@@ -1,0 +1,599 @@
+@font-face {
+  font-family: Opensans-Light;
+  src: url(font/OpenSans-Light.ttf);
+}
+@font-face {
+  font-family: Opensans-Light-Italic;
+  src: url(font/OpenSans-LightItalic.ttf);
+}
+
+@font-face {
+  font-family: Opensans-Regular;
+  src: url(font/OpenSans-Regular.ttf);
+}
+@font-face {
+  font-family: Opensans-Regular-Italic;
+  src: url(font/OpenSans-Italic.ttf);
+}
+@font-face {
+  font-family: Opensans-Medium;
+  src: url(font/OpenSans-Medium.ttf);
+}
+@font-face {
+  font-family: Opensans-Medium-Italic;
+  src: url(font/OpenSans-MediumItalic.ttf);
+}
+@font-face {
+  font-family: Opensans-Semibold;
+  src: url(font/OpenSans-SemiBold.ttf);
+}
+@font-face {
+  font-family: Opensans-Semibold-Italic;
+  src: url(font/OpenSans-SemiBoldItalic.ttf);
+}
+@font-face {
+  font-family: Opensans-Bold;
+  src: url(font/OpenSans-Bold.ttf);
+}
+@font-face {
+  font-family: Opensans-Bold-Italic;
+  src: url(font/OpenSans-BoldItalic.ttf);
+}
+@font-face {
+  font-family: Opensans-ExtralBold;
+  src: url(font/OpenSans-ExtraBold.ttf);
+}
+@font-face {
+  font-family: Opensans-ExtralBold-Italic;
+  src: url(font/OpenSans-ExtraBoldItalic.ttf);
+}
+
+* {
+  font-family: Opensans-Light;
+  color: rgba(13, 24, 131, 1);
+}
+
+.h7 {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-family: Opensans-Bold;
+}
+.h8 {
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.2;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-family: Opensans-Semibold;
+}
+
+.brand {
+  font-family: Opensans-ExtralBold;
+  font-size: 24;
+  color: rgba(13, 24, 131, 1);
+}
+
+.a-nav {
+  font-family: Opensans-Medium;
+  font-size: 15px;
+  color: rgba(13, 24, 131, 1);
+}
+
+.nav-b {
+  font-family: Opensans-Bold;
+}
+
+.btn-radius {
+  border-radius: 40px;
+  padding: 3px 20px 5px 20px;
+}
+
+.btn-nav {
+  font-family: Opensans-Semibold;
+  font-size: 18;
+  background-color: rgba(13, 156, 83, 1);
+  color: white;
+  margin-top: 5px;
+}
+
+.i-nav {
+  font-size: 28px;
+  color: rgba(13, 24, 131, 1);
+}
+
+.product-nav {
+  font-family: Opensans-Semibold;
+  font-size: 14px;
+  color: rgba(13, 156, 83, 1);
+}
+
+.product-nav-span {
+  font-family: Opensans-Semibold;
+  font-size: 10px;
+  color: rgba(143, 140, 140, 1);
+  margin-top: -15px;
+  position: absolute;
+}
+.product-nav-small {
+  font-family: Opensans-Semibold;
+  font-size: 10px;
+  color: rgba(143, 140, 140, 1);
+  margin-top: -15px;
+  position: absolute;
+}
+.dropdown-menu-nav {
+  width: 450px !important;
+  height: 250px !important;
+}
+
+.dropdown-menu-a {
+  width: 180px !important;
+  height: 100px !important;
+}
+
+.dropdown-menu-b {
+  width: 220px !important;
+  height: 150px !important;
+}
+.dropdown-menu-d {
+  width: 150px !important;
+  height: 100px !important;
+}
+
+#main {
+  padding-top: 50px;
+}
+
+.main-color {
+  color: rgba(13, 24, 131, 1);
+}
+.sub-main-color {
+  color: rgba(13, 156, 83, 1);
+}
+
+a {
+  text-decoration: none;
+  font-family: Opensans-Regular;
+}
+
+h1 {
+  font-family: Opensans-ExtralBold;
+  font-size: 42px;
+}
+
+h2 {
+  font-family: Opensans-ExtralBold;
+  font-size: 36px;
+}
+
+h3 {
+  font-family: Opensans-Bold;
+  font-size: 28px;
+}
+
+h4 {
+  font-family: Opensans-Bold;
+  font-size: 24px;
+}
+
+h5 {
+  font-family: Opensans-Bold;
+  font-size: 20px;
+}
+h6 {
+  font-family: Opensans-SemiBold;
+  font-size: 18px;
+}
+
+.pabt {
+  font-family: Opensans-Medium;
+  font-size: 16px;
+}
+
+.desc {
+  font-family: Opensans-SemiBold;
+  font-size: 16px;
+  color: rgba(13, 156, 83, 1);
+}
+
+.descp {
+  font-family: Opensans-Medium;
+  font-size: 14px;
+  color: rgba(78, 76, 76, 1);
+}
+
+.bold {
+  font-family: Opensans-Bold;
+}
+
+.text-center {
+  text-align: center;
+}
+.text-right {
+  text-align: right;
+}
+
+.btn-pry {
+  font-family: Opensans-Semibold;
+  font-size: 18;
+  background-color: rgba(13, 156, 83, 1);
+  color: white;
+}
+
+.wd-25 {
+  width: 15%;
+}
+
+.success {
+  text-align: center;
+}
+
+.success i {
+  color: rgba(13, 156, 83, 1);
+  font-size: 3rem;
+}
+
+.success p {
+  font-size: 20px;
+  margin-bottom: 0px;
+  padding-bottom: 0px;
+}
+
+.small {
+  color: red;
+  font-size: 250px;
+  margin-top: 0px;
+  padding-top: 0px;
+  border-radius: 5px;
+}
+
+.bg-sec {
+  background-color: rgba(180, 238, 249, 1);
+}
+.bg-pry {
+  background-color: rgba(13, 24, 131, 1);
+}
+
+.bg-alt {
+  background-color: rgba(249, 249, 249, 1);
+}
+.bg-white {
+  background-color: white;
+  color: rgba(140, 142, 165, 0.4);
+}
+.text-alt {
+  color: rgba(78, 76, 76, 1);
+}
+.text-sec {
+  color: rgba(13, 156, 83, 1);
+}
+
+.text-alt1 {
+  color: rgb(155, 154, 154);
+}
+
+.products h4 {
+  font-family: Opensans-Bold;
+  font-size: 28px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  position: relative;
+}
+.products h4::after {
+  content: "";
+  position: absolute;
+  display: block;
+  width: 50px;
+  height: 3px;
+  background: rgba(13, 24, 131, 1);
+  bottom: 0;
+  left: calc(50% - 25px);
+}
+.products a {
+  text-decoration: none;
+  font-family: Opensans-Regular;
+  color: rgba(13, 156, 83, 1);
+}
+.bg-pro {
+  background-color: rgba(228, 247, 254, 1);
+}
+
+.partners h4 {
+  font-family: Opensans-Bold;
+  font-size: 28px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  position: relative;
+  color: rgba(13, 24, 131, 1);
+}
+.partners h4::after {
+  content: "";
+  position: absolute;
+  display: block;
+  width: 50px;
+  height: 3px;
+  background: rgba(13, 156, 83, 1);
+  bottom: 0;
+  left: calc(50% - 25px);
+}
+
+.rule::after {
+  content: "";
+  position: absolute;
+  display: block;
+  width: 50px;
+  height: 3px;
+  background: rgba(13, 156, 83, 1);
+  bottom: 0;
+  left: calc(50% - 25px);
+}
+
+.footter h4 {
+  font-family: Opensans-Semibold;
+  font-size: 18px;
+  color: white;
+}
+.footter h3 {
+  font-family: Opensans-Semibold;
+  font-size: 24px;
+  color: white;
+}
+.footter p {
+  font-family: Opensans-Semibold;
+  font-size: 24px;
+  color: white;
+}
+.footter a {
+  font-family: Opensans-Regular;
+  font-size: 14px;
+  color: white;
+}
+.footter i {
+  font-size: 20px;
+  color: white;
+}
+.footter ul {
+  text-decoration: none;
+  list-style: none;
+}
+.footter li {
+  list-style: none;
+}
+
+.what-we-do a {
+  color: rgba(13, 24, 131, 1);
+  font-family: Opensans-Medium;
+  font-size: 16px;
+}
+
+.what-we-do p {
+  font-size: 17px;
+  color: rgba(78, 76, 76, 1);
+}
+.what-we-do i {
+  color: rgba(13, 156, 83, 1);
+}
+
+.faq h1 {
+  font-family: Opensans-Bold;
+}
+
+.help h4 {
+  font-family: Opensans-Bold;
+}
+
+.help i {
+  font-size: 18px;
+  color: rgba(13, 156, 83, 1);
+}
+
+.help a {
+  font-size: 17px;
+  color: rgba(13, 24, 131, 1);
+  font-family: Opensans-Medium;
+}
+
+.login-i {
+  font-size: 72px;
+  color: rgba(13, 24, 131, 1);
+}
+
+.forms i {
+  font-size: 32px;
+  color: rgba(13, 24, 131, 1);
+}
+
+.forms label {
+  font-family: Opensans-Medium;
+  color: rgba(13, 24, 131, 1);
+}
+
+.border {
+  border-radius: 20px;
+}
+
+.border1 {
+  border-radius: 15px;
+}
+.btn-text {
+  font-size: 28px;
+}
+
+.moddal h5 {
+  font-family: Opensans-Bold;
+  font-size: 24px;
+}
+
+@media only screen and (max-width: 768px) {
+  .image-hid {
+    display: none;
+  }
+
+  h1 {
+    font-size: 36px;
+  }
+  h2 {
+    font-size: 26px;
+  }
+  h3 {
+    font-size: 20px;
+  }
+
+  p {
+    font-size: 15px;
+  }
+}
+
+@media only screen and (max-width: 990px) {
+  .image-hid {
+    display: none;
+  }
+}
+
+.misc-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - (1.625rem * 2));
+  text-align: center;
+}
+
+.product:hover {
+  filter: none;
+  transform: scale(1.1);
+}
+
+.protocol p {
+  font-family: Opensans-Medium;
+  font-size: 15px;
+  margin-bottom: 0px;
+  color: rgba(13, 156, 83, 1);
+}
+.protocol span {
+  font-family: Opensans-Medium;
+  font-size: 12px;
+  line-height: 0px;
+  margin-bottom: 0px;
+  color: rgba(13, 156, 83, 1);
+}
+
+.protocol li {
+  font-family: Opensans-Regular;
+  font-size: 14px;
+  color: rgb(117, 117, 117);
+}
+
+.airport-form {
+  border-radius: 10px;
+  border: 0.2px solid rgb(194, 194, 194);
+}
+
+.checkout p {
+  font-family: Opensans-Regular;
+  font-size: 14px;
+  color: rgba(13, 24, 131, 1);
+}
+.no-border {
+  border: 0;
+  box-shadow: none; /* You may want to include this as bootstrap applies these styles too */
+}
+
+.checkout_amount p {
+  font-family: Opensans-Medium;
+  font-size: 18px;
+  color: rgb(57, 66, 150);
+}
+
+.checkout_amount span {
+  font-family: Opensans-Bold;
+  font-size: 24px;
+  color: rgba(13, 24, 131, 1);
+}
+
+label {
+  font-family: Opensans-Light;
+  font-size: 14px;
+  color: rgb(80, 86, 141);
+}
+
+/*=============================================
+    07: Packages
+==============================================*/
+
+.single-package {
+  position: relative;
+  padding: 30px 15px;
+  margin-bottom: 30px;
+  border: 1px solid #e1eeff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+  -webkit-transition: all 0.2s;
+  transition: all 0.2s;
+}
+.single-package .pupular-pack {
+  position: absolute;
+  text-transform: uppercase;
+  text-align: center;
+  color: #fff;
+  background-color: #385638;
+  font-size: 0.625rem;
+  top: 0;
+  margin: auto;
+  left: 0;
+  right: 0;
+  width: 146px;
+  padding: 2px 0;
+  letter-spacing: 1px;
+}
+.single-package:hover {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+.single-package h4 {
+  margin-top: -3px;
+}
+.single-package h4 + span {
+  font-size: 0.75rem;
+  color: #979797;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  display: block;
+  padding-bottom: 10px;
+}
+.single-package ul {
+  font-size: 0.9375rem;
+  margin-top: 10px;
+}
+
+.single-package ul li {
+  margin-top: 4px;
+}
+.single-package ul li span {
+  color: #385638;
+}
+.single-package p {
+  color: rgb(10, 19, 99);
+  font-size: 1.875rem;
+  line-height: 1.2;
+  font-weight: 800;
+  font-family: Opensans-Bold;
+  -webkit-transition: all 0.2s;
+  transition: all 0.2s;
+}
+.single-package:hover p {
+  color: rgba(13, 156, 83, 1);
+}
+.single-package p sup {
+  font-size: 0.875rem;
+}
+.single-package p span {
+  display: block;
+  font-size: 0.75rem;
+  color: #979797;
+  text-transform: uppercase;
+  font-family: "Source Sans Pro", sans-serif;
+}
