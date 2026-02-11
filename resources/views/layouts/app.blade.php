@@ -20,15 +20,20 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
+    <link rel="stylesheet" href="{{ asset('bootstrap-5.0.2/dist/css/bootstrap.min.css') }}">
+    <script src="{{ asset('bootstrap-5.0.2/dist/js/bootstrap.bundle.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ asset('fontawesome-6/dist-font/css/font-awesome.min.css') }}">
+
     <!-- Custom Styles -->
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/styleslide.css') }}">
     
     <style>
         @media (max-width: 650px) {
             .navbarmain {
-                padding-top: 50px;
+                padding-top: var(--space-16);
             }
         }
         .img-W1 {
@@ -38,25 +43,25 @@
         .nav-content {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: var(--space-2);
         }
         .nav-text {
             display: flex;
             flex-direction: column;
-            line-height: 1.2;
+            line-height: var(--leading-snug);
         }
         .product-nav {
             color: inherit;
             text-decoration: none;
         }
         body, .navbarmain, .topnav, .product-nav, .nav-content, .nav-text, .navbarmain * {
-            font-family: "Opensans-Regular", "Open Sans", Arial, sans-serif !important;
+            font-family: var(--font-primary) !important;
         }
         .mobile-menu {
             display: block;
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease-out;
+            transition: max-height var(--transition-base) ease-out;
         }
         .mobile-menu.show {
             max-height: 500px;
@@ -65,7 +70,7 @@
             .mobile-menu {
                 width: 100%;
                 background-color: white;
-                border-top: 1px solid #eee;
+                border-top: 1px solid var(--color-neutral-200);
             }
         }
     </style>
@@ -90,6 +95,7 @@
     @livewireScripts
     
     <!-- Mobile Menu Toggle Script -->
+    <script src="{{ asset('js/jquery.min.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const mobileMenuButton = document.getElementById('mobile-menu-button');

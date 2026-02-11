@@ -1,599 +1,698 @@
+/* ========================================
+   FONT FACES - Using system fonts instead of custom files
+   ======================================== */
 @font-face {
-  font-family: Opensans-Light;
-  src: url(font/OpenSans-Light.ttf);
+    font-family: Opensans-Light;
+    font-weight: 300;
+    src: local("Open Sans"), local("OpenSans"), sans-serif;
 }
+
 @font-face {
-  font-family: Opensans-Light-Italic;
-  src: url(font/OpenSans-LightItalic.ttf);
+    font-family: Opensans-Regular;
+    font-weight: 400;
+    src: local("Open Sans"), local("OpenSans"), sans-serif;
 }
 
 @font-face {
-  font-family: Opensans-Regular;
-  src: url(font/OpenSans-Regular.ttf);
-}
-@font-face {
-  font-family: Opensans-Regular-Italic;
-  src: url(font/OpenSans-Italic.ttf);
-}
-@font-face {
-  font-family: Opensans-Medium;
-  src: url(font/OpenSans-Medium.ttf);
-}
-@font-face {
-  font-family: Opensans-Medium-Italic;
-  src: url(font/OpenSans-MediumItalic.ttf);
-}
-@font-face {
-  font-family: Opensans-Semibold;
-  src: url(font/OpenSans-SemiBold.ttf);
-}
-@font-face {
-  font-family: Opensans-Semibold-Italic;
-  src: url(font/OpenSans-SemiBoldItalic.ttf);
-}
-@font-face {
-  font-family: Opensans-Bold;
-  src: url(font/OpenSans-Bold.ttf);
-}
-@font-face {
-  font-family: Opensans-Bold-Italic;
-  src: url(font/OpenSans-BoldItalic.ttf);
-}
-@font-face {
-  font-family: Opensans-ExtralBold;
-  src: url(font/OpenSans-ExtraBold.ttf);
-}
-@font-face {
-  font-family: Opensans-ExtralBold-Italic;
-  src: url(font/OpenSans-ExtraBoldItalic.ttf);
+    font-family: Opensans-Medium;
+    font-weight: 500;
+    src: local("Open Sans"), local("OpenSans"), sans-serif;
 }
 
+@font-face {
+    font-family: Opensans-Semibold;
+    font-weight: 600;
+    src: local("Open Sans"), local("OpenSans"), sans-serif;
+}
+
+@font-face {
+    font-family: Opensans-Bold;
+    font-weight: 700;
+    src: local("Open Sans"), local("OpenSans"), sans-serif;
+}
+
+@font-face {
+    font-family: Opensans-ExtralBold;
+    font-weight: 800;
+    src: local("Open Sans"), local("OpenSans"), sans-serif;
+}
+
+/* ========================================
+   BASE STYLES
+   ======================================== */
 * {
-  font-family: Opensans-Light;
-  color: rgba(13, 24, 131, 1);
+    font-family: var(--font-primary);
+    color: var(--color-primary);
 }
 
+body {
+    font-family: var(--font-primary);
+    color: var(--color-primary);
+}
+
+/* ========================================
+   TYPOGRAPHY CLASSES
+   ======================================== */
 .h7 {
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1.2;
-  margin-top: 0;
-  margin-bottom: 1rem;
-  font-family: Opensans-Bold;
+    font-size: var(--text-lg);
+    font-weight: var(--font-extrabold);
+    line-height: var(--leading-tight);
+    margin-top: 0;
+    margin-bottom: var(--space-4);
 }
+
 .h8 {
-  font-size: 0.8rem;
-  font-weight: 500;
-  line-height: 1.2;
-  margin-top: 0;
-  margin-bottom: 1rem;
-  font-family: Opensans-Semibold;
-}
-
-.brand {
-  font-family: Opensans-ExtralBold;
-  font-size: 24;
-  color: rgba(13, 24, 131, 1);
-}
-
-.a-nav {
-  font-family: Opensans-Medium;
-  font-size: 15px;
-  color: rgba(13, 24, 131, 1);
-}
-
-.nav-b {
-  font-family: Opensans-Bold;
-}
-
-.btn-radius {
-  border-radius: 40px;
-  padding: 3px 20px 5px 20px;
-}
-
-.btn-nav {
-  font-family: Opensans-Semibold;
-  font-size: 18;
-  background-color: rgba(13, 156, 83, 1);
-  color: white;
-  margin-top: 5px;
-}
-
-.i-nav {
-  font-size: 28px;
-  color: rgba(13, 24, 131, 1);
-}
-
-.product-nav {
-  font-family: Opensans-Semibold;
-  font-size: 14px;
-  color: rgba(13, 156, 83, 1);
-}
-
-.product-nav-span {
-  font-family: Opensans-Semibold;
-  font-size: 10px;
-  color: rgba(143, 140, 140, 1);
-  margin-top: -15px;
-  position: absolute;
-}
-.product-nav-small {
-  font-family: Opensans-Semibold;
-  font-size: 10px;
-  color: rgba(143, 140, 140, 1);
-  margin-top: -15px;
-  position: absolute;
-}
-.dropdown-menu-nav {
-  width: 450px !important;
-  height: 250px !important;
-}
-
-.dropdown-menu-a {
-  width: 180px !important;
-  height: 100px !important;
-}
-
-.dropdown-menu-b {
-  width: 220px !important;
-  height: 150px !important;
-}
-.dropdown-menu-d {
-  width: 150px !important;
-  height: 100px !important;
-}
-
-#main {
-  padding-top: 50px;
-}
-
-.main-color {
-  color: rgba(13, 24, 131, 1);
-}
-.sub-main-color {
-  color: rgba(13, 156, 83, 1);
-}
-
-a {
-  text-decoration: none;
-  font-family: Opensans-Regular;
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+    line-height: var(--leading-tight);
+    margin-top: 0;
+    margin-bottom: var(--space-4);
 }
 
 h1 {
-  font-family: Opensans-ExtralBold;
-  font-size: 42px;
+    font-family: var(--font-primary);
+    font-size: var(--text-5xl);
+    font-weight: var(--font-black);
 }
 
 h2 {
-  font-family: Opensans-ExtralBold;
-  font-size: 36px;
+    font-family: var(--font-primary);
+    font-size: var(--text-4xl);
+    font-weight: var(--font-black);
 }
 
 h3 {
-  font-family: Opensans-Bold;
-  font-size: 28px;
+    font-family: var(--font-primary);
+    font-size: var(--text-3xl);
+    font-weight: var(--font-bold);
 }
 
 h4 {
-  font-family: Opensans-Bold;
-  font-size: 24px;
+    font-family: var(--font-primary);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-bold);
 }
 
 h5 {
-  font-family: Opensans-Bold;
-  font-size: 20px;
+    font-family: var(--font-primary);
+    font-size: var(--text-xl);
+    font-weight: var(--font-bold);
 }
+
 h6 {
-  font-family: Opensans-SemiBold;
-  font-size: 18px;
+    font-family: var(--font-primary);
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+}
+
+.brand {
+    font-family: var(--font-primary);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-black);
+    color: var(--color-primary);
+}
+
+/* ========================================
+   NAVIGATION STYLES
+   ======================================== */
+.a-nav {
+    font-family: var(--font-primary);
+    font-size: var(--text-base);
+    font-weight: var(--font-medium);
+    color: var(--color-primary);
+}
+
+.nav-b {
+    font-weight: var(--font-bold);
+}
+
+.btn-radius {
+    border-radius: var(--radius-full);
+    padding: var(--space-1) var(--space-5);
+}
+
+.btn-nav {
+    font-family: var(--font-primary);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-lg);
+    background-color: var(--color-secondary);
+    color: white;
+    margin-top: var(--space-1);
+}
+
+.i-nav {
+    font-size: var(--text-3xl);
+    color: var(--color-primary);
+}
+
+.product-nav {
+    font-family: var(--font-primary);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-base);
+    color: var(--color-secondary);
+}
+
+.product-nav-span,
+.product-nav-small {
+    font-family: var(--font-primary);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-xs);
+    color: var(--color-neutral-400);
+    margin-top: var(--space-2);
+    position: absolute;
+}
+
+/* ========================================
+   DROPDOWN MENUS
+   ======================================== */
+.dropdown-menu-nav {
+    width: 450px !important;
+    height: 250px !important;
+}
+
+.dropdown-menu-a {
+    width: 180px !important;
+    height: 100px !important;
+}
+
+.dropdown-menu-b {
+    width: 220px !important;
+    height: 150px !important;
+}
+
+.dropdown-menu-d {
+    width: 150px !important;
+    height: 100px !important;
+}
+
+#main {
+    padding-top: var(--space-16);
+}
+
+/* ========================================
+   COLOR UTILITY CLASSES
+   ======================================== */
+.main-color {
+    color: var(--color-primary);
+}
+
+.sub-main-color {
+    color: var(--color-secondary);
+}
+
+a {
+    text-decoration: none;
+    font-family: var(--font-primary);
+    color: var(--color-primary);
 }
 
 .pabt {
-  font-family: Opensans-Medium;
-  font-size: 16px;
+    font-family: var(--font-primary);
+    font-weight: var(--font-medium);
+    font-size: var(--text-base);
 }
 
 .desc {
-  font-family: Opensans-SemiBold;
-  font-size: 16px;
-  color: rgba(13, 156, 83, 1);
+    font-family: var(--font-primary);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-base);
+    color: var(--color-secondary);
 }
 
 .descp {
-  font-family: Opensans-Medium;
-  font-size: 14px;
-  color: rgba(78, 76, 76, 1);
+    font-family: var(--font-primary);
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+    color: var(--color-neutral-600);
 }
 
 .bold {
-  font-family: Opensans-Bold;
+    font-weight: var(--font-bold);
 }
 
 .text-center {
-  text-align: center;
+    text-align: center;
 }
+
 .text-right {
-  text-align: right;
+    text-align: right;
 }
 
 .btn-pry {
-  font-family: Opensans-Semibold;
-  font-size: 18;
-  background-color: rgba(13, 156, 83, 1);
-  color: white;
+    font-family: var(--font-primary);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-lg);
+    background-color: var(--color-secondary);
+    color: white;
 }
 
 .wd-25 {
-  width: 15%;
+    width: 15%;
 }
 
+/* ========================================
+   SUCCESS & STATUS STATES
+   ======================================== */
 .success {
-  text-align: center;
+    text-align: center;
 }
 
 .success i {
-  color: rgba(13, 156, 83, 1);
-  font-size: 3rem;
+    color: var(--color-secondary);
+    font-size: 3rem;
 }
 
 .success p {
-  font-size: 20px;
-  margin-bottom: 0px;
-  padding-bottom: 0px;
+    font-size: var(--text-xl);
+    margin-bottom: 0;
+    padding-bottom: 0;
 }
 
-.small {
-  color: red;
-  font-size: 250px;
-  margin-top: 0px;
-  padding-top: 0px;
-  border-radius: 5px;
-}
-
+/* ========================================
+   BACKGROUND COLORS
+   ======================================== */
 .bg-sec {
-  background-color: rgba(180, 238, 249, 1);
+    background-color: var(--color-info-light);
 }
+
 .bg-pry {
-  background-color: rgba(13, 24, 131, 1);
+    background-color: var(--color-primary);
 }
 
 .bg-alt {
-  background-color: rgba(249, 249, 249, 1);
+    background-color: var(--color-neutral-50);
 }
+
 .bg-white {
-  background-color: white;
-  color: rgba(140, 142, 165, 0.4);
+    background-color: white;
+    color: var(--color-neutral-400);
 }
+
+.bg-pro {
+    background-color: var(--color-primary-50);
+}
+
+/* ========================================
+   TEXT COLOR UTILITIES
+   ======================================== */
 .text-alt {
-  color: rgba(78, 76, 76, 1);
+    color: var(--color-neutral-600);
 }
+
 .text-sec {
-  color: rgba(13, 156, 83, 1);
+    color: var(--color-secondary);
 }
 
 .text-alt1 {
-  color: rgb(155, 154, 154);
+    color: var(--color-neutral-500);
 }
 
+/* ========================================
+   PRODUCTS SECTION
+   ======================================== */
 .products h4 {
-  font-family: Opensans-Bold;
-  font-size: 28px;
-  text-transform: uppercase;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  position: relative;
-}
-.products h4::after {
-  content: "";
-  position: absolute;
-  display: block;
-  width: 50px;
-  height: 3px;
-  background: rgba(13, 24, 131, 1);
-  bottom: 0;
-  left: calc(50% - 25px);
-}
-.products a {
-  text-decoration: none;
-  font-family: Opensans-Regular;
-  color: rgba(13, 156, 83, 1);
-}
-.bg-pro {
-  background-color: rgba(228, 247, 254, 1);
+    font-family: var(--font-primary);
+    font-weight: var(--font-bold);
+    font-size: var(--text-3xl);
+    text-transform: uppercase;
+    margin-bottom: var(--space-5);
+    padding-bottom: var(--space-5);
+    position: relative;
+    color: var(--color-primary);
 }
 
-.partners h4 {
-  font-family: Opensans-Bold;
-  font-size: 28px;
-  text-transform: uppercase;
-  margin-bottom: 20px;
-  padding-bottom: 20px;
-  position: relative;
-  color: rgba(13, 24, 131, 1);
+.products h4::after {
+    content: "";
+    position: absolute;
+    display: block;
+    width: 50px;
+    height: 3px;
+    background: var(--color-primary);
+    bottom: 0;
+    left: calc(50% - 25px);
 }
+
+.products a {
+    text-decoration: none;
+    font-family: var(--font-primary);
+    color: var(--color-secondary);
+}
+
+/* ========================================
+   PARTNERS SECTION
+   ======================================== */
+.partners h4 {
+    font-family: var(--font-primary);
+    font-weight: var(--font-bold);
+    font-size: var(--text-3xl);
+    text-transform: uppercase;
+    margin-bottom: var(--space-5);
+    padding-bottom: var(--space-5);
+    position: relative;
+    color: var(--color-primary);
+}
+
 .partners h4::after {
-  content: "";
-  position: absolute;
-  display: block;
-  width: 50px;
-  height: 3px;
-  background: rgba(13, 156, 83, 1);
-  bottom: 0;
-  left: calc(50% - 25px);
+    content: "";
+    position: absolute;
+    display: block;
+    width: 50px;
+    height: 3px;
+    background: var(--color-secondary);
+    bottom: 0;
+    left: calc(50% - 25px);
 }
 
 .rule::after {
-  content: "";
-  position: absolute;
-  display: block;
-  width: 50px;
-  height: 3px;
-  background: rgba(13, 156, 83, 1);
-  bottom: 0;
-  left: calc(50% - 25px);
+    content: "";
+    position: absolute;
+    display: block;
+    width: 50px;
+    height: 3px;
+    background: var(--color-secondary);
+    bottom: 0;
+    left: calc(50% - 25px);
 }
 
+/* ========================================
+   FOOTER STYLES
+   ======================================== */
 .footter h4 {
-  font-family: Opensans-Semibold;
-  font-size: 18px;
-  color: white;
-}
-.footter h3 {
-  font-family: Opensans-Semibold;
-  font-size: 24px;
-  color: white;
-}
-.footter p {
-  font-family: Opensans-Semibold;
-  font-size: 24px;
-  color: white;
-}
-.footter a {
-  font-family: Opensans-Regular;
-  font-size: 14px;
-  color: white;
-}
-.footter i {
-  font-size: 20px;
-  color: white;
-}
-.footter ul {
-  text-decoration: none;
-  list-style: none;
-}
-.footter li {
-  list-style: none;
+    font-family: var(--font-primary);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-lg);
+    color: white;
 }
 
+.footter h3 {
+    font-family: var(--font-primary);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-2xl);
+    color: white;
+}
+
+.footter p {
+    font-family: var(--font-primary);
+    font-weight: var(--font-semibold);
+    font-size: var(--text-2xl);
+    color: white;
+}
+
+.footter a {
+    font-family: var(--font-primary);
+    font-weight: var(--font-normal);
+    font-size: var(--text-sm);
+    color: white;
+}
+
+.footter i {
+    font-size: var(--text-xl);
+    color: white;
+}
+
+.footter ul,
+.footter li {
+    list-style: none;
+    text-decoration: none;
+}
+
+/* ========================================
+   WHAT WE DO SECTION
+   ======================================== */
 .what-we-do a {
-  color: rgba(13, 24, 131, 1);
-  font-family: Opensans-Medium;
-  font-size: 16px;
+    color: var(--color-primary);
+    font-family: var(--font-primary);
+    font-weight: var(--font-medium);
+    font-size: var(--text-base);
 }
 
 .what-we-do p {
-  font-size: 17px;
-  color: rgba(78, 76, 76, 1);
-}
-.what-we-do i {
-  color: rgba(13, 156, 83, 1);
+    font-size: var(--text-lg);
+    color: var(--color-neutral-600);
 }
 
+.what-we-do i {
+    color: var(--color-secondary);
+}
+
+/* ========================================
+   FAQ & HELP SECTIONS
+   ======================================== */
 .faq h1 {
-  font-family: Opensans-Bold;
+    font-family: var(--font-primary);
+    font-weight: var(--font-bold);
 }
 
 .help h4 {
-  font-family: Opensans-Bold;
+    font-family: var(--font-primary);
+    font-weight: var(--font-bold);
 }
 
 .help i {
-  font-size: 18px;
-  color: rgba(13, 156, 83, 1);
+    font-size: var(--text-base);
+    color: var(--color-secondary);
 }
 
 .help a {
-  font-size: 17px;
-  color: rgba(13, 24, 131, 1);
-  font-family: Opensans-Medium;
+    font-size: var(--text-lg);
+    color: var(--color-primary);
+    font-family: var(--font-primary);
+    font-weight: var(--font-medium);
 }
 
+/* ========================================
+   LOGIN & FORMS
+   ======================================== */
 .login-i {
-  font-size: 72px;
-  color: rgba(13, 24, 131, 1);
+    font-size: var(--text-7xl);
+    color: var(--color-primary);
 }
 
 .forms i {
-  font-size: 32px;
-  color: rgba(13, 24, 131, 1);
+    font-size: var(--text-3xl);
+    color: var(--color-primary);
 }
 
 .forms label {
-  font-family: Opensans-Medium;
-  color: rgba(13, 24, 131, 1);
+    font-family: var(--font-primary);
+    font-weight: var(--font-medium);
+    color: var(--color-primary);
 }
 
+/* ========================================
+   BORDER RADIUS UTILITIES
+   ======================================== */
 .border {
-  border-radius: 20px;
+    border-radius: var(--radius-3xl);
 }
 
 .border1 {
-  border-radius: 15px;
+    border-radius: var(--radius-2xl);
 }
+
 .btn-text {
-  font-size: 28px;
+    font-size: var(--text-3xl);
 }
 
 .moddal h5 {
-  font-family: Opensans-Bold;
-  font-size: 24px;
+    font-family: var(--font-primary);
+    font-weight: var(--font-bold);
+    font-size: var(--text-2xl);
 }
 
+/* ========================================
+   RESPONSIVE UTILITIES
+   ======================================== */
 @media only screen and (max-width: 768px) {
-  .image-hid {
-    display: none;
-  }
+    .image-hid {
+        display: none;
+    }
 
-  h1 {
-    font-size: 36px;
-  }
-  h2 {
-    font-size: 26px;
-  }
-  h3 {
-    font-size: 20px;
-  }
+    h1 {
+        font-size: var(--text-4xl);
+    }
 
-  p {
-    font-size: 15px;
-  }
+    h2 {
+        font-size: var(--text-3xl);
+    }
+
+    h3 {
+        font-size: var(--text-2xl);
+    }
+
+    p {
+        font-size: var(--text-sm);
+    }
 }
 
 @media only screen and (max-width: 990px) {
-  .image-hid {
-    display: none;
-  }
+    .image-hid {
+        display: none;
+    }
 }
 
+/* ========================================
+   MISCELLANEOUS
+   ======================================== */
 .misc-wrapper {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  min-height: calc(100vh - (1.625rem * 2));
-  text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - (var(--space-6) * 2));
+    text-align: center;
 }
 
 .product:hover {
-  filter: none;
-  transform: scale(1.1);
+    filter: none;
+    transform: scale(1.1);
 }
 
+/* ========================================
+   PROTOCOL SECTION
+   ======================================== */
 .protocol p {
-  font-family: Opensans-Medium;
-  font-size: 15px;
-  margin-bottom: 0px;
-  color: rgba(13, 156, 83, 1);
+    font-family: var(--font-primary);
+    font-weight: var(--font-medium);
+    font-size: var(--text-sm);
+    margin-bottom: 0;
+    color: var(--color-secondary);
 }
+
 .protocol span {
-  font-family: Opensans-Medium;
-  font-size: 12px;
-  line-height: 0px;
-  margin-bottom: 0px;
-  color: rgba(13, 156, 83, 1);
+    font-family: var(--font-primary);
+    font-weight: var(--font-medium);
+    font-size: var(--text-xs);
+    line-height: 0;
+    margin-bottom: 0;
+    color: var(--color-secondary);
 }
 
 .protocol li {
-  font-family: Opensans-Regular;
-  font-size: 14px;
-  color: rgb(117, 117, 117);
+    font-family: var(--font-primary);
+    font-weight: var(--font-normal);
+    font-size: var(--text-sm);
+    color: var(--color-neutral-500);
 }
 
 .airport-form {
-  border-radius: 10px;
-  border: 0.2px solid rgb(194, 194, 194);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-neutral-300);
 }
 
+/* ========================================
+   CHECKOUT SECTION
+   ======================================== */
 .checkout p {
-  font-family: Opensans-Regular;
-  font-size: 14px;
-  color: rgba(13, 24, 131, 1);
+    font-family: var(--font-primary);
+    font-weight: var(--font-normal);
+    font-size: var(--text-sm);
+    color: var(--color-primary);
 }
+
 .no-border {
-  border: 0;
-  box-shadow: none; /* You may want to include this as bootstrap applies these styles too */
+    border: 0;
+    box-shadow: none;
 }
 
 .checkout_amount p {
-  font-family: Opensans-Medium;
-  font-size: 18px;
-  color: rgb(57, 66, 150);
+    font-family: var(--font-primary);
+    font-weight: var(--font-medium);
+    font-size: var(--text-lg);
+    color: var(--color-primary-700);
 }
 
 .checkout_amount span {
-  font-family: Opensans-Bold;
-  font-size: 24px;
-  color: rgba(13, 24, 131, 1);
+    font-family: var(--font-primary);
+    font-weight: var(--font-bold);
+    font-size: var(--text-2xl);
+    color: var(--color-primary);
 }
 
 label {
-  font-family: Opensans-Light;
-  font-size: 14px;
-  color: rgb(80, 86, 141);
+    font-family: var(--font-primary);
+    font-weight: var(--font-light);
+    font-size: var(--text-sm);
+    color: var(--color-primary-700);
 }
 
-/*=============================================
-    07: Packages
-==============================================*/
-
+/* ========================================
+   PACKAGES SECTION
+   ======================================== */
 .single-package {
-  position: relative;
-  padding: 30px 15px;
-  margin-bottom: 30px;
-  border: 1px solid #e1eeff;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-  -webkit-transition: all 0.2s;
-  transition: all 0.2s;
+    position: relative;
+    padding: var(--space-8);
+    margin-bottom: var(--space-8);
+    border: 1px solid var(--color-primary-100);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-base);
 }
+
 .single-package .pupular-pack {
-  position: absolute;
-  text-transform: uppercase;
-  text-align: center;
-  color: #fff;
-  background-color: #385638;
-  font-size: 0.625rem;
-  top: 0;
-  margin: auto;
-  left: 0;
-  right: 0;
-  width: 146px;
-  padding: 2px 0;
-  letter-spacing: 1px;
+    position: absolute;
+    text-transform: uppercase;
+    text-align: center;
+    color: white;
+    background-color: #385638;
+    font-size: var(--text-xs);
+    top: 0;
+    margin: auto;
+    left: 0;
+    right: 0;
+    width: 146px;
+    padding: var(--space-1) 0;
+    letter-spacing: var(--tracking-wide);
 }
+
 .single-package:hover {
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-lg);
 }
+
 .single-package h4 {
-  margin-top: -3px;
+    margin-top: -3px;
 }
+
 .single-package h4 + span {
-  font-size: 0.75rem;
-  color: #979797;
-  text-transform: uppercase;
-  letter-spacing: 3px;
-  display: block;
-  padding-bottom: 10px;
+    font-size: var(--text-xs);
+    color: var(--color-neutral-500);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wider);
+    display: block;
+    padding-bottom: var(--space-2);
 }
+
 .single-package ul {
-  font-size: 0.9375rem;
-  margin-top: 10px;
+    font-size: 0.9375rem;
+    margin-top: var(--space-2);
 }
 
 .single-package ul li {
-  margin-top: 4px;
+    margin-top: var(--space-1);
 }
+
 .single-package ul li span {
-  color: #385638;
+    color: #385638;
 }
+
 .single-package p {
-  color: rgb(10, 19, 99);
-  font-size: 1.875rem;
-  line-height: 1.2;
-  font-weight: 800;
-  font-family: Opensans-Bold;
-  -webkit-transition: all 0.2s;
-  transition: all 0.2s;
+    color: var(--color-primary);
+    font-size: var(--text-3xl);
+    line-height: var(--leading-tight);
+    font-weight: var(--font-black);
+    transition: all var(--transition-base);
 }
+
 .single-package:hover p {
-  color: rgba(13, 156, 83, 1);
+    color: var(--color-secondary);
 }
+
 .single-package p sup {
-  font-size: 0.875rem;
+    font-size: var(--text-base);
 }
+
 .single-package p span {
-  display: block;
-  font-size: 0.75rem;
-  color: #979797;
-  text-transform: uppercase;
-  font-family: "Source Sans Pro", sans-serif;
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--color-neutral-500);
+    text-transform: uppercase;
 }
