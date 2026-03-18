@@ -1,0 +1,1072 @@
+<main id="main" style="padding-top: 60px;">
+        <section class="shadow-sm">
+            <div class="container">
+                <div class="row p-2 pt-5 ">
+                    <div class="col-sm-6 p-3 ">
+                        <h3> <img src="{{ asset('public/assets/img/pp.png') }}" class="image-fluid wd-25" alt="protocol"> Airport Protocol Service </h3>
+                    </div>
+                </div> 
+                <div class="row airport-form shadow p-4 mb-5">
+                    <div class="col-sm-5 mb-3">
+                        <div class="bg-light p-3 shadow-sm protocol"  >
+                            <p style="color: rgba(13, 156, 83, 1);"> <b>Benefits of Our Protocol Services for All Nigeria Airports</b> </p>
+                            <ul class="list-unstyled"  >
+                                    <li> <i class="fa fa-check"></i> Meet and Greet.</li>
+                                    <li><i class="fa fa-check"></i> Exclusive Baggage Handling. </li>
+                                    <li><i class="fa fa-check"></i> No Queue.</li>
+                                    <li><i class="fa fa-check"></i> Fast-tracking Check-in Process.</li>
+                                    <li><i class="fa fa-check"></i> Stress free Check-in Process.</li>
+                                    <li><i class="fa fa-check"></i> Escort through Boarding Gate. </li> 
+                                    <li><i class="fa fa-check"></i> Escort to the Arrival Lobby. </li> 
+                                    <li><i class="fa fa-check"></i> Cordinate Passenger to their Pre-arranged Transportation. </li>
+                                    <li><i class="fa fa-check"></i> Other relevant Airport Protocol Service as case may be.</li>
+                                    <li><i class="fa fa-angle-right" style="font-size:24px;"></i> Pick-up Request (Optional)</li>
+                                    <li><i class="fa fa-angle-right" style="font-size:24px;"></i> Drop-off Request (Optional)</li>
+                                    <li><i class="fa fa-angle-right" style="font-size:24px;"></i> Police Escort Request (Optional)</li>
+                                </ul>
+                            <h6>
+                                NB: <span > 
+                                        <b style="color:red;">A Protocol Boarding Pass will be generated after a Succefful transaction. It expires after Departure / Arrival date.</b>
+                                    </span>
+                            </h6>
+                        </div>
+                    </div>
+                    <input type="hidden" id="airport3" value="{{$data['airport']}}">
+                    @if($data['airport'] === "International Airport")
+                    <div class="col-sm-7" id="international">
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0" style="color: rgba(13, 156, 83, 1);">Flight Details</h6>
+                                <small class="text-muted float-end">FIll in details</small>
+                            </div>
+                            <div class="card-body">
+                                <form id="myForm" action="{{ route('air.protocol_checkout')}}" method="POST">
+                                    {{ csrf_field() }}
+                                    <div class="row">
+                                        <input type="hidden" value="{{ request('plan') }}" name="plan" id="plan">
+                                        <!-- <input type="hidden" id="selectedAmount" name="amount" value="10000"> -->
+                                        <input type="hidden" id="selectedAmount" name="amount"  >
+                                        <p id="demo"></p>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">Location</label>
+                                                <input type="text" name="" class="form-control" value="{{$data['location']}}" readonly/>
+                                                <input type="hidden" name="location" class="form-control" value="{{$data['location']}}" />
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                            <label class="form-label" for="firstname">Airport</label>
+                                                <input type="text" name="" class="form-control" value="{{$data['airport']}}" readonly/>
+                                                <input type="hidden" name="airport"  class="form-control" value="{{$data['airport']}}" />
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">Travel Date</label>
+                                                <input class="form-control" type="date" name="travel_date"  id="html5-date-input" value="{{Session::get('travel_date')}}" required/>
+                                                
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">{{$data['service']}} Time</label>
+                                                <input type="time" name="d_time" class="form-control" required/>
+                                                <input type="hidden" name="service" value="{{$data['service']}}" id="service">
+                                                <input type="hidden" value="{{$data['service']}}" id="serviceI">
+
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-sm-6" id="airline1">
+                                            <div class="mb-3"> 
+                                                <label class="form-label">Select Airline</label>
+                                                <div class="input-group input-group-merge">
+                                                    <select class="form-select" id="airlineselect1" name="airline" required>
+                                                        <option value="">-- Choose Airline --</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-sm-6 hidden" id="other1">
+                                            <div class="mb-3">
+                                                <label class="form-label">Other Airline</label>
+                                                <input type="text" class="form-control" name="other" placeholder="Enter Airline Name">
+                                            </div>
+                                        </div>
+                                        <script>
+                                            document.addEventListener("DOMContentLoaded", function () {
+                                                const location = @json($data['location']);
+                                                const airport = @json($data['airport']);
+                                                const select = document.getElementById("airlineselect1");
+                                                const otherField = document.getElementById("other1");
+
+                                                // ✈️ Airline mapping per international airport
+                                                const airlineMap = {
+                                                    "Lagos": [
+                                                        "BRITISH AIRWAYS", "QATAR AIRWAYS", "EMIRATES", "LUFTHANSA",
+                                                        "TURKISH AIRLINES", "DELTA AIRLINES", "VIRGIN ATLANTIC",
+                                                        "ETHIOPIAN AIRLINES", "KENYA AIRWAYS", "AIR PEACE", "ASKY AIRLINES",
+                                                        "AIR FRANCE", "KLM", "EGYPT AIR", "ROYAL AIR MAROC", "QATAR AIRWAYS",
+                                                        "TAAG ANGOLA", "SOUTH AFRICA AIRWAYS", "UNITED AIRLINES", "RWANDAIR"
+                                                    ],
+                                                    "Abuja": [
+                                                        "BRITISH AIRWAYS", "LUFTHANSA", "ETHIOPIAN AIRLINES", "KLM",
+                                                        "EMIRATES", "QATAR AIRWAYS", "TURKISH AIRLINES", "AIR FRANCE",
+                                                         "AIR PEACE", "ASKY AIRLINES", "ROYAL AIR MAROC",
+                                                        "UNITED AIRLINES", "VIRGIN ATLANTIC", "DELTA AIRLINES"
+                                                    ],
+                                                    "Kano": [
+                                                        "ETHIOPIAN AIRLINES"
+                                                    ],
+                                                    "Enugu": [
+                                                        "ETHIOPIAN AIRLINES"
+                                                    ],
+                                                    "Rivers": [
+                                                        "QATAR AIRWAYS", "TURKISH AIRLINES", "LUFTHANSA",
+                                                    ]
+                                                };
+
+                                                const airlines = airlineMap[location] || [];
+
+                                                // Populate dropdown
+                                                airlines.forEach(airline => {
+                                                    const option = document.createElement("option");
+                                                    option.value = airline;
+                                                    option.textContent = airline;
+                                                    select.appendChild(option);
+                                                });
+
+                                                // Add "OTHERS" option at the end
+                                                const othersOption = document.createElement("option");
+                                                othersOption.value = "OTHERS";
+                                                othersOption.textContent = "OTHERS";
+                                                select.appendChild(othersOption);
+
+                                                // Show text field if "OTHERS" selected
+                                                select.addEventListener("change", function() {
+                                                    if (this.value === "OTHERS") {
+                                                        otherField.classList.remove("hidden");
+                                                    } else {
+                                                        otherField.classList.add("hidden");
+                                                    }
+                                                });
+                                            });
+                                            </script>
+                                        
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="nop">No. Of Person(s)</label>
+                                                <div class="input-group input-group-merge">
+                                                <span id="fullname" class="input-group-text"><i class="fa fa-user"></i></span>
+                                                <input type="number" class="form-control" name="nop" id="numberInput" value="0" aria-describedby="basic-icon-default-fullname2" required>
+                                                <small id="nop-error" style="color: red; display: none;">Please enter a number greater than zero.</small>
+                                                
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">Phone Number</label>
+                                                <div class="input-group input-group-merge">
+                                                    <div class="input-group-prepend">
+                                                        <select class="form-select" id="country_code" name="country_code" style="width: 90px;">
+                                                            <option value="+93">+93 (Afghanistan)</option>
+                                                            <option value="+355">+355 (Albania)</option>
+                                                            <option value="+213"> the rest of the selection code</option>
+
+                                                        </select>
+                                                    </div>
+                                                    <input type="number" class="form-control" name="phone_no" id="phone_no" placeholder=" Your phone number" aria-describedby="basic-icon-default-fullname2" minlength="10" maxlength="10" required/>
+                                                    <small id="phone-error" style="color: red; display: none;">Phone number must be exactly 10 digits long.</small>
+                                                
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">Email Address</label>
+                                                <div class="input-group input-group-merge">
+                                                    <span id="fullname" class="input-group-text"><i class="fa fa-envelope"></i></span>
+                                                    <input type="email" class="form-control" name="email" id="firstname" placeholder="Email Address"
+                                                    aria-describedby="basic-icon-default-fullname2" required/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    
+                                        <div class="col-sm-6 hidden" id="arrival_I">
+                                            <div class="mb-3">
+                                                <!-- <label class="form-label" for="firstname">Optional Service</label> -->
+                                                <div class="input-group input-group-merge">
+                                                    <select id="my-selectA"  class="form-select" name="optinal_requestA" aria-label="Default select example">
+                                                        <option value="">-- Optional Request --</option>
+                                                        <option value="Drop-off">Drop-off Request </option>
+                                                        <option value="Police Escort">Police Escort Request</option>
+                                                        <option value="Drop-off & Escort">Drop-off & Escort </option>
+                                                    </select>
+                                                </div>
+                                                <div class="d-none" id="vehicleTypeA">
+                                                    <div class="card p-2">
+                                                        <div class="selectable p-1" onclick="selectVehicleA(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">Saloon Comfort</strong></small><br>
+                                                                    <small>Up to 3 <i class="fa fa-users"></i>Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('public/assets/image/saloon.jpg') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="selectable p-1" onclick="selectVehicleA(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">SUV Business</strong></small><br>
+                                                                    <small>Up to 3 <i class="fa fa-users"></i> Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('public/assets/image/suv.jpg') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="selectable p-1" onclick="selectVehicleA(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">Mini Van</strong></small><br>
+                                                                    <small>Up to 5 <i class="fa fa-users"></i>Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('public/assets/image/minivan.png') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <script>
+                                                    document.getElementById('my-selectA').addEventListener('change', function() {
+                                                        const vehicleTypeA = document.getElementById('vehicleTypeA');
+                                                        const optionalA = document.getElementById('optionalA');
+                                                        const optionalPriceA = document.getElementById('optionalPriceA');
+                                                        const selectedValueA = this.value;
+                                                        
+                                                        if (selectedValueA === 'Drop-off') {
+                                                            vehicleTypeA.classList.remove('d-none');
+
+                                                        } else {
+                                                            vehicleTypeA.classList.add('d-none');
+                                                            optionalA.classList.add('d-none');
+                                                            optionalPriceA.value = null;
+                                                        }
+                                                        
+                                                    });
+                                                </script>
+                                                <small style="color:red">Optional request if applicable.</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6 hidden" id="departure_I" >
+                                            <div class="mb-3">
+                                                <!-- <label class="form-label" for="firstname">Optional Service</label> -->
+                                                <div class="input-group input-group-merge">
+                                                    <select id="my-selectD" class="form-select" name="optinal_requestD" aria-label="Default select example">
+                                                        <option value="">-- Optional Request --</option>
+                                                        <option value="Pick-up">Pick-up Request </option>
+                                                        <option value="Police Escort">Police Escort Request</option>
+                                                        <option value="Pick-up & Escort">Pick-up & Escort </option>
+                                                    </select>
+                                                </div>
+                                                <div class="d-none" id="vehicleTypeD">
+                                                    <div class="card p-2">
+                                                        <div class="selectable p-1" onclick="selectVehicleD(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">Saloon Comfort</strong></small><br>
+                                                                    <small>Up to 3 <i class="fa fa-users"></i>Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('assets/image/saloon.jpg') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="selectable p-1" onclick="selectVehicleD(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">SUV Business</strong></small><br>
+                                                                    <small>Up to 3 <i class="fa fa-users"></i> Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('assets/image/suv.jpg') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="selectable p-1" onclick="selectVehicleD(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">Mini Van</strong></small><br>
+                                                                    <small>Up to 5 <i class="fa fa-users"></i>Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('assets/image/minivan.png') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <script>
+                                                    document.getElementById('my-selectD').addEventListener('change', function() {
+                                                        const vehicleTypeD = document.getElementById('vehicleTypeD');
+                                                        const optionalD = document.getElementById('optionalD');
+                                                        const optionalPriceD = document.getElementById('optionalPriceD');
+                                                        const selectedValueD = this.value;
+                                                        
+                                                        if (selectedValueD === 'Pick-up') {
+                                                            vehicleTypeD.classList.remove('d-none');
+
+                                                        } else {
+                                                            vehicleTypeD.classList.add('d-none');
+                                                            optionalD.classList.add('d-none');
+                                                            optionalPriceD.value = null;
+                                                        }
+                                                        
+                                                    });
+                                                </script>
+                                                <small style="color:red">Optional request if applicable.</small>
+                                            </div>
+                                        </div>
+                                            <div class="col-sm-6 optional-display d-none" id="optionalA"></div>
+                                            <input type="hidden" name="optionalPriceA" id="optionalPriceA">
+                                       
+                                            <div class="col-sm-6 optional-display d-none" id="optionalD"></div>
+                                            <input type="hidden" name="optionalPriceD" id="optionalPriceD">
+                                        <script>
+                                            function selectVehicleA(element) {
+                                                // Remove selected class from all selectable elements
+                                                const selectables = document.querySelectorAll('.selectable');
+                                                selectables.forEach(selectable => {
+                                                    selectable.classList.remove('selected');
+                                                });
+                                                // Add selected class to the clicked element
+                                                element.classList.add('selected');
+                                                const vehicleTypeA = document.getElementById('vehicleTypeA');
+                                                vehicleTypeA.classList.add('d-none');
+                                                // Get the selected vehicle details
+                                                const vehicleDetailsA = element.innerHTML;
+                                                const priceTextA = element.querySelector('small:last-of-type').innerText;
+                                                // Create input box for the price
+                                                const priceInputA = document.getElementById('optionalPriceA');
+                                                priceInputA.value = (priceTextA);
+                                                // Update the optional div with vehicle details and price input
+                                                const optionalDivA = document.getElementById('optionalA');
+                                                optionalDivA.classList.remove('d-none');
+                                                optionalDivA.innerHTML = vehicleDetailsA; // Copy innerHTML of selected element and add input
+                                            }
+                                        </script>
+                                        <script>
+                                            function selectVehicleD(element) {
+                                                // Remove selected class from all selectable elements
+                                                const selectables = document.querySelectorAll('.selectable');
+                                                selectables.forEach(selectable => {
+                                                    selectable.classList.remove('selected');
+                                                });
+                                                // Add selected class to the clicked element
+                                                element.classList.add('selected');
+                                                const vehicleTypeD = document.getElementById('vehicleTypeD');
+                                                vehicleTypeD.classList.add('d-none');
+                                                // Get the selected vehicle details
+                                                const vehicleDetailsD = element.innerHTML;
+                                                const priceTextD = element.querySelector('small:last-of-type').innerText;
+                                                // Create input box for the price
+                                                const priceInputD = document.getElementById('optionalPriceD');
+                                                priceInputD.value = priceTextD;
+                                                // Update the optional div with vehicle details and price input
+                                                const optionalDivD = document.getElementById('optionalD');
+                                                optionalDivD.classList.remove('d-none');
+                                                optionalDivD.innerHTML = vehicleDetailsD; // Copy innerHTML of selected element and add input                                                
+                                            }
+                                        </script>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                            <input class="form-check-input" type="checkbox" name="terms" value="" id="defaultCheck1" required/>
+                                                <label class="form-check-label" for="defaultCheck1">I agreed to Terms & Services.</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12 text-center">
+                                            <p>Amount: NGN <span id="textValue">0</span> </p>
+                                            <input type="hidden" id="amountpriceI" value="{{$price}}">
+                                        </div>
+                                    </div>
+                                    <center> <input type="submit" class="btn btn-pry" value="Book Service" /></center>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    @elseif($data['airport'] === "Local Airport")
+                    <div class="col-sm-7 " id="local">       
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0" style="color: rgba(13, 156, 83, 1);">Flight Details</h6>
+                                <small class="text-muted float-end">FIll in details</small>
+                            </div>
+                            <div class="card-body">
+                                <form id="myFormL" action="{{ route('air.protocol_checkout')}}" method="POST">
+                                    {{ csrf_field() }}
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">Location</label>
+                                                <input type="text" name="" class="form-control" value="{{$data['location']}}" readonly/>
+                                                <input type="hidden" name="location" id="location"    class="form-control" value="{{$data['location']}}" />
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">Airport</label>
+                                                <input type="text" name="" class="form-control" value="{{$data['airport']}}" readonly/>
+                                                <input type="hidden" name="airport" id="airport" class="form-control" value="{{$data['airport']}}" />
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">Travel Date</label>
+                                                <input class="form-control" type="date" name="travel_date"  id="html5-date-input" value="{{Session::get('travel_date')}}" required/>                                               
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">{{$data['service']}} Time</label>
+                                                <input type="time" name="d_time" class="form-control" required/>
+                                                <input type="hidden" id="service" name="service" value="{{$data['service']}}">
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6" id="airline" >
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">Select Airline</label>
+                                                <div class="input-group input-group-merge">
+                                                    <select class="form-select" id="airlineselect2"  name="airline" aria-label="Default select example" required>
+                                                                              
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6 hidden" id="other2" >
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">Other Airline</label>
+                                                <div class="input-group input-group-merge">
+                                                    <input type="text" class="form-control" name="other" value="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <script>
+                                            document.addEventListener("DOMContentLoaded", function () {
+                                                const location = document.getElementById("location").value.trim();  
+                                                const airlineSelect = document.getElementById("airlineselect2");
+                                                const otherDiv = document.getElementById("other2");
+
+                                                console.log("Location value detected:", location); // Debug line
+
+                                                // Define airlines for each location (local airports)
+                                                const localAirlinesByLocation = {
+                                                    "Lagos": ["Air Peace", "Arik", "Ibom Air", "Value Jet", "Overland Airways", "United Nigeria Airlines", "MAx Air", "XEjet", "Aero Contractor", "Green Africa", "Rano Air", "Umza Air"],
+                                                    "Abuja": ["Air Peace", "Arik", "Ibom Air", "Value Jet", "Overland Airways", "United Nigeria Airlines", "MAx Air", "XEjet", "Aero Contractor", "Green Africa", "Rano Air", "Umza Air"],
+                                                    "Enugu": ["Ibom Air", "United Nigeria Airlines", "XEjet"],
+                                                    "Rivers": ["Air Peace", "Arik", "Aero Contractor", "Ibom Air", "United Nigeria Airlines", "Value Jet", "Umza Air"],
+                                                    "Kano ": ["Air Peace", "Rano Air", "Value Jet", "Umza Air"],
+                                                    "Delta Asaba": ["Air Peace", "Arik", "Aero Contractor", "United Nigeria Airlines"],
+                                                    "Imo": ["Air Peace", "United Nigeria Airlines", "XEjet"],
+                                                    "Oyo": ["Overland Airways"],
+                                                    "Kwara": ["Overland Airways"],
+                                                    "Anambra": ["Air Peace", "United Nigeria Airlines"],
+                                                    "Delta Warri": ["Air Peace", "Arik", "Aero Contractor"],
+                                                    "Edo": ["Air Peace", "Arik", "Aero Contractor", "United Nigeria Airlines"],
+                                                    "Gombe": ["Air Peace"],
+                                                    "Borno": ["Air Peace", "Umza Air", "Rano Air"],
+                                                    "Adamawa": ["Air Peace", "Umza Air"],
+                                                    "Sokoto": ["Umza Air", "Rano Air"],
+                                                    "Kaduna": ["Rano Air"],
+                                                    "Cross River": ["Ibom Air", "Value Jet"]
+                                                };
+
+                                                // Normalize & find match
+                                                const locationKey = Object.keys(localAirlinesByLocation).find(
+                                                    key => key.toLowerCase() === location.toLowerCase()
+                                                );
+
+                                                // Reset dropdown
+                                                airlineSelect.innerHTML = '<option value="">-- Choose Airline --</option>';
+
+                                                // Populate airline options if found
+                                                if (locationKey) {
+                                                    localAirlinesByLocation[locationKey].forEach(function (airline) {
+                                                        const option = document.createElement("option");
+                                                        option.value = airline.toUpperCase();
+                                                        option.text = airline;
+                                                        airlineSelect.appendChild(option);
+                                                    });
+                                                }
+
+                                                // Always add "OTHERS"
+                                                const otherOption = document.createElement("option");
+                                                otherOption.value = "OTHERS";
+                                                otherOption.text = "OTHERS";
+                                                airlineSelect.appendChild(otherOption);
+
+                                                // Show/hide "Other Airline" input based on selection
+                                                airlineSelect.addEventListener("change", function () {
+                                                    if (this.value === "OTHERS") {
+                                                        otherDiv.classList.remove("hidden");
+                                                    } else {
+                                                        otherDiv.classList.add("hidden");
+                                                    }
+                                                });
+                                            });
+                                        </script>
+
+
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="nop">No. Of Person(s)</label>
+                                                <div class="input-group input-group-merge">
+                                                    <span id="fullname" class="input-group-text"><i class="fa fa-user"></i></span>
+                                                    <input type="number" class="form-control" name="nop" id="numberInputL" value="0" aria-describedby="basic-icon-default-fullname2" required>
+                                                    <small id="nop-errorL" style="color: red; display: none;">Please enter a number greater than zero.</small>
+                                                </div>
+                                            
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">Phone Number</label>
+                                                <div class="input-group input-group-merge">
+                                                    <div class="input-group-prepend">
+                                                        <select class="form-select" id="country_code" name="country_code" style="width: 90px;">
+                                                            <option value="+93">+93 (Afghanistan)</option>
+                                                            <option value="+355">+355 (Albania)</option>
+                                                            <option value="+213">the rest of the selection code</option>
+
+                                                        </select>
+                                                    </div>
+                                                    <input type="number" class="form-control" name="phone_no" id="phone_no" placeholder="Your phone number" aria-describedby="basic-icon-default-fullname2" minlength="10" maxlength="10" required/>
+                                                    <small id="phone-error" style="color: red; display: none;">Phone number must be exactly 10 digits long.</small>
+                                                
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                                <label class="form-label" for="firstname">Email Address</label>
+                                                <div class="input-group input-group-merge">
+                                                    <span id="fullname" class="input-group-text"><i class="fa fa-envelope"></i></span>
+                                                    <input type="email" class="form-control" name="email" id="firstname" placeholder="Email Address"
+                                                    aria-describedby="basic-icon-default-fullname2" required/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- <input type="hidden" id="selectedAmount" name="amount" value=""> -->
+                                        <input type="hidden" id="selectedAmountL" name="amount"  >
+                                        <input type="hidden"  name="plan" id="planL" value="{{ request('plan') }}">
+                                        
+                                        <div class="col-sm-6 hidden" id="departure_L">
+                                            <div class="mb-3">
+                                                <!-- <label class="form-label" for="firstname">Optional Service</label> -->
+                                                <div class="input-group input-group-merge">
+                                                    <select  id="my-selectD2"  class="form-select" name="optinal_requestD2" aria-label="Default select example">
+                                                        <option value="">-- Optional Request --</option>
+                                                        <option value="Pick-up">Pick-up Request </option>
+                                                        <option value="Police-escot">Police Escort Request</option>
+                                                        <option value="Pick-up">Pick-up $ Escort Request </option>
+                                                    </select>
+                                                </div>
+                                                <div class="d-none" id="vehicleTypeD2">
+                                                    <div class="card p-2">
+                                                        <div class="selectable p-1" onclick="selectVehicleD2(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">Saloon Comfort</strong></small><br>
+                                                                    <small>Up to 3 <i class="fa fa-users"></i>Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('assets/image/saloon.jpg') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="selectable p-1" onclick="selectVehicleD2(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">SUV Business</strong></small><br>
+                                                                    <small>Up to 3 <i class="fa fa-users"></i> Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('assets/image/suv.jpg') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="selectable p-1" onclick="selectVehicleD2(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">Mini Van</strong></small><br>
+                                                                    <small>Up to 5 <i class="fa fa-users"></i>Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('assets/image/minivan.png') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <script>
+                                                    document.getElementById('my-selectD2').addEventListener('change', function() {
+                                                        const vehicleTypeD2 = document.getElementById('vehicleTypeD2');
+                                                        const optionalD2 = document.getElementById('optionalD2');
+                                                        const optionalPriceD2 = document.getElementById('optionalPriceD2');
+                                                        const selectedValueD2 = this.value;
+                                                        
+                                                        if (selectedValueD2 === 'Pick-up') {
+                                                            vehicleTypeD2.classList.remove('d-none');
+
+                                                        } else {
+                                                            vehicleTypeD2.classList.add('d-none');
+                                                            optionalD2.classList.add('d-none');
+                                                            optionalPriceD2.value = null;
+                                                        }
+                                                    });
+                                                </script>
+                                                <small style="color:red">Optional request if applicable.</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6 optional-display d-none" id="optionalD2"></div>
+                                        <input type="hidden" name="optionalPriceD2" id="optionalPriceD2">
+                                        <script>
+                                            function selectVehicleD2(element) {
+                                                // Remove selected class from all selectable elements
+                                                const selectables = document.querySelectorAll('.selectable');
+                                                selectables.forEach(selectable => {
+                                                    selectable.classList.remove('selected');
+                                                });
+                                                // Add selected class to the clicked element
+                                                element.classList.add('selected');
+                                                const vehicleTypeD2 = document.getElementById('vehicleTypeD2');
+                                                vehicleTypeD2.classList.add('d-none');
+                                                // Get the selected vehicle details
+                                                const vehicleDetailsD2 = element.innerHTML;
+                                                const priceTextD2 = element.querySelector('small:last-of-type').innerText;
+                                                // Create input box for the price
+                                                const priceInputD2 = document.getElementById('optionalPriceD2');
+                                                priceInputD2.value = priceTextD2;
+                                                // Update the optional div with vehicle details and price input
+                                                const optionalDivD2 = document.getElementById('optionalD2');
+                                                optionalDivD2.classList.remove('d-none');
+                                                optionalDivD2.innerHTML = vehicleDetailsD2; // Copy innerHTML of selected element and add input                                                
+                                            }
+                                        </script>
+                                        
+                                        <div class="col-sm-6 hidden" id="arrival_L">
+                                            <div class="mb-3">
+                                                <!-- <label class="form-label" for="firstname">Optional Service</label> -->
+                                                <div class="input-group input-group-merge">
+                                                    <select id="my-selectA2"  class="form-select" name="optinal_requestA2" aria-label="Default select example">
+                                                        <option value="">-- Optional Request --</option>
+                                                        <option value="Drop-off">Drop-off Request </option>
+                                                        <option value="Police Escort">Police Escort Request</option>
+                                                        <option value="Drop-off & Escort">Drop-off & Escort </option>
+                                                    </select>
+                                                </div>
+                                                <div class="d-none" id="vehicleTypeA2">
+                                                    <div class="card p-2">
+                                                        <div class="selectable p-1" onclick="selectVehicleA2(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">Saloon Comfort</strong></small><br>
+                                                                    <small>Up to 3 <i class="fa fa-users"></i>Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('assets/image/saloon.jpg') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="selectable p-1" onclick="selectVehicleA2(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">SUV Business</strong></small><br>
+                                                                    <small>Up to 3 <i class="fa fa-users"></i> Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('assets/image/suv.jpg') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="selectable p-1" onclick="selectVehicleA2(this)">
+                                                            <div class="row">
+                                                                <div class="col-7">
+                                                                    <small><strong class="text-muted">Mini Van</strong></small><br>
+                                                                    <small>Up to 5 <i class="fa fa-users"></i>Seaters </small>
+                                                                </div>
+                                                                <div class="col-5 text-end">
+                                                                    <img src="{{ asset('assets/image/minivan.png') }}" class="image-fluid w-100" alt="Saloon">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <script>
+                                                    document.getElementById('my-selectA2').addEventListener('change', function() {
+                                                        const vehicleTypeA2 = document.getElementById('vehicleTypeA2');
+                                                        const optionalA2 = document.getElementById('optionalA2');
+                                                        const optionalPriceA2 = document.getElementById('optionalPriceA2');
+                                                        const selectedValueA2 = this.value;
+                                                        
+                                                        if (selectedValueA2 === 'Drop-off') {
+                                                            vehicleTypeA2.classList.remove('d-none');
+
+                                                        } else {
+                                                            vehicleTypeA2.classList.add('d-none');
+                                                            optionalA2.classList.add('d-none');
+                                                            optionalPriceA2.value = null;
+                                                        }
+                                                        
+                                                    });
+                                                </script>
+                                                <small style="color:red">Optional request if applicable.</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-6 optional-display d-none" id="optionalA2"></div>
+                                        <input type="hidden" name="optionalPriceA2" id="optionalPriceA2"> 
+                                        <script>
+                                            function selectVehicleA2(element) {
+                                                // Remove selected class from all selectable elements
+                                                const selectables = document.querySelectorAll('.selectable');
+                                                selectables.forEach(selectable => {
+                                                    selectable.classList.remove('selected');
+                                                });
+                                                // Add selected class to the clicked element
+                                                element.classList.add('selected');
+                                                const vehicleTypeA2 = document.getElementById('vehicleTypeA2');
+                                                vehicleTypeA2.classList.add('d-none');
+                                                // Get the selected vehicle details
+                                                const vehicleDetailsA2 = element.innerHTML;
+                                                const priceTextA2 = element.querySelector('small:last-of-type').innerText;
+                                                // Create input box for the price
+                                                const priceInputA2 = document.getElementById('optionalPriceA2');
+                                                priceInputA2.value = (priceTextA2);
+                                                // Update the optional div with vehicle details and price input
+                                                const optionalDivA2 = document.getElementById('optionalA2');
+                                                optionalDivA2.classList.remove('d-none');
+                                                optionalDivA2.innerHTML = vehicleDetailsA2; // Copy innerHTML of selected element and add input
+                                            }
+                                        </script>
+                                        
+                                        <div class="col-sm-6">
+                                            <div class="mb-3">
+                                            <input class="form-check-input" type="checkbox" name="terms" value="" id="defaultCheck1" required/>
+                                                <label class="form-check-label" for="defaultCheck1">I agreed to Terms & Services.</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12 text-center">
+                                            <p>Amount: NGN <span id="textValueL">0</span> </p>
+                                            <input type="hidden" id="amountprice" value="{{$price}}">
+                                        </div>
+                                    </div>
+                                    <center> <input type="submit" class="btn btn-pry" value="Proceed" /></center>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+                </div>
+            </div>
+        </section>
+        <script>
+            var airport = document.getElementById("airport");
+            var airline1 = document.getElementById("international");
+            var airline2 = document.getElementById("local");
+                if (airport.value === "International Airport") {
+                    international.style.display = "block";
+                    local.style.display = "none";
+                }
+                else if (airport.value === "Local Airport") {
+                    international.style.display = "none";
+                    local.style.display = "block";
+                }
+        </script>
+        <script>
+            var service = document.getElementById("service");
+            var arrival = document.getElementById("arrival_I");
+            var departure = document.getElementById("departure_I");
+                if (service.value === "Arrival") {
+                    arrival.style.display = "block";
+                    departure.style.display = "none";
+                }
+                else if (service.value === "Departure") {
+                    arrival.style.display = "none";
+                    departure.style.display = "block";
+                }
+        </script>
+        <script>
+            var serviceL = document.getElementById("service");
+            var arrivalL = document.getElementById("arrival_L");
+            var departureL = document.getElementById("departure_L");
+                if (serviceL.value === "Arrival") {
+                    arrivalL.style.display = "block";
+                    departureL.style.display = "none";
+                }
+                else if (service.value === "Departure") {
+                    arrivalL.style.display = "none";
+                    departureL.style.display = "block";
+                }
+        </script>
+        <script>
+                var airlineselect1 = document.getElementById("airlineselect1");
+                var other1 = document.getElementById("other1");
+
+                airlineselect1.addEventListener("change", function() {
+                    if (airlineselect1.value === "OTHERS") {
+                        other1.style.display = "block";
+                    }
+                    else {
+                        other1.style.display = "none";
+                    }
+                })
+        </script>
+        <script>
+                var airlineselect2 = document.getElementById("airlineselect2");
+                var other2 = document.getElementById("other2");
+                airlineselect2.addEventListener("change", function() {
+                    if (airlineselect2.value === "OTHERS") {
+                        other2.style.display = "block";
+                    }
+                    else {
+                        other2.style.display = "none";
+                    }
+
+                })
+        </script>
+        <script>
+            const numberInput = document.getElementById('numberInput');
+            let textValue = document.getElementById('textValue');
+            const selectedAmount = document.getElementById('selectedAmount');
+            
+            let plan = document.getElementById('plan').value;
+            let serviceI = document.getElementById('serviceI').value;
+            let amountPriceI = document.getElementById('amountpriceI').value;
+
+
+            // let plan = document.getElementById('plan').value;
+            let price = amountPriceI; // Initialize price
+
+            numberInput.addEventListener('input', function() {
+                let currentValue = parseInt(numberInput.value);
+                let totalAmount = price * currentValue;
+                
+                textValue.textContent = totalAmount.toLocaleString('en-US');
+                selectedAmount.value = totalAmount;
+            });
+        </script> 
+        <script>
+            const numberInputL = document.getElementById('numberInputL');
+            let textValueL = document.getElementById('textValueL');
+            const selectedAmountL = document.getElementById('selectedAmountL');
+            let amountPrice = document.getElementById('amountprice').value;
+            
+            let planL = document.getElementById('planL').value;
+            let priceL = amountPrice; // Set the price for the "Regular" plan       
+
+            numberInputL.addEventListener('input', function() {
+                let currentValueL = parseInt(numberInputL.value);
+                let totalAmountL = priceL * currentValueL;
+                
+                
+                textValueL.textContent = totalAmountL.toLocaleString('en-US');
+                selectedAmountL.value = totalAmountL;
+            });
+        </script>
+        <script>
+            document.getElementById('myForm').addEventListener('submit', function(event) {
+                const phoneInput = document.getElementById('phone_no');
+                const phoneError = document.getElementById('phone-error');
+                const phoneNumber = phoneInput.value;
+
+                if (phoneNumber.length !== 10) {
+                    phoneError.style.display = 'inline'; // Show the error message
+                    event.preventDefault(); // Prevent form submission
+                } else {
+                    phoneError.style.display = 'none'; // Hide the error message
+                }
+                
+                const nop = parseInt(document.getElementById('numberInput').value);
+                const nopError = document.getElementById('nop-error');
+                if (isNaN(nop) || nop <= 0) {
+                    nopError.style.display = 'inline'; // Show the error message
+                    event.preventDefault(); // Prevent form submission
+                } else {
+                    nopError.style.display = 'none'; // Hide the error message
+                }
+
+                const nopL = parseInt(document.getElementById('numberInputL').value);
+                const nopErrorL = document.getElementById('nop-errorL');
+                if (isNaN(nopL) || nopL <= 0) {
+                    nopErrorL.style.display = 'inline'; // Show the error message
+                    event.preventDefault(); // Prevent form submission
+                } else {
+                    nopErrorL.style.display = 'none'; // Hide the error message
+                }
+                
+            });
+        </script>
+        <script>
+            document.getElementById('myFormL').addEventListener('submit', function(event) {
+                const phoneInput = document.getElementById('phone_no');
+                const phoneError = document.getElementById('phone-error');
+                const phoneNumber = phoneInput.value;
+
+                if (phoneNumber.length !== 10) {
+                    phoneError.style.display = 'inline'; // Show the error message
+                    event.preventDefault(); // Prevent form submission
+                } else {
+                    phoneError.style.display = 'none'; // Hide the error message
+                }
+                
+                const nop = parseInt(document.getElementById('numberInputL').value);
+                const nopError = document.getElementById('nop-errorL');
+                if (isNaN(nop) || nop <= 0) {
+                    nopError.style.display = 'inline'; // Show the error message
+                    event.preventDefault(); // Prevent form submission
+                } else {
+                    nopError.style.display = 'none'; // Hide the error message
+                }
+                
+            });
+        </script>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script> 
+    </main>
+
+
+    @include('admin.layouts.nav')
+<!-- Content wrapper -->
+<div class="content-wrapper">
+<div class="container-xxl flex-grow-1 container-p-y">
+
+
+
+</div>
+</div>
+
+</div>
+
+
+
+    <!-- RIGHT SIDE INFO -->
+    <div class="col-md-6">
+
+    <div class="card">
+    <div class="card-header">
+        <h6>Protocol Service Benefits</h6>
+    </div>
+
+    <div class="card-body">
+
+    <p style="color:#0d9c53;">
+    <b>The benefits of our Protocol Services depends on the package you selected</b>
+    </p>
+    
+    <small class="text-muted">List of Our Services</small>
+    
+    <ul class="list-unstyled mt-2">
+    
+        <li><i class="bx bx-check"></i> Meet and Greet</li>
+        <li><i class="bx bx-check"></i> Exclusive Baggage Handling</li>
+        <li><i class="bx bx-check"></i> No Queue</li>
+        <li><i class="bx bx-check"></i> Fast-tracking Check-in</li>
+        <li><i class="bx bx-check"></i> Stress Free Check-in</li>
+        <li><i class="bx bx-check"></i> Escort to Arrival Lobby</li>
+        <li><i class="bx bx-check"></i> Passenger coordination</li>
+        <li><i class="bx bx-check"></i> Other relevant Airport services</li>
+        
+        <li class="mt-2"><i class="bx bx-right-arrow-alt"></i> Pick-up Request (Optional)</li>
+        <li><i class="bx bx-right-arrow-alt"></i> Drop-off Request (Optional)</li>
+        <li><i class="bx bx-right-arrow-alt"></i> Police Escort Request (Optional)</li>
+    
+    </ul>
+    
+    <hr>
+
+    <h6>
+    NB:
+    <span style="color:red;">
+    Protocol Boarding Pass will be generated after a successful transaction.
+    </span>
+    </h6>
+
+</div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+</div>
+</div>
+
+
+
+<script>
+
+const stateselect = document.getElementById("stateselect");
+const airportSection = document.getElementById("airportSection");
+const submitSection = document.getElementById("submitSection");
+const airportSelect = document.getElementById("airportSelect");
+const locationInput = document.getElementById("locationInput");
+
+
+const localOnly = [
+"Delta Asaba","Imo","Oyo","Kwara",
+"Anambra","Delta Warri","Edo","Gombe","Borno","Adamawa",
+"Sokoto","Kaduna","Cross River"
+];
+
+
+stateselect.addEventListener("change", function(){
+
+const selected = stateselect.value;
+
+locationInput.value = selected;
+
+if(selected === ""){
+airportSection.classList.add("hidden");
+submitSection.classList.add("hidden");
+airportSelect.innerHTML="";
+return;
+}
+
+airportSection.classList.remove("hidden");
+submitSection.classList.remove("hidden");
+
+airportSelect.innerHTML="";
+
+if(localOnly.includes(selected)){
+
+airportSelect.innerHTML = `
+<option value="Local Airport" selected>Local Airport</option>
+`;
+
+airportSelect.setAttribute("readonly", true);
+
+}else{
+
+airportSelect.innerHTML = `
+<option value="">-- Choose Airport --</option>
+<option value="International Airport">International Airport</option>
+<option value="Local Airport">Local Airport</option>
+`;
+
+airportSelect.removeAttribute("readonly");
+
+}
+
+});
+
+</script>
+          <!-- / Content -->
+    @include('admin.layouts.footer')

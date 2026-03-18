@@ -29,6 +29,10 @@
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <link rel="stylesheet" href="{{ asset('css/styleslide.css') }}">
+
+    
+    <link rel="stylesheet" href="{{ asset('css/flight-widget.css') }}">
+
     
     <style>
         @media (max-width: 650px) {
@@ -74,24 +78,28 @@
             }
         }
     </style>
+
+    
+
     
     @livewireStyles
 </head>
 <body>
-    <!-- Top Navigation Bar -->
-    <livewire:layout.top-nav />
-    
-    <!-- Main Navigation Bar -->
-    <livewire:layout.main-nav />
-    
-    <!-- Main Content -->
-    <main class="navbarmain">
-        {{ $slot }}
-    </main>
-    
-    <!-- Footer -->
-    <livewire:layout.footer />
-    
+    <div>
+        <!-- Top Navigation Bar -->
+        <livewire:layout.top-nav />
+        
+        <!-- Main Navigation Bar -->
+        <livewire:layout.main-nav />
+        
+        <!-- Main Content -->
+        <main class="navbarmain upper-space">
+            {{ $slot }}
+        </main>
+        
+        <!-- Footer -->
+        <livewire:layout.footer />
+    </div> 
     @livewireScripts
     
     <!-- Mobile Menu Toggle Script -->
@@ -110,5 +118,9 @@
             }
         });
     </script>
+
+    
+    <script src="{{ asset('js/flight-widget.js') }}"></script>
+    
 </body>
 </html>

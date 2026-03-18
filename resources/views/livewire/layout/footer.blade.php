@@ -63,14 +63,14 @@
                         <small class="text-white mt-2">Certified By</small>
                         <img src="https://travelwheel.ng/public/assets/img/ncaa.jpg" class="w-16 mt-1" alt="NCAA">
                     </div>
-                </div>
+                </div> 
                 <h4 class="text-white font-bold mb-2">Social Media</h4>
                 <div class="flex space-x-2">
                     <a href="https://www.facebook.com/travelwheelng" class="facebook text-white hover:text-blue-500" target="_blank">
                         <i class="ph-fill ph-facebook-logo p-2"></i>
                     </a>
                     <a href="https://x.com/travelwheelng" class="twitter text-white hover:text-blue-400" target="_blank">
-                        <i class="ph-fill ph-twitter-logo-fill p-2"></i>
+                        <i class="ph-fill ph-x-logo p-2"></i>
                     </a>
                     <a href="https://www.instagram.com/travelwheelng/" class="instagram text-white hover:text-pink-500" target="_blank">
                         <i class="ph-fill ph-instagram-logo p-2"></i>
