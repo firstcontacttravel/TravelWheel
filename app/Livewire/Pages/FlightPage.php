@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Pages;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Http;
 
 use Livewire\Component;
 
@@ -64,31 +66,93 @@ class FlightPage extends Component
         //dd($request->all());
     
         $validated = $request->validate($rules);
-        //dd($validated);
-        /*
-        |--------------------------------------------------
-        | Load JSON response for testing
-        |--------------------------------------------------
-        */
-        if ($request->trip === 'oneway') {
-            $jsonPath = public_path('assets/data/responseOneway.json');
-        } elseif ($request->trip === 'return') {
-            $jsonPath = public_path('assets/data/responseReturn.json');
-        } else {
-            $jsonPath = public_path('assets/data/responseMulticity.json');
+        
+        $originDestination = [];
+        $journeyType = match ($request->trip) {
+            'oneway' => 'OneWay',
+            'return' => 'Return',
+            'multi'  => 'MultiCity',
+            default  => 'OneWay'
+        };
+        $fromCode = Str::between($request->from, '(', ')');
+        $toCode   = Str::between($request->to, '(', ')');  
+
+        // 🟢 ONE WAY
+        if ($validated['trip'] === 'oneway') {
+            $originDestination[] = [
+                "departureDate" => \Carbon\Carbon::createFromFormat('d/m/Y', $validated['depart'])->format('Y-m-d'),
+                "airportOriginCode" => $fromCode,
+                "airportDestinationCode" => $toCode,
+            ];
         }
-    
-        //dd($jsonPath);
-        if (!file_exists($jsonPath)) {
-            return back()->with('error', 'Test flight data not found.');
+
+        // 🟡 RETURN
+        elseif ($validated['trip'] === 'return') {
+            $originDestination[] = [
+                "departureDate" => \Carbon\Carbon::createFromFormat('d/m/Y', $validated['depart'])->format('Y-m-d'),
+                "returnDate" => \Carbon\Carbon::createFromFormat('d/m/Y', $validated['returning'])->format('Y-m-d'),
+                "airportOriginCode" => $fromCode,
+                "airportDestinationCode" => $toCode, 
+            ];
+
+            
+        } 
+
+        // 🔵 MULTI CITY
+        elseif ($validated['trip'] === 'multi') {
+            foreach ($validated['multi_legs'] as $leg) {
+                $fromCode = Str::between($leg['from'], '(', ')');
+                $toCode   = Str::between($leg['to'], '(', ')'); 
+                $originDestination[] = [
+                    "departureDate" => \Carbon\Carbon::createFromFormat('d/m/Y', $leg['depart'])->format('Y-m-d'),
+                    "airportOriginCode" => $fromCode,
+                    "airportDestinationCode" => $toCode,
+                ];
+            }
         }
+
+        
+
+        $payload = [
+            "user_id" => "travelwheel_testAPI",
+            "user_password" => "travelwheelTest@2025",
+            "access" => "Test",
+            "ip_address" => "102.88.115.201",
+
+            "requiredCurrency" => "NGN",
+            "journeyType" => $journeyType,
+
+            "OriginDestinationInfo" => $originDestination,
+
+            "class" => $this->mapCabin($validated['flight_type']),
+            "adults" => (int) $validated['adults'],
+            "childs" => (int) ($validated['childs'] ?? 0),
+            "infants" => (int) ($validated['kids'] ?? 0),
+        ];
+
+        //dd($payload);
+
+        $response = Http::timeout(60)
+        ->post('https://travelnext.works/api/aeroVE5/availability', $payload);
+
+        if ($response->failed()) {
+            return back()->withErrors(['error' => 'Flight API failed']);
+        }
+
+        $data = $response->json();
+        //dd($data);  
+        
     
-        $jsonData = json_decode(file_get_contents($jsonPath), true);
+        $jsonData = $data;
         //dd($jsonData);
     
         $jsonAirlinesPath = public_path('assets/data/airline.json');
         $airlines = collect(json_decode(file_get_contents($jsonAirlinesPath), true))->keyBy('AirLineCode');
     
+
+        $jsonAirportsPath = public_path('assets/data/airportsCode.json');
+        $airports = collect(json_decode(file_get_contents($jsonAirportsPath), true))->keyBy('AirportCode');
+
         $tripType    = $request->trip;
         $searchLegs  = $request->multi_legs ?? [];   // the legs the user searched (for multi-city splitting)
     
@@ -97,19 +161,30 @@ class FlightPage extends Component
         // ──────────────────────────────────────────────────────────────────────────
         // Helper: map a raw OriginDestinationOption array → clean segments array
         // ──────────────────────────────────────────────────────────────────────────
-        $mapSegments = function (array $odo) use ($airlines): array {
-            return collect($odo)->map(function ($seg) use ($airlines) {
+        $mapSegments = function (array $odo) use ($airlines, $airports): array {
+            return collect($odo)->map(function ($seg) use ($airlines, $airports) {
                 $fs          = $seg['FlightSegment'];
                 $dep         = \Carbon\Carbon::parse($fs['DepartureDateTime']);
                 $arr         = \Carbon\Carbon::parse($fs['ArrivalDateTime']);
                 $airlineCode = $fs['MarketingAirlineCode'];
                 $airline     = $airlines->get($airlineCode);
-    
+
+                $fromCode    = $fs['DepartureAirportLocationCode'];
+                $toCode      = $fs['ArrivalAirportLocationCode'];
+                $fromAirport = $airports->get($fromCode);
+                $toAirport   = $airports->get($toCode);
+
                 return [
-                    'from'        => $fs['DepartureAirportLocationCode'],
-                    'to'          => $fs['ArrivalAirportLocationCode'],
-                    'fromAirport' => $fs['DepartureAirportLocationCode'],  // replace with full name if API provides it
-                    'toAirport'   => $fs['ArrivalAirportLocationCode'],    // replace with full name if API provides it
+                    'from'        => $fromCode,
+                    'to'          => $toCode,
+                    'fromCity'    => $fromAirport['City'] . ' (' . $fromCode . ')' ?? $fromCode,
+                    'toCity'      => $toAirport['City'] . ' (' . $toCode . ')' ?? $toCode,
+                    'fromAirport' => $fromAirport
+                                        ? $fromAirport['AirportName']
+                                        : $fromCode,
+                    'toAirport'   => $toAirport
+                                        ? $toAirport['AirportName']
+                                        : $toCode,
                     'departTime'  => $dep->format('H:i'),
                     'arriveTime'  => $arr->format('H:i'),
                     'departDT'    => $fs['DepartureDateTime'],
@@ -383,6 +458,22 @@ class FlightPage extends Component
             'searchSessionId' => data_get($jsonData, 'AirSearchResponse.session_id', ''),
         ]);
     }
+
+    
+
+    private function mapCabin($code)
+    {
+        return match ($code) {
+            'Y' => 'Economy',
+            'S' => 'PremiumEconomy',
+            'C' => 'Business',
+            'F' => 'First',
+            default => 'Economy'
+        };
+    }
+
+    
+
 }
 
         

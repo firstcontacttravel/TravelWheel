@@ -218,7 +218,7 @@
         .sr-seg-stop { font-size: 10.5px; color: var(--green); font-weight: 700; }
         .sr-seg-stop.hasstop { color: var(--amber); }
         .sr-depart-return { display: flex; gap: 0; }
-        .sr-dr-col { flex: 1; gap: 2px; }
+        .sr-dr-col { flex: 1; }
         .sr-dr-col + .sr-dr-col { border-left: 1px dashed var(--gray-200); padding-left: 18px; margin-left: 18px; }
         .sr-dr-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gray-400); margin-bottom: 8px; }
         .sr-card-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px 14px; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--gray-100); }
@@ -515,7 +515,7 @@
                                 <div class="sr-segments">
                                     <div class="sr-seg">
                                         <div class="sr-seg-time" x-text="flight.departTime"></div>
-                                        <div class="sr-seg-place" x-text="flight.segments[0]?.from"></div>
+                                        <div class="sr-seg-place" x-text="flight.segments[0]?.fromCity"></div>
                                     </div>
                                     <div class="sr-seg-line">
                                         <div class="sr-seg-duration" x-text="flight.durationLabel"></div>
@@ -528,7 +528,7 @@
                                     </div>
                                     <div class="sr-seg">
                                         <div class="sr-seg-time" x-text="flight.arriveTime"></div>
-                                        <div class="sr-seg-place" x-text="flight.segments[flight.segments.length-1]?.to"></div>
+                                        <div class="sr-seg-place" x-text="flight.segments[flight.segments.length-1]?.toCity"></div>
                                     </div>
                                 </div>
                             </div>
@@ -540,7 +540,7 @@
                                     <div class="sr-segments">
                                         <div class="sr-seg">
                                             <div class="sr-seg-time" x-text="flight.returnSegments[0]?.departTime"></div>
-                                            <div class="sr-seg-place" x-text="flight.returnSegments[0]?.from"></div>
+                                            <div class="sr-seg-place" x-text="flight.returnSegments[0]?.fromCity"></div>
                                         </div>
                                         <div class="sr-seg-line">
                                             <div class="sr-seg-duration" x-text="flight.returnDurationLabel || ''"></div>
@@ -553,7 +553,7 @@
                                         </div>
                                         <div class="sr-seg">
                                             <div class="sr-seg-time" x-text="flight.returnSegments[flight.returnSegments.length-1]?.arriveTime"></div>
-                                            <div class="sr-seg-place" x-text="flight.returnSegments[flight.returnSegments.length-1]?.to"></div>
+                                            <div class="sr-seg-place" x-text="flight.returnSegments[flight.returnSegments.length-1]?.toCity"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -588,14 +588,15 @@
                                     {{-- Outbound legs --}}
                                     <div class="sr-detail-col">
                                         <div class="sr-detail-leg-head">
-                                            <span class="sr-detail-leg-title" x-text="(flight.segments[0]?.from || '') + ' to ' + (flight.segments[flight.segments.length-1]?.to || '') + (flight.departDateLabel ? ', ' + flight.departDateLabel : '')"></span>
+                                            <span class="sr-detail-leg-title" x-text="(flight.segments[0]?.fromCity || '') + ' to ' + (flight.segments[flight.segments.length-1]?.toCity || '') + (flight.departDateLabel ? ', ' + flight.departDateLabel : '')"></span>
                                             <span class="sr-detail-leg-badge">Outbound</span>
                                         </div>
                                         <template x-for="(seg, si) in flight.segments" :key="'out-'+si">
                                             <div>
                                                 <template x-if="si > 0">
                                                     <div class="sr-detail-layover">
-                                                        <hr>
+                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                                        <span x-text="'· Layover in ' + (flight.segments[si-1]?.toCity||'') + (flight.layoverDurations && flight.layoverDurations[si-1] ? ' · ' + flight.layoverDurations[si-1] : '')"></span>
                                                     </div>
                                                 </template>
                                                 <div class="sr-detail-seg">
@@ -609,7 +610,7 @@
                                                     <div class="sr-detail-seg-route">
                                                         <div class="sr-detail-seg-point">
                                                             <div class="sr-detail-seg-time" x-text="seg.departTime"></div>
-                                                            <div class="sr-detail-seg-iata" x-text="seg.from"></div>
+                                                            <div class="sr-detail-seg-iata" x-text="seg.fromCity"></div>
                                                             <div class="sr-detail-seg-airport" x-text="seg.fromAirport || seg.from"></div>
                                                         </div>
                                                         <div class="sr-detail-seg-mid">
@@ -623,7 +624,7 @@
                                                         </div>
                                                         <div class="sr-detail-seg-point" style="text-align:right;">
                                                             <div class="sr-detail-seg-time" x-text="seg.arriveTime"></div>
-                                                            <div class="sr-detail-seg-iata" x-text="seg.to"></div>
+                                                            <div class="sr-detail-seg-iata" x-text="seg.toCity"></div>
                                                             <div class="sr-detail-seg-airport" x-text="seg.toAirport || seg.to" style="text-align:right;"></div>
                                                         </div>
                                                     </div>
@@ -648,14 +649,17 @@
                                     <template x-if="flight.returnSegments && flight.returnSegments.length > 0">
                                         <div class="sr-detail-col">
                                             <div class="sr-detail-leg-head">
-                                                <span class="sr-detail-leg-title" x-text="(flight.returnSegments[0]?.from||'') + ' to ' + (flight.returnSegments[flight.returnSegments.length-1]?.to||'') + (flight.returnDateLabel ? ', ' + flight.returnDateLabel : '')"></span>
+                                                <span class="sr-detail-leg-title" x-text="(flight.returnSegments[0]?.fromCity||'') + ' to ' + (flight.returnSegments[flight.returnSegments.length-1]?.toCity||'') + (flight.returnDateLabel ? ', ' + flight.returnDateLabel : '')"></span>
                                                 <span class="sr-detail-leg-badge inbound">Inbound</span>
                                             </div>
                                             <template x-for="(seg, si) in flight.returnSegments" :key="'ret-'+si">
                                                 <div>
                                                     <template x-if="si > 0">
                                                         <div class="sr-detail-layover">
-                                                            <hr>
+                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                                            
+                                                            <span x-text="'· Layover in ' + (flight.returnSegments[si-1]?.toCity||'') + (flight.returnLayoverDurations && flight.returnLayoverDurations[si-1] ? ' · ' + flight.returnLayoverDurations[si-1] : '')"></span>
+                                                            
                                                         </div>
                                                     </template>
                                                     <div class="sr-detail-seg">
@@ -669,7 +673,7 @@
                                                         <div class="sr-detail-seg-route">
                                                             <div class="sr-detail-seg-point">
                                                                 <div class="sr-detail-seg-time" x-text="seg.departTime"></div>
-                                                                <div class="sr-detail-seg-iata" x-text="seg.from"></div>
+                                                                <div class="sr-detail-seg-iata" x-text="seg.fromCity"></div>
                                                                 <div class="sr-detail-seg-airport" x-text="seg.fromAirport || seg.from"></div>
                                                             </div>
                                                             <div class="sr-detail-seg-mid">
@@ -683,7 +687,7 @@
                                                             </div>
                                                             <div class="sr-detail-seg-point" style="text-align:right;">
                                                                 <div class="sr-detail-seg-time" x-text="seg.arriveTime"></div>
-                                                                <div class="sr-detail-seg-iata" x-text="seg.to"></div>
+                                                                <div class="sr-detail-seg-iata" x-text="seg.toCity"></div>
                                                                 <div class="sr-detail-seg-airport" x-text="seg.toAirport || seg.to" style="text-align:right;"></div>
                                                             </div>
                                                         </div>
