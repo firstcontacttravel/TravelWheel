@@ -459,8 +459,6 @@ class FlightPage extends Component
         ]);
     }
 
-    
-
     private function mapCabin($code)
     {
         return match ($code) {
