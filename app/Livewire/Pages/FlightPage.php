@@ -114,10 +114,10 @@ class FlightPage extends Component
         
 
         $payload = [
-            "user_id" => "travelwheel_testAPI",
-            "user_password" => "travelwheelTest@2025",
-            "access" => "Test",
-            "ip_address" => "102.88.115.201",
+            "user_id"        => config('services.travelnext.user_id'),
+            "user_password"  => config('services.travelnext.password'),
+            "access"         => config('services.travelnext.access'),
+            "ip_address" => config('services.travelnext.ip'),
 
             "requiredCurrency" => "NGN",
             "journeyType" => $journeyType,

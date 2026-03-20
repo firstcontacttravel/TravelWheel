@@ -34,5 +34,11 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'travelnext' => [
+        'user_id' => env('TRAVELNEXT_USER_ID'),
+        'password' => env('TRAVELNEXT_PASSWORD'),
+        'access' => env('TRAVELNEXT_ACCESS'),
+        'ip' => env('TRAVELNEXT_IP'),
+    ],
 
 ];
