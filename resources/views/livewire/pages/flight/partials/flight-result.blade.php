@@ -295,6 +295,179 @@
         /* ── Responsive ── */
         @media (max-width: 1100px) { .sr-page { grid-template-columns: 232px 1fr; } .sr-rail { display: none; } }
         @media (max-width: 720px) { .sr-page { grid-template-columns: 1fr; padding: 12px 10px 32px; } .sr-sidebar { position: static; } .sr-seg-time { font-size: 17px; } .sr-card-price { font-size: 18px; } }
+        /* ══════════════════════════════════════════════════════════
+           RESPONSIVE  —  replace the existing two @media blocks
+           with this full responsive block
+           ══════════════════════════════════════════════════════════ */
+
+        /* ── Tablet (≤ 1100px): hide right rail, shrink sidebar ── */
+        @media (max-width: 1100px) {
+            .sr-page { grid-template-columns: 220px 1fr; gap: 14px; }
+            .sr-rail { display: none; }
+            .sr-matrix-scroll { width: 100%; }
+        }
+
+        /* ── Large Mobile / Small Tablet (≤ 860px): sidebar goes below, stack layout ── */
+        @media (max-width: 860px) {
+            .sr-page {
+                grid-template-columns: 1fr;
+                padding: 12px 10px 32px;
+                gap: 12px;
+            }
+
+            /* Sidebar becomes a horizontal scrollable filter strip */
+            .sr-sidebar {
+                position: static;
+                display: flex;
+                flex-direction: row;
+                overflow-x: auto;
+                gap: 10px;
+                padding-bottom: 4px;
+                scrollbar-width: none;
+                -webkit-overflow-scrolling: touch;
+                /* Swap grid order so filters appear after header */
+                order: 2;
+            }
+            .sr-sidebar::-webkit-scrollbar { display: none; }
+
+            .sr-main { order: 1; }
+
+            /* Each filter panel becomes a compact horizontal chip */
+            .sr-sidebar .sr-panel {
+                flex-shrink: 0;
+                min-width: 200px;
+                max-width: 260px;
+                border-radius: 10px;
+            }
+
+            /* Stop pills become even more compact */
+            .sr-stop-pills { padding: 8px 12px 10px; gap: 5px; }
+            .sr-stop-pill  { padding: 5px 3px; font-size: 11px; }
+
+            /* Time pills */
+            .sr-time-pills { padding: 8px 12px 10px; }
+            .sr-time-pill  { padding: 4px 8px; font-size: 10.5px; }
+        }
+
+        /* ── Phone (≤ 600px): full single column, compact everything ── */
+        @media (max-width: 600px) {
+
+            /* Topbar: smaller pills */
+            .sr-topbar { padding: 0 12px; }
+            .sr-tb-pill { padding: 5px 9px; }
+            .sr-tb-pill-value { font-size: 12px; }
+            .sr-tb-search { padding: 0 14px; font-size: 12px; height: 34px; }
+
+            /* Header card */
+            .sr-header { padding: 12px 14px; }
+            .sr-header-title { font-size: 14px; }
+            .sr-header-sub   { font-size: 11.5px; }
+            .sr-fare-cal-btn { padding: 6px 12px; font-size: 11.5px; }
+
+            /* Matrix: full width scroll */
+            .sr-matrix-scroll { width: 100%; }
+
+            /* Fare summary bar: stack the 3 options vertically */
+            .sr-fare-options {
+                grid-template-columns: 1fr;
+            }
+            .sr-fare-option {
+                border-right: none;
+                border-bottom: 1px solid var(--gray-100);
+                padding: 10px 14px;
+            }
+            .sr-fare-option:last-child { border-bottom: none; }
+            .sr-fare-option-price { font-size: 15px; }
+
+            /* Sort bar wraps tightly */
+            .sr-sort-bar { gap: 6px; }
+            .sr-sort-btn { padding: 5px 10px; font-size: 11px; }
+            .sr-sort-label { font-size: 11px; }
+            .sr-result-count { font-size: 11px; }
+
+            /* ── Flight card ── */
+            .sr-card-head {
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 12px 14px 10px;
+            }
+
+            /* Airline info takes full width on its row */
+            .sr-card-head > div:nth-child(2) { flex: 1; min-width: 0; }
+
+            /* Price + Book Now go side-by-side below airline name */
+            .sr-card-price-wrap { text-align: left; }
+            .sr-card-price { font-size: 18px; }
+            .sr-card-price-sub { font-size: 10.5px; }
+            .sr-card-price-label { font-size: 9px; }
+
+            /* Book Now button full width on its own line */
+            .sr-card-head .sr-book-btn {
+                width: 100%;
+                margin-left: 0;
+                height: 36px;
+                font-size: 13px;
+            }
+
+            /* Segments summary */
+            .sr-card-body { padding: 0 14px 12px; }
+
+            /* Stack outbound + return vertically on mobile */
+            .sr-depart-return { flex-direction: column; gap: 14px; }
+            .sr-dr-col + .sr-dr-col {
+                border-left: none;
+                border-top: 1px dashed var(--gray-200);
+                padding-left: 0;
+                margin-left: 0;
+                padding-top: 12px;
+            }
+
+            /* Smaller segment times */
+            .sr-seg-time { font-size: 18px; }
+            .sr-seg-place { font-size: 11px; }
+            .sr-seg-line { min-width: 60px; padding: 0 8px; }
+            .sr-seg-duration { font-size: 10.5px; }
+            .sr-seg-stop { font-size: 10px; }
+
+            /* Card footer */
+            .sr-card-footer { padding: 8px 14px 12px; }
+            .sr-view-details { font-size: 11.5px; }
+
+            /* ── Detail Panel ── */
+            .sr-detail-tabs { padding: 0 10px; }
+            .sr-detail-tab { padding: 8px 12px; font-size: 12px; }
+            .sr-detail-body { padding: 12px; }
+
+            /* Detail cols: always single column on phone */
+            .sr-detail-cols { grid-template-columns: 1fr !important; }
+
+            /* Segment cards inside detail */
+            .sr-detail-seg { padding: 12px; }
+            .sr-detail-seg-time { font-size: 17px; }
+            .sr-detail-seg-route { flex-direction: column; gap: 8px; }
+            .sr-detail-seg-mid { flex-direction: row; align-items: center; padding: 0; gap: 8px; width: 100%; }
+            .sr-detail-seg-point { display: flex; align-items: center; gap: 8px; }
+            .sr-detail-seg-airport { max-width: 100%; font-size: 10px; }
+            .sr-detail-seg-point[style*="text-align:right"] { justify-content: flex-end; text-align: right; }
+
+            /* Fare rules */
+            .sr-fare-rules-body { padding: 12px; }
+            .sr-fare-rule-label { min-width: 90px; font-size: 12px; }
+            .sr-fare-rule-val { font-size: 12px; }
+
+            /* Detail footer */
+            .sr-detail-footer { padding: 10px 14px 14px; }
+            .sr-detail-footer .sr-book-btn { width: 100%; }
+        }
+
+        /* ── Very small phone (≤ 380px) ── */
+        @media (max-width: 380px) {
+            .sr-seg-time { font-size: 16px; }
+            .sr-card-price { font-size: 16px; }
+            .sr-tb-pill { padding: 4px 7px; }
+            .sr-tb-pill-value { font-size: 11px; }
+            .sr-detail-seg-time { font-size: 15px; }
+        }
     </style>
 
     @php
