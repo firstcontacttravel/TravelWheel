@@ -3,6 +3,8 @@
 use App\Livewire\Pages\HomePage;
 use App\Livewire\Pages\FlightPage;
 use App\Http\Controllers\FlightSearchController;
+use App\Http\Controllers\FlightBookingController;
+use App\Livewire\Pages\FlightBooking;
 
 Route::get('/', HomePage::class)->name('home');
 Route::get('/air', HomePage::class)->name('air');
@@ -16,7 +18,7 @@ Route::get('/help', function() { /* ... */ })->name('help');
 Route::get('/air/flight', FlightPage::class)->name('air.flight');
 Route::get('/air/flight-s', FlightPage::class)->name('air.flight-s');
 Route::post('/air/flight/search', [FlightPage::class, 'search'])->name('flights.search');
-Route::post('/air/flight/select', [FlightSearchController::class, 'select'])->name('flights.select');
+// Route::post('/air/flight/select', [FlightSearchController::class, 'select'])->name('flights.select');
 
 
 Route::get('/air/hotel', function() { /* ... */ })->name('air.hotel');
@@ -28,3 +30,12 @@ Route::get('/air/cargo', function() { /* ... */ })->name('air.cargo');
 Route::get('/air/support', function() { /* ... */ })->name('air.support');
 
 // Flight routes
+ 
+Route::post('/flights/select', [FlightBookingController::class, 'select'])
+    ->name('flights.select');
+ 
+Route::get('/flights/booking', FlightBooking::class)
+    ->name('flights.booking');
+ 
+Route::post('/flights/book', [FlightBookingController::class, 'book'])
+    ->name('flights.book');

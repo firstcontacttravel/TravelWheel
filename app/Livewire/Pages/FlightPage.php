@@ -1,10 +1,10 @@
 <?php
 
 namespace App\Livewire\Pages;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
-
 use Livewire\Component;
 
 class FlightPage extends Component
@@ -16,29 +16,27 @@ class FlightPage extends Component
 
     public function search(Request $request)
     {
-        //dd($request->all());
-        // Normalize trip type
-        $request->merge([
-            'trip' => strtolower($request->trip)
-        ]);
-    
-        // Decode multi legs if JSON string
+        // ── Normalise trip type ───────────────────────────────────────────────
+        $request->merge(['trip' => strtolower($request->trip)]);
+
+        // ── Decode multi-city legs if sent as JSON string ─────────────────────
         if ($request->multi_legs && is_string($request->multi_legs)) {
             $request->merge([
-                'multi_legs' => json_decode($request->multi_legs, true)
+                'multi_legs' => json_decode($request->multi_legs, true),
             ]);
         }
-    
-        // Remove empty legs
+
+        // ── Strip incomplete legs ─────────────────────────────────────────────
         if (!empty($request->multi_legs)) {
-            $legs = array_filter($request->multi_legs, function ($leg) {
-                return !empty($leg['from']) && !empty($leg['to']) && !empty($leg['depart']);
-            });
             $request->merge([
-                'multi_legs' => array_values($legs)
+                'multi_legs' => array_values(array_filter(
+                    $request->multi_legs,
+                    fn($leg) => !empty($leg['from']) && !empty($leg['to']) && !empty($leg['depart'])
+                )),
             ]);
         }
-    
+
+        // ── Validation ────────────────────────────────────────────────────────
         $rules = [
             'trip'        => 'required|in:oneway,return,multi',
             'adults'      => 'required|integer|min:1|max:9',
@@ -46,121 +44,112 @@ class FlightPage extends Component
             'kids'        => 'nullable|integer|min:0|max:9',
             'flight_type' => 'required|in:Y,S,C,F',
         ];
-    
+
         if ($request->trip !== 'multi') {
             $rules['from']   = 'required|string|max:255';
             $rules['to']     = 'required|string|max:255';
             $rules['depart'] = 'required|date_format:d/m/Y';
         }
-    
         if ($request->trip === 'return') {
             $rules['returning'] = 'required|date_format:d/m/Y|after_or_equal:depart';
         }
-    
         if ($request->trip === 'multi') {
             $rules['multi_legs']          = 'required|array|min:1';
             $rules['multi_legs.*.from']   = 'required|string|max:255';
             $rules['multi_legs.*.to']     = 'required|string|max:255';
             $rules['multi_legs.*.depart'] = 'required|date_format:d/m/Y';
         }
-        //dd($request->all());
-    
+
         $validated = $request->validate($rules);
-        
+
+        // ── Build origin-destination payload ──────────────────────────────────
         $originDestination = [];
         $journeyType = match ($request->trip) {
             'oneway' => 'OneWay',
             'return' => 'Return',
             'multi'  => 'MultiCity',
-            default  => 'OneWay'
+            default  => 'OneWay',
         };
-        $fromCode = Str::between($request->from, '(', ')');
-        $toCode   = Str::between($request->to, '(', ')');  
 
-        // 🟢 ONE WAY
+        $fromCode = Str::between($request->from ?? '', '(', ')');
+        $toCode   = Str::between($request->to   ?? '', '(', ')');
+
         if ($validated['trip'] === 'oneway') {
             $originDestination[] = [
-                "departureDate" => \Carbon\Carbon::createFromFormat('d/m/Y', $validated['depart'])->format('Y-m-d'),
-                "airportOriginCode" => $fromCode,
-                "airportDestinationCode" => $toCode,
+                'departureDate'          => \Carbon\Carbon::createFromFormat('d/m/Y', $validated['depart'])->format('Y-m-d'),
+                'airportOriginCode'      => $fromCode,
+                'airportDestinationCode' => $toCode,
             ];
-        }
-
-        // 🟡 RETURN
-        elseif ($validated['trip'] === 'return') {
+        } elseif ($validated['trip'] === 'return') {
             $originDestination[] = [
-                "departureDate" => \Carbon\Carbon::createFromFormat('d/m/Y', $validated['depart'])->format('Y-m-d'),
-                "returnDate" => \Carbon\Carbon::createFromFormat('d/m/Y', $validated['returning'])->format('Y-m-d'),
-                "airportOriginCode" => $fromCode,
-                "airportDestinationCode" => $toCode, 
+                'departureDate'          => \Carbon\Carbon::createFromFormat('d/m/Y', $validated['depart'])->format('Y-m-d'),
+                'returnDate'             => \Carbon\Carbon::createFromFormat('d/m/Y', $validated['returning'])->format('Y-m-d'),
+                'airportOriginCode'      => $fromCode,
+                'airportDestinationCode' => $toCode,
             ];
-
-            
-        } 
-
-        // 🔵 MULTI CITY
-        elseif ($validated['trip'] === 'multi') {
+        } elseif ($validated['trip'] === 'multi') {
             foreach ($validated['multi_legs'] as $leg) {
-                $fromCode = Str::between($leg['from'], '(', ')');
-                $toCode   = Str::between($leg['to'], '(', ')'); 
+                $lFrom = Str::between($leg['from'], '(', ')');
+                $lTo   = Str::between($leg['to'],   '(', ')');
                 $originDestination[] = [
-                    "departureDate" => \Carbon\Carbon::createFromFormat('d/m/Y', $leg['depart'])->format('Y-m-d'),
-                    "airportOriginCode" => $fromCode,
-                    "airportDestinationCode" => $toCode,
+                    'departureDate'          => \Carbon\Carbon::createFromFormat('d/m/Y', $leg['depart'])->format('Y-m-d'),
+                    'airportOriginCode'      => $lFrom,
+                    'airportDestinationCode' => $lTo,
                 ];
             }
         }
 
-        
-
+        // ── API call ──────────────────────────────────────────────────────────
         $payload = [
-            "user_id"        => config('services.travelnext.user_id'),
-            "user_password"  => config('services.travelnext.password'),
-            "access"         => config('services.travelnext.access'),
-            "ip_address" => config('services.travelnext.ip'),
+            'user_id'       => config('services.travelnext.user_id'),
+            'user_password' => config('services.travelnext.password'),
+            'access'        => config('services.travelnext.access'),
+            'ip_address'    => config('services.travelnext.ip'),
 
-            "requiredCurrency" => "NGN",
-            "journeyType" => $journeyType,
+            'requiredCurrency'      => 'NGN',
+            'journeyType'           => $journeyType,
+            'OriginDestinationInfo' => $originDestination,
 
-            "OriginDestinationInfo" => $originDestination,
-
-            "class" => $this->mapCabin($validated['flight_type']),
-            "adults" => (int) $validated['adults'],
-            "childs" => (int) ($validated['childs'] ?? 0),
-            "infants" => (int) ($validated['kids'] ?? 0),
+            'class'   => $this->mapCabin($validated['flight_type']),
+            'adults'  => (int) $validated['adults'],
+            'childs'  => (int) ($validated['childs'] ?? 0),
+            'infants' => (int) ($validated['kids']   ?? 0),
         ];
 
-        //dd($payload);
-
         $response = Http::timeout(60)
-        ->post('https://travelnext.works/api/aeroVE5/availability', $payload);
+            ->post('https://travelnext.works/api/aeroVE5/availability', $payload);
 
         if ($response->failed()) {
-            return back()->withErrors(['error' => 'Flight API failed']);
+            return back()->withErrors(['error' => 'Flight search failed. Please try again.']);
         }
 
-        $data = $response->json();
-        //dd($data);  
-        
-    
-        $jsonData = $data;
-        //dd($jsonData);
-    
-        $jsonAirlinesPath = public_path('assets/data/airline.json');
-        $airlines = collect(json_decode(file_get_contents($jsonAirlinesPath), true))->keyBy('AirLineCode');
-    
+        $jsonData = $response->json();
 
-        $jsonAirportsPath = public_path('assets/data/airportsCode.json');
-        $airports = collect(json_decode(file_get_contents($jsonAirportsPath), true))->keyBy('AirportCode');
+        // ── Reference data ────────────────────────────────────────────────────
+        $airlines = collect(
+            json_decode(file_get_contents(public_path('assets/data/airline.json')), true)
+        )->keyBy('AirLineCode');
+
+        $airports = collect(
+            json_decode(file_get_contents(public_path('assets/data/airportsCode.json')), true)
+        )->keyBy('AirportCode');
 
         $tripType    = $request->trip;
-        $searchLegs  = $request->multi_legs ?? [];   // the legs the user searched (for multi-city splitting)
-    
+        $searchLegs  = $request->multi_legs ?? [];
         $itineraries = data_get($jsonData, 'AirSearchResponse.AirSearchResult.FareItineraries', []);
-    
-        // ──────────────────────────────────────────────────────────────────────────
-        // Helper: map a raw OriginDestinationOption array → clean segments array
-        // ──────────────────────────────────────────────────────────────────────────
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Helper: map raw ODO segment array → clean segment objects
+        //
+        // NEW fields added:
+        //   resBookCode   — booking class code (Y, R, O, etc.)
+        //   mealCode      — meal code if present
+        //   belowMinimum  — true when seats are critically low (below threshold)
+        //   isCodeshare   — true when marketing carrier ≠ operating carrier
+        //   operatingAirline / operatingFlightNo — for codeshare display
+        //   fromCountry / toCountry — from airportsCode.json (for visa info)
+        //   fromLat/Lon, toLat/Lon  — for potential map use
+        // ─────────────────────────────────────────────────────────────────────
         $mapSegments = function (array $odo) use ($airlines, $airports): array {
             return collect($odo)->map(function ($seg) use ($airlines, $airports) {
                 $fs          = $seg['FlightSegment'];
@@ -174,37 +163,74 @@ class FlightPage extends Component
                 $fromAirport = $airports->get($fromCode);
                 $toAirport   = $airports->get($toCode);
 
+                $opCode = $fs['OperatingAirline']['Code'] ?? $airlineCode;
+                $opAirline = $airlines->get($opCode);
+
                 return [
+                    // ── Route ─────────────────────────────────────────────────
                     'from'        => $fromCode,
                     'to'          => $toCode,
-                    'fromCity'    => $fromAirport['City'] . ' (' . $fromCode . ')' ?? $fromCode,
-                    'toCity'      => $toAirport['City'] . ' (' . $toCode . ')' ?? $toCode,
-                    'fromAirport' => $fromAirport
-                                        ? $fromAirport['AirportName']
+                    'fromCity'    => $fromAirport
+                                        ? ($fromAirport['City'] . ' (' . $fromCode . ')')
                                         : $fromCode,
-                    'toAirport'   => $toAirport
-                                        ? $toAirport['AirportName']
+                    'toCity'      => $toAirport
+                                        ? ($toAirport['City'] . ' (' . $toCode . ')')
                                         : $toCode,
+                    'fromAirport' => $fromAirport['AirportName'] ?? $fromCode,
+                    'toAirport'   => $toAirport['AirportName']   ?? $toCode,
+                    'fromCountry' => $fromAirport['Country']     ?? '',
+                    'toCountry'   => $toAirport['Country']       ?? '',
+                    'fromLat'     => $fromAirport['Latitude']    ?? null,
+                    'fromLon'     => $fromAirport['Longitude']   ?? null,
+                    'toLat'       => $toAirport['Latitude']      ?? null,
+                    'toLon'       => $toAirport['Longitude']     ?? null,
+
+                    // ── Times ─────────────────────────────────────────────────
                     'departTime'  => $dep->format('H:i'),
                     'arriveTime'  => $arr->format('H:i'),
+                    'departDate'  => $dep->format('D, d M Y'),
+                    'arriveDate'  => $arr->format('D, d M Y'),
                     'departDT'    => $fs['DepartureDateTime'],
                     'arriveDT'    => $fs['ArrivalDateTime'],
                     'duration'    => (int) $fs['JourneyDuration'],
+
+                    // ── Flight ────────────────────────────────────────────────
                     'flightNo'    => $airlineCode . $fs['FlightNumber'],
                     'airline'     => $fs['MarketingAirlineName'],
                     'airlineCode' => $airlineCode,
                     'airlineLogo' => $airline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+
+                    // ── Aircraft ──────────────────────────────────────────────
                     'equipment'   => $fs['OperatingAirline']['Equipment'] ?? '',
-                    'cabin'       => $fs['CabinClassText'],
-                    'cabinCode'   => $fs['CabinClassCode'],
-                    'seatsLeft'   => (int) ($seg['SeatsRemaining']['Number'] ?? 9),
+
+                    // ── Cabin ─────────────────────────────────────────────────
+                    'cabin'       => $fs['CabinClassText'] ?? '',
+                    'cabinCode'   => $fs['CabinClassCode'] ?? 'Y',
+
+                    // ── Booking class & meal ──────────────────────────────────
+                    'resBookCode' => $seg['ResBookDesigCode'] ?? '',
+                    'mealCode'    => $fs['MealCode']          ?? '',
+
+                    // ── Availability ──────────────────────────────────────────
+                    'seatsLeft'    => (int)  ($seg['SeatsRemaining']['Number']       ?? 9),
+                    'belowMinimum' => (bool) ($seg['SeatsRemaining']['BelowMinimum'] ?? false),
+
+                    // ── Codeshare ─────────────────────────────────────────────
+                    'isCodeshare'        => $opCode !== $airlineCode,
+                    'operatingCode'      => $opCode,
+                    'operatingAirline'   => $fs['OperatingAirline']['Name']         ?? '',
+                    'operatingFlightNo'  => $opCode . ($fs['OperatingAirline']['FlightNumber'] ?? ''),
+                    'operatingLogo'      => $opAirline['AirLineLogo']               ?? '/assets/img/airlines/default.png',
+
+                    // ── e-Ticket ──────────────────────────────────────────────
+                    'eticket'     => (bool) ($fs['Eticket'] ?? true),
                 ];
             })->values()->toArray();
         };
-    
-        // ──────────────────────────────────────────────────────────────────────────
-        // Helper: compute layover durations between consecutive segments
-        // ──────────────────────────────────────────────────────────────────────────
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Helper: layover durations between consecutive segments
+        // ─────────────────────────────────────────────────────────────────────
         $calcLayovers = function (array $segments): array {
             $durations = [];
             for ($i = 0; $i < count($segments) - 1; $i++) {
@@ -215,42 +241,31 @@ class FlightPage extends Component
             }
             return $durations;
         };
-    
-        // ──────────────────────────────────────────────────────────────────────────
-        // Helper: split a flat segments array into logical legs for multi-city.
-        //
-        // Multi-city API packs ALL segments into one ODO (e.g. AMS→LCY→DXB→LHR→AMS).
-        // We split them by matching the user's requested leg destinations:
-        //   leg 0: from=AMS to=DXB  →  segments until we arrive at DXB
-        //   leg 1: from=DXB to=AMS  →  remaining segments
-        //
-        // Falls back to one-segment-per-leg if the destinations don't match cleanly.
-        // ──────────────────────────────────────────────────────────────────────────
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Helper: split flat multi-city segment list into per-leg arrays
+        // ─────────────────────────────────────────────────────────────────────
         $splitMultiLegs = function (array $allSegments, array $searchLegs): array {
             if (empty($searchLegs)) {
-                // No leg info — treat every segment as its own leg
                 return array_map(fn($s) => [$s], $allSegments);
             }
-    
+
             $legs      = [];
             $remaining = $allSegments;
-    
+
             foreach ($searchLegs as $legIdx => $legDef) {
-                // Extract IATA code from strings like "Lagos (LOS)" or plain "LOS"
                 $extractIata = function (string $val): string {
                     if (preg_match('/\(([A-Z]{3})\)/', $val, $m)) return $m[1];
                     return strtoupper(trim($val));
                 };
-    
+
                 $destIata = $extractIata($legDef['to'] ?? '');
-    
-                // Last leg — all remaining segments belong here
+
                 if ($legIdx === count($searchLegs) - 1) {
                     $legs[] = $remaining;
                     break;
                 }
-    
-                // Find the segment that arrives at this leg's destination
+
                 $cutAt = -1;
                 foreach ($remaining as $si => $seg) {
                     if (strtoupper($seg['to']) === $destIata) {
@@ -258,34 +273,30 @@ class FlightPage extends Component
                         break;
                     }
                 }
-    
-                if ($cutAt === -1) {
-                    // Destination not found — put one segment in this leg and continue
-                    $legs[]    = array_splice($remaining, 0, 1);
-                } else {
-                    $legs[]    = array_splice($remaining, 0, $cutAt + 1);
-                }
+
+                $legs[]    = $cutAt === -1
+                    ? array_splice($remaining, 0, 1)
+                    : array_splice($remaining, 0, $cutAt + 1);
             }
-    
-            // Safety: if any segments are left over, append as an extra leg
+
             if (!empty($remaining)) {
                 $legs[] = $remaining;
             }
-    
+
             return $legs;
         };
-        //dd($splitMultiLegs($mapSegments($itineraries[0]['FareItinerary']['OriginDestinationOptions']['OriginDestinationOption'] ?? []), $searchLegs));  
-        // ──────────────────────────────────────────────────────────────────────────
-        // Map itineraries → flights
-        // ──────────────────────────────────────────────────────────────────────────
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Map itineraries → normalised flight objects
+        // ─────────────────────────────────────────────────────────────────────
         $flights = collect($itineraries)->values()->map(
-            function ($item, $index) use ($airlines, $tripType, $searchLegs, $mapSegments, $calcLayovers, $splitMultiLegs) {
-    
+            function ($item, $index) use ($tripType, $searchLegs, $mapSegments, $calcLayovers, $splitMultiLegs, $airlines) {
+
             $fi       = $item['FareItinerary'];
             $fareInfo = $fi['AirItineraryFareInfo'];
             $odos     = $fi['OriginDestinationOptions'] ?? [];
-    
-            // ── DEFAULTS ──────────────────────────────────────────────────────────
+
+            // ── Per-itinerary defaults ────────────────────────────────────────
             $segments               = [];
             $totalStops             = 0;
             $totalMins              = 0;
@@ -297,33 +308,23 @@ class FlightPage extends Component
             $multiLegs              = [];
             $layoverDurations       = [];
             $departDateLabel        = '';
-    
-            // ─────────────────────────────────────────────────────────────────────
-            // ONE WAY
-            // Single ODO, all segments are outbound.
-            // ─────────────────────────────────────────────────────────────────────
+
+            // ── ONE WAY ───────────────────────────────────────────────────────
             if ($tripType === 'oneway') {
-    
-                $odo0       = $odos[0]['OriginDestinationOption'] ?? [];
-                $segments   = $mapSegments($odo0);
-                $totalStops = (int) ($odos[0]['TotalStops'] ?? max(0, count($odo0) - 1));
-                $totalMins  = array_sum(array_column($segments, 'duration'));
+                $odo0             = $odos[0]['OriginDestinationOption'] ?? [];
+                $segments         = $mapSegments($odo0);
+                $totalStops       = (int) ($odos[0]['TotalStops'] ?? max(0, count($odo0) - 1));
+                $totalMins        = array_sum(array_column($segments, 'duration'));
                 $layoverDurations = $calcLayovers($segments);
-    
-            // ─────────────────────────────────────────────────────────────────────
-            // RETURN
-            // Two ODOs: first = outbound, second = inbound.
-            // ─────────────────────────────────────────────────────────────────────
+
+            // ── RETURN ────────────────────────────────────────────────────────
             } elseif ($tripType === 'return') {
-    
-                // Outbound
-                $odo0       = $odos[0]['OriginDestinationOption'] ?? [];
-                $segments   = $mapSegments($odo0);
-                $totalStops = (int) ($odos[0]['TotalStops'] ?? max(0, count($odo0) - 1));
-                $totalMins  = array_sum(array_column($segments, 'duration'));
+                $odo0             = $odos[0]['OriginDestinationOption'] ?? [];
+                $segments         = $mapSegments($odo0);
+                $totalStops       = (int) ($odos[0]['TotalStops'] ?? max(0, count($odo0) - 1));
+                $totalMins        = array_sum(array_column($segments, 'duration'));
                 $layoverDurations = $calcLayovers($segments);
-    
-                // Inbound (if present)
+
                 if (!empty($odos[1])) {
                     $odo1                   = $odos[1]['OriginDestinationOption'] ?? [];
                     $returnSegments         = $mapSegments($odo1);
@@ -331,37 +332,25 @@ class FlightPage extends Component
                     $returnMins             = array_sum(array_column($returnSegments, 'duration'));
                     $returnDurationLabel    = floor($returnMins / 60) . 'h ' . ($returnMins % 60) . 'm';
                     $returnLayoverDurations = $calcLayovers($returnSegments);
-    
+
                     if (!empty($returnSegments[0]['departDT'])) {
                         $returnDateLabel = \Carbon\Carbon::parse($returnSegments[0]['departDT'])->format('D, d M');
                     }
                 }
-    
-            // ─────────────────────────────────────────────────────────────────────
-            // MULTI-CITY
-            // All segments are packed into ONE ODO.
-            // We split them into logical legs using the user's search legs.
-            // The first leg becomes the primary `segments` (shown in the card
-            // summary row); the remaining legs go into `multiLegs[]` for the
-            // expanded detail panel.
-            // ─────────────────────────────────────────────────────────────────────
+
+            // ── MULTI-CITY ────────────────────────────────────────────────────
             } elseif ($tripType === 'multi') {
-    
                 $odo0       = $odos[0]['OriginDestinationOption'] ?? [];
                 $allSegs    = $mapSegments($odo0);
                 $totalStops = (int) ($odos[0]['TotalStops'] ?? max(0, count($odo0) - 1));
-    
-                // Split flat segment list into per-leg arrays
-                $legArrays = $splitMultiLegs($allSegs, $searchLegs);
-    
-                // First leg → primary segments (card summary)
-                $segments  = $legArrays[0] ?? [];
-                $totalMins = array_sum(array_column($segments, 'duration'));
+                $legArrays  = $splitMultiLegs($allSegs, $searchLegs);
+
+                $segments         = $legArrays[0] ?? [];
+                $totalMins        = array_sum(array_column($segments, 'duration'));
                 $layoverDurations = $calcLayovers($segments);
-    
-                // Remaining legs → multiLegs (detail panel)
+
                 foreach (array_slice($legArrays, 1) as $legSegs) {
-                    $legMins   = array_sum(array_column($legSegs, 'duration'));
+                    $legMins     = array_sum(array_column($legSegs, 'duration'));
                     $multiLegs[] = [
                         'segments'         => $legSegs,
                         'durationLabel'    => floor($legMins / 60) . 'h ' . ($legMins % 60) . 'm',
@@ -373,19 +362,23 @@ class FlightPage extends Component
                     ];
                 }
             }
-    
-            // ── Shared first/last segment shortcuts ───────────────────────────────
+
+            // ── Shared shortcuts ──────────────────────────────────────────────
             $firstSeg = $segments[0]               ?? [];
             $lastSeg  = !empty($segments) ? end($segments) : [];
-    
+
             $deptHour = (int) substr($firstSeg['departTime'] ?? '00:00', 0, 2);
             $arrHour  = (int) substr($lastSeg['arriveTime']  ?? '00:00', 0, 2);
-    
+
             if (!empty($firstSeg['departDT'])) {
                 $departDateLabel = \Carbon\Carbon::parse($firstSeg['departDT'])->format('D, d M');
             }
-    
-            // ── FARE BREAKDOWN ────────────────────────────────────────────────────
+
+            // ── Validating airline info ───────────────────────────────────────
+            $validatingCode    = $fi['ValidatingAirlineCode'] ?? '';
+            $validatingAirline = $airlines->get($validatingCode);
+
+            // ── FARE BREAKDOWN ────────────────────────────────────────────────
             $breakdown = collect($fareInfo['FareBreakdown'] ?? [])->map(function ($fb) {
                 return [
                     'passengerType' => $fb['PassengerTypeQuantity']['Code'],
@@ -393,35 +386,61 @@ class FlightPage extends Component
                     'baseFare'      => (float) $fb['PassengerFare']['BaseFare']['Amount'],
                     'totalFare'     => (float) $fb['PassengerFare']['TotalFare']['Amount'],
                     'currency'      => $fb['PassengerFare']['TotalFare']['CurrencyCode'],
-                    'baggage'       => $fb['Baggage'][0]      ?? '',
-                    'cabinBaggage'  => $fb['CabinBaggage'][0] ?? '',
+
+                    // Full array — multi-city has one entry per leg
+                    'baggage'       => $fb['Baggage']      ?? [],
+                    'cabinBaggage'  => $fb['CabinBaggage'] ?? [],
+
+                    // Itemised taxes for booking page breakdown
+                    'taxes'         => $fb['PassengerFare']['Taxes'] ?? [],
+
+                    // Surcharges (may be 0)
+                    'serviceTax'    => (float) ($fb['PassengerFare']['ServiceTax']['Amount']  ?? 0),
+                    'surcharges'    => (float) ($fb['PassengerFare']['Surcharges']['Amount']  ?? 0),
+
+                    // PenaltyDetails is absent on some multi-city fares
                     'changeAllowed' => $fb['PenaltyDetails']['ChangeAllowed']       ?? false,
                     'changePenalty' => $fb['PenaltyDetails']['ChangePenaltyAmount'] ?? '0.00',
                     'refundAllowed' => $fb['PenaltyDetails']['RefundAllowed']       ?? false,
+                    'refundPenalty' => $fb['PenaltyDetails']['RefundPenaltyAmount'] ?? '0.00',
                 ];
             })->values()->toArray();
-    
-            // ── ASSEMBLE FLIGHT OBJECT ────────────────────────────────────────────
+
+            // ── Assemble flight object ────────────────────────────────────────
             return [
                 'id'             => $index,
                 'fareSourceCode' => $fareInfo['FareSourceCode'],
-    
+
+                // ── Airline ───────────────────────────────────────────────────
                 'airline'     => $firstSeg['airline']    ?? '',
                 'airlineCode' => $firstSeg['airlineCode'] ?? '',
                 'airlineLogo' => $firstSeg['airlineLogo'] ?? '/assets/img/airlines/default.png',
-    
+
+                // ── Validating airline (may differ from marketing) ────────────
+                'validatingCode'    => $validatingCode,
+                'validatingAirline' => $validatingAirline['AirLineName'] ?? $validatingCode,
+                'validatingLogo'    => $validatingAirline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+
+                // ── Flight meta ───────────────────────────────────────────────
                 'cabin'     => $firstSeg['cabin']    ?? '',
                 'cabinCode' => $firstSeg['cabinCode'] ?? 'Y',
                 'stops'     => $totalStops,
-    
+
+                // ── Pricing ───────────────────────────────────────────────────
                 'price'    => (float) $fareInfo['ItinTotalFares']['TotalFare']['Amount'],
                 'baseFare' => (float) $fareInfo['ItinTotalFares']['BaseFare']['Amount'],
+                'totalTax' => (float) ($fareInfo['ItinTotalFares']['TotalTax']['Amount'] ?? 0),
                 'currency' => $fareInfo['ItinTotalFares']['TotalFare']['CurrencyCode'],
-    
-                'isRefundable' => strtolower($fareInfo['IsRefundable'] ?? 'no') === 'yes',
-                'fareType'     => $fareInfo['FareType'] ?? 'Public',
-    
-                // ── Outbound / first leg ──
+
+                // ── Policies ──────────────────────────────────────────────────
+                'isRefundable'       => strtolower($fareInfo['IsRefundable'] ?? 'no') === 'yes',
+                'fareType'           => $fareInfo['FareType']            ?? 'Public',
+                'ticketType'         => $fi['TicketType']                ?? 'eTicket',
+                'isPassportMandatory'=> (bool) ($fi['IsPassportMandatory'] ?? false),
+                'directionInd'       => $fi['DirectionInd']              ?? '',
+                'ticketAdvisory'     => trim($fi['TicketAdvisory']       ?? ''),
+
+                // ── Outbound ──────────────────────────────────────────────────
                 'segments'         => $segments,
                 'departTime'       => $firstSeg['departTime'] ?? '',
                 'arriveTime'       => $lastSeg['arriveTime']  ?? '',
@@ -431,27 +450,33 @@ class FlightPage extends Component
                 'durationLabel'    => floor($totalMins / 60) . 'h ' . ($totalMins % 60) . 'm',
                 'layoverDurations' => $layoverDurations,
                 'departDateLabel'  => $departDateLabel,
-    
-                // ── Return / inbound (Return trips only) ──
+
+                // ── Return inbound ────────────────────────────────────────────
                 'returnSegments'         => $returnSegments,
                 'returnStops'            => $returnStops,
                 'returnDurationLabel'    => $returnDurationLabel,
                 'returnDateLabel'        => $returnDateLabel,
                 'returnLayoverDurations' => $returnLayoverDurations,
-    
-                // ── Multi-city extra legs (legs 2…N) ──
+
+                // ── Multi-city extra legs ─────────────────────────────────────
                 'multiLegs' => $multiLegs,
-    
-                // ── Sidebar filter slots ──
+
+                // ── Sidebar filter slots ───────────────────────────────────────
                 'departSlot'  => $deptHour < 12 ? 'morning' : ($deptHour < 18 ? 'afternoon' : 'evening'),
                 'arrivalSlot' => $arrHour  < 12 ? 'morning' : ($arrHour  < 18 ? 'afternoon' : 'evening'),
-    
+
                 'fareBreakdown' => $breakdown,
             ];
-    
+
         })->values()->toArray();
-        //dd($flights);
-        // ✅ Store as plain array — Laravel serialises/deserialises automatically.
+
+        // ── Persist to durable session so "Book Now" survives the flash expiry ─
+        session([
+            'flightResultsStore' => $flights,
+            'searchParamsStore'  => $validated,
+        ]);
+
+        // ── Flash for the results page ────────────────────────────────────────
         return redirect()->route('air.flight-s')->with([
             'flightResults'   => $flights,
             'searchParams'    => $validated,
@@ -459,19 +484,15 @@ class FlightPage extends Component
         ]);
     }
 
-    private function mapCabin($code)
+    // ─────────────────────────────────────────────────────────────────────────
+    private function mapCabin(string $code): string
     {
         return match ($code) {
-            'Y' => 'Economy',
-            'S' => 'PremiumEconomy',
-            'C' => 'Business',
-            'F' => 'First',
-            default => 'Economy'
+            'Y'     => 'Economy',
+            'S'     => 'PremiumEconomy',
+            'C'     => 'Business',
+            'F'     => 'First',
+            default => 'Economy',
         };
     }
-
-    
-
 }
-
-        
