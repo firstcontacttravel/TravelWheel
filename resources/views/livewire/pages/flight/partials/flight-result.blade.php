@@ -269,7 +269,7 @@
 
     /* ── Right Rail ── */
     .sr-rail { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 78px; }
-    .sr-promo-label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #fff; margin-bottom: 6px; }
+    .sr-promo-label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #aa1818; margin-bottom: 6px; }
     .sr-promo-title { font-size: 13px; font-weight: 700; line-height: 1.3; margin-bottom: 8px; color: #ffffff;}
     .sr-promo-body { font-size: 12px; color: rgba(255,255,255,.65); line-height: 1.5; margin-bottom: 14px; }
     .sr-promo-btn { display: inline-block; padding: 8px 18px; background: #fff; color: var(--navy); border-radius: 8px; font-size: 12.5px; font-weight: 700; text-decoration: none; cursor: pointer; transition: opacity .15s; }
@@ -1029,7 +1029,7 @@
                 <template x-for="(item, index) in items" :key="index">
                     <div class="sr-promo-slide" x-show="current === index" x-transition>
                         
-                        <div class="sr-promo-label">💡 <span x-text="item.label"></span></div>
+                        <div class="sr-promo-label" >💡 <span style="color: #ffffff;" x-text="item.label"></span></div>
                         <div class="sr-promo-title" x-text="item.title"></div>
                         <div class="sr-promo-body" x-text="item.body"></div>
 
@@ -1253,7 +1253,7 @@
                 {
                     label: 'Hotel Booking',
                     title: 'Find the best hotel deals',
-                    body: 'Book top-rated hotels at discounted prices across major cities.',
+                    body: 'Book top-rated hotels at better prices.',
                     cta: 'Explore Hotels',
                     link: '#'
                 },
