@@ -48,6 +48,7 @@
   { "iata": "ASM", "name": "Asmara International Airport", "city": "Asmara", "country": "Eritrea" },
   { "iata": "ASP", "name": "Alice Springs Airport", "city": "Alice Springs", "country": "Australia" },
   { "iata": "ASU", "name": "Silvio Pettirossi International Airport", "city": "Asuncion", "country": "Paraguay" },
+  { "iata": "LOS", "name": "Murtala Muhammed International Airport", "city": "Lagos", "country": "Nigeria" },
   { "iata": "ATH", "name": "Athens International Airport Eleftherios Venizelos", "city": "Athens", "country": "Greece" },
   { "iata": "ATL", "name": "Hartsfield Jackson Atlanta International Airport", "city": "Atlanta", "country": "United States" },
   { "iata": "ATQ", "name": "Sri Guru Ram Dass Jee International Airport", "city": "Amritsar", "country": "India" },
@@ -338,7 +339,7 @@
   { "iata": "LLW", "name": "Lilongwe International Airport", "city": "Lilongwe", "country": "Malawi" },
   { "iata": "LNZ", "name": "Linz Airport", "city": "Linz", "country": "Austria" },
   { "iata": "LON", "name": "London Metropolitan Area", "city": "London", "country": "United Kingdom" },
-  { "iata": "LOS", "name": "Murtala Muhammed International Airport", "city": "Lagos", "country": "Nigeria" },
+  
   { "iata": "LPA", "name": "Las Palmas Airport", "city": "Las Palmas", "country": "Spain" },
   { "iata": "LPB", "name": "El Alto International Airport", "city": "La Paz", "country": "Bolivia" },
   { "iata": "LPL", "name": "Liverpool John Lennon Airport", "city": "Liverpool", "country": "United Kingdom" },

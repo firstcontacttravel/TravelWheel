@@ -52,7 +52,8 @@
     .fw-search-btn{display:inline-flex;align-items:center;gap:9px;padding:0 34px;height:52px;background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 22px rgba(29,78,216,.38);transition:all .2s;letter-spacing:.01em;font-family:inherit;white-space:nowrap}
     .fw-search-btn:hover{background:linear-gradient(135deg,#1e40af 0%,#1d4ed8 100%);box-shadow:0 6px 30px rgba(29,78,216,.48);transform:translateY(-1px)}
     .fw-search-btn:active{transform:translateY(0)}
-    /* Calendar */
+
+    /* ── Calendar ── */
     .fw-cal{display:none;position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1.5px solid #e5e7eb;border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,.15);z-index:99997;width:300px;padding:16px;box-sizing:border-box;font-family:inherit}
     .fw-cal.fw-open{display:block}
     .fw-cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -61,24 +62,25 @@
     .fw-cal-nav:hover{background:#eff6ff;border-color:#3b82f6;color:#1d4ed8}
     .fw-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
     .fw-cal-dow{font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;text-align:center;padding:4px 0}
-    .fw-cal-day{height:34px;border-radius:8px;border:none;background:none;font-size:13px;color:#111827;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:inherit;width:100%;padding:0}
+    .fw-cal-day{height:34px;border-radius:8px;border:none;background:none;font-size:13px;color:#111827;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;font-family:inherit;width:100%;padding:0}
     .fw-cal-day:hover:not(.fw-disabled):not(.fw-empty){background:#eff6ff;color:#1d4ed8}
     .fw-cal-day.fw-today{font-weight:700;color:#1d4ed8}
-    .fw-cal-day.fw-selected{background:#1d4ed8!important;color:#fff!important;font-weight:700}
-    .fw-cal-day.fw-disabled{color:#d1d5db;cursor:not-allowed}
+    /* Range styles — order matters: range-start/end override in-range */
+    .fw-cal-day.fw-in-range{background:#dbeafe !important;color:#1e40af;border-radius:0}
+    .fw-cal-day.fw-range-start{background:#1d4ed8 !important;color:#fff !important;font-weight:700;border-radius:8px 0 0 8px !important}
+    .fw-cal-day.fw-range-end{background:#1d4ed8 !important;color:#fff !important;font-weight:700;border-radius:0 8px 8px 0 !important}
+    /* When start == end (same day selected on both calendars) show full circle */
+    .fw-cal-day.fw-range-start.fw-range-end{border-radius:8px !important}
+    .fw-cal-day.fw-selected{background:#1d4ed8 !important;color:#fff !important;font-weight:700;border-radius:8px}
+    .fw-cal-day.fw-disabled{color:#d1d5db !important;cursor:not-allowed;background:none !important}
     .fw-cal-day.fw-empty{visibility:hidden;pointer-events:none}
+
     /* Responsive */
     @media(max-width:960px){.fw-card{padding:24px 20px 20px}.fw-row{flex-wrap:wrap;gap:8px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 calc(50% - 8px)!important;min-width:calc(50% - 8px)}.fw-swap{display:none!important}}
     @media(max-width:580px){.fw-card-outer{padding:20px 14px}.fw-card{padding:20px 16px;border-radius:14px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 100%!important;min-width:100%}.fw-leg{flex-wrap:wrap}.fw-search-btn{width:100%;justify-content:center}.fw-search-row{margin-top:14px}.fw-tab{padding:7px 13px;font-size:12px}}
     .upper-space{margin-top:30px;}
     @media(max-width:650px){.upper-space{margin-top:0px;}}
 </style>
-
-{{--
-    Flight Search Widget — Alpine.js (no Livewire)
-    All state is managed client-side with Alpine.js x-data.
-    On search, a standard form POST is submitted to the server.
---}}
 
 <div
     class="fw-card-outer"
@@ -88,39 +90,26 @@
 >
     <div class="fw-card">
 
-        {{-- ── Trip Type Tabs + Multi-city global passengers ── --}}
+        {{-- ── Trip Type Tabs ── --}}
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px;flex-wrap:wrap;">
             <div class="fw-tabs" style="margin-bottom:0;flex:1;min-width:0;">
-                <button type="button"
-                    class="fw-tab"
-                    :class="{ 'fw-active': trip === 'OneWay' }"
-                    @click="trip = 'OneWay'">
+                <button type="button" class="fw-tab" :class="{ 'fw-active': trip === 'OneWay' }" @click="setTrip('OneWay')">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                     One Way
                 </button>
-                <button type="button"
-                    class="fw-tab"
-                    :class="{ 'fw-active': trip === 'Return' }"
-                    @click="trip = 'Return'">
+                <button type="button" class="fw-tab" :class="{ 'fw-active': trip === 'Return' }" @click="setTrip('Return')">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
                     Round Trip
                 </button>
-                <button type="button"
-                    class="fw-tab"
-                    :class="{ 'fw-active': trip === 'multi' }"
-                    @click="trip = 'multi'">
+                <button type="button" class="fw-tab" :class="{ 'fw-active': trip === 'multi' }" @click="setTrip('multi')">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                     Multi City
                 </button>
             </div>
 
-            {{-- Global passenger selector — visible only when Multi City is active --}}
+            {{-- Global passenger selector for Multi City --}}
             <div x-show="trip === 'multi'" x-transition style="position:relative;flex-shrink:0;">
-                <div
-                    class="fw-tab fw-active"
-                    style="cursor:pointer;gap:8px;padding:8px 14px;border-radius:999px;border-color:#bfdbfe;"
-                    @click.stop="paxOpen = !paxOpen"
-                >
+                <div class="fw-tab fw-active" style="cursor:pointer;gap:8px;padding:8px 14px;border-radius:999px;border-color:#bfdbfe;" @click.stop="paxOpen = !paxOpen">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     <span x-text="(adults + childs + kids) + ' Passenger' + (adults + childs + kids > 1 ? 's' : '')"></span>
                     <svg style="opacity:.5" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -163,17 +152,12 @@
                 <div class="fw-field fw-field-2x" style="position:relative;">
                     <div class="fw-label">Flying From</div>
                     <div class="fw-input-wrap">
-                        <input
-                            class="fw-input"
-                            type="text"
-                            placeholder="City or airport"
+                        <input class="fw-input" type="text" placeholder="City or airport"
                             x-model="from"
                             @input="searchAirport($event.target.value, 'fromResults')"
-                            @focus="searchAirport(from, 'fromResults')"
-                            @click.stop
-                            autocomplete="off"
-                        >
-                        {{-- Autocomplete dropdown --}}
+                            @focus="searchAirport(from, 'fromResults'); fromFocus = true"
+                            @blur="setTimeout(() => fromFocus = false, 150)"
+                            @click.stop autocomplete="off">
                         <div class="fw-ac-dropdown" :class="{ 'fw-open': fromResults.length && fromFocus }" @click.stop>
                             <template x-for="(a, i) in fromResults" :key="a.iata">
                                 <div class="fw-ac-item" :class="{ 'fw-hi': i === 0 }" @mousedown.prevent="selectAirport('from', a)">
@@ -190,7 +174,7 @@
                     <span x-show="errors.from" class="fw-error" x-text="errors.from"></span>
                 </div>
 
-                {{-- Swap button --}}
+                {{-- Swap --}}
                 <button class="fw-swap" type="button" @click="swapRoutes">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
                 </button>
@@ -199,16 +183,12 @@
                 <div class="fw-field fw-field-2x" style="position:relative;">
                     <div class="fw-label">Flying To</div>
                     <div class="fw-input-wrap">
-                        <input
-                            class="fw-input"
-                            type="text"
-                            placeholder="City or airport"
+                        <input class="fw-input" type="text" placeholder="City or airport"
                             x-model="to"
                             @input="searchAirport($event.target.value, 'toResults')"
-                            @focus="searchAirport(to, 'toResults')"
-                            @click.stop
-                            autocomplete="off"
-                        >
+                            @focus="searchAirport(to, 'toResults'); toFocus = true"
+                            @blur="setTimeout(() => toFocus = false, 150)"
+                            @click.stop autocomplete="off">
                         <div class="fw-ac-dropdown" :class="{ 'fw-open': toResults.length && toFocus }" @click.stop>
                             <template x-for="(a, i) in toResults" :key="a.iata">
                                 <div class="fw-ac-item" :class="{ 'fw-hi': i === 0 }" @mousedown.prevent="selectAirport('to', a)">
@@ -229,15 +209,10 @@
                 <div class="fw-field fw-field-15x" style="position:relative;">
                     <div class="fw-label">Depart</div>
                     <div class="fw-input-wrap">
-                        <input
-                            class="fw-input"
-                            type="text"
-                            placeholder="dd/mm/yyyy"
+                        <input class="fw-input" type="text" placeholder="dd/mm/yyyy"
                             x-model="depart"
                             @click.stop="toggleCal('depart')"
-                            readonly
-                            style="cursor:pointer;"
-                        >
+                            readonly style="cursor:pointer;">
                         <div class="fw-cal" :class="{ 'fw-open': openCal === 'depart' }" @click.stop>
                             <div class="fw-cal-header">
                                 <button type="button" class="fw-cal-nav" @click="prevMonth('depart')">&#8249;</button>
@@ -249,18 +224,19 @@
                                     <div class="fw-cal-dow" x-text="d"></div>
                                 </template>
                                 <template x-for="cell in calCells('depart')" :key="cell.key">
-                                    <button
-                                        type="button"
-                                        class="fw-cal-day"
+                                    <button type="button" class="fw-cal-day"
                                         :class="{
-                                            'fw-empty': cell.empty,
-                                            'fw-disabled': cell.disabled,
-                                            'fw-today': cell.today,
-                                            'fw-selected': cell.selected
+                                            'fw-empty':      cell.empty,
+                                            'fw-disabled':   cell.disabled,
+                                            'fw-today':      cell.today && !cell.rangeStart && !cell.selected,
+                                            'fw-range-start': cell.rangeStart,
+                                            'fw-in-range':   cell.inRange,
+                                            'fw-range-end':  cell.rangeEnd,
+                                            'fw-selected':   cell.selected && !cell.rangeStart && !cell.rangeEnd
                                         }"
                                         @click="pickDate('depart', cell)"
-                                        x-text="cell.empty ? '' : cell.d"
-                                    ></button>
+                                        x-text="cell.empty ? '' : cell.d">
+                                    </button>
                                 </template>
                             </div>
                         </div>
@@ -268,19 +244,14 @@
                     <span x-show="errors.depart" class="fw-error" x-text="errors.depart"></span>
                 </div>
 
-                {{-- Return date (only shown for Return trip) --}}
+                {{-- Return date — only shown for Round Trip --}}
                 <div class="fw-field fw-field-15x" x-show="trip === 'Return'" style="position:relative;">
                     <div class="fw-label">Return</div>
                     <div class="fw-input-wrap">
-                        <input
-                            class="fw-input"
-                            type="text"
-                            placeholder="dd/mm/yyyy"
+                        <input class="fw-input" type="text" placeholder="dd/mm/yyyy"
                             x-model="returning"
                             @click.stop="toggleCal('returning')"
-                            readonly
-                            style="cursor:pointer;"
-                        >
+                            readonly style="cursor:pointer;">
                         <div class="fw-cal" :class="{ 'fw-open': openCal === 'returning' }" @click.stop>
                             <div class="fw-cal-header">
                                 <button type="button" class="fw-cal-nav" @click="prevMonth('returning')">&#8249;</button>
@@ -292,18 +263,19 @@
                                     <div class="fw-cal-dow" x-text="d"></div>
                                 </template>
                                 <template x-for="cell in calCells('returning')" :key="cell.key">
-                                    <button
-                                        type="button"
-                                        class="fw-cal-day"
+                                    <button type="button" class="fw-cal-day"
                                         :class="{
-                                            'fw-empty': cell.empty,
-                                            'fw-disabled': cell.disabled,
-                                            'fw-today': cell.today,
-                                            'fw-selected': cell.selected
+                                            'fw-empty':      cell.empty,
+                                            'fw-disabled':   cell.disabled,
+                                            'fw-today':      cell.today && !cell.rangeEnd && !cell.selected,
+                                            'fw-range-start': cell.rangeStart,
+                                            'fw-in-range':   cell.inRange,
+                                            'fw-range-end':  cell.rangeEnd,
+                                            'fw-selected':   cell.selected && !cell.rangeStart && !cell.rangeEnd
                                         }"
                                         @click="pickDate('returning', cell)"
-                                        x-text="cell.empty ? '' : cell.d"
-                                    ></button>
+                                        x-text="cell.empty ? '' : cell.d">
+                                    </button>
                                 </template>
                             </div>
                         </div>
@@ -368,19 +340,15 @@
                     <div class="fw-leg">
                         <span class="fw-leg-badge" x-text="index + 1"></span>
 
-                        {{-- Leg From --}}
                         <div class="fw-field fw-field-2x" style="position:relative;">
                             <div class="fw-label">From</div>
                             <div class="fw-input-wrap">
-                                <input
-                                    class="fw-input"
-                                    type="text"
-                                    placeholder="City or airport"
+                                <input class="fw-input" type="text" placeholder="City or airport"
                                     x-model="leg.from"
                                     @input="searchLegAirport($event.target.value, index, 'from')"
-                                    @click.stop
-                                    autocomplete="off"
-                                >
+                                    @focus="leg.fromFocus = true; searchLegAirport(leg.from, index, 'from')"
+                                    @blur="setTimeout(() => { multiLegs[index].fromFocus = false; multiLegs = [...multiLegs] }, 150)"
+                                    @click.stop autocomplete="off">
                                 <div class="fw-ac-dropdown" :class="{ 'fw-open': leg.fromResults && leg.fromResults.length && leg.fromFocus }" @click.stop>
                                     <template x-for="(a, i) in (leg.fromResults || [])" :key="a.iata">
                                         <div class="fw-ac-item" :class="{ 'fw-hi': i === 0 }" @mousedown.prevent="selectLegAirport(index, 'from', a)">
@@ -395,19 +363,15 @@
                             </div>
                         </div>
 
-                        {{-- Leg To --}}
                         <div class="fw-field fw-field-2x" style="position:relative;">
                             <div class="fw-label">To</div>
                             <div class="fw-input-wrap">
-                                <input
-                                    class="fw-input"
-                                    type="text"
-                                    placeholder="City or airport"
+                                <input class="fw-input" type="text" placeholder="City or airport"
                                     x-model="leg.to"
                                     @input="searchLegAirport($event.target.value, index, 'to')"
-                                    @click.stop
-                                    autocomplete="off"
-                                >
+                                    @focus="leg.toFocus = true; searchLegAirport(leg.to, index, 'to')"
+                                    @blur="setTimeout(() => { multiLegs[index].toFocus = false; multiLegs = [...multiLegs] }, 150)"
+                                    @click.stop autocomplete="off">
                                 <div class="fw-ac-dropdown" :class="{ 'fw-open': leg.toResults && leg.toResults.length && leg.toFocus }" @click.stop>
                                     <template x-for="(a, i) in (leg.toResults || [])" :key="a.iata">
                                         <div class="fw-ac-item" :class="{ 'fw-hi': i === 0 }" @mousedown.prevent="selectLegAirport(index, 'to', a)">
@@ -422,19 +386,13 @@
                             </div>
                         </div>
 
-                        {{-- Leg Date --}}
                         <div class="fw-field fw-field-15x" style="position:relative;">
                             <div class="fw-label">Date</div>
                             <div class="fw-input-wrap">
-                                <input
-                                    class="fw-input"
-                                    type="text"
-                                    placeholder="dd/mm/yyyy"
+                                <input class="fw-input" type="text" placeholder="dd/mm/yyyy"
                                     x-model="leg.depart"
                                     @click.stop="toggleLegCal(index)"
-                                    readonly
-                                    style="cursor:pointer;"
-                                >
+                                    readonly style="cursor:pointer;">
                                 <div class="fw-cal" :class="{ 'fw-open': openLegCal === index }" @click.stop>
                                     <div class="fw-cal-header">
                                         <button type="button" class="fw-cal-nav" @click="prevLegMonth(index)">&#8249;</button>
@@ -446,32 +404,27 @@
                                             <div class="fw-cal-dow" x-text="d"></div>
                                         </template>
                                         <template x-for="cell in legCalCells(index)" :key="cell.key">
-                                            <button
-                                                type="button"
-                                                class="fw-cal-day"
+                                            <button type="button" class="fw-cal-day"
                                                 :class="{
-                                                    'fw-empty': cell.empty,
+                                                    'fw-empty':    cell.empty,
                                                     'fw-disabled': cell.disabled,
-                                                    'fw-today': cell.today,
+                                                    'fw-today':    cell.today,
                                                     'fw-selected': cell.selected
                                                 }"
                                                 @click="pickLegDate(index, cell)"
-                                                x-text="cell.empty ? '' : cell.d"
-                                            ></button>
+                                                x-text="cell.empty ? '' : cell.d">
+                                            </button>
                                         </template>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Leg Cabin --}}
                         <div class="fw-field fw-field-12x">
                             <div class="fw-label">Cabin</div>
-                            <select
-                                class="fw-input fw-select"
+                            <select class="fw-input fw-select"
                                 :value="leg.cabin"
-                                @change="multiLegs[index].cabin = $event.target.value; multiLegs = [...multiLegs]"
-                            >
+                                @change="multiLegs[index].cabin = $event.target.value; multiLegs = [...multiLegs]">
                                 <option value="Y">Economy</option>
                                 <option value="S">Prem. Economy</option>
                                 <option value="C">Business</option>
@@ -479,23 +432,15 @@
                             </select>
                         </div>
 
-                        {{-- Remove button (only for legs beyond the first two) --}}
-                        <button
-                            x-show="index >= 2"
-                            type="button"
-                            class="fw-remove-btn"
-                            @click="removeLeg(index)"
-                        >
+                        <button x-show="index >= 2" type="button" class="fw-remove-btn" @click="removeLeg(index)">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         </button>
                     </div>
                 </template>
             </div>
-
             <button type="button" class="fw-add-leg-btn" style="margin-top:10px;" @click="addLeg">
                 + Add another flight
             </button>
-
         </div>
 
         {{-- ── Search Button ── --}}
@@ -507,7 +452,7 @@
             </button>
         </div>
 
-        {{-- Hidden form for POST submission --}}
+        {{-- Hidden form --}}
         <form id="fw-form" method="POST" action="{{ route('flights.search') }}" style="display:none;">
             @csrf
             <input type="hidden" name="trip"        x-bind:value="trip">
@@ -528,60 +473,99 @@
 <script>
 function flightWidget() {
     return {
+
         // ── Core state ──
-        trip: 'OneWay',
-        from: '',
-        to: '',
-        depart: '',
-        returning: '',
-        adults: 1,
-        childs: 0,
-        kids: 0,
+        trip:       'OneWay',
+        from:       '',
+        to:         '',
+        depart:     '',
+        returning:  '',
+        adults:     1,
+        childs:     0,
+        kids:       0,
         flightType: 'Y',
+
         multiLegs: [
-            { from: '', to: '', depart: '', cabin: 'Y', fromResults: [], toResults: [], fromFocus: false, toFocus: false, calY: new Date().getFullYear(), calM: new Date().getMonth() },
-            { from: '', to: '', depart: '', cabin: 'Y', fromResults: [], toResults: [], fromFocus: false, toFocus: false, calY: new Date().getFullYear(), calM: new Date().getMonth() },
+            { from:'', to:'', depart:'', cabin:'Y', fromResults:[], toResults:[], fromFocus:false, toFocus:false, calY:new Date().getFullYear(), calM:new Date().getMonth() },
+            { from:'', to:'', depart:'', cabin:'Y', fromResults:[], toResults:[], fromFocus:false, toFocus:false, calY:new Date().getFullYear(), calM:new Date().getMonth() },
         ],
 
         // ── UI state ──
-        paxOpen: false,
-        openCal: null,       // 'depart' | 'returning' | null
-        openLegCal: null,    // index | null
+        paxOpen:    false,
+        openCal:    null,   // 'depart' | 'returning' | null
+        openLegCal: null,   // index | null
         calState: {
             depart:    { y: new Date().getFullYear(), m: new Date().getMonth() },
             returning: { y: new Date().getFullYear(), m: new Date().getMonth() },
         },
 
         // ── Airport data ──
-        airports: [],
+        airports:    [],
         fromResults: [],
-        toResults: [],
-        fromFocus: false,
-        toFocus: false,
+        toResults:   [],
+        fromFocus:   false,
+        toFocus:     false,
 
-        // ── Validation errors ──
+        // ── Errors ──
         errors: {},
 
-        // ── Init ──
+        // ────────────────────────────────────────────────────────────
+        //  INIT
+        // ────────────────────────────────────────────────────────────
         init() {
             fetch('{{ asset('assets/data/airports.json') }}')
                 .then(r => r.json())
                 .then(d => { this.airports = d; })
                 .catch(e => console.error('[FW] airports.json:', e));
 
-            // Close dropdowns/calendars on outside click
+            // Global click closes all dropdowns/calendars
             document.addEventListener('click', () => {
-                this.fromFocus = false;
-                this.toFocus   = false;
-                this.openCal   = null;
+                this.fromFocus  = false;
+                this.toFocus    = false;
+                this.openCal    = null;
                 this.openLegCal = null;
-                this.paxOpen   = false;
+                this.paxOpen    = false;
             });
         },
 
-        // ── Airport search ──
+        // ────────────────────────────────────────────────────────────
+        //  HELPERS
+        // ────────────────────────────────────────────────────────────
+
+        // Parse "dd/mm/yyyy" → midnight Date (local), or null
+        _parseDate(str) {
+            if (!str) return null;
+            const p = str.split('/');
+            if (p.length !== 3) return null;
+            const d = new Date(+p[2], +p[1] - 1, +p[0]);
+            d.setHours(0, 0, 0, 0);
+            return isNaN(d.getTime()) ? null : d;
+        },
+
+        // Format a Date → "dd/mm/yyyy"
+        _fmtDate(date) {
+            return String(date.getDate()).padStart(2,'0') + '/' +
+                   String(date.getMonth() + 1).padStart(2,'0') + '/' +
+                   date.getFullYear();
+        },
+
+        // ────────────────────────────────────────────────────────────
+        //  TRIP TABS
+        // ────────────────────────────────────────────────────────────
+        setTrip(value) {
+            this.trip    = value;
+            this.openCal = null;
+            // Switching away from Return: clear return date
+            if (value !== 'Return') {
+                this.returning = '';
+            }
+        },
+
+        // ────────────────────────────────────────────────────────────
+        //  AIRPORT AUTOCOMPLETE
+        // ────────────────────────────────────────────────────────────
         airportSearch(q) {
-            q = q.toLowerCase().trim();
+            q = (q || '').toLowerCase().trim();
             if (q.length < 2) return [];
             return this.airports.filter(a =>
                 (a.iata    && a.iata.toLowerCase().startsWith(q))  ||
@@ -592,87 +576,79 @@ function flightWidget() {
         },
 
         searchAirport(val, target) {
-            const results = this.airportSearch(val);
             if (target === 'fromResults') {
-                this.fromResults = results;
+                this.fromResults = this.airportSearch(val);
                 this.fromFocus   = true;
             } else {
-                this.toResults = results;
+                this.toResults = this.airportSearch(val);
                 this.toFocus   = true;
             }
         },
 
         selectAirport(field, airport) {
-            const val = (airport.city || airport.name) + ' (' + airport.iata + ')';
+            const display = (airport.city || airport.name) + ' (' + airport.iata + ')';
+
             if (field === 'from') {
-                this.from        = val;
+                this.from        = display;
                 this.fromResults = [];
                 this.fromFocus   = false;
             } else {
-                this.to        = val;
+                this.to        = display;
                 this.toResults = [];
                 this.toFocus   = false;
             }
         },
 
-        // Multi-leg airport search
+        // ── Multi-leg autocomplete ──
         searchLegAirport(val, index, field) {
             const results = this.airportSearch(val);
-            const leg = this.multiLegs[index];
-            if (field === 'from') {
-                leg.fromResults = results;
-                leg.fromFocus   = true;
-            } else {
-                leg.toResults = results;
-                leg.toFocus   = true;
-            }
-            this.multiLegs = [...this.multiLegs]; // trigger reactivity
-        },
-
-        selectLegAirport(index, field, airport) {
-            const val = (airport.city || airport.name) + ' (' + airport.iata + ')';
             const leg = { ...this.multiLegs[index] };
-            if (field === 'from') {
-                leg.from        = val;
-                leg.fromResults = [];
-                leg.fromFocus   = false;
-            } else {
-                leg.to        = val;
-                leg.toResults = [];
-                leg.toFocus   = false;
-            }
+            if (field === 'from') { leg.fromResults = results; leg.fromFocus = true; }
+            else                  { leg.toResults   = results; leg.toFocus   = true; }
             this.multiLegs[index] = leg;
             this.multiLegs = [...this.multiLegs];
         },
 
-        // ── Swap ──
-        swapRoutes() {
-            const tmp = this.from;
-            this.from = this.to;
-            this.to   = tmp;
-        },
+        selectLegAirport(index, field, airport) {
+            const val = (airport.city || airport.name) + ' (' + airport.iata + ')';
 
-        // ── Passengers ──
-        closePax() {
-            this.paxOpen = false;
-        },
+            const leg = { ...this.multiLegs[index] };
 
-        // ── Multi-leg management ──
+            if (field === 'from') {
+                leg.from = val;
+                leg.fromResults = [];
+                leg.fromFocus = false;
+            } else {
+                leg.to = val;
+                leg.toResults = [];
+                leg.toFocus = false;
+            }
+
+            this.multiLegs[index] = leg;
+            this.multiLegs = [...this.multiLegs];
+        },
+        
+
+        // ────────────────────────────────────────────────────────────
+        //  MISC
+        // ────────────────────────────────────────────────────────────
+        swapRoutes() { [this.from, this.to] = [this.to, this.from]; },
+        closePax()   { this.paxOpen = false; },
         addLeg() {
             this.multiLegs.push({
-                from: '', to: '', depart: '', cabin: 'Y',
-                fromResults: [], toResults: [],
-                fromFocus: false, toFocus: false,
+                from:'', to:'', depart:'', cabin:'Y',
+                fromResults:[], toResults:[],
+                fromFocus:false, toFocus:false,
                 calY: new Date().getFullYear(), calM: new Date().getMonth(),
             });
         },
+        removeLeg(index) { this.multiLegs.splice(index, 1); },
 
-        removeLeg(index) {
-            this.multiLegs.splice(index, 1);
-        },
-
-        // ── Calendar helpers ──
-        MONTHS: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+        // ────────────────────────────────────────────────────────────
+        //  CALENDAR
+        // ────────────────────────────────────────────────────────────
+        MONTHS: ['January','February','March','April','May','June',
+                 'July','August','September','October','November','December'],
 
         calTitle(field) {
             const s = this.calState[field];
@@ -681,73 +657,32 @@ function flightWidget() {
 
         prevMonth(field) {
             const s = this.calState[field];
-            s.m--;
-            if (s.m < 0) { s.m = 11; s.y--; }
+            if (--s.m < 0) { s.m = 11; s.y--; }
         },
 
         nextMonth(field) {
             const s = this.calState[field];
-            s.m++;
-            if (s.m > 11) { s.m = 0; s.y++; }
-        },
-
-        calCells(field) {
-            const s      = this.calState[field];
-            const today  = new Date(); today.setHours(0,0,0,0);
-            const selStr = this[field]; // e.g. this.depart
-            let selDate  = null;
-            if (selStr) {
-                const p = selStr.split('/');
-                if (p.length === 3) selDate = new Date(+p[2], +p[1]-1, +p[0]);
-            }
-            const startDow = new Date(s.y, s.m, 1).getDay();
-            const lastDay  = new Date(s.y, s.m + 1, 0).getDate();
-            const cells    = [];
-
-            for (let i = 0; i < startDow; i++) {
-                cells.push({ key: 'e'+i, empty: true });
-            }
-            for (let d = 1; d <= lastDay; d++) {
-                const date = new Date(s.y, s.m, d);
-                cells.push({
-                    key:      d,
-                    d,
-                    empty:    false,
-                    disabled: date < today,
-                    today:    date.toDateString() === today.toDateString(),
-                    selected: selDate && date.toDateString() === selDate.toDateString(),
-                    y: s.y, mo: s.m,
-                });
-            }
-            return cells;
-        },
-
-        pickDate(field, cell) {
-            if (cell.empty || cell.disabled) return;
-            const val = String(cell.d).padStart(2,'0') + '/' + String(cell.mo+1).padStart(2,'0') + '/' + cell.y;
-            this[field] = val;
-            this.openCal = null;
+            if (++s.m > 11) { s.m = 0; s.y++; }
         },
 
         toggleCal(field) {
             if (this.openCal === field) {
                 this.openCal = null;
-            } else {
-                // Sync calendar state to existing value
-                const val = this[field];
-                if (val) {
-                    const p = val.split('/');
-                    if (p.length === 3) {
-                        this.calState[field].m = +p[1]-1;
-                        this.calState[field].y = +p[2];
-                    }
-                } else {
-                    const n = new Date();
-                    this.calState[field].m = n.getMonth();
-                    this.calState[field].y = n.getFullYear();
-                }
-                this.openCal = field;
+                return;
             }
+
+            // ── Sync calendar view month ──────────────────────────────
+            if (field === 'returning') {
+                // Always open from the depart date (or today if none set)
+                const anchor = this._parseDate(this.depart) || new Date();
+                this.calState.returning = { y: anchor.getFullYear(), m: anchor.getMonth() };
+            } else {
+                // Open from the currently selected date, or today
+                const anchor = this._parseDate(this[field]) || new Date();
+                this.calState[field] = { y: anchor.getFullYear(), m: anchor.getMonth() };
+            }
+
+            this.openCal    = field;
             this.openLegCal = null;
         },
 
@@ -756,7 +691,109 @@ function flightWidget() {
             this.openLegCal = null;
         },
 
-        // Leg-specific calendar
+        // Build the array of cell objects for a given calendar field
+        calCells(field) {
+            const s   = this.calState[field];
+            const now = new Date(); now.setHours(0, 0, 0, 0);
+
+            const departDate  = this._parseDate(this.depart);
+            const returnDate  = this._parseDate(this.returning);
+
+            const startDow = new Date(s.y, s.m, 1).getDay();
+            const lastDay  = new Date(s.y, s.m + 1, 0).getDate();
+            const cells    = [];
+
+            // Empty lead cells for day-of-week alignment
+            for (let i = 0; i < startDow; i++) {
+                cells.push({ key: 'e' + i, empty: true });
+            }
+
+            for (let d = 1; d <= lastDay; d++) {
+                const date = new Date(s.y, s.m, d);
+                date.setHours(0, 0, 0, 0);
+
+                // ── Disabled logic ────────────────────────────────────
+                // All past dates are always disabled
+                let disabled = date < now;
+
+                // Return calendar: also disable dates strictly before depart
+                if (!disabled && field === 'returning' && departDate && date < departDate) {
+                    disabled = true;
+                }
+
+                // ── Range-highlight logic ─────────────────────────────
+                // We compute these the same way for both calendars so the
+                // full range is visible when navigating either calendar.
+                const isDepart = departDate && date.getTime() === departDate.getTime();
+                const isReturn = returnDate && date.getTime() === returnDate.getTime();
+                const between  = departDate && returnDate && date > departDate && date < returnDate;
+
+                // rangeStart = the depart date (only when a return is also set)
+                const rangeStart = isDepart && !!returnDate;
+                // rangeEnd   = the return date (only when a depart is also set)
+                const rangeEnd   = isReturn && !!departDate;
+                // inRange    = strictly between depart and return
+                const inRange    = !!between;
+                // selected   = the "own" date of this calendar without a pair
+                //              (e.g. depart selected but no return yet)
+                const selected   = (isDepart && !returnDate) || (isReturn && !departDate);
+
+                cells.push({
+                    key:        s.y + '-' + s.m + '-' + d,
+                    d,
+                    y:          s.y,
+                    m:          s.m,
+                    empty:      false,
+                    disabled,
+                    today:      date.getTime() === now.getTime(),
+                    selected,
+                    rangeStart,
+                    inRange,
+                    rangeEnd,
+                });
+            }
+
+            return cells;
+        },
+
+        pickDate(field, cell) {
+            if (cell.empty || cell.disabled) return;
+
+            const picked = new Date(cell.y, cell.m, cell.d);
+            picked.setHours(0, 0, 0, 0);
+            const formatted = this._fmtDate(picked);
+
+            if (field === 'depart') {
+                this.depart = formatted;
+
+                // ── If existing return is now before depart, clear it ──
+                const ret = this._parseDate(this.returning);
+                if (ret && ret < picked) {
+                    this.returning = '';
+                }
+
+                if (this.trip === 'Return') {
+                    if (!this.returning) {
+                        // ── Auto-fill return = depart + 1 day ────────────
+                        const next = new Date(picked);
+                        next.setDate(next.getDate() + 1);
+                        this.returning = this._fmtDate(next);
+                    }
+                    // ── Auto-open return calendar, starting from depart month ──
+                    this.calState.returning = { y: cell.y, m: cell.m };
+                    this.openCal = 'returning';
+                } else {
+                    this.openCal = null;
+                }
+
+            } else {
+                // Picking return date — just save and close
+                this.returning = formatted;
+                this.openCal   = null;
+            }
+        },
+
+        // ── Multi-leg calendars ──
         legCalTitle(index) {
             const leg = this.multiLegs[index];
             return this.MONTHS[leg.calM] + ' ' + leg.calY;
@@ -764,41 +801,43 @@ function flightWidget() {
 
         prevLegMonth(index) {
             const leg = this.multiLegs[index];
-            leg.calM--;
-            if (leg.calM < 0) { leg.calM = 11; leg.calY--; }
+            if (--leg.calM < 0) { leg.calM = 11; leg.calY--; }
             this.multiLegs = [...this.multiLegs];
         },
 
         nextLegMonth(index) {
             const leg = this.multiLegs[index];
-            leg.calM++;
-            if (leg.calM > 11) { leg.calM = 0; leg.calY++; }
+            if (++leg.calM > 11) { leg.calM = 0; leg.calY++; }
             this.multiLegs = [...this.multiLegs];
         },
 
         legCalCells(index) {
-            const leg    = this.multiLegs[index];
-            const today  = new Date(); today.setHours(0,0,0,0);
-            let selDate  = null;
-            if (leg.depart) {
-                const p = leg.depart.split('/');
-                if (p.length === 3) selDate = new Date(+p[2], +p[1]-1, +p[0]);
-            }
+            const leg = this.multiLegs[index];
+            const now = new Date(); now.setHours(0, 0, 0, 0);
+            const sel = this._parseDate(leg.depart);
+
+            // Minimum selectable date = later of today OR previous leg's date
+            const prevDate = index > 0 ? this._parseDate(this.multiLegs[index - 1].depart) : null;
+            const minDate  = prevDate && prevDate > now ? prevDate : now;
+
             const startDow = new Date(leg.calY, leg.calM, 1).getDay();
             const lastDay  = new Date(leg.calY, leg.calM + 1, 0).getDate();
             const cells    = [];
 
-            for (let i = 0; i < startDow; i++) cells.push({ key: 'e'+i, empty: true });
+            for (let i = 0; i < startDow; i++) cells.push({ key: 'e' + i, empty: true });
+
             for (let d = 1; d <= lastDay; d++) {
                 const date = new Date(leg.calY, leg.calM, d);
+                date.setHours(0, 0, 0, 0);
                 cells.push({
-                    key:      d,
+                    key:      leg.calY + '-' + leg.calM + '-' + d,
                     d,
+                    y:        leg.calY,
+                    m:        leg.calM,
                     empty:    false,
-                    disabled: date < today,
-                    today:    date.toDateString() === today.toDateString(),
-                    selected: selDate && date.toDateString() === selDate.toDateString(),
-                    y: leg.calY, mo: leg.calM,
+                    disabled: date < minDate,
+                    today:    date.getTime() === now.getTime(),
+                    selected: sel && date.getTime() === sel.getTime(),
                 });
             }
             return cells;
@@ -806,29 +845,69 @@ function flightWidget() {
 
         pickLegDate(index, cell) {
             if (cell.empty || cell.disabled) return;
-            const val = String(cell.d).padStart(2,'0') + '/' + String(cell.mo+1).padStart(2,'0') + '/' + cell.y;
-            this.multiLegs[index].depart = val;
-            this.multiLegs = [...this.multiLegs];
+
+            const picked = new Date(cell.y, cell.m, cell.d);
+            picked.setHours(0, 0, 0, 0);
+
+            this.multiLegs[index].depart = this._fmtDate(picked);
+
+            // Clear any later leg dates that are now before this picked date
+            for (let i = index + 1; i < this.multiLegs.length; i++) {
+                const existing = this._parseDate(this.multiLegs[i].depart);
+                if (existing && existing < picked) {
+                    this.multiLegs[i].depart = '';
+                }
+            }
+
+            // Auto-fill the very next leg with picked date + 1 day (if empty)
+            const nextIndex = index + 1;
+            if (nextIndex < this.multiLegs.length && !this.multiLegs[nextIndex].depart) {
+                const next = new Date(picked);
+                next.setDate(next.getDate() + 1);
+                this.multiLegs[nextIndex].depart = this._fmtDate(next);
+                // Sync next leg calendar view to that month
+                this.multiLegs[nextIndex].calY = next.getFullYear();
+                this.multiLegs[nextIndex].calM = next.getMonth();
+            }
+
+            this.multiLegs  = [...this.multiLegs];
             this.openLegCal = null;
         },
 
         toggleLegCal(index) {
-            this.openLegCal = (this.openLegCal === index) ? null : index;
-            this.openCal = null;
+            if (this.openLegCal === index) {
+                this.openLegCal = null;
+                return;
+            }
+
+            // Sync calendar view: own date > previous leg date > today
+            const leg     = this.multiLegs[index];
+            const ownDate = this._parseDate(leg.depart);
+            const prevDate = index > 0 ? this._parseDate(this.multiLegs[index - 1].depart) : null;
+            const anchor  = ownDate || prevDate || new Date();
+
+            this.multiLegs[index].calY = anchor.getFullYear();
+            this.multiLegs[index].calM = anchor.getMonth();
+            this.multiLegs = [...this.multiLegs];
+
+            this.openLegCal = index;
+            this.openCal    = null;
         },
 
-        // ── Validation & Search ──
+        // ────────────────────────────────────────────────────────────
+        //  VALIDATION & SEARCH
+        // ────────────────────────────────────────────────────────────
         validate() {
             this.errors = {};
             if (this.trip !== 'multi') {
-                if (!this.from.trim())   this.errors.from   = 'Please enter a departure city or airport.';
-                if (!this.to.trim())     this.errors.to     = 'Please enter a destination city or airport.';
-                if (!this.depart.trim()) this.errors.depart = 'Please select a departure date.';
+                if (!this.from.trim())   this.errors.from    = 'Please enter a departure city or airport.';
+                if (!this.to.trim())     this.errors.to      = 'Please enter a destination city or airport.';
+                if (!this.depart.trim()) this.errors.depart  = 'Please select a departure date.';
                 if (this.trip === 'Return' && !this.returning.trim())
                     this.errors.returning = 'Please select a return date.';
             } else {
-                const incomplete = this.multiLegs.some(l => !l.from || !l.to || !l.depart);
-                if (incomplete) this.errors.general = 'Please complete all flight legs.';
+                if (this.multiLegs.some(l => !l.from || !l.to || !l.depart))
+                    this.errors.general = 'Please complete all flight legs.';
             }
             return Object.keys(this.errors).length === 0;
         },
