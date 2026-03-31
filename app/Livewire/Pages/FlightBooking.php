@@ -14,6 +14,15 @@ class FlightBooking extends Component
     public string $sessionId    = '';
     public array  $searchParams = [];
 
+    public array  $bookingFlight   = [];
+    public string $searchSessionId = '';
+
+    public string $bookingSessionId = '';
+    public array  $bookingSearchParams = [];    
+    public array  $extraServices = [];
+    public array  $fareRules = [];
+    public string $tripType = '';
+
     // ── Contact ───────────────────────────────────────────────────────────────
     public string $contactEmail        = '';
     public string $contactEmailConfirm = '';
@@ -98,6 +107,14 @@ class FlightBooking extends Component
         $this->adultCount  = (int) ($this->searchParams['adults'] ?? 1);
         $this->childCount  = (int) ($this->searchParams['childs'] ?? 0);
         $this->infantCount = (int) ($this->searchParams['kids']   ?? 0);
+
+        $this->bookingFlight   = session('bookingFlight', []);
+        $this->bookingSearchParams    = session('bookingSearchParams',  []);
+        $this->bookingSessionId = session('bookingSessionId',    '');
+
+        $this->extraServices = session('extraServices',    '');
+        $this->fareRules = session('fareRules', []);
+        $this->tripType = session('tripType', []);
 
         $this->_rebuildPassengers();
     }
@@ -325,7 +342,15 @@ class FlightBooking extends Component
 
     public function render()
     {
-        return view('livewire.pages.flight.flight-booking')
+        return view('livewire.pages.flight.flight-booking', [
+        
+            'bookingFlight'   => $this->bookingFlight,
+            'bookingSessionId' => $this->bookingSessionId,
+            'bookingSearchParams' => $this->bookingSearchParams,
+            'extraServices' => $this->extraServices,
+            'fareRules' => $this->fareRules,
+            'tripType' => $this->tripType,
+        ])
             ->layout('layouts.app', ['title' => 'Complete Your Booking']);
     }
 }

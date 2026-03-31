@@ -390,7 +390,7 @@
 </style>
 
 @php
-    $searchParams = session('searchParams', []);
+    $searchParams = $searchParams ?? [];
     $trip        = $searchParams['trip'] ?? 'oneway';
     $from        = $searchParams['from_city'] ?? $searchParams['from'] ?? 'Lagos';
     $to          = $searchParams['to_city'] ?? $searchParams['to'] ?? 'Abuja';
@@ -585,7 +585,17 @@
                         · <span x-text="filteredFlights.length + ' flights found'"></span>
                     </div>
                 </div>
-                
+                {{--
+                <button class="sr-fare-cal-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    Fare Calendar
+                </button>
+                --}}
             </div>
 
             {{-- Fare Matrix --}}
@@ -1080,11 +1090,7 @@
                 { value: 2, label: '1+ Stops', sub: '' },
             ],
 
-            allFlights: {!! (function() {
-                $data = session('flightResults', []);
-                if (is_string($data)) return $data ?: '[]';
-                return json_encode($data ?: []);
-            })() !!},
+            allFlights: @js($flightResults),
 
             airlines: [],
             matrixAirlines: [],
