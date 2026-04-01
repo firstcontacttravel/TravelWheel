@@ -446,7 +446,16 @@
         <span class="bk-crumb-sep">›</span>
         <span>Complete Booking</span>
     </div>
-
+    @if($errors->any())
+    <div class="bk-notice danger" style="margin-bottom:16px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <div>
+            @foreach($errors->all() as $error)
+                <div>{{ $error }}</div>
+            @endforeach
+        </div>
+    </div>
+    @endif
     {{-- Global notices --}}
     @if(!empty($flight['isPassportMandatory']))
         <div class="bk-notice danger" style="margin-bottom:12px;">
@@ -1106,7 +1115,7 @@
                                                 <label class="bk-label">Title <span class="bk-req">*</span></label>
                                                 <select class="bk-select" wire:model="passengers.{{ $i }}.title">
                                                     <option value="">–</option>
-                                                    @foreach(['Mr','Mrs','Ms','Miss','Dr'] as $t)
+                                                    @foreach(['Mr','Mrs','Ms','Miss','Dr','Master'] as $t)
                                                         <option value="{{ $t }}">{{ $t }}</option>
                                                     @endforeach
                                                 </select>
@@ -1180,12 +1189,36 @@
                                                 <span class="bk-hint">Must be valid beyond travel dates</span>
                                                 @error("passengers.{$i}.passport_exp") <span class="bk-error">{{ $message }}</span> @enderror
                                             </div>
-                                            
-                                            
-                                            
-                                        </div>
+                                            {{-- Passport Issuing Country (passportIssueCountry in API) --}}
+                                            <div class="bk-field">
+                                                <label class="bk-label">Passport Issuing Country</label>
+                                                <select class="bk-select" wire:model="passengers.{{ $i }}.passport_issue_country">
+                                                    @foreach($this->nationalities as $code => $name)
+                                                        <option value="{{ $code }}">{{ $name }}</option>
+                                                    @endforeach
+                                                </select>
+                                                @error("passengers.{$i}.passport_issue_country") <span class="bk-error">{{ $message }}</span> @enderror
+                                            </div>
 
-                                        
+                                            {{-- Passport Issue Date (passportIssueDate in API) --}}
+                                            <div class="bk-field">
+                                                <label class="bk-label">Passport Issue Date</label>
+                                                <input class="bk-input" type="date"
+                                                        wire:model.blur="passengers.{{ $i }}.passport_issue_date"
+                                                        max="{{ now()->format('Y-m-d') }}">
+                                                <span class="bk-hint">Date passport was issued</span>
+                                                @error("passengers.{$i}.passport_issue_date") <span class="bk-error">{{ $message }}</span> @enderror
+                                            </div>
+                                            <div class="bk-field">
+                                                <label class="bk-label">Frequent Flyer Number</label>
+                                                <input class="bk-input" type="text" placeholder="e.g. BA12345678"
+                                                    wire:model.blur="passengers.{{ $i }}.frequent_flyer_number">
+                                                <span class="bk-hint">Optional — enter your airline loyalty number</span>
+                                                @error("passengers.{$i}.frequent_flyer_number") <span class="bk-error">{{ $message }}</span> @enderror
+                                            </div>
+                                        </div>
+                                            
+                                            
                                     </div>
                                 </div>
                             @endforeach
@@ -1222,11 +1255,25 @@
                                     @error('contactEmailConfirm') <span class="bk-error">{{ $message }}</span> @enderror
                                 </div>
                                 <div class="bk-field bk-contact-full">
-                                    <label class="bk-label">Mobile No <span class="bk-req">*</span></label>
+                                    <label class="bk-label">Mobile No <span class="bk-req"></span></label>
                                     <input class="bk-input" type="tel" placeholder="+234 800 000 0000"
-                                           wire:model.blur="contactPhone">
+                                                                            wire:model.blur="contactPhone">
                                     <span class="bk-hint">Include country code · e.g. +234 for Nigeria</span>
                                     @error('contactPhone') <span class="bk-error">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="bk-field">
+                                    <label class="bk-label">Area Code <span class="bk-req"></span></label>
+                                    <input class="bk-input" type="text" placeholder="e.g. 080"
+                                                                            wire:model.blur="contactAreaCode">
+                                    <span class="bk-hint">Local area code</span>
+                                    @error('contactAreaCode') <span class="bk-error">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="bk-field">
+                                    <label class="bk-label">Country Dialling Code <span class="bk-req">*</span></label>
+                                    <input class="bk-input" type="text" placeholder="e.g. 234"
+                                                                            wire:model.blur="contactCountryCode">
+                                    <span class="bk-hint">Country code without + e.g. 234</span>
+                                    @error('contactCountryCode') <span class="bk-error">{{ $message }}</span> @enderror
                                 </div>
                             </div>
                         </div>
@@ -1339,21 +1386,24 @@
 
                 <form id="bk-form" method="POST" action="{{ route('flights.book') }}" style="display:none;">
                     @csrf
-                    <input type="hidden" name="fare_source_code" value="{{ $flight['fareSourceCode'] ?? '' }}">
-                    <input type="hidden" name="session_id"       value="{{ $sessionId }}">
-                    <input type="hidden" name="contact[email]"   value="{{ $contactEmail }}">
-                    <input type="hidden" name="contact[phone]"   value="{{ $contactPhone }}">
+                    <input type="hidden" name="fare_source_code" value="{{ $flight['flight']['fareSourceCode'] ?? $flight['fareSourceCode'] ?? '' }}">
+                    <input type="hidden" name="session_id"            value="{{ $sessionId }}">
+                    <input type="hidden" name="contact[email]"        value="{{ $contactEmail }}">
+                    <input type="hidden" name="contact[phone]"        value="{{ $contactPhone }}">
+                    <input type="hidden" name="contact[area_code]"    value="{{ $contactAreaCode }}">
+                    <input type="hidden" name="contact[country_code]" value="{{ $contactCountryCode }}">
                     @foreach($this->passengers as $i => $pax)
-                        @foreach(['type','title','first_name','last_name','middle_name','dob','gender','nationality','passport_no','passport_exp'] as $field)
-                            <input type="hidden" name="passengers[{{ $i }}][{{ $field }}]" value="{{ $pax[$field] ?? '' }}">
-                        @endforeach
+                    @foreach([
+                    'type','title','first_name','middle_name','last_name',
+                    'gender','dob','nationality',
+                    'passport_no','passport_issue_country','passport_issue_date','passport_exp', 'frequent_flyer_number'
+                    ] as $field)
+                    <input type="hidden" name="passengers[{{ $i }}][{{ $field }}]" value="{{ $pax[$field] ?? '' }}">
+                    @endforeach
                     @endforeach
                 </form>
 
-                <div class="bk-notice warn">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    <span>Payment gateway will be connected here. <strong>Confirm &amp; Pay</strong> submits to a test endpoint.</span>
-                </div>
+               
 
                 <div class="bk-actions">
                     <button class="bk-btn-ghost" wire:click="back">
