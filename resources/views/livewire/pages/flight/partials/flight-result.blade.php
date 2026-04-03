@@ -1039,7 +1039,6 @@
                     </div>
                 </template>
 
-                
 
             </div>
             <div class="sr-tip-card">

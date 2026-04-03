@@ -1,4 +1,4 @@
-<footer class="mt-32 footter">
+<footer class="mt-10 footter">
     <section class="w-full bg-[var(--color-primary)]">
         <div class="flex flex-wrap p-3">
             <div class="w-full md:w-1/6 p-2 flex flex-col items-start">

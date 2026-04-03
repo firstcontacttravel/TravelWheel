@@ -2,6 +2,7 @@
 
 use App\Livewire\Pages\HomePage;
 use App\Livewire\Pages\FlightPage;
+use App\Livewire\Pages\FlightIndex;
 use App\Http\Controllers\FlightSearchController;
 use App\Http\Controllers\FlightBookingController;
 use App\Livewire\Pages\FlightBooking;
@@ -17,7 +18,7 @@ Route::get('/faq', function() { /* ... */ })->name('faq');
 Route::get('/help', function() { /* ... */ })->name('help');
 
 // Air routes
-Route::get('/air/flight', FlightPage::class)->name('air.flight');
+Route::get('/air/flight', FlightIndex::class)->name('air.flight');
 Route::get('/air/flight-s', FlightPage::class)->name('air.flight-s');
 //Route::post('/air/flight/search', [FlightPage::class, 'search'])->name('flights.search');
 // Route::post('/air/flight/select', [FlightSearchController::class, 'select'])->name('flights.select');
