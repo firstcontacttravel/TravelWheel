@@ -23,7 +23,7 @@ class FlightPage extends Component
 
      public function render()
     {
-        
+       //dd($this->searchParams);
         return view('livewire.pages.flight.flight-page-result', [
             'flightResults'   => $this->flightResults,
             'searchParams'    => $this->searchParams,

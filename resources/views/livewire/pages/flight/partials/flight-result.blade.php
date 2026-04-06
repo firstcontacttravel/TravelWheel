@@ -387,7 +387,43 @@
         .sr-tb-pill { padding: 4px 7px; }
         .sr-tb-pill-value { font-size: 11px; }
     }
+
+    /* Multi-city card grid */
+    .mc-grid{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #f1f5f9;}
+    .mc-leg {
+        margin-top: 5px;
+        padding: 12px 16px 14px;
+        border: 1px solid #f1f5f9;
+        border-radius: 8px;
+
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    }
+    .mc-leg:nth-child(even){border-right:none;}
+    /* last odd leg spans full width 
+    .mc-leg.mc-span{grid-column:1/-1;border-right:none;}*/
+    .mc-leg-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:2px;display:flex;align-items:center;gap:6px;}
+    .mc-leg-airline{font-size:10.5px;color:#64748b;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
+    .mc-leg-airline img{width:16px;height:16px;object-fit:contain;border-radius:3px;background:#f1f5f9;}
+    .mc-row{display:flex;align-items:center;gap:0;}
+    .mc-pt{display:flex;flex-direction:column;gap:1px;min-width:0;}
+    .mc-time{font-size:20px;font-weight:800;color:#0f172a;font-family:'DM Mono',monospace;line-height:1;letter-spacing:-.5px;}
+    .mc-city{font-size:11px;color:#64748b;font-weight:500;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;}
+    .mc-mid{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:0 8px;min-width:60px;}
+    .mc-dur{font-size:10.5px;color:#64748b;font-weight:600;}
+    .mc-track{width:100%;display:flex;align-items:center;}
+    .mc-dot{width:5px;height:5px;border-radius:50%;background:#cbd5e1;flex-shrink:0;}
+    .mc-dash{flex:1;height:1.5px;background:#cbd5e1;}
+    .mc-stop{font-size:10px;font-weight:700;}
+    .mc-stop.direct{color:#059669;}
+    .mc-stop.hasstop{color:#d97706;}
+    @media(max-width:580px){
+        .mc-grid{grid-template-columns:1fr;}
+        .mc-leg{border-right:none;}
+        .mc-leg.mc-span{grid-column:1;}
+        .mc-time{font-size:17px;}
+    }
 </style>
+
 
 @php
     $searchParams = $searchParams ?? [];
@@ -396,12 +432,67 @@
     $to          = $searchParams['to_city'] ?? $searchParams['to'] ?? 'Abuja';
     $depart      = $searchParams['depart'] ?? null;
     $return      = $searchParams['returning'] ?? null;
-    $adults      = $searchParams['adults'] ?? 1;
-    $childs      = $searchParams['childs'] ?? 0;
-    $kids        = $searchParams['kids'] ?? 0;
+
+    if ($trip === 'multi' && !empty($searchParams['multi_legs'])) {
+        $legs = collect($searchParams['multi_legs'] ?? []);
+
+        $from = $legs->first()['from'] ?? 'N/A';
+        $to   = $legs->last()['to'] ?? 'N/A';
+        $depart = $legs->first()['depart'] ?? null;
+    }
+    
+@endphp
+
+@php
+    $searchParams = $searchParams ?? [];
+
+    $trip   = $searchParams['trip'] ?? 'oneway';
+    $adults = $searchParams['adults'] ?? 1;
+    $childs = $searchParams['childs'] ?? 0;
+    $kids   = $searchParams['kids'] ?? 0;
+
     $totalPassengers = $adults + $childs + $kids;
-    $cabinMap    = ['Y' => 'Economy', 'S' => 'Premium Economy', 'C' => 'Business', 'F' => 'First Class'];
-    $cabin       = $cabinMap[$searchParams['flight_type'] ?? 'Y'] ?? 'Economy';
+
+    $cabinMap = [
+        'Y' => 'Economy',
+        'S' => 'Premium Economy',
+        'C' => 'Business',
+        'F' => 'First Class'
+    ];
+
+    $cabin = $cabinMap[$searchParams['flight_type'] ?? 'Y'] ?? 'Economy';
+
+    // ── ROUTE HANDLING ─────────────────────────────
+
+    $routes = [];
+
+    if ($trip === 'multi' && !empty($searchParams['multi_legs'])) {
+
+        foreach ($searchParams['multi_legs'] as $leg) {
+            $routes[] = [
+                'from'   => $leg['from'] ?? 'N/A',
+                'to'     => $leg['to'] ?? 'N/A',
+                'depart' => $leg['depart'] ?? null,
+            ];
+        }
+
+    } else {
+
+        $routes[] = [
+            'from'   => $searchParams['from_city'] ?? $searchParams['from'] ?? 'Lagos',
+            'to'     => $searchParams['to_city'] ?? $searchParams['to'] ?? 'Abuja',
+            'depart' => $searchParams['depart'] ?? null,
+        ];
+
+        // Add return leg if round trip
+        if ($trip === 'return') {
+            $routes[] = [
+                'from'   => $searchParams['to_city'] ?? $searchParams['to'] ?? 'Abuja',
+                'to'     => $searchParams['from_city'] ?? $searchParams['from'] ?? 'Lagos',
+                'depart' => $searchParams['returning'] ?? null,
+            ];
+        }
+    }
 @endphp
 
 {{-- ══ SINGLE ALPINE SCOPE wraps EVERYTHING ══ --}}
@@ -574,8 +665,15 @@
             <div class="sr-header">
                 <div>
                     <div class="sr-header-title">
-                        ✈ Flights from {{ $from }} → {{ $to }}
-                        @if($trip === 'return') , and back @elseif($trip === 'multi') (Multi-city) @endif
+                       @if($trip === 'multi')
+                            ✈ Multi-city 
+                            {{ collect($routes)->pluck('from')->implode(' → ') }} → {{ last($routes)['to'] ?? '' }}
+                        @else
+                            ✈ Flights from {{ $routes[0]['from'] ?? '' }} → {{ $routes[0]['to'] ?? '' }}
+                            {{ $trip === 'return' ? ', and back' : '' }}
+                        @endif
+
+                        
                     </div>
                     <div class="sr-header-sub">
                         @if($depart) 📅 {{ \Carbon\Carbon::createFromFormat('d/m/Y',$depart)->format('D, d M') }} @endif
@@ -708,15 +806,25 @@
                         <button class="sr-book-btn" @click="selectFlight(flight)" style="flex-shrink:0;">Book Now</button>
                     </div>
 
+                    
+
                     {{-- Card Body --}}
                     <div class="sr-card-body" style="padding-top:12px;">
-
-                        <div style="margin-bottom:10px;">
-                            <span class="sr-refund-badge" :class="flight.isRefundable ? 'yes' : 'no'" x-text="flight.isRefundable ? 'Refundable' : 'Non Refundable'"></span>
-                        </div>
-
+ 
+                    {{-- Badge row --}}
+                    <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span class="sr-refund-badge" :class="flight.isRefundable ? 'yes' : 'no'"
+                            x-text="flight.isRefundable ? 'Refundable' : 'Non Refundable'"></span>
+                        <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
+                            <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#eff6ff;color:#1d4ed8;">
+                                Multi-city · <span x-text="flight.multiLegs.length + ' legs'"></span>
+                            </span>
+                        </template>
+                    </div>
+                
+                    {{-- ── ONE WAY / RETURN ── --}}
+                    <template x-if="!flight.multiLegs || flight.multiLegs.length === 0">
                         <div class="sr-depart-return">
-
                             {{-- Outbound --}}
                             <div class="sr-dr-col">
                                 <div class="sr-dr-label" x-text="'Depart ' + flight.departTime + ' · ' + flight.airline"></div>
@@ -728,11 +836,10 @@
                                     <div class="sr-seg-line">
                                         <div class="sr-seg-duration" x-text="flight.totalTimeLabel"></div>
                                         <div class="sr-seg-track">
-                                            <div class="sr-seg-dot"></div>
-                                            <div class="sr-seg-dash"></div>
-                                            <div class="sr-seg-dot"></div>
+                                            <div class="sr-seg-dot"></div><div class="sr-seg-dash"></div><div class="sr-seg-dot"></div>
                                         </div>
-                                        <div class="sr-seg-stop" :class="{ hasstop: flight.stops > 0 }" x-text="flight.stops === 0 ? 'Non stop' : flight.stops + ' Stop'"></div>
+                                        <div class="sr-seg-stop" :class="{ hasstop: flight.stops > 0 }"
+                                            x-text="flight.stops === 0 ? 'Non stop' : flight.stops + ' Stop'"></div>
                                     </div>
                                     <div class="sr-seg">
                                         <div class="sr-seg-time" x-text="flight.arriveTime"></div>
@@ -740,10 +847,9 @@
                                     </div>
                                 </div>
                             </div>
-
-                            {{-- Return (if applicable) --}}
+                            {{-- Return inbound --}}
                             <template x-if="flight.returnSegments && flight.returnSegments.length > 0">
-                                <div class="sr-dr-col ps-5">
+                                <div class="sr-dr-col">
                                     <div class="sr-dr-label" x-text="'Return ' + (flight.returnSegments[0]?.departTime || '') + ' · ' + flight.airline"></div>
                                     <div class="sr-segments">
                                         <div class="sr-seg">
@@ -753,11 +859,10 @@
                                         <div class="sr-seg-line">
                                             <div class="sr-seg-duration" x-text="flight.returnTotalTimeLabel || ''"></div>
                                             <div class="sr-seg-track">
-                                                <div class="sr-seg-dot"></div>
-                                                <div class="sr-seg-dash"></div>
-                                                <div class="sr-seg-dot"></div>
+                                                <div class="sr-seg-dot"></div><div class="sr-seg-dash"></div><div class="sr-seg-dot"></div>
                                             </div>
-                                            <div class="sr-seg-stop" :class="{ hasstop: (flight.returnStops||0) > 0 }" x-text="(flight.returnStops||0) === 0 ? 'Non stop' : flight.returnStops + ' Stop'"></div>
+                                            <div class="sr-seg-stop" :class="{ hasstop: (flight.returnStops||0) > 0 }"
+                                                x-text="(flight.returnStops||0) === 0 ? 'Non stop' : flight.returnStops + ' Stop'"></div>
                                         </div>
                                         <div class="sr-seg">
                                             <div class="sr-seg-time" x-text="flight.returnSegments[flight.returnSegments.length-1]?.arriveTime"></div>
@@ -766,46 +871,98 @@
                                     </div>
                                 </div>
                             </template>
-
                         </div>
-
-                        {{-- Baggage & Seats Row --}}
-                        <div class="sr-meta-row" style="display:flex; align-items:center; gap:18px; margin-top:12px; padding-top:10px; border-top:1px solid #f0f0f0; flex-wrap:wrap;">
-
-                            {{-- Cabin Baggage --}}
-                            <div class="sr-meta-item" style="display:flex; align-items:center; gap:5px;">
-                                🎒
-                                <span class="sr-meta-label" style="font-size:12px; color:#6b7280;">Cabin:</span>
-                                <div class="sr-tooltip">
-                                    <span class="sr-meta-value" style="font-size:12px; font-weight:600; color:#374151;" x-text="flight.fareBreakdown[0]?.cabinBaggage[0] || '—'"></span>
-                                    <div class="sr-tooltip-text">1 standard cabin bag (7kg Hand Bag) allowed — check fare rules for details.</div>
+                    </template>
+                
+                    {{-- ── MULTI-CITY grid ── --}}
+                    <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
+                        <div class="mc-grid">
+                            <template x-for="(leg, li) in flight.multiLegs" :key="'mcl-'+li">
+                                <div class="mc-leg"
+                                    :class="(flight.multiLegs.length % 2 !== 0 && li === flight.multiLegs.length - 1) ? 'mc-span' : ''">
+                
+                                    {{-- Label: first leg = Depart, rest = Connecting --}}
+                                    <div class="mc-leg-lbl">
+                                        <span x-text="li === 0 ? 'Depart' : 'Connecting'"></span>
+                                        <span x-show="leg.departDateLabel"
+                                            style="font-weight:500;color:#94a3b8;"
+                                            x-text="'· ' + leg.departDateLabel"></span>
+                                    </div>
+                
+                                    {{-- Airline row --}}
+                                    <div class="mc-leg-airline">
+                                        <template x-if="leg.segments[0]?.airlineLogo">
+                                            <img :src="leg.segments[0].airlineLogo" :alt="leg.segments[0].airline">
+                                        </template>
+                                        <span x-text="leg.segments[0]?.airline || flight.validatingAirline"></span>
+                                        <span style="color:#cbd5e1;margin:0 2px;">·</span>
+                                        <span x-text="leg.segments[0]?.flightNo || ''"></span>
+                                    </div>
+                
+                                    {{-- Times / route row --}}
+                                    <div class="mc-row">
+                                        <div class="mc-pt">
+                                            <div class="mc-time" x-text="leg.departTime"></div>
+                                            <div class="mc-city" x-text="leg.fromCity"></div>
+                                        </div>
+                                        <div class="mc-mid">
+                                            <div class="mc-dur" x-text="leg.totalTimeLabel"></div>
+                                            <div class="mc-track">
+                                                <div class="mc-dot"></div>
+                                                <div class="mc-dash"></div>
+                                                <div class="mc-dot"></div>
+                                            </div>
+                                            <div class="mc-stop" :class="leg.stops === 0 ? 'direct' : 'hasstop'"
+                                                x-text="leg.stops === 0 ? 'Non stop' : leg.stops + ' Stop'"></div>
+                                        </div>
+                                        <div class="mc-pt" style="text-align:right;align-items:flex-end;">
+                                            <div class="mc-time" x-text="leg.arriveTime"></div>
+                                            <div class="mc-city" x-text="leg.toCity"></div>
+                                        </div>
+                                    </div>
+                
                                 </div>
-                            </div>
-
-                            <div class="sr-meta-divider" style="width:1px; height:14px; background:#e5e7eb;"></div>
-
-                            {{-- Checked Luggage --}}
-                            <div class="sr-meta-item" style="display:flex; align-items:center; gap:5px;">
-                                🧳
-                                <span class="sr-meta-label" style="font-size:12px; color:#6b7280;">Luggage:</span>
-                                <span class="sr-meta-value" style="font-size:12px; font-weight:600; color:#374151;" x-text="flight.fareBreakdown[0]?.baggage[0] || '—'"></span>
-                            </div>
-
-                            <div class="sr-meta-divider" style="width:1px; height:14px; background:#e5e7eb;"></div>
-
-                            {{-- Seats Left --}}
-                            <div class="sr-meta-item" style="display:flex; align-items:center; gap:5px;">
-                                💺
-                                <span class="sr-meta-value"
-                                    style="font-size:12px; font-weight:500;"
-                                    :style="flight.segments[0].seatsLeft <= 5 ? 'color:#dc2626;' : 'color:#374151;'"
-                                    x-text="flight.segments[0].seatsLeft !== undefined ? flight.segments[0].seatsLeft + ' seats left' : 'N/A'">
-                                </span>
-                            </div>
-
+                            </template>
                         </div>
-
+                    </template>
+                
+                    {{-- Baggage & seats — shared --}}
+                    <div style="display:flex;align-items:center;gap:18px;margin-top:12px;padding-top:10px;border-top:1px solid #f0f0f0;flex-wrap:wrap;">
+                        {{-- Cabin Baggage --}}
+                        <div class="sr-meta-item" style="display:flex; align-items:center; gap:5px;">
+                            <div class="sr-tooltip">🎒
+                                <span class="sr-meta-label" style="font-size:12px; color:#6b7280;">Cabin:</span>
+                            
+                                <span class="sr-meta-value" style="font-size:12px; font-weight:600; color:#374151;" x-text="flight.fareBreakdown[0]?.cabinBaggage[0] || '—'"></span>
+                                <div class="sr-tooltip-text">1 standard cabin bag (7kg Hand Bag) allowed — check fare rules for details.</div>
+                            </div>
+                        </div>
+                        <div style="width:1px;height:14px;background:#e5e7eb;"></div>
+                        <div style="display:flex;align-items:center;gap:5px;">
+                            🧳 <span style="font-size:12px;color:#6b7280;">Luggage:</span>
+                            <span style="font-size:12px;font-weight:600;color:#374151;"
+                                x-text="flight.fareBreakdown[0]?.baggage[0] || '—'"></span>
+                        </div>
+                        <div style="width:1px;height:14px;background:#e5e7eb;"></div>
+                        <div style="display:flex;align-items:center;gap:5px;">
+                            💺
+                            {{-- one-way/return: seats from segments[0] --}}
+                            <template x-if="!flight.multiLegs || flight.multiLegs.length === 0">
+                                <span style="font-size:12px;font-weight:500;"
+                                    :style="(flight.segments[0]?.seatsLeft ?? 9) <= 5 ? 'color:#dc2626' : 'color:#374151'"
+                                    x-text="(flight.segments[0]?.seatsLeft ?? '—') + ' seats left'"></span>
+                            </template>
+                            {{-- multi-city: seats from multiLegs[0].segments[0] --}}
+                            <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
+                                <span style="font-size:12px;font-weight:500;"
+                                    :style="(flight.multiLegs[0]?.segments[0]?.seatsLeft ?? 9) <= 5 ? 'color:#dc2626' : 'color:#374151'"
+                                    x-text="((flight.multiLegs[0]?.segments[0]?.seatsLeft) ?? '—') + ' seats left'"></span>
+                            </template>
+                        </div>
                     </div>
+                
+                </div>{{-- /sr-card-body --}}
+
 
                     {{-- Card Footer --}}
                     <div class="sr-card-footer">
@@ -826,131 +983,206 @@
 
                         <template x-if="(activeTab[flight.id]||'details') === 'details'">
                             <div class="sr-detail-body">
-                                <div :class="(flight.returnSegments && flight.returnSegments.length > 0) ? 'sr-detail-cols' : ''">
-
-                                    {{-- Outbound legs --}}
-                                    <div class="sr-detail-col">
-                                        <div class="sr-detail-leg-head">
-                                            <span class="sr-detail-leg-title" x-text="(flight.segments[0]?.fromCity || '') + ' to ' + (flight.segments[flight.segments.length-1]?.toCity || '') + (flight.departDateLabel ? ', ' + flight.departDateLabel : '')"></span>
-                                            <span class="sr-detail-leg-badge">Outbound</span>
-                                        </div>
-                                        <template x-for="(seg, si) in flight.segments" :key="'out-'+si">
-                                            <div>
-                                                <template x-if="si > 0">
-                                                    <div class="sr-detail-layover">
-                                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                        <span x-text="'· Layover in ' + (flight.segments[si-1]?.toCity||'') + (flight.layoverDurations && flight.layoverDurations[si-1] ? ' · ' + flight.layoverDurations[si-1] : '')"></span>
-                                                    </div>
-                                                </template>
-                                                <div class="sr-detail-seg">
-                                                    <div class="sr-detail-seg-airline">
-                                                        <div class="sr-detail-seg-logo">
-                                                            <template x-if="flight.airlineLogo"><img :src="flight.airlineLogo" :alt="seg.airline||flight.airline"></template>
-                                                            <template x-if="!flight.airlineLogo"><span x-text="(seg.flightNo||'').substring(0,2)"></span></template>
-                                                        </div>
-                                                        <span class="sr-detail-seg-airline-name" x-text="seg.airline || flight.airline"></span>
-                                                    </div>
-                                                    <div class="sr-detail-seg-route">
-                                                        <div class="sr-detail-seg-point">
-                                                            <div class="sr-detail-seg-time" x-text="seg.departTime"></div>
-                                                            <div class="sr-detail-seg-iata" x-text="seg.fromCity"></div>
-                                                            <div class="sr-detail-seg-airport" x-text="seg.fromAirport || seg.from"></div>
-                                                        </div>
-                                                        <div class="sr-detail-seg-mid">
-                                                            <span class="sr-detail-seg-dur" x-text="Math.floor(seg.duration/60)+'h '+(seg.duration%60)+'m'"></span>
-                                                            <div class="sr-detail-seg-track">
-                                                                <div class="sr-detail-seg-dot2"></div>
-                                                                <div class="sr-detail-seg-line"></div>
-                                                                <div class="sr-detail-seg-dot2"></div>
-                                                            </div>
-                                                            <span class="sr-detail-seg-stops" style="font-size:10px;">Non stop</span>
-                                                        </div>
-                                                        <div class="sr-detail-seg-point" style="text-align:right;">
-                                                            <div class="sr-detail-seg-time" x-text="seg.arriveTime"></div>
-                                                            <div class="sr-detail-seg-iata" x-text="seg.toCity"></div>
-                                                            <div class="sr-detail-seg-airport" x-text="seg.toAirport || seg.to" style="text-align:right;"></div>
-                                                        </div>
-                                                    </div>
-                                                    <div class="sr-detail-seg-meta">
-                                                        <div class="sr-detail-meta-item">
-                                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-                                                            <span class="sr-detail-meta-label">Baggage</span>
-                                                            <span class="sr-detail-meta-val" x-text="flight.fareBreakdown[0]?.baggage[0] || '—'"></span>
-                                                        </div>
-                                                        <div class="sr-detail-meta-item">
-                                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
-                                                            <span class="sr-detail-meta-label">Airline</span>
-                                                            <span class="sr-detail-meta-val" x-text="(seg.flightNo||'') + ' · ' + (flight.fareBreakdown[0]?.fareBasisCode || flight.cabin)"></span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </template>
-                                    </div>
-
-                                    {{-- Inbound legs --}}
-                                    <template x-if="flight.returnSegments && flight.returnSegments.length > 0">
+                        
+                                {{-- ── ONE WAY / RETURN detail ── --}}
+                                <template x-if="!flight.multiLegs || flight.multiLegs.length === 0">
+                                    <div :class="(flight.returnSegments && flight.returnSegments.length > 0) ? 'sr-detail-cols' : ''">
+                        
+                                        {{-- Outbound --}}
                                         <div class="sr-detail-col">
                                             <div class="sr-detail-leg-head">
-                                                <span class="sr-detail-leg-title" x-text="(flight.returnSegments[0]?.fromCity||'') + ' to ' + (flight.returnSegments[flight.returnSegments.length-1]?.toCity||'') + (flight.returnDateLabel ? ', ' + flight.returnDateLabel : '')"></span>
-                                                <span class="sr-detail-leg-badge inbound">Inbound</span>
+                                                <span class="sr-detail-leg-title"
+                                                    x-text="(flight.segments[0]?.fromCity||'') + ' → ' + (flight.segments[flight.segments.length-1]?.toCity||'') + (flight.departDateLabel ? ', '+flight.departDateLabel : '')">
+                                                </span>
+                                                <span class="sr-detail-leg-badge">Outbound</span>
                                             </div>
-                                            <template x-for="(seg, si) in flight.returnSegments" :key="'ret-'+si">
+                                            <template x-for="(seg, si) in flight.segments" :key="'d-out-'+si">
                                                 <div>
                                                     <template x-if="si > 0">
                                                         <div class="sr-detail-layover">
-                                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                            <span x-text="'· Layover in ' + (flight.returnSegments[si-1]?.toCity||'') + (flight.returnLayoverDurations && flight.returnLayoverDurations[si-1] ? ' · ' + flight.returnLayoverDurations[si-1] : '')"></span>
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                                            <span x-text="'Layover in '+(flight.segments[si-1]?.toCity||'')+(flight.layoverDurations?.[si-1]?' · '+flight.layoverDurations[si-1]:'')"></span>
                                                         </div>
                                                     </template>
                                                     <div class="sr-detail-seg">
                                                         <div class="sr-detail-seg-airline">
                                                             <div class="sr-detail-seg-logo">
-                                                                <template x-if="flight.airlineLogo"><img :src="flight.airlineLogo" :alt="seg.airline||flight.airline"></template>
-                                                                <template x-if="!flight.airlineLogo"><span x-text="(seg.flightNo||'').substring(0,2)"></span></template>
+                                                                <template x-if="seg.airlineLogo"><img :src="seg.airlineLogo" :alt="seg.airline"></template>
+                                                                <template x-if="!seg.airlineLogo"><span x-text="seg.airlineCode"></span></template>
                                                             </div>
-                                                            <span class="sr-detail-seg-airline-name" x-text="seg.airline || flight.airline"></span>
+                                                            <span class="sr-detail-seg-airline-name" x-text="seg.airline"></span>
+                                                            <span style="font-size:11px;color:var(--gray-400);margin-left:5px;" x-text="seg.flightNo"></span>
                                                         </div>
                                                         <div class="sr-detail-seg-route">
                                                             <div class="sr-detail-seg-point">
                                                                 <div class="sr-detail-seg-time" x-text="seg.departTime"></div>
                                                                 <div class="sr-detail-seg-iata" x-text="seg.fromCity"></div>
-                                                                <div class="sr-detail-seg-airport" x-text="seg.fromAirport || seg.from"></div>
+                                                                <div class="sr-detail-seg-airport" x-text="seg.fromAirport"></div>
                                                             </div>
                                                             <div class="sr-detail-seg-mid">
                                                                 <span class="sr-detail-seg-dur" x-text="Math.floor(seg.duration/60)+'h '+(seg.duration%60)+'m'"></span>
-                                                                <div class="sr-detail-seg-track">
-                                                                    <div class="sr-detail-seg-dot2"></div>
-                                                                    <div class="sr-detail-seg-line"></div>
-                                                                    <div class="sr-detail-seg-dot2"></div>
-                                                                </div>
-                                                                <span class="sr-detail-seg-stops" style="font-size:10px;">Non stop</span>
+                                                                <div class="sr-detail-seg-track"><div class="sr-detail-seg-dot2"></div><div class="sr-detail-seg-line"></div><div class="sr-detail-seg-dot2"></div></div>
                                                             </div>
                                                             <div class="sr-detail-seg-point" style="text-align:right;">
                                                                 <div class="sr-detail-seg-time" x-text="seg.arriveTime"></div>
                                                                 <div class="sr-detail-seg-iata" x-text="seg.toCity"></div>
-                                                                <div class="sr-detail-seg-airport" x-text="seg.toAirport || seg.to" style="text-align:right;"></div>
+                                                                <div class="sr-detail-seg-airport" x-text="seg.toAirport" style="text-align:right;"></div>
                                                             </div>
                                                         </div>
                                                         <div class="sr-detail-seg-meta">
-                                                            <div class="sr-detail-meta-item">
-                                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-                                                                <span class="sr-detail-meta-label">Baggage</span>
-                                                                <span class="sr-detail-meta-val" x-text="flight.fareBreakdown[0]?.baggage[0] || '—'"></span>
-                                                            </div>
-                                                            <div class="sr-detail-meta-item">
-                                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
-                                                                <span class="sr-detail-meta-label">Airline</span>
-                                                                <span class="sr-detail-meta-val" x-text="(seg.flightNo||'') + ' · ' + flight.cabin"></span>
-                                                            </div>
+                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Baggage</span><span class="sr-detail-meta-val" x-text="flight.fareBreakdown[0]?.baggage[0]||'—'"></span></div>
+                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Cabin bag</span><span class="sr-detail-meta-val" x-text="flight.fareBreakdown[0]?.cabinBaggage[0]||'—'"></span></div>
+                                                            <div class="sr-detail-meta-item" x-show="seg.equipment"><span class="sr-detail-meta-label">Aircraft</span><span class="sr-detail-meta-val" x-text="seg.equipment"></span></div>
+                                                            <div class="sr-detail-meta-item" x-show="seg.resBookCode"><span class="sr-detail-meta-label">Class</span><span class="sr-detail-meta-val" x-text="seg.resBookCode"></span></div>
+                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Seats</span><span class="sr-detail-meta-val" :style="seg.seatsLeft<=5?'color:#dc2626':''" x-text="seg.seatsLeft+' remaining'"></span></div>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </template>
                                         </div>
-                                    </template>
-
-                                </div>
+                        
+                                        {{-- Return inbound --}}
+                                        <template x-if="flight.returnSegments && flight.returnSegments.length > 0">
+                                            <div class="sr-detail-col">
+                                                <div class="sr-detail-leg-head">
+                                                    <span class="sr-detail-leg-title"
+                                                        x-text="(flight.returnSegments[0]?.fromCity||'') + ' → ' + (flight.returnSegments[flight.returnSegments.length-1]?.toCity||'') + (flight.returnDateLabel ? ', '+flight.returnDateLabel : '')">
+                                                    </span>
+                                                    <span class="sr-detail-leg-badge inbound">Inbound</span>
+                                                </div>
+                                                <template x-for="(seg, si) in flight.returnSegments" :key="'d-ret-'+si">
+                                                    <div>
+                                                        <template x-if="si > 0">
+                                                            <div class="sr-detail-layover">
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                                                <span x-text="'Layover in '+(flight.returnSegments[si-1]?.toCity||'')+(flight.returnLayoverDurations?.[si-1]?' · '+flight.returnLayoverDurations[si-1]:'')"></span>
+                                                            </div>
+                                                        </template>
+                                                        <div class="sr-detail-seg">
+                                                            <div class="sr-detail-seg-airline">
+                                                                <div class="sr-detail-seg-logo">
+                                                                    <template x-if="seg.airlineLogo"><img :src="seg.airlineLogo" :alt="seg.airline"></template>
+                                                                    <template x-if="!seg.airlineLogo"><span x-text="seg.airlineCode"></span></template>
+                                                                </div>
+                                                                <span class="sr-detail-seg-airline-name" x-text="seg.airline"></span>
+                                                                <span style="font-size:11px;color:var(--gray-400);margin-left:5px;" x-text="seg.flightNo"></span>
+                                                            </div>
+                                                            <div class="sr-detail-seg-route">
+                                                                <div class="sr-detail-seg-point">
+                                                                    <div class="sr-detail-seg-time" x-text="seg.departTime"></div>
+                                                                    <div class="sr-detail-seg-iata" x-text="seg.fromCity"></div>
+                                                                    <div class="sr-detail-seg-airport" x-text="seg.fromAirport"></div>
+                                                                </div>
+                                                                <div class="sr-detail-seg-mid">
+                                                                    <span class="sr-detail-seg-dur" x-text="Math.floor(seg.duration/60)+'h '+(seg.duration%60)+'m'"></span>
+                                                                    <div class="sr-detail-seg-track"><div class="sr-detail-seg-dot2"></div><div class="sr-detail-seg-line"></div><div class="sr-detail-seg-dot2"></div></div>
+                                                                </div>
+                                                                <div class="sr-detail-seg-point" style="text-align:right;">
+                                                                    <div class="sr-detail-seg-time" x-text="seg.arriveTime"></div>
+                                                                    <div class="sr-detail-seg-iata" x-text="seg.toCity"></div>
+                                                                    <div class="sr-detail-seg-airport" x-text="seg.toAirport" style="text-align:right;"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="sr-detail-seg-meta">
+                                                                <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Baggage</span><span class="sr-detail-meta-val" x-text="flight.fareBreakdown[0]?.baggage[0]||'—'"></span></div>
+                                                                <div class="sr-detail-meta-item" x-show="seg.equipment"><span class="sr-detail-meta-label">Aircraft</span><span class="sr-detail-meta-val" x-text="seg.equipment"></span></div>
+                                                                <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Seats</span><span class="sr-detail-meta-val" :style="seg.seatsLeft<=5?'color:#dc2626':''" x-text="seg.seatsLeft+' remaining'"></span></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                        
+                                    </div>
+                                </template>
+                        
+                                {{-- ── MULTI-CITY detail — stacked legs ── --}}
+                                <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
+                                    <div style="display:flex;flex-direction:column;gap:20px;">
+                        
+                                        <template x-for="(leg, li) in flight.multiLegs" :key="'det-leg-'+li">
+                                            <div>
+                                                {{-- Leg heading --}}
+                                                <div class="sr-detail-leg-head">
+                                                    <span class="sr-detail-leg-title"
+                                                        x-text="'Leg '+(li+1)+' · '+(leg.fromCity||'')+' → '+(leg.toCity||'')+(leg.departDateLabel ? ', '+leg.departDateLabel : '')">
+                                                    </span>
+                                                    <span class="sr-detail-leg-badge"
+                                                        :class="li === 0 ? '' : 'connecting'"
+                                                        x-text="li === 0 ? 'Depart' : 'Connecting'">
+                                                    </span>
+                                                </div>
+                        
+                                                {{-- Segments within this leg --}}
+                                                <template x-for="(seg, si) in leg.segments" :key="'det-l'+li+'-s'+si">
+                                                    <div>
+                                                        <template x-if="si > 0">
+                                                            <div class="sr-detail-layover" style="margin-top:10px;">
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                                                <span x-text="'Layover in '+(leg.segments[si-1]?.toCity||'')+(leg.layoverDurations?.[si-1]?' · '+leg.layoverDurations[si-1]:'')"></span>
+                                                            </div>
+                                                        </template>
+                                                        <div class="sr-detail-seg">
+                                                            <div class="sr-detail-seg-airline">
+                                                                <div class="sr-detail-seg-logo">
+                                                                    <template x-if="seg.airlineLogo"><img :src="seg.airlineLogo" :alt="seg.airline"></template>
+                                                                    <template x-if="!seg.airlineLogo"><span x-text="seg.airlineCode"></span></template>
+                                                                </div>
+                                                                <span class="sr-detail-seg-airline-name" x-text="seg.airline"></span>
+                                                                <span style="font-size:11px;color:var(--gray-400);margin-left:5px;" x-text="seg.flightNo"></span>
+                                                            </div>
+                                                            <div class="sr-detail-seg-route">
+                                                                <div class="sr-detail-seg-point">
+                                                                    <div class="sr-detail-seg-time" x-text="seg.departTime"></div>
+                                                                    <div class="sr-detail-seg-iata" x-text="seg.fromCity"></div>
+                                                                    <div class="sr-detail-seg-airport" x-text="seg.fromAirport"></div>
+                                                                </div>
+                                                                <div class="sr-detail-seg-mid">
+                                                                    <span class="sr-detail-seg-dur" x-text="Math.floor(seg.duration/60)+'h '+(seg.duration%60)+'m'"></span>
+                                                                    <div class="sr-detail-seg-track"><div class="sr-detail-seg-dot2"></div><div class="sr-detail-seg-line"></div><div class="sr-detail-seg-dot2"></div></div>
+                                                                </div>
+                                                                <div class="sr-detail-seg-point" style="text-align:right;">
+                                                                    <div class="sr-detail-seg-time" x-text="seg.arriveTime"></div>
+                                                                    <div class="sr-detail-seg-iata" x-text="seg.toCity"></div>
+                                                                    <div class="sr-detail-seg-airport" x-text="seg.toAirport" style="text-align:right;"></div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="sr-detail-seg-meta">
+                                                                <div class="sr-detail-meta-item">
+                                                                    <span class="sr-detail-meta-label">Baggage</span>
+                                                                    <span class="sr-detail-meta-val"
+                                                                        x-text="flight.fareBreakdown[0]?.baggage[li] || flight.fareBreakdown[0]?.baggage[0] || '—'"></span>
+                                                                </div>
+                                                                <div class="sr-detail-meta-item">
+                                                                    <span class="sr-detail-meta-label">Cabin bag</span>
+                                                                    <span class="sr-detail-meta-val"
+                                                                        x-text="flight.fareBreakdown[0]?.cabinBaggage[li] || flight.fareBreakdown[0]?.cabinBaggage[0] || '—'"></span>
+                                                                </div>
+                                                                <div class="sr-detail-meta-item" x-show="seg.equipment">
+                                                                    <span class="sr-detail-meta-label">Aircraft</span>
+                                                                    <span class="sr-detail-meta-val" x-text="seg.equipment"></span>
+                                                                </div>
+                                                                <div class="sr-detail-meta-item" x-show="seg.resBookCode">
+                                                                    <span class="sr-detail-meta-label">Class</span>
+                                                                    <span class="sr-detail-meta-val" x-text="seg.resBookCode"></span>
+                                                                </div>
+                                                                <div class="sr-detail-meta-item">
+                                                                    <span class="sr-detail-meta-label">Seats</span>
+                                                                    <span class="sr-detail-meta-val"
+                                                                        :style="seg.seatsLeft<=5?'color:#dc2626':''"
+                                                                        x-text="seg.seatsLeft+' remaining'"></span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </template>
+                        
+                                    </div>
+                                </template>
+                        
                             </div>
                         </template>
 

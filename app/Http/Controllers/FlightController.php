@@ -215,19 +215,46 @@ class FlightController extends Controller
         $fmtMins = fn(int $mins): string => floor($mins / 60) . 'h ' . ($mins % 60) . 'm';
 
         $splitMultiLegs = function (array $allSegments, array $searchLegs): array {
-            if (empty($searchLegs)) return array_map(fn($s) => [$s], $allSegments);
-            $legs = []; $remaining = $allSegments;
+            if (empty($searchLegs)) {
+                return [$allSegments];
+            }
+        
+            $legs      = [];
+            $remaining = $allSegments;
+            
+
+        
             foreach ($searchLegs as $legIdx => $legDef) {
-                $extractIata = fn(string $val) => preg_match('/\(([A-Z]{3})\)/', $val, $m) ? $m[1] : strtoupper(trim($val));
+                $extractIata = fn(string $val) =>
+                    preg_match('/\(([A-Z]{3})\)/', $val, $m) ? $m[1] : strtoupper(trim($val));
+        
                 $destIata = $extractIata($legDef['to'] ?? '');
-                if ($legIdx === count($searchLegs) - 1) { $legs[] = $remaining; break; }
+        
+                // Last leg — all remaining segments belong here
+                if ($legIdx === count($searchLegs) - 1) {
+                    $legs[] = $remaining;
+                    $remaining = [];
+                    break;
+                }
+        
+                // Find the cut point: last segment whose 'to' == this leg's destination
                 $cutAt = -1;
                 foreach ($remaining as $si => $seg) {
-                    if (strtoupper($seg['to']) === $destIata) { $cutAt = $si; break; }
+                    if (strtoupper($seg['to']) === $destIata) {
+                        $cutAt = $si;
+                        break;
+                    }
                 }
-                $legs[] = $cutAt === -1 ? array_splice($remaining, 0, 1) : array_splice($remaining, 0, $cutAt + 1);
+        
+                $legs[] = ($cutAt === -1)
+                    ? array_splice($remaining, 0, 1)          // fallback: take one segment
+                    : array_splice($remaining, 0, $cutAt + 1); // normal: up to & including the destination segment
             }
-            if (!empty($remaining)) $legs[] = $remaining;
+        
+            if (!empty($remaining)) {
+                $legs[] = $remaining;
+            }
+        
             return $legs;
         };
 
@@ -289,37 +316,61 @@ class FlightController extends Controller
                     }
 
                 } elseif ($tripType === 'multi') {
-                    $odo0       = $odos[0]['OriginDestinationOption'] ?? [];
-                    $allSegs    = $mapSegments($odo0);
-                    $totalStops = (int) ($odos[0]['TotalStops'] ?? max(0, count($odo0) - 1));
-                    $legArrays  = $splitMultiLegs($allSegs, $searchLegs);
-
-                    $segments         = $legArrays[0] ?? [];
-                    $totalMins        = array_sum(array_column($segments, 'duration'));
-                    $layoverDurations = $calcLayovers($segments);
-                    $totalTimeMins    = $totalMins + $calcLayoverMins($segments);
-
-                    foreach (array_slice($legArrays, 1) as $legSegs) {
+                    $odo0      = $odos[0]['OriginDestinationOption'] ?? [];
+                    $allSegs   = $mapSegments($odo0);
+                    $legArrays = $splitMultiLegs($allSegs, $searchLegs);
+                
+                    // Build ALL legs into $multiLegs (leg 0 is included — no more skipping it)
+                    $multiLegs = [];
+                    foreach ($legArrays as $legSegs) {
+                        if (empty($legSegs)) {
+                            continue;
+                        }
+                
+                        $lastSeg          = end($legSegs);
                         $legMins          = array_sum(array_column($legSegs, 'duration'));
+                        $legLayovers      = $calcLayovers($legSegs);
                         $legTotalTimeMins = $legMins + $calcLayoverMins($legSegs);
+                
                         $multiLegs[] = [
                             'segments'         => $legSegs,
-                            'durationLabel'    => $fmtMins($legMins),
                             'stops'            => max(0, count($legSegs) - 1),
-                            'layoverDurations' => $calcLayovers($legSegs),
+                            'durationLabel'    => $fmtMins($legMins),
+                            'layoverDurations' => $legLayovers,
+                            'totalTimeMins'    => $legTotalTimeMins,
+                            'totalTimeLabel'   => $fmtMins($legTotalTimeMins),
                             'departDateLabel'  => !empty($legSegs[0]['departDT'])
                                                     ? \Carbon\Carbon::parse($legSegs[0]['departDT'])->format('D, d M')
                                                     : '',
-                            'totalTimeMins'    => $legTotalTimeMins,
-                            'totalTimeLabel'   => $fmtMins($legTotalTimeMins),
+                            // Convenience fields for the view
+                            'from'             => $legSegs[0]['from']       ?? '',
+                            'to'               => $lastSeg['to']            ?? '',
+                            'fromCity'         => $legSegs[0]['fromCity']   ?? '',
+                            'toCity'           => $lastSeg['toCity']        ?? '',
+                            'departTime'       => $legSegs[0]['departTime'] ?? '',
+                            'arriveTime'       => $lastSeg['arriveTime']    ?? '',
+                            'departDT'         => $legSegs[0]['departDT']   ?? '',
+                            'arriveDT'         => $lastSeg['arriveDT']      ?? '',
+                            
                         ];
+
+                        
                     }
                 }
 
                 $firstSeg        = $segments[0] ?? [];
                 $lastSeg         = !empty($segments) ? end($segments) : [];
+                if ($tripType === 'multi') {
+                    // First leg drives the top-level fields (for backward compatibility)
+                    $firstSeg    = $multiLegs[0]['segments'][0] ?? [];
+                    $lastSeg     = !empty($multiLegs) ? end($multiLegs)['segments'] : [];
+                    
+                }
+                //dd($firstSeg);
                 $deptHour        = (int) substr($firstSeg['departTime'] ?? '00:00', 0, 2);
                 $arrHour         = (int) substr($lastSeg['arriveTime']  ?? '00:00', 0, 2);
+            
+
                 $validatingCode  = $fi['ValidatingAirlineCode'] ?? '';
                 $validatingAir   = $airlines->get($validatingCode);
 
@@ -349,7 +400,7 @@ class FlightController extends Controller
                 return [
                     'id'                     => $index,
                     'fareSourceCode'         => $fareInfo['FareSourceCode'],
-                    'airline'                => $firstSeg['airline']     ?? '',
+                    'airline'                => $firstSeg['airline'] ?? '',
                     'airlineCode'            => $firstSeg['airlineCode'] ?? '',
                     'airlineLogo'            => $firstSeg['airlineLogo'] ?? '/assets/img/airlines/default.png',
                     'validatingCode'         => $validatingCode,
@@ -393,7 +444,7 @@ class FlightController extends Controller
                 ];
             }
         )->values()->toArray();
-        //dd($flights);
+        //dd($flights[0]);
 
         // ── Write ONLY to durable session — no flash data needed ─────────────
         // The Livewire FlightPage component reads directly from these session
