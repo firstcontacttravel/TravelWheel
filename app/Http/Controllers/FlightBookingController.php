@@ -140,12 +140,22 @@ class FlightBookingController extends Controller
             if(!empty($odos[1])){$odo1=$odos[1]['OriginDestinationOption']??[];$returnSegments=$mapSegments($odo1);$returnStops=(int)($odos[1]['TotalStops']??max(0,count($odo1)-1));$rm=array_sum(array_column($returnSegments,'duration'));$returnDurationLabel=$fmtMins($rm);$returnLayoverDurations=$calcLayovers($returnSegments);$returnTotalTimeMins=$rm+$calcLayoverMins($returnSegments);$returnTotalTimeLabel=$fmtMins($returnTotalTimeMins);if(!empty($returnSegments[0]['departDT']))$returnDateLabel=\Carbon\Carbon::parse($returnSegments[0]['departDT'])->format('D, d M');}
         } elseif ($tripType === 'multi') {
             $odo0=$odos[0]['OriginDestinationOption']??[];$allSegs=$mapSegments($odo0);$totalStops=(int)($odos[0]['TotalStops']??max(0,count($odo0)-1));
-            $legArrays=$splitMultiLegs($allSegs,$searchLegs);$segments=$legArrays[0]??[];
+            $legArrays=$splitMultiLegs($allSegs,$searchLegs);
+            foreach($legArrays as $ls){
+                if (empty($ls)) continue;
+                $lm=array_sum(array_column($ls,'duration'));$ll=$calcLayoverMins($ls);$lastLegSeg=end($ls);
+                $multiLegs[]=['segments'=>$ls,'durationLabel'=>$fmtMins($lm),'stops'=>max(0,count($ls)-1),'layoverDurations'=>$calcLayovers($ls),'departDateLabel'=>!empty($ls[0]['departDT'])?\Carbon\Carbon::parse($ls[0]['departDT'])->format('D, d M'):'','totalTimeMins'=>$lm+$ll,'totalTimeLabel'=>$fmtMins($lm+$ll),'from'=>$ls[0]['from']??'','to'=>$lastLegSeg['to']??'','fromCity'=>$ls[0]['fromCity']??'','toCity'=>$lastLegSeg['toCity']??'','departTime'=>$ls[0]['departTime']??'','arriveTime'=>$lastLegSeg['arriveTime']??'','departDT'=>$ls[0]['departDT']??'','arriveDT'=>$lastLegSeg['arriveDT']??''];
+            }
+            $segments=$multiLegs[0]['segments']??[];
             $totalMins=array_sum(array_column($segments,'duration'));$layoverDurations=$calcLayovers($segments);$totalTimeMins=$totalMins+$calcLayoverMins($segments);
-            foreach(array_slice($legArrays,1) as $ls){$lm=array_sum(array_column($ls,'duration'));$ll=$calcLayoverMins($ls);$multiLegs[]=['segments'=>$ls,'durationLabel'=>$fmtMins($lm),'stops'=>max(0,count($ls)-1),'layoverDurations'=>$calcLayovers($ls),'departDateLabel'=>!empty($ls[0]['departDT'])?\Carbon\Carbon::parse($ls[0]['departDT'])->format('D, d M'):'','totalTimeMins'=>$lm+$ll,'totalTimeLabel'=>$fmtMins($lm+$ll)];}
         }
 
         $firstSeg=$segments[0]??[]; $lastSeg=!empty($segments)?end($segments):[];
+        if ($tripType === 'multi' && !empty($multiLegs)) {
+            $firstSeg = $multiLegs[0]['segments'][0] ?? [];
+            $lastMultiSegs = $multiLegs[count($multiLegs) - 1]['segments'] ?? [];
+            $lastSeg = !empty($lastMultiSegs) ? $lastMultiSegs[count($lastMultiSegs) - 1] : [];
+        }
         $deptHour=(int)substr($firstSeg['departTime']??'00:00',0,2); $arrHour=(int)substr($lastSeg['arriveTime']??'00:00',0,2);
         if(!empty($firstSeg['departDT'])) $departDateLabel=\Carbon\Carbon::parse($firstSeg['departDT'])->format('D, d M');
         $validatingCode=$fi['ValidatingAirlineCode']??''; $validatingAirline=$airlines->get($validatingCode);
@@ -225,7 +235,7 @@ class FlightBookingController extends Controller
 
         // ── Public / Private: book now (hold), then collect payment ───────────
         $result = $this->_callBookApi($validated, $request);
-
+       
         if ($result['error']) {
             return back()->withErrors(['error' => $result['message']]);
         }
@@ -252,7 +262,8 @@ class FlightBookingController extends Controller
 
         session([
             'bookingConfirmation' => $apiResponse,
-            'bookingUniqueId'     => $uniqueId,
+            'bookingUniqueId'     => $uniqueId,           // API hold/ticket ref — NOT shown as booking ref
+            'bookingRef'          => $dbBooking->booking_ref, // OUR internal booking reference
             'bookingTktTimeLimit' => $tktTimeLimit,
             'bookingStatus'       => $bookResult['Status'] ?? '',
             'flightBookingDbId'   => $dbBooking->id,
@@ -328,7 +339,8 @@ class FlightBookingController extends Controller
 
         session([
             'bookingConfirmation' => $apiResponse,
-            'bookingUniqueId'     => $uniqueId,
+            'bookingUniqueId'     => $uniqueId,           // API e-ticket ref
+            'bookingRef'          => $dbBooking->booking_ref, // OUR internal booking reference
             'bookingStatus'       => $bookResult['Status'] ?? 'CONFIRMED',
             'flightBookingDbId'   => $dbBooking->id,
             'paymentMethod'       => 'gateway',
@@ -426,6 +438,10 @@ class FlightBookingController extends Controller
             'ticketOrderResult' => $ticketResponse,
             'ticketSuccess'     => $ticketSuccess,
             'paymentMethod'     => 'gateway',
+            // bookingRef already in session from book() — just ensure uniqueId is the e-ticket ref
+            'bookingUniqueId'   => $ticketSuccess
+                ? (data_get($ticketResponse, 'AirOrderTicketRS.TicketOrderResult.UniqueID', session('bookingUniqueId', '')) ?: session('bookingUniqueId', ''))
+                : session('bookingUniqueId', ''),
         ]);
 
         return redirect()->route('flights.confirmation');
@@ -494,7 +510,7 @@ class FlightBookingController extends Controller
                 'tkt_time_limit'            => session('bookingTktTimeLimit'),
             ]);
  
-            session(['flightBookingDbId' => $dbBooking->id]);
+            session(['flightBookingDbId' => $dbBooking->id, 'bookingRef' => $dbBooking->booking_ref]);
             $this->_sendPendingEmail($dbBooking, 'bank_transfer');
         }
  
@@ -604,7 +620,8 @@ class FlightBookingController extends Controller
  
             session([
                 'bookingConfirmation' => $apiResponse,
-                'bookingUniqueId'     => $uniqueId,
+                'bookingUniqueId'     => $uniqueId,           // API ref
+                'bookingRef'          => $dbBooking->booking_ref, // OUR ref
                 'bookingStatus'       => $bookResult['Status'] ?? 'CONFIRMED',
                 'flightBookingDbId'   => $dbBooking->id,
             ]);
@@ -624,7 +641,12 @@ class FlightBookingController extends Controller
             return redirect()->route('air.flight-s')->withErrors(['error' => 'No TravelFlex plan found.']);
         }
  
-        return view('livewire.pages.flight.flight-travelflex-pending');
+        $dbId      = session('flightBookingDbId');
+        $dbBooking = $dbId ? \App\Models\FlightBooking::find($dbId) : null;
+
+        return view('livewire.pages.flight.flight-travelflex-pending', [
+            'bookingRef' => session('bookingRef', $dbBooking?->booking_ref ?? ''),
+        ]);
     }
  
     // =========================================================================
@@ -636,8 +658,30 @@ class FlightBookingController extends Controller
             return redirect()->route('air.flight-s')->withErrors(['error' => 'No TravelFlex plan found.']);
         }
  
-        return view('livewire.pages.flight.flight-travelflex-confirmation');
+        $uniqueId    = session('bookingUniqueId', '');
+        $dbId        = session('flightBookingDbId');
+        $dbBooking   = $dbId ? \App\Models\FlightBooking::find($dbId) : null;
+ 
+        // ── Fetch live trip details after successful gateway payment ──────────
+        $tripDetails = [];
+        if ($uniqueId) {
+            $tripDetails = $this->_callTripDetailsApi($uniqueId);
+        }
+ 
+        $bookingFlight = session('bookingFlight', []);
+        $mappedFlight  = $bookingFlight['flight'] ?? $bookingFlight;
+ 
+        return view('livewire.pages.flight.flight-travelflex-confirmation', [
+            'flight'      => $mappedFlight,
+            'dbBooking'   => $dbBooking,
+            'tripDetails' => $tripDetails,   // ← live API data
+            'uniqueId'    => $uniqueId,      // API e-ticket ref
+            'bookingRef'  => session('bookingRef', $dbBooking?->booking_ref ?? ''), // OUR ref
+            'contact'     => session('bookingContact', []),
+            'passengers'  => session('bookingPassengers', []),
+        ]);
     }
+ 
 
     // =========================================================================
     //  pending() — Bank transfer: awaiting manual confirmation
@@ -657,7 +701,8 @@ class FlightBookingController extends Controller
         return view('livewire.pages.flight.flight-pending', [
             'flight'       => $mappedFlight,
             'dbBooking'    => $dbBooking,
-            'uniqueId'     => session('bookingUniqueId'),
+            'uniqueId'     => session('bookingUniqueId'),     // API hold ref
+            'bookingRef'   => session('bookingRef', $dbBooking?->booking_ref ?? ''), // OUR ref
             'tktTimeLimit' => session('bookingTktTimeLimit'),
             'contact'      => session('bookingContact', []),
             'passengers'   => session('bookingPassengers', []),
@@ -766,6 +811,21 @@ class FlightBookingController extends Controller
         }
     }
 
+    /**
+     * Generate a unique, human-readable booking reference.
+     * Format: TW-XXXXXXXX  (TW prefix + 8 uppercase alphanumeric chars)
+     * This is OUR internal reference — completely separate from the airline's
+     * UniqueID / e-ticket number returned by the ticketing API.
+     */
+    private function _generateBookingRef(): string
+    {
+        do {
+            $ref = 'TW-' . strtoupper(substr(base_convert(bin2hex(random_bytes(5)), 16, 36), 0, 8));
+        } while (FlightBooking::where('booking_ref', $ref)->exists());
+
+        return $ref;
+    }
+
     private function _persistBooking(array $mappedFlight, array $validated, array $apiResponse, array $overrides = []): FlightBooking
     {
         $segments   = $mappedFlight['segments'] ?? [];
@@ -777,7 +837,12 @@ class FlightBookingController extends Controller
         $tktRaw = $overrides['tkt_time_limit'] ?? null;
         unset($overrides['tkt_time_limit']);
 
+        // unique_id from the API (hold/ticket reference) — NOT our booking ref
+        // We always generate our own booking_ref for customer-facing reference.
+        $bookingRef = $this->_generateBookingRef();
+
         return FlightBooking::create(array_merge([
+            'booking_ref'          => $bookingRef,
             'fare_source_code'     => $mappedFlight['fareSourceCode'] ?? '',
             'session_id'           => session('bookingSessionId', ''),
             'fare_type'            => $mappedFlight['fareType']   ?? 'Public',
@@ -821,10 +886,6 @@ class FlightBookingController extends Controller
         }
     }
 
-    
-
-
-
     private function _callTripDetailsApi(string $uniqueId): array
     {
         $payload = [
@@ -834,17 +895,65 @@ class FlightBookingController extends Controller
             'ip_address'    => config('services.travelnext.ip'),
             'UniqueID'      => $uniqueId,
         ];
- 
+    
         try {
             $response = Http::timeout(30)->post('https://travelnext.works/api/aeroVE5/trip_details', $payload);
             if ($response->failed()) return [];
             $data    = $response->json();
             $result  = $data['TripDetailsResponse']['TripDetailsResult'] ?? [];
             $success = filter_var($result['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            return $success ? ($result['TravelItinerary'] ?? []) : [];
+            
+            if (!$success) return [];
+            
+            $tripData = $result['TravelItinerary'] ?? [];
+            $bookingStatus = $tripData['BookingStatus'] ?? '';
+            $ticketStatus = $tripData['TicketStatus'] ?? '';
+            
+            // ── Handle CONFIRMED (not ticketed) case ─────────────────────────────
+            if (strtoupper($bookingStatus) === 'CONFIRMED' && strtoupper($ticketStatus) !== 'TICKETED') {
+                // Send alert email to support about untickleted confirmed booking
+                $this->_sendUnTicketedConfirmationAlert($tripData, $uniqueId);
+            }
+            
+            return $tripData;
         } catch (\Throwable $e) {
             Log::error('TripDetails API error', ['message' => $e->getMessage()]);
             return [];
+        }
+    }
+    
+    /**
+     * Send alert to support when booking is CONFIRMED but not yet TICKETED
+     * This indicates a potential issue that needs manual follow-up
+     */
+    private function _sendUnTicketedConfirmationAlert(array $tripData, string $uniqueId): void
+    {
+        try {
+            $customerInfos = collect(data_get($tripData, 'ItineraryInfo.CustomerInfos', []))
+                ->map(fn($c) => $c['CustomerInfo'] ?? $c);
+            
+            $resItems = collect(data_get($tripData, 'ItineraryInfo.ReservationItems', []))
+                ->map(fn($r) => $r['ReservationItem'] ?? $r);
+            
+            $itinPricing = data_get($tripData, 'ItineraryInfo.ItineraryPricing', []);
+            
+            $alertData = [
+                'uniqueId'      => $uniqueId,
+                'bookingStatus' => $tripData['BookingStatus'] ?? 'UNKNOWN',
+                'ticketStatus'  => $tripData['TicketStatus'] ?? 'UNKNOWN',
+                'origin'        => $tripData['Origin'] ?? '',
+                'destination'   => $tripData['Destination'] ?? '',
+                'fareType'      => $tripData['FareType'] ?? '',
+                'passengers'    => $customerInfos->toArray(),
+                'flights'       => $resItems->toArray(),
+                'pricing'       => $itinPricing,
+                'timestamp'     => now(),
+            ];
+            
+            Mail::to(config('mail.support_address', 'support@travelwheel.com'))
+                ->send(new \App\Mail\UnTicketedConfirmationAlert($alertData));
+        } catch (\Throwable $e) {
+            Log::error('UnTicketedConfirmationAlert failed', ['error' => $e->getMessage()]);
         }
     }
  
@@ -881,7 +990,8 @@ class FlightBookingController extends Controller
             'bookingResult'     => session('bookingConfirmation', []),
             'ticketOrderResult' => session('ticketOrderResult', []),
             'ticketSuccess'     => session('ticketSuccess', false),
-            'uniqueId'          => $uniqueId,
+            'uniqueId'          => $uniqueId,                         // API e-ticket / hold ref
+            'bookingRef'        => session('bookingRef', $dbBooking?->booking_ref ?? ''), // OUR ref
             'tktTimeLimit'      => session('bookingTktTimeLimit'),
             'bookingStatus'     => session('bookingStatus', 'CONFIRMED'),
             'paymentMethod'     => $paymentMethod,
@@ -1125,7 +1235,8 @@ class FlightBookingController extends Controller
  
                 session([
                     'bookingConfirmation' => $apiResponse,
-                    'bookingUniqueId'     => $uniqueId,
+                    'bookingUniqueId'     => $uniqueId,           // API ref
+                    'bookingRef'          => $dbBooking->booking_ref, // OUR ref
                     'bookingStatus'       => $bookResult['Status'] ?? 'CONFIRMED',
                     'flightBookingDbId'   => $dbBooking->id,
                 ]);
@@ -1152,7 +1263,7 @@ class FlightBookingController extends Controller
         array  $tfPlan,
         array  $uploadPaths,
         string $bookingRef = ''
-    ): void {
+     ): void {
         $bookingFlight = session('bookingFlight', []);
         $flightInfo    = $bookingFlight['flight'] ?? $bookingFlight;
  

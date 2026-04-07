@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 class FlightBooking extends Model
 {
     protected $fillable = [
+        'booking_ref',
         'unique_id',
         'fare_source_code',
         'session_id',

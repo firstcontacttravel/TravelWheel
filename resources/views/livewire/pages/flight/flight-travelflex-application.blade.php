@@ -15,12 +15,20 @@
 
     $flight       = session('bookingFlight.flight') ?? session('bookingFlight', []);
     $segments     = $flight['segments'] ?? [];
+    $multiLegs    = $flight['multiLegs'] ?? [];
+    $isMulti      = count($multiLegs) > 0;
     $firstSeg     = $segments[0] ?? [];
     $lastSeg      = !empty($segments) ? $segments[count($segments)-1] : [];
     $currency     = $flight['currency'] ?? 'NGN';
     $sym          = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
     $fmt          = fn($v) => $sym . number_format((float)$v, 2);
     $errors       = $errors ?? new \Illuminate\Support\MessageBag();
+    $routeLines   = [];
+    if ($isMulti) {
+        foreach ($multiLegs as $leg) {
+            $routeLines[] = ($leg['from'] ?? '') . ' â†’ ' . ($leg['to'] ?? '');
+        }
+    }
 @endphp
 
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -99,7 +107,15 @@
     <div class="tfa-loan-strip">
         <div class="tfa-loan-item">
             <div class="tfa-loan-lbl">Flight</div>
-            <div class="tfa-loan-val">{{ ($firstSeg['from']??'') }} → {{ ($lastSeg['to']??'') }}</div>
+            <div class="tfa-loan-val" style="font-family:var(--font);font-size:13px;line-height:1.45;">
+                @if($isMulti)
+                    @foreach($routeLines as $routeLine)
+                        <div>{{ $routeLine }}</div>
+                    @endforeach
+                @else
+                    {{ ($firstSeg['from']??'') }} → {{ ($lastSeg['to']??'') }}
+                @endif
+            </div>
         </div>
         <div class="tfa-loan-item">
             <div class="tfa-loan-lbl">Total Loan Amount</div>
@@ -228,7 +244,7 @@
 
                 @php
                 $docs = [
-                    ['name' => 'valid_id',              'label' => 'Valid Government-Issued ID', 'required' => true,  'hint' => 'National ID, Voter's Card, Driver's License or International Passport', 'icon' => '🪪'],
+                    ['name' => 'valid_id',              'label' => 'Valid Government-Issued ID', 'required' => true,  'hint' => "National ID, Voter's Card, Driver's License or International Passport", 'icon' => '🪪'],
                     ['name' => 'passport_photo',         'label' => 'Recent Passport Photograph', 'required' => true,  'hint' => 'Clear, white background, taken within the last 6 months', 'icon' => '🤳'],
                     ['name' => 'work_id_card',           'label' => 'Work ID Card',              'required' => true,  'hint' => 'Current employer ID card — both sides if required', 'icon' => '🏢'],
                     ['name' => 'employment_letter',      'label' => 'Employment Letter / Details','required' => true,  'hint' => 'Official letter from your employer confirming employment', 'icon' => '📄'],

@@ -1,3 +1,4 @@
+
 <div>{{-- Single Livewire root element --}}
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
@@ -323,6 +324,7 @@
 @php
     // ── Core session data ──
     $flight        = session('bookingFlight') ?? [];
+    $mappedFlight  = $flight['flight'] ?? $flight;
     $sessionId     = session('bookingSessionId') ?? null;
     $searchParams  = session('bookingSearchParams') ?? [];
     $fareRulesData = session('fareRules') ?? [];
@@ -351,25 +353,30 @@
     $cabinMap = ['Y' => 'Economy', 'S' => 'Premium Economy', 'C' => 'Business', 'F' => 'First Class'];
     $cabin    = $cabinMap[$searchParams['flight_type'] ?? 'Y'] ?? 'Economy';
 
-    $currency = $flight['currency'] ?? ($itinTotals['TotalFare']['CurrencyCode'] ?? 'NGN');
+    $currency = $mappedFlight['currency'] ?? ($itinTotals['TotalFare']['CurrencyCode'] ?? 'NGN');
     $sym      = $currency === 'NGN' ? '₦' : ($currency === 'USD' ? '$' : $currency . ' ');
     $fmt      = fn($v) => $sym . number_format((float) $v, 2);
 
-    $segments  = $flight['segments'] ?? [];
-    $retSegs   = $flight['flight']['returnSegments'] ?? [];
-    $multiLegs = $flight['flight']['multiLegs']      ?? [];
-    $breakdown = $flight['fareBreakdown']  ?? $fareBreakdown;
+    $segments  = $flight['segments'] ?? ($mappedFlight['segments'] ?? []);
+    $retSegs   = $mappedFlight['returnSegments'] ?? [];
+    $multiLegs = $mappedFlight['multiLegs'] ?? [];
+    $breakdown = $flight['fareBreakdown'] ?? ($mappedFlight['fareBreakdown'] ?? $fareBreakdown);
     $isReturn  = count($retSegs) > 0;
     $isMulti   = count($multiLegs) > 0;
     $tripLabel = $isReturn ? 'Round-trip' : ($isMulti ? 'Multi-city' : 'One-way');
     $firstSeg  = $segments[0] ?? [];
     $lastSeg   = count($segments) > 0 ? $segments[count($segments) - 1] : [];
-    $stopCount = $flights['stops'] ?? 0;
+    if ($isMulti && !empty($multiLegs)) {
+        $firstSeg = $multiLegs[0]['segments'][0] ?? [];
+        $lastMultiLeg = $multiLegs[count($multiLegs) - 1]['segments'] ?? [];
+        $lastSeg = !empty($lastMultiLeg) ? $lastMultiLeg[count($lastMultiLeg) - 1] : [];
+    }
+    $stopCount = $mappedFlight['stops'] ?? 0;
 
     // Totals from revalidate
-    $totalPrice = (float)($itinTotals['TotalFare']['Amount'] ?? $flight['price'] ?? 0);
-    $totalBase  = (float)($itinTotals['BaseFare']['Amount'] ?? 0);
-    $totalTax   = (float)($itinTotals['TotalTax']['Amount'] ?? 0);
+    $totalPrice = (float)($mappedFlight['price'] ?? ($itinTotals['TotalFare']['Amount'] ?? 0));
+    $totalBase  = (float)($mappedFlight['baseFare'] ?? ($itinTotals['BaseFare']['Amount'] ?? 0));
+    $totalTax   = (float)($mappedFlight['totalTax'] ?? ($itinTotals['TotalTax']['Amount'] ?? 0));
     $discount   = 0;
 
     $taxLabels = [
@@ -407,6 +414,21 @@
     }
 
     // ── Parse DynamicBaggage for outbound/inbound options ──
+    if ($isMulti && !empty($multiLegs)) {
+        $allLegs = [];
+        foreach ($multiLegs as $li => $leg) {
+            $legSegs = $leg['segments'] ?? [];
+            if (!empty($legSegs)) {
+                $allLegs[] = [
+                    'label' => 'Leg ' . ($li + 1),
+                    'route' => ($legSegs[0]['from'] ?? '') . ' â†’ ' . ($legSegs[count($legSegs)-1]['to'] ?? ''),
+                    'type' => 'multi',
+                    'logo' => $legSegs[0]['airlineLogo'] ?? '',
+                ];
+            }
+        }
+    }
+
     $baggageOutbound = [];
     $baggageInbound  = [];
     foreach ($dynBaggage as $bag) {
@@ -431,1135 +453,1180 @@
     $esFmt = fn($svc) => ($esSym($svc['ServiceCost']['CurrencyCode'] ?? '') . number_format((float)($svc['ServiceCost']['Amount'] ?? 0), 2));
 @endphp
 
-<div class="bk-wrap"
-     x-data="{
-         submitForm() { document.getElementById('bk-form').submit(); },
-         taxOpen: {},
-         toggleTax(key) { this.taxOpen[key] = !this.taxOpen[key]; }
-     }">
+    <div class="bk-wrap"
+        x-data="{
+            submitForm() { document.getElementById('bk-form').submit(); },
+            taxOpen: {},
+            toggleTax(key) { this.taxOpen[key] = !this.taxOpen[key]; }
+        }">
 
-    {{-- Breadcrumb --}}
-    <div class="bk-crumb">
-        <a href="{{ route('home') }}">Home</a>
-        <span class="bk-crumb-sep">›</span>
-        <a href="{{ route('air.flight-s') }}">Flight Results</a>
-        <span class="bk-crumb-sep">›</span>
-        <span>Complete Booking</span>
-    </div>
-    @if($errors->any())
-    <div class="bk-notice danger" style="margin-bottom:16px;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-        <div>
-            @foreach($errors->all() as $error)
-                <div>{{ $error }}</div>
-            @endforeach
+        {{-- Breadcrumb --}}
+        <div class="bk-crumb">
+            <a href="{{ route('home') }}">Home</a>
+            <span class="bk-crumb-sep">›</span>
+            <a href="{{ route('air.flight-s') }}">Flight Results</a>
+            <span class="bk-crumb-sep">›</span>
+            <span>Complete Booking</span>
         </div>
-    </div>
-    @endif
-    {{-- Global notices --}}
-    @if(!empty($flight['isPassportMandatory']))
-        <div class="bk-notice danger" style="margin-bottom:12px;">
+        @if($errors->any())
+        <div class="bk-notice danger" style="margin-bottom:16px;">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-            <span><strong>Passport required.</strong> All passengers must carry a valid passport. Names must match exactly.</span>
-        </div>
-    @endif
-
-    <div class="bk-page">
-
-        {{-- ══════════════ MAIN COLUMN ══════════════ --}}
-        <div class="bk-main">
-
-            {{-- Stepper --}}
-            <div class="bk-steps">
-                <div class="bk-step">
-                    <div class="bk-step-dot {{ $step > 1 ? 'done' : 'active' }}">
-                        @if($step > 1)
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        @else 1 @endif
-                    </div>
-                    <div>
-                        <div class="bk-step-label {{ $step === 1 ? 'active' : '' }}">Traveller Info</div>
-                        <div class="bk-step-sub">Names &amp; documents</div>
-                    </div>
-                </div>
-                <div class="bk-connector {{ $step > 1 ? 'done' : '' }}"></div>
-                <div class="bk-step">
-                    <div class="bk-step-dot {{ $step >= 2 ? 'active' : 'pending' }}">2</div>
-                    <div>
-                        <div class="bk-step-label {{ $step === 2 ? 'active' : '' }}">Trip Customisation</div>
-                        <div class="bk-step-sub">Seats &amp; extras</div>
-                    </div>
-                </div>
-                <div class="bk-connector"></div>
-                <div class="bk-step">
-                    <div class="bk-step-dot pending">3</div>
-                    <div>
-                        <div class="bk-step-label">Overview &amp; Payment</div>
-                        <div class="bk-step-sub">Review &amp; pay</div>
-                    </div>
-                </div>
+            <div>
+                @foreach($errors->all() as $error)
+                    <div>{{ $error }}</div>
+                @endforeach
             </div>
+        </div>
+        @endif
+        {{-- Global notices --}}
+        @if(!empty($flight['isPassportMandatory']))
+            <div class="bk-notice danger" style="margin-bottom:12px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                <span><strong>Passport required.</strong> All passengers must carry a valid passport. Names must match exactly.</span>
+            </div>
+        @endif
 
-            {{-- ════════ STEP 1 ════════ --}}
-            @if($step === 1)
+        <div class="bk-page">
 
-                {{-- ── 1. Flight Itinerary (accordion, open by default) ── --}}
-                <div class="bk-acc" x-data="{ open: true }">
-                    <div class="bk-acc-head" :class="{ open }" @click="open = !open">
-                        <div class="bk-acc-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+            {{-- ══════════════ MAIN COLUMN ══════════════ --}}
+            <div class="bk-main">
+
+                {{-- Stepper --}}
+                <div class="bk-steps">
+                    <div class="bk-step">
+                        <div class="bk-step-dot {{ $step > 1 ? 'done' : 'active' }}">
+                            @if($step > 1)
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            @else 1 @endif
                         </div>
                         <div>
-                            <div class="bk-acc-title">Flight Itinerary</div>
-                            <div class="bk-acc-sub">
-                                {{ $firstSeg['from'] ?? '' }} → {{ $lastSeg['to'] ?? '' }} · {{ $tripLabel }} · {{ $cabin }}
-                            </div>
+                            <div class="bk-step-label {{ $step === 1 ? 'active' : '' }}">Traveller Info</div>
+                            <div class="bk-step-sub">Names &amp; documents</div>
                         </div>
-                        <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                     </div>
-
-                    <div x-show="open" x-transition>
-                        {{-- ── Outbound leg ── --}}
-                        @php
-                            $outStopCount = $flight['stops'] ?? max(0, count($segments) - 1);
-                            $outDuration  = $flight['totalTimeLabel'] ?? $flight['durationLabel'] ?? '';
-                        @endphp
-                        <div class="bk-itin-leg" x-data="{ legOpen: true }">
-                            <div class="bk-itin-leg-head" @click="legOpen = !legOpen">
-                                <div>
-                                    <div class="bk-itin-leg-route">
-                                        {{ $firstSeg['from'] ?? '' }}
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                                        {{ $lastSeg['to'] ?? '' }}
-                                        <span class="bk-outbound-badge">
-                                            Outbound
-                                        </span>
-                                    </div>
-                                    <div class="bk-itin-leg-meta">
-                                        @if(!empty($flight['departDateLabel'])) <span>{{ $flight['departDateLabel'] }}</span> @endif
-                                        <span class="bk-itin-leg-badge {{ $outStopCount === 0 ? 'direct' : '' }}">
-                                            {{ $outStopCount === 0 ? 'Non stop' : $outStopCount . ' stop' . ($outStopCount > 1 ? 's' : '') }}
-                                        </span>
-                                        @if($outDuration) <span>· {{ $outDuration }}</span> @endif
-                                    </div>
-                                </div>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="legOpen ? 'transform:rotate(180deg)' : ''"><polyline points="6 9 12 15 18 9"/></svg>
-                            </div>
-
-                            <div x-show="legOpen" x-transition>
-                                <div class="bk-itin-leg-body">
-                                    @foreach($segments as $si => $seg)
-                                        @php
-                                            $equip   = $seg['equipment'] ?? '';
-                                            $equipLbl= $equipMap[$equip] ?? $equip;
-                                            $bagStr  = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 23kg';
-                                            $cabinBag= implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 7kg';
-                                        @endphp
-
-                                        @if($si > 0 && !empty($flight['layoverDurations'][$si - 1]))
-                                            <div class="bk-layover-strip">
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                Layover in {{ $segments[$si-1]['toCity'] ?? $segments[$si-1]['to'] ?? '' }}
-                                                · {{ $flight['layoverDurations'][$si-1] }}
-                                            </div>
-                                        @endif
-
-                                        <div class="bk-seg-group">
-                                            <div class="bk-seg-airline-bar">
-                                                <div class="bk-seg-airline-left">
-                                                    @if(!empty($seg['airlineLogo']))
-                                                        <img class="bk-seg-airline-logo" src="{{ $seg['airlineLogo'] }}" alt="{{ $seg['airline'] ?? '' }}">
-                                                    @endif
-                                                    <span class="bk-seg-airline-name">{{ $seg['airline'] ?? '' }}</span>
-                                                    @if($equipLbl) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $equipLbl }}</span> @endif
-                                                    @if(!empty($seg['flightNo'])) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $seg['flightNo'] }}</span> @endif
-                                                </div>
-                                                <div>
-                                                    <span class="bk-seg-cabin-tag">{{ $seg['cabin'] ?? $cabin }}</span>
-                                                    @if(!empty($seg['resBookCode'])) <span class="bk-seg-cabin-tag" style="margin-left:5px;">Class{{ $seg['resBookCode'] }}</span> @endif
-                                                </div>
-                                            </div>
-
-                                            <div class="bk-seg-timeline">
-                                                <div class="bk-seg-spine">
-                                                    <div class="bk-seg-dot"></div>
-                                                    <div class="bk-seg-line"></div>
-                                                    <div class="bk-seg-dot end"></div>
-                                                </div>
-                                                <div class="bk-seg-stops">
-                                                    <div class="bk-seg-stop">
-                                                        <div class="bk-seg-time">{{ $seg['departTime'] }}</div>
-                                                        <div>
-                                                            <div class="bk-seg-place">{{ $seg['fromCity'] ?? $seg['from'] ?? '' }}</div>
-                                                            <div class="bk-seg-place-sub">{{ $seg['fromAirport'] ?? '' }}</div>
-                                                        </div>
-                                                        <div class="bk-seg-bags">
-                                                            <span class="bk-seg-bags-lbl">Baggage</span>
-                                                            <span class="bk-seg-bags-val">{{ $bagStr }}</span>
-                                                            <span class="bk-seg-bags-lbl" style="margin-top:4px;">Check In</span>
-                                                            <span class="bk-seg-bags-val">{{ $bagStr }}</span>
-                                                            <span class="bk-seg-bags-lbl" style="margin-top:4px;">Cabin</span>
-                                                            <span class="bk-seg-bags-val">{{ $cabinBag }}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div class="bk-seg-stop" style="padding-bottom:0;">
-                                                        <div class="bk-seg-time" style="color:var(--gray-500);font-size:12px;">
-                                                            {{ floor($seg['duration']/60) }}h {{ $seg['duration']%60 }}m
-                                                        </div>
-                                                        <div></div>
-                                                        <div></div>
-                                                    </div>
-                                                    <div class="bk-seg-stop" style="padding-top:4px;padding-bottom:0;">
-                                                        <div class="bk-seg-time">{{ $seg['arriveTime'] }}</div>
-                                                        <div>
-                                                            <div class="bk-seg-place">{{ $seg['toCity'] ?? $seg['to'] ?? '' }}</div>
-                                                            <div class="bk-seg-place-sub">{{ $seg['toAirport'] ?? '' }}</div>
-                                                        </div>
-                                                        <div></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
+                    <div class="bk-connector {{ $step > 1 ? 'done' : '' }}"></div>
+                    <div class="bk-step">
+                        <div class="bk-step-dot {{ $step >= 2 ? 'active' : 'pending' }}">2</div>
+                        <div>
+                            <div class="bk-step-label {{ $step === 2 ? 'active' : '' }}">Trip Customisation</div>
+                            <div class="bk-step-sub">Seats &amp; extras</div>
                         </div>
-
-                        {{-- ── Return leg ── --}}
-                        @if($isReturn && count($retSegs) > 0)
-                            @php
-                                $retFirst    = $retSegs[0];
-                                $retLast     = $retSegs[count($retSegs)-1];
-                                $retStops    = $flight['returnStops'] ?? max(0, count($retSegs)-1);
-                                $retDuration = $flight['returnTotalTimeLabel'] ?? $flight['returnDurationLabel'] ?? '';
-                            @endphp
-                            <div class="bk-itin-leg" x-data="{ legOpen: true }">
-                                <div class="bk-itin-leg-head" @click="legOpen = !legOpen">
-                                    <div>
-                                        <div class="bk-itin-leg-route">
-                                            {{ $retFirst['from'] ?? '' }}
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                                            {{ $retLast['to'] ?? '' }}
-                                            <span class="bk-outbound-badge">
-                                                Return
-                                            </span>
-                                        </div>
-                                        <div class="bk-itin-leg-meta">
-                                            @if(!empty($flight['returnDateLabel'])) <span>{{ $flight['returnDateLabel'] }}</span> @endif
-                                            <span class="bk-itin-leg-badge {{ $retStops === 0 ? 'direct' : '' }}">
-                                                {{ $retStops === 0 ? 'Non stop' : $retStops . ' stop' . ($retStops > 1 ? 's' : '') }}
-                                            </span>
-                                            @if($retDuration) <span>· {{ $retDuration }}</span> @endif
-                                        </div>
-                                    </div>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="legOpen ? 'transform:rotate(180deg)' : ''"><polyline points="6 9 12 15 18 9"/></svg>
-                                </div>
-
-                                <div x-show="legOpen" x-transition>
-                                    <div class="bk-itin-leg-body">
-                                        @foreach($retSegs as $si => $seg)
-                                            @php
-                                                $equip    = $seg['equipment'] ?? '';
-                                                $equipLbl = $equipMap[$equip] ?? $equip;
-                                                $bagStr   = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 23kg';
-                                                $cabinBag = implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 7kg';
-                                            @endphp
-
-                                            @if($si > 0 && !empty($flight['returnLayoverDurations'][$si-1]))
-                                                <div class="bk-layover-strip">
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                    Layover in {{ $retSegs[$si-1]['toCity'] ?? $retSegs[$si-1]['to'] ?? '' }}
-                                                    · {{ $flight['returnLayoverDurations'][$si-1] }}
-                                                </div>
-                                            @endif
-
-                                            <div class="bk-seg-group">
-                                                <div class="bk-seg-airline-bar">
-                                                    <div class="bk-seg-airline-left">
-                                                        @if(!empty($seg['airlineLogo']))
-                                                            <img class="bk-seg-airline-logo" src="{{ $seg['airlineLogo'] }}" alt="{{ $seg['airline'] ?? '' }}">
-                                                        @endif
-                                                        <span class="bk-seg-airline-name">{{ $seg['airline'] ?? '' }}</span>
-                                                        @if($equipLbl) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $equipLbl }}</span> @endif
-                                                        @if(!empty($seg['flightNo'])) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $seg['flightNo'] }}</span> @endif
-                                                    </div>
-                                                    <span class="bk-seg-cabin-tag">{{ $seg['cabin'] ?? $cabin }}</span>
-                                                </div>
-                                                <div class="bk-seg-timeline">
-                                                    <div class="bk-seg-spine">
-                                                        <div class="bk-seg-dot"></div>
-                                                        <div class="bk-seg-line"></div>
-                                                        <div class="bk-seg-dot end"></div>
-                                                    </div>
-                                                    <div class="bk-seg-stops">
-                                                        <div class="bk-seg-stop">
-                                                            <div class="bk-seg-time">{{ $seg['departTime'] }}</div>
-                                                            <div>
-                                                                <div class="bk-seg-place">{{ $seg['fromCity'] ?? $seg['from'] ?? '' }}</div>
-                                                                <div class="bk-seg-place-sub">{{ $seg['fromAirport'] ?? '' }}</div>
-                                                            </div>
-                                                            <div class="bk-seg-bags">
-                                                                <span class="bk-seg-bags-lbl">Baggage</span>
-                                                                <span class="bk-seg-bags-val">{{ $bagStr }}</span>
-                                                                <span class="bk-seg-bags-lbl" style="margin-top:4px;">Check In</span>
-                                                                <span class="bk-seg-bags-val">{{ $bagStr }}</span>
-                                                                <span class="bk-seg-bags-lbl" style="margin-top:4px;">Cabin</span>
-                                                                <span class="bk-seg-bags-val">{{ $cabinBag }}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div class="bk-seg-stop" style="padding-bottom:0;">
-                                                            <div class="bk-seg-time" style="color:var(--gray-500);font-size:12px;">{{ floor($seg['duration']/60) }}h {{ $seg['duration']%60 }}m</div>
-                                                            <div></div><div></div>
-                                                        </div>
-                                                        <div class="bk-seg-stop" style="padding-top:4px;padding-bottom:0;">
-                                                            <div class="bk-seg-time">{{ $seg['arriveTime'] }}</div>
-                                                            <div>
-                                                                <div class="bk-seg-place">{{ $seg['toCity'] ?? $seg['to'] ?? '' }}</div>
-                                                                <div class="bk-seg-place-sub">{{ $seg['toAirport'] ?? '' }}</div>
-                                                            </div>
-                                                            <div></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        {{-- Multi-city legs --}}
-                        @if($isMulti)
-                            @foreach($multiLegs as $li => $leg)
-                                @php
-                                    $legSegs  = $leg['segments'] ?? [];
-                                    $legFirst = $legSegs[0] ?? [];
-                                    $legLast  = count($legSegs) > 0 ? $legSegs[count($legSegs)-1] : [];
-                                    $legStops = $leg['stops'] ?? max(0, count($legSegs)-1);
-                                @endphp
-                                @if(!empty($legSegs))
-                                    <div class="bk-itin-leg" x-data="{ legOpen: true }">
-                                        <div class="bk-itin-leg-head" @click="legOpen = !legOpen">
-                                            <div>
-                                                <div class="bk-itin-leg-route">
-                                                    {{ $legFirst['from'] ?? '' }}
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                                                    {{ $legLast['to'] ?? '' }}
-                                                </div>
-                                                <div class="bk-itin-leg-meta">
-                                                    <span>Leg {{ $li + 2 }}</span>
-                                                    @if(!empty($leg['departDateLabel'])) <span>· {{ $leg['departDateLabel'] }}</span> @endif
-                                                    <span class="bk-itin-leg-badge {{ $legStops === 0 ? 'direct' : '' }}">{{ $legStops === 0 ? 'Non stop' : $legStops . ' stop' }}</span>
-                                                    @if(!empty($leg['totalTimeLabel'])) <span>· {{ $leg['totalTimeLabel'] }}</span> @endif
-                                                </div>
-                                            </div>
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="legOpen ? 'transform:rotate(180deg)' : ''"><polyline points="6 9 12 15 18 9"/></svg>
-                                        </div>
-                                        <div x-show="legOpen" x-transition>
-                                            <div class="bk-itin-leg-body">
-                                                @foreach($legSegs as $si => $seg)
-                                                    @if($si > 0 && !empty($leg['layoverDurations'][$si-1]))
-                                                        <div class="bk-layover-strip">
-                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                            Layover · {{ $leg['layoverDurations'][$si-1] }}
-                                                        </div>
-                                                    @endif
-                                                    <div class="bk-seg-group">
-                                                        <div class="bk-seg-airline-bar">
-                                                            <div class="bk-seg-airline-left">
-                                                                @if(!empty($seg['airlineLogo'])) <img class="bk-seg-airline-logo" src="{{ $seg['airlineLogo'] }}" alt=""> @endif
-                                                                <span class="bk-seg-airline-name">{{ $seg['airline'] ?? '' }}</span>
-                                                                @if(!empty($seg['flightNo'])) <span style="font-size:11px;color:var(--gray-400);">· {{ $seg['flightNo'] }}</span> @endif
-                                                            </div>
-                                                            <span class="bk-seg-cabin-tag">{{ $seg['cabin'] ?? $cabin }}</span>
-                                                        </div>
-                                                        <div class="bk-seg-timeline">
-                                                            <div class="bk-seg-spine">
-                                                                <div class="bk-seg-dot"></div>
-                                                                <div class="bk-seg-line"></div>
-                                                                <div class="bk-seg-dot end"></div>
-                                                            </div>
-                                                            <div class="bk-seg-stops">
-                                                                <div class="bk-seg-stop">
-                                                                    <div class="bk-seg-time">{{ $seg['departTime'] }}</div>
-                                                                    <div><div class="bk-seg-place">{{ $seg['fromCity'] ?? $seg['from'] ?? '' }}</div><div class="bk-seg-place-sub">{{ $seg['fromAirport'] ?? '' }}</div></div>
-                                                                    <div></div>
-                                                                </div>
-                                                                <div class="bk-seg-stop" style="padding-bottom:0;">
-                                                                    <div class="bk-seg-time" style="color:var(--gray-500);font-size:12px;">{{ floor($seg['duration']/60) }}h {{ $seg['duration']%60 }}m</div>
-                                                                    <div></div><div></div>
-                                                                </div>
-                                                                <div class="bk-seg-stop" style="padding-top:4px;padding-bottom:0;">
-                                                                    <div class="bk-seg-time">{{ $seg['arriveTime'] }}</div>
-                                                                    <div><div class="bk-seg-place">{{ $seg['toCity'] ?? $seg['to'] ?? '' }}</div><div class="bk-seg-place-sub">{{ $seg['toAirport'] ?? '' }}</div></div>
-                                                                    <div></div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                        </div>
-                                    </div>
-                                @endif
-                            @endforeach
-                        @endif
+                    </div>
+                    <div class="bk-connector"></div>
+                    <div class="bk-step">
+                        <div class="bk-step-dot pending">3</div>
+                        <div>
+                            <div class="bk-step-label">Overview &amp; Payment</div>
+                            <div class="bk-step-sub">Review &amp; pay</div>
+                        </div>
                     </div>
                 </div>
 
-                {{-- ── 2. Extra Services (Baggage + Meals) ── --}}
-                @if(!empty($baggageOutbound) || !empty($baggageInbound) || !empty($mealOutbound) || !empty($mealInbound))
-                <div class="bk-acc" x-data="{ open: true }">
-                    <div class="bk-acc-head" :class="{ open }" @click="open = !open">
-                        <div class="bk-acc-icon" style="background:#f0fdf4;color:#059669;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
-                        </div>
-                        <div>
-                            <div class="bk-acc-title">Extra Services</div>
-                            <div class="bk-acc-sub">Add baggage or meals to your booking</div>
-                        </div>
-                        <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div x-show="open" x-transition>
-                        <div class="bk-acc-body" style="padding-top:0;">
+                {{-- ════════ STEP 1 ════════ --}}
+                @if($step === 1)
 
-                            {{-- ── Extra Baggage ── --}}
-                            @if(!empty($baggageOutbound) || !empty($baggageInbound))
-                            <div style="padding:14px 0 10px; border-bottom:1px solid var(--gray-100);">
-                                <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;">
-                                    🧳 Extra Check-in Baggage
+                    {{-- ── 1. Flight Itinerary (accordion, open by default) ── --}}
+                    <div class="bk-acc" x-data="{ open: true }">
+                        <div class="bk-acc-head" :class="{ open }" @click="open = !open">
+                            <div class="bk-acc-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                            </div>
+                            <div>
+                                <div class="bk-acc-title">Flight Itinerary</div>
+                                <div class="bk-acc-sub">
+                                    {{ $firstSeg['from'] ?? '' }} → {{ $lastSeg['to'] ?? '' }} · {{ $tripLabel }} · {{ $cabin }}
                                 </div>
+                            </div>
+                            <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
 
-                                @foreach([['Outbound', $baggageOutbound], ['Inbound', $baggageInbound]] as [$dir, $bagOpts])
-                                    @if(!empty($bagOpts))
-                                    <div style="margin-bottom:14px;">
-                                        <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">{{ $dir }}</div>
-                                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                                            @foreach($bagOpts as $svc)
-                                            <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:9px;cursor:pointer;background:#fff;transition:all .15s;flex:1;min-width:160px;"
-                                                x-data="{}"
-                                                :style="$el.querySelector('input').checked ? 'border-color:var(--blue);background:var(--blue-lt);' : ''">
-                                                <input type="checkbox"
-                                                    name="extra_baggage[{{ strtolower($dir) }}][]"
-                                                    value="{{ $svc['ServiceId'] }}"
-                                                    style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;flex-shrink:0;">
-                                                <div style="flex:1;">
-                                                    <div style="font-size:13px;font-weight:700;color:var(--gray-900);">{{ $svc['Description'] }}</div>
-                                                    <div style="font-size:11px;color:var(--gray-400);margin-top:1px;">per passenger</div>
+                        <div x-show="open" x-transition>
+                            @if(!$isMulti)
+                                {{-- ── Outbound leg ── --}}
+                                @php
+                                    $outStopCount = $flight['stops'] ?? max(0, count($segments) - 1);
+                                    $outDuration  = $flight['totalTimeLabel'] ?? $flight['durationLabel'] ?? '';
+                                @endphp
+                                <div class="bk-itin-leg" x-data="{ legOpen: true }">
+                                    <div class="bk-itin-leg-head" @click="legOpen = !legOpen">
+                                        <div>
+                                            <div class="bk-itin-leg-route">
+                                                {{ $firstSeg['from'] ?? '' }}
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                                                {{ $lastSeg['to'] ?? '' }}
+                                                <span class="bk-outbound-badge">
+                                                    Outbound
+                                                </span>
+                                            </div>
+                                            <div class="bk-itin-leg-meta">
+                                                @if(!empty($flight['departDateLabel'])) <span>{{ $flight['departDateLabel'] }}</span> @endif
+                                                <span class="bk-itin-leg-badge {{ $outStopCount === 0 ? 'direct' : '' }}">
+                                                    {{ $outStopCount === 0 ? 'Non stop' : $outStopCount . ' stop' . ($outStopCount > 1 ? 's' : '') }}
+                                                </span>
+                                                @if($outDuration) <span>· {{ $outDuration }}</span> @endif
+                                            </div>
+                                        </div>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="legOpen ? 'transform:rotate(180deg)' : ''"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </div>
+
+                                    <div x-show="legOpen" x-transition>
+                                        <div class="bk-itin-leg-body">
+                                            @foreach($segments as $si => $seg)
+                                                @php
+                                                    $equip   = $seg['equipment'] ?? '';
+                                                    $equipLbl= $equipMap[$equip] ?? $equip;
+                                                    $bagStr  = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 23kg';
+                                                    $cabinBag= implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 7kg';
+                                                @endphp
+
+                                                @if($si > 0 && !empty($flight['layoverDurations'][$si - 1]))
+                                                    <div class="bk-layover-strip">
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                                        Layover in {{ $segments[$si-1]['toCity'] ?? $segments[$si-1]['to'] ?? '' }}
+                                                        · {{ $flight['layoverDurations'][$si-1] }}
+                                                    </div>
+                                                @endif
+
+                                                <div class="bk-seg-group">
+                                                    <div class="bk-seg-airline-bar">
+                                                        <div class="bk-seg-airline-left">
+                                                            @if(!empty($seg['airlineLogo']))
+                                                                <img class="bk-seg-airline-logo" src="{{ $seg['airlineLogo'] }}" alt="{{ $seg['airline'] ?? '' }}">
+                                                            @endif
+                                                            <span class="bk-seg-airline-name">{{ $seg['airline'] ?? '' }}</span>
+                                                            @if($equipLbl) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $equipLbl }}</span> @endif
+                                                            @if(!empty($seg['flightNo'])) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $seg['flightNo'] }}</span> @endif
+                                                        </div>
+                                                        <div>
+                                                            <span class="bk-seg-cabin-tag">{{ $seg['cabin'] ?? $cabin }}</span>
+                                                            @if(!empty($seg['resBookCode'])) <span class="bk-seg-cabin-tag" style="margin-left:5px;">Class{{ $seg['resBookCode'] }}</span> @endif
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="bk-seg-timeline">
+                                                        <div class="bk-seg-spine">
+                                                            <div class="bk-seg-dot"></div>
+                                                            <div class="bk-seg-line"></div>
+                                                            <div class="bk-seg-dot end"></div>
+                                                        </div>
+                                                        <div class="bk-seg-stops">
+                                                            <div class="bk-seg-stop">
+                                                                <div class="bk-seg-time">{{ $seg['departTime'] }}</div>
+                                                                <div>
+                                                                    <div class="bk-seg-place">{{ $seg['fromCity'] ?? $seg['from'] ?? '' }}</div>
+                                                                    <div class="bk-seg-place-sub">{{ $seg['fromAirport'] ?? '' }}</div>
+                                                                </div>
+                                                                <div class="bk-seg-bags">
+                                                                    <span class="bk-seg-bags-lbl">Baggage</span>
+                                                                    <span class="bk-seg-bags-val">{{ $bagStr }}</span>
+                                                                    <span class="bk-seg-bags-lbl" style="margin-top:4px;">Check In</span>
+                                                                    <span class="bk-seg-bags-val">{{ $bagStr }}</span>
+                                                                    <span class="bk-seg-bags-lbl" style="margin-top:4px;">Cabin</span>
+                                                                    <span class="bk-seg-bags-val">{{ $cabinBag }}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="bk-seg-stop" style="padding-bottom:0;">
+                                                                <div class="bk-seg-time" style="color:var(--gray-500);font-size:12px;">
+                                                                    {{ floor($seg['duration']/60) }}h {{ $seg['duration']%60 }}m
+                                                                </div>
+                                                                <div></div>
+                                                                <div></div>
+                                                            </div>
+                                                            <div class="bk-seg-stop" style="padding-top:4px;padding-bottom:0;">
+                                                                <div class="bk-seg-time">{{ $seg['arriveTime'] }}</div>
+                                                                <div>
+                                                                    <div class="bk-seg-place">{{ $seg['toCity'] ?? $seg['to'] ?? '' }}</div>
+                                                                    <div class="bk-seg-place-sub">{{ $seg['toAirport'] ?? '' }}</div>
+                                                                </div>
+                                                                <div></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div style="font-size:13px;font-weight:800;color:var(--blue);white-space:nowrap;font-family:var(--mono);">
-                                                    + {{ $esFmt($svc) }}
-                                                </div>
-                                            </label>
                                             @endforeach
                                         </div>
                                     </div>
-                                    @endif
-                                @endforeach
-                            </div>
+                                </div>
                             @endif
 
-                            {{-- ── Meals ── --}}
-                            @if(!empty($mealOutbound) || !empty($mealInbound))
-                            <div style="padding-top:14px;">
-                                <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;">
-                                    🍽️ Meal Preferences
-                                </div>
-
-                                @foreach([['Outbound', $mealOutbound], ['Inbound', $mealInbound]] as [$dir, $mealSegs])
-                                    @if(!empty($mealSegs))
-                                    <div style="margin-bottom:14px;">
-                                        <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">{{ $dir }}</div>
-                                        @foreach($mealSegs as $si => $segMeals)
-                                        <div style="margin-bottom:10px;">
-                                            <div style="font-size:10.5px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
-                                                Segment {{ $si + 1 }}
+                            {{-- ── Return leg ── --}}
+                            @if($isReturn && count($retSegs) > 0)
+                                @php
+                                    $retFirst    = $retSegs[0];
+                                    $retLast     = $retSegs[count($retSegs)-1];
+                                    $retStops    = $flight['returnStops'] ?? max(0, count($retSegs)-1);
+                                    $retDuration = $flight['returnTotalTimeLabel'] ?? $flight['returnDurationLabel'] ?? '';
+                                @endphp
+                                <div class="bk-itin-leg" x-data="{ legOpen: true }">
+                                    <div class="bk-itin-leg-head" @click="legOpen = !legOpen">
+                                        <div>
+                                            <div class="bk-itin-leg-route">
+                                                {{ $retFirst['from'] ?? '' }}
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                                                {{ $retLast['to'] ?? '' }}
+                                                <span class="bk-outbound-badge">
+                                                    Return
+                                                </span>
                                             </div>
-                                            <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                                                @foreach($segMeals as $svc)
-                                                <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:9px;cursor:pointer;background:#fff;transition:all .15s;flex:1;min-width:180px;"
-                                                    x-data="{}"
-                                                    :style="$el.querySelector('input').checked ? 'border-color:var(--amber);background:var(--amber-lt);' : ''">
-                                                    <input type="checkbox"
-                                                        name="extra_meal[{{ strtolower($dir) }}][{{ $si }}][]"
-                                                        value="{{ $svc['ServiceId'] }}"
-                                                        style="width:16px;height:16px;accent-color:var(--amber);cursor:pointer;flex-shrink:0;">
-                                                    <div style="flex:1;">
-                                                        <div style="font-size:12.5px;font-weight:700;color:var(--gray-900);">{{ $svc['Description'] }}</div>
+                                            <div class="bk-itin-leg-meta">
+                                                @if(!empty($flight['returnDateLabel'])) <span>{{ $flight['returnDateLabel'] }}</span> @endif
+                                                <span class="bk-itin-leg-badge {{ $retStops === 0 ? 'direct' : '' }}">
+                                                    {{ $retStops === 0 ? 'Non stop' : $retStops . ' stop' . ($retStops > 1 ? 's' : '') }}
+                                                </span>
+                                                @if($retDuration) <span>· {{ $retDuration }}</span> @endif
+                                            </div>
+                                        </div>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="legOpen ? 'transform:rotate(180deg)' : ''"><polyline points="6 9 12 15 18 9"/></svg>
+                                    </div>
+
+                                    <div x-show="legOpen" x-transition>
+                                        <div class="bk-itin-leg-body">
+                                            @foreach($retSegs as $si => $seg)
+                                                @php
+                                                    $equip    = $seg['equipment'] ?? '';
+                                                    $equipLbl = $equipMap[$equip] ?? $equip;
+                                                    $bagStr   = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 23kg';
+                                                    $cabinBag = implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 7kg';
+                                                @endphp
+
+                                                @if($si > 0 && !empty($flight['returnLayoverDurations'][$si-1]))
+                                                    <div class="bk-layover-strip">
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                                        Layover in {{ $retSegs[$si-1]['toCity'] ?? $retSegs[$si-1]['to'] ?? '' }}
+                                                        · {{ $flight['returnLayoverDurations'][$si-1] }}
                                                     </div>
-                                                    <div style="font-size:12.5px;font-weight:800;color:var(--amber);white-space:nowrap;font-family:var(--mono);">
+                                                @endif
+
+                                                <div class="bk-seg-group">
+                                                    <div class="bk-seg-airline-bar">
+                                                        <div class="bk-seg-airline-left">
+                                                            @if(!empty($seg['airlineLogo']))
+                                                                <img class="bk-seg-airline-logo" src="{{ $seg['airlineLogo'] }}" alt="{{ $seg['airline'] ?? '' }}">
+                                                            @endif
+                                                            <span class="bk-seg-airline-name">{{ $seg['airline'] ?? '' }}</span>
+                                                            @if($equipLbl) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $equipLbl }}</span> @endif
+                                                            @if(!empty($seg['flightNo'])) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $seg['flightNo'] }}</span> @endif
+                                                        </div>
+                                                        <span class="bk-seg-cabin-tag">{{ $seg['cabin'] ?? $cabin }}</span>
+                                                    </div>
+                                                    <div class="bk-seg-timeline">
+                                                        <div class="bk-seg-spine">
+                                                            <div class="bk-seg-dot"></div>
+                                                            <div class="bk-seg-line"></div>
+                                                            <div class="bk-seg-dot end"></div>
+                                                        </div>
+                                                        <div class="bk-seg-stops">
+                                                            <div class="bk-seg-stop">
+                                                                <div class="bk-seg-time">{{ $seg['departTime'] }}</div>
+                                                                <div>
+                                                                    <div class="bk-seg-place">{{ $seg['fromCity'] ?? $seg['from'] ?? '' }}</div>
+                                                                    <div class="bk-seg-place-sub">{{ $seg['fromAirport'] ?? '' }}</div>
+                                                                </div>
+                                                                <div class="bk-seg-bags">
+                                                                    <span class="bk-seg-bags-lbl">Baggage</span>
+                                                                    <span class="bk-seg-bags-val">{{ $bagStr }}</span>
+                                                                    <span class="bk-seg-bags-lbl" style="margin-top:4px;">Check In</span>
+                                                                    <span class="bk-seg-bags-val">{{ $bagStr }}</span>
+                                                                    <span class="bk-seg-bags-lbl" style="margin-top:4px;">Cabin</span>
+                                                                    <span class="bk-seg-bags-val">{{ $cabinBag }}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="bk-seg-stop" style="padding-bottom:0;">
+                                                                <div class="bk-seg-time" style="color:var(--gray-500);font-size:12px;">{{ floor($seg['duration']/60) }}h {{ $seg['duration']%60 }}m</div>
+                                                                <div></div><div></div>
+                                                            </div>
+                                                            <div class="bk-seg-stop" style="padding-top:4px;padding-bottom:0;">
+                                                                <div class="bk-seg-time">{{ $seg['arriveTime'] }}</div>
+                                                                <div>
+                                                                    <div class="bk-seg-place">{{ $seg['toCity'] ?? $seg['to'] ?? '' }}</div>
+                                                                    <div class="bk-seg-place-sub">{{ $seg['toAirport'] ?? '' }}</div>
+                                                                </div>
+                                                                <div></div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+
+                            {{-- Multi-city legs --}}
+                            @if($isMulti)
+                                @foreach($multiLegs as $li => $leg)
+                                    @php
+                                        $legSegs  = $leg['segments'] ?? [];
+                                        $legFirst = $legSegs[0] ?? [];
+                                        $legLast  = count($legSegs) > 0 ? $legSegs[count($legSegs)-1] : [];
+                                        $legStops = $leg['stops'] ?? max(0, count($legSegs)-1);
+                                    @endphp
+                                    @if(!empty($legSegs))
+                                        <div class="bk-itin-leg" x-data="{ legOpen: true }">
+                                            <div class="bk-itin-leg-head" @click="legOpen = !legOpen">
+                                                <div>
+                                                    <div class="bk-itin-leg-route">
+                                                        {{ $legFirst['from'] ?? '' }}
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                                                        {{ $legLast['to'] ?? '' }}
+                                                    </div>
+                                                    <div class="bk-itin-leg-meta">
+                                                        <span>Leg {{ $li + 1 }}</span>
+                                                        @if(!empty($leg['departDateLabel'])) <span>· {{ $leg['departDateLabel'] }}</span> @endif
+                                                        <span class="bk-itin-leg-badge {{ $legStops === 0 ? 'direct' : '' }}">{{ $legStops === 0 ? 'Non stop' : $legStops . ' stop' }}</span>
+                                                        @if(!empty($leg['totalTimeLabel'])) <span>· {{ $leg['totalTimeLabel'] }}</span> @endif
+                                                    </div>
+                                                </div>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="legOpen ? 'transform:rotate(180deg)' : ''"><polyline points="6 9 12 15 18 9"/></svg>
+                                            </div>
+                                            <div x-show="legOpen" x-transition>
+                                                <div class="bk-itin-leg-body">
+                                                    @foreach($legSegs as $si => $seg)
+                                                        @if($si > 0 && !empty($leg['layoverDurations'][$si-1]))
+                                                            <div class="bk-layover-strip">
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                                                Layover · {{ $leg['layoverDurations'][$si-1] }}
+                                                            </div>
+                                                        @endif
+                                                        <div class="bk-seg-group">
+                                                            <div class="bk-seg-airline-bar">
+                                                                <div class="bk-seg-airline-left">
+                                                                    @if(!empty($seg['airlineLogo'])) <img class="bk-seg-airline-logo" src="{{ $seg['airlineLogo'] }}" alt=""> @endif
+                                                                    <span class="bk-seg-airline-name">{{ $seg['airline'] ?? '' }}</span>
+                                                                    @if(!empty($seg['flightNo'])) <span style="font-size:11px;color:var(--gray-400);">· {{ $seg['flightNo'] }}</span> @endif
+                                                                </div>
+                                                                <span class="bk-seg-cabin-tag">{{ $seg['cabin'] ?? $cabin }}</span>
+                                                            </div>
+                                                            <div class="bk-seg-timeline">
+                                                                <div class="bk-seg-spine">
+                                                                    <div class="bk-seg-dot"></div>
+                                                                    <div class="bk-seg-line"></div>
+                                                                    <div class="bk-seg-dot end"></div>
+                                                                </div>
+                                                                <div class="bk-seg-stops">
+                                                                    <div class="bk-seg-stop">
+                                                                        <div class="bk-seg-time">{{ $seg['departTime'] }}</div>
+                                                                        <div><div class="bk-seg-place">{{ $seg['fromCity'] ?? $seg['from'] ?? '' }}</div><div class="bk-seg-place-sub">{{ $seg['fromAirport'] ?? '' }}</div></div>
+                                                                        <div></div>
+                                                                    </div>
+                                                                    <div class="bk-seg-stop" style="padding-bottom:0;">
+                                                                        <div class="bk-seg-time" style="color:var(--gray-500);font-size:12px;">{{ floor($seg['duration']/60) }}h {{ $seg['duration']%60 }}m</div>
+                                                                        <div></div><div></div>
+                                                                    </div>
+                                                                    <div class="bk-seg-stop" style="padding-top:4px;padding-bottom:0;">
+                                                                        <div class="bk-seg-time">{{ $seg['arriveTime'] }}</div>
+                                                                        <div><div class="bk-seg-place">{{ $seg['toCity'] ?? $seg['to'] ?? '' }}</div><div class="bk-seg-place-sub">{{ $seg['toAirport'] ?? '' }}</div></div>
+                                                                        <div></div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                @endforeach
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- ── 2. Extra Services (Baggage + Meals) ── --}}
+                    @if(!empty($baggageOutbound) || !empty($baggageInbound) || !empty($mealOutbound) || !empty($mealInbound))
+                    <div class="bk-acc" x-data="{ open: true }">
+                        <div class="bk-acc-head" :class="{ open }" @click="open = !open">
+                            <div class="bk-acc-icon" style="background:#f0fdf4;color:#059669;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                            </div>
+                            <div>
+                                <div class="bk-acc-title">Extra Services</div>
+                                <div class="bk-acc-sub">Add baggage or meals to your booking</div>
+                            </div>
+                            <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div x-show="open" x-transition>
+                            <div class="bk-acc-body" style="padding-top:0;">
+
+                                {{-- ── Extra Baggage ── --}}
+                                @if(!empty($baggageOutbound) || !empty($baggageInbound))
+                                <div style="padding:14px 0 10px; border-bottom:1px solid var(--gray-100);">
+                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;">
+                                        🧳 Extra Check-in Baggage
+                                    </div>
+
+                                    @foreach([['Outbound', $baggageOutbound], ['Inbound', $baggageInbound]] as [$dir, $bagOpts])
+                                        @if(!empty($bagOpts))
+                                        <div style="margin-bottom:14px;">
+                                            <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">{{ $dir }}</div>
+                                            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                                                @foreach($bagOpts as $svc)
+                                                <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:9px;cursor:pointer;background:#fff;transition:all .15s;flex:1;min-width:160px;"
+                                                    x-data="{}"
+                                                    :style="$el.querySelector('input').checked ? 'border-color:var(--blue);background:var(--blue-lt);' : ''">
+                                                    <input type="checkbox"
+                                                        name="extra_baggage[{{ strtolower($dir) }}][]"
+                                                        value="{{ $svc['ServiceId'] }}"
+                                                        style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;flex-shrink:0;">
+                                                    <div style="flex:1;">
+                                                        <div style="font-size:13px;font-weight:700;color:var(--gray-900);">{{ $svc['Description'] }}</div>
+                                                        <div style="font-size:11px;color:var(--gray-400);margin-top:1px;">per passenger</div>
+                                                    </div>
+                                                    <div style="font-size:13px;font-weight:800;color:var(--blue);white-space:nowrap;font-family:var(--mono);">
                                                         + {{ $esFmt($svc) }}
                                                     </div>
                                                 </label>
                                                 @endforeach
                                             </div>
                                         </div>
-                                        @endforeach
-                                    </div>
-                                    @endif
-                                @endforeach
-                            </div>
-                            @endif
-
-                        </div>
-                    </div>
-                </div>
-                @else
-                {{-- Fallback banner if no extra services available --}}
-                <div class="bk-bags-banner">
-                    <div class="bk-bags-icon">🧳</div>
-                    <div class="bk-bags-text">
-                        <div class="bk-bags-title">Add extra check-in bags</div>
-                        <div class="bk-bags-sub">No additional baggage options available for this route</div>
-                    </div>
-                </div>
-                @endif
-
-                {{-- ── Fare Rules (from BaggageInfos + FareRules) ── --}}
-                @if(!empty($baggageInfos) || !empty($fareRulesList))
-                <div class="bk-acc" x-data="{ open: false }">
-                    <div class="bk-acc-head" :class="{ open }" @click="open = !open">
-                        <div class="bk-acc-icon" style="background:#fef2f2;color:#dc2626;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                        </div>
-                        <div>
-                            <div class="bk-acc-title">Fare & Baggage Rules</div>
-                            <div class="bk-acc-sub">Baggage allowance per segment</div>
-                        </div>
-                        <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div x-show="open" x-transition>
-                        <div class="bk-acc-body" style="padding-top:14px;">
-
-                            {{-- Baggage per segment table --}}
-                            @if(!empty($baggageInfos))
-                            <div style="margin-bottom:16px;">
-                                <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:10px;">Baggage Allowance by Segment</div>
-                                <div style="border:1px solid var(--gray-200);border-radius:9px;overflow:hidden;">
-                                    <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
-                                        <thead>
-                                            <tr style="background:var(--gray-50);">
-                                                <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--gray-500);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--gray-200);">Flight</th>
-                                                <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--gray-500);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--gray-200);">Route</th>
-                                                <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--gray-500);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--gray-200);">Allowance</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($baggageInfos as $bi => $bagInfo)
-                                                @php $b = $bagInfo['BaggageInfo'] ?? $bagInfo; @endphp
-                                                <tr style="{{ $bi % 2 === 0 ? '' : 'background:var(--gray-50);' }}">
-                                                    <td style="padding:10px 14px;font-weight:700;color:var(--blue);font-family:var(--mono);border-bottom:1px solid var(--gray-100);">
-                                                        {{ $b['FlightNo'] ?? '—' }}
-                                                    </td>
-                                                    <td style="padding:10px 14px;color:var(--gray-700);font-weight:600;border-bottom:1px solid var(--gray-100);">
-                                                        {{ $b['Departure'] ?? '' }} → {{ $b['Arrival'] ?? '' }}
-                                                    </td>
-                                                    <td style="padding:10px 14px;border-bottom:1px solid var(--gray-100);">
-                                                        <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--green-lt);color:var(--green);border-radius:999px;font-size:11.5px;font-weight:700;">
-                                                            🧳 {{ $b['Baggage'] ?? '—' }}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
+                                        @endif
+                                    @endforeach
                                 </div>
-                            </div>
-                            @endif
+                                @endif
 
-                            {{-- Fare Rules per city pair --}}
-                            @if(!empty($fareRulesList))
+                                {{-- ── Meals ── --}}
+                                @if(!empty($mealOutbound) || !empty($mealInbound))
+                                <div style="padding-top:14px;">
+                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;">
+                                        🍽️ Meal Preferences
+                                    </div>
+
+                                    @foreach([['Outbound', $mealOutbound], ['Inbound', $mealInbound]] as [$dir, $mealSegs])
+                                        @if(!empty($mealSegs))
+                                        <div style="margin-bottom:14px;">
+                                            <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">{{ $dir }}</div>
+                                            @foreach($mealSegs as $si => $segMeals)
+                                            <div style="margin-bottom:10px;">
+                                                <div style="font-size:10.5px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+                                                    Segment {{ $si + 1 }}
+                                                </div>
+                                                <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                                                    @foreach($segMeals as $svc)
+                                                    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:9px;cursor:pointer;background:#fff;transition:all .15s;flex:1;min-width:180px;"
+                                                        x-data="{}"
+                                                        :style="$el.querySelector('input').checked ? 'border-color:var(--amber);background:var(--amber-lt);' : ''">
+                                                        <input type="checkbox"
+                                                            name="extra_meal[{{ strtolower($dir) }}][{{ $si }}][]"
+                                                            value="{{ $svc['ServiceId'] }}"
+                                                            style="width:16px;height:16px;accent-color:var(--amber);cursor:pointer;flex-shrink:0;">
+                                                        <div style="flex:1;">
+                                                            <div style="font-size:12.5px;font-weight:700;color:var(--gray-900);">{{ $svc['Description'] }}</div>
+                                                        </div>
+                                                        <div style="font-size:12.5px;font-weight:800;color:var(--amber);white-space:nowrap;font-family:var(--mono);">
+                                                            + {{ $esFmt($svc) }}
+                                                        </div>
+                                                    </label>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                        @endif
+                                    @endforeach
+                                </div>
+                                @endif
+
+                            </div>
+                        </div>
+                    </div>
+                    @else
+                    {{-- Fallback banner if no extra services available --}}
+                    <div class="bk-bags-banner">
+                        <div class="bk-bags-icon">🧳</div>
+                        <div class="bk-bags-text">
+                            <div class="bk-bags-title">Add extra check-in bags</div>
+                            <div class="bk-bags-sub">No additional baggage options available for this route</div>
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- ── Fare Rules (from BaggageInfos + FareRules) ── --}}
+                    @if(!empty($baggageInfos) || !empty($fareRulesList))
+                    <div class="bk-acc" x-data="{ open: false }">
+                        <div class="bk-acc-head" :class="{ open }" @click="open = !open">
+                            <div class="bk-acc-icon" style="background:#fef2f2;color:#dc2626;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            </div>
                             <div>
-                                <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:10px;">Fare Rules by Route</div>
-                                @foreach($fareRulesList as $frItem)
-                                    @php $fr = $frItem['FareRule'] ?? $frItem; @endphp
-                                    <div style="border:1px solid var(--gray-200);border-radius:9px;margin-bottom:8px;overflow:hidden;">
-                                        <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);">
-                                            <div style="display:flex;align-items:center;gap:8px;">
-                                                <span style="font-size:11.5px;font-weight:700;color:var(--navy);font-family:var(--mono);">{{ $fr['Airline'] ?? '' }}</span>
-                                                <span style="font-size:12px;font-weight:700;color:var(--gray-700);">
-                                                    {{ substr($fr['CityPair'] ?? '', 0, 3) }} → {{ substr($fr['CityPair'] ?? '', 3, 3) }}
+                                <div class="bk-acc-title">Fare & Baggage Rules</div>
+                                <div class="bk-acc-sub">Baggage allowance per segment</div>
+                            </div>
+                            <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div x-show="open" x-transition>
+                            <div class="bk-acc-body" style="padding-top:14px;">
+
+                                {{-- Baggage per segment table --}}
+                                @if(!empty($baggageInfos))
+                                <div style="margin-bottom:16px;">
+                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:10px;">Baggage Allowance by Segment</div>
+                                    <div style="border:1px solid var(--gray-200);border-radius:9px;overflow:hidden;">
+                                        <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+                                            <thead>
+                                                <tr style="background:var(--gray-50);">
+                                                    <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--gray-500);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--gray-200);">Flight</th>
+                                                    <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--gray-500);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--gray-200);">Route</th>
+                                                    <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--gray-500);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--gray-200);">Allowance</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($baggageInfos as $bi => $bagInfo)
+                                                    @php $b = $bagInfo['BaggageInfo'] ?? $bagInfo; @endphp
+                                                    <tr style="{{ $bi % 2 === 0 ? '' : 'background:var(--gray-50);' }}">
+                                                        <td style="padding:10px 14px;font-weight:700;color:var(--blue);font-family:var(--mono);border-bottom:1px solid var(--gray-100);">
+                                                            {{ $b['FlightNo'] ?? '—' }}
+                                                        </td>
+                                                        <td style="padding:10px 14px;color:var(--gray-700);font-weight:600;border-bottom:1px solid var(--gray-100);">
+                                                            {{ $b['Departure'] ?? '' }} → {{ $b['Arrival'] ?? '' }}
+                                                        </td>
+                                                        <td style="padding:10px 14px;border-bottom:1px solid var(--gray-100);">
+                                                            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--green-lt);color:var(--green);border-radius:999px;font-size:11.5px;font-weight:700;">
+                                                                🧳 {{ $b['Baggage'] ?? '—' }}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                @endif
+
+                                {{-- Fare Rules per city pair --}}
+                                @if(!empty($fareRulesList))
+                                <div>
+                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:10px;">Fare Rules by Route</div>
+                                    @foreach($fareRulesList as $frItem)
+                                        @php
+                                            $fr = $frItem['FareRule'] ?? $frItem;
+                                            $rawRules = (string)($fr['Rules'] ?? '');
+                                            $rulesText = trim(strip_tags(preg_replace('/<(br|\/p|\/div|\/li)>/i', "\n", html_entity_decode($rawRules, ENT_QUOTES | ENT_HTML5))));
+                                        @endphp
+                                        <div style="border:1px solid var(--gray-200);border-radius:9px;margin-bottom:8px;overflow:hidden;">
+                                            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);">
+                                                <div style="display:flex;align-items:center;gap:8px;">
+                                                    <span style="font-size:11.5px;font-weight:700;color:var(--navy);font-family:var(--mono);">{{ $fr['Airline'] ?? '' }}</span>
+                                                    <span style="font-size:12px;font-weight:700;color:var(--gray-700);">
+                                                        {{ substr($fr['CityPair'] ?? '', 0, 3) }} → {{ substr($fr['CityPair'] ?? '', 3, 3) }}
+                                                    </span>
+                                                </div>
+                                                <span style="font-size:10.5px;padding:2px 8px;border-radius:999px;background:var(--blue-lt);color:var(--blue);font-weight:700;">
+                                                    {{ $fr['Category'] ?? 'General' }}
                                                 </span>
                                             </div>
-                                            <span style="font-size:10.5px;padding:2px 8px;border-radius:999px;background:var(--blue-lt);color:var(--blue);font-weight:700;">
-                                                {{ $fr['Category'] ?? 'General' }}
-                                            </span>
+                                            @if($rulesText !== '')
+                                            <div style="padding:12px 14px;font-size:12px;color:var(--gray-600);line-height:1.7;white-space:pre-wrap;">{{ $rulesText }}</div>
+                                            @else
+                                            <div style="padding:12px 14px;font-size:12px;color:var(--gray-400);font-style:italic;">No specific rules text available for this route.</div>
+                                            @endif
                                         </div>
-                                        @if(!empty($fr['Rules']))
-                                        <div style="padding:12px 14px;font-size:12px;color:var(--gray-600);line-height:1.7;white-space:pre-wrap;">{{ $fr['Rules'] }}</div>
-                                        @else
-                                        <div style="padding:12px 14px;font-size:12px;color:var(--gray-400);font-style:italic;">No specific rules text available for this route.</div>
-                                        @endif
-                                    </div>
-                                @endforeach
+                                    @endforeach
+                                </div>
+                                @endif
+
                             </div>
-                            @endif
-
                         </div>
                     </div>
-                </div>
-                @endif
+                    @endif
 
-                {{-- ── 4. Passenger Count ── --}}
-                <div class="bk-acc" x-data="{ open: true }">
-                    <div class="bk-acc-head" :class="{ open }" @click="open = !open">
-                        <div class="bk-acc-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                        </div>
-                        <div>
-                            <div class="bk-acc-title">Passengers</div>
-                            <div class="bk-acc-sub">{{ $this->getTotalPassengers() }} passenger{{ $this->getTotalPassengers() > 1 ? 's' : '' }} · adjust if needed</div>
-                        </div>
-                        <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div x-show="open" x-transition>
-                        <div class="bk-acc-body">
+                    {{-- ── 4. Passenger Count ── --}}
+                    <div class="bk-acc" x-data="{ open: true }">
+                        <div class="bk-acc-head" :class="{ open }" @click="open = !open">
+                            <div class="bk-acc-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            </div>
                             <div>
-                                <div class="bk-pax-counter"> 
-                                    <div class="bk-pax-col">
-                                        <div class="bk-pax-info">
-                                            <div>
-                                                <div class="bk-pax-col-label">Adults</div>
-                                                <div class="bk-pax-col-sub">12+ years</div>
-                                            </div>
-
-                                            <div class="bk-pax-ctr">
-                                                <span class="bk-pax-num">{{ $this->adultCount }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="bk-pax-col">
-                                        <div class="bk-pax-info">
-                                            <div>
-                                                <div class="bk-pax-col-label">Children</div>
-                                                <div class="bk-pax-col-sub">2–11 years</div>
-                                            </div>
-
-                                            <div class="bk-pax-ctr">
-                                                <span class="bk-pax-num">{{ $this->childCount }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="bk-pax-col">
-                                        <div class="bk-pax-info">
-                                            <div>
-                                                <div class="bk-pax-col-label">Infants</div>
-                                                <div class="bk-pax-col-sub">Under 2</div>
-                                            </div>
-                                            <div class="bk-pax-ctr">
-                                                <span class="bk-pax-num">{{ $this->infantCount }}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <div class="bk-acc-title">Passengers</div>
+                                <div class="bk-acc-sub">{{ $this->getTotalPassengers() }} passenger{{ $this->getTotalPassengers() > 1 ? 's' : '' }} · adjust if needed</div>
                             </div>
-                            
-                            <div class="bk-total-bar">
-                                <span class="bk-total-label">✈ Total passengers</span>
-                                <span class="bk-total-val">{{ $this->getTotalPassengers() }} passenger{{ $this->getTotalPassengers() > 1 ? 's' : '' }}</span>
-                            </div>
+                            <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
-                    </div>
-                </div>
-
-                {{-- ── 5. Traveller Details (accordion, one card per passenger) ── --}}
-                <div class="bk-acc" x-data="{ open: true }">
-                    <div class="bk-acc-head" :class="{ open }" @click="open = !open">
-                        <div class="bk-acc-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                        </div>
-                        <div>
-                            <div class="bk-acc-title">Traveller Details</div>
-                            <div class="bk-acc-sub">Names must match ID or passport exactly</div>
-                        </div>
-                        <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div x-show="open" x-transition>
-                        <div class="bk-acc-body">
-
-                            @foreach($this->passengers as $i => $pax)
-                                @php
-                                    $typeLabel  = match($pax['type']) { 'ADT' => 'Adult (12 yrs+)', 'CHD' => 'Child (2–11 yrs)', 'INF' => 'Infant (under 2)', default => 'Passenger' };
-                                    $badgeClass = strtolower($pax['type']);
-                                    $showPp     = !empty($pax['show_passport']);
-                                    $hasPpData  = !empty($pax['passport_no']);
-                                    $isComplete = !empty($pax['first_name']) && !empty($pax['last_name']) && !empty($pax['dob']);
-                                    $filledCount= (int)!empty($pax['first_name']) + (int)!empty($pax['last_name']) + (int)!empty($pax['dob']) + (int)!empty($pax['nationality']);
-                                @endphp
-
-                                <div class="bk-pax-card" wire:key="pax-{{ $i }}-{{ $pax['type'] }}"
-                                     x-data="{ cardOpen: {{ $i === 0 ? 'true' : 'false' }} }">
-
-                                    <div class="bk-pax-card-head" @click="cardOpen = !cardOpen">
-                                        <span class="bk-pax-badge {{ $badgeClass }}">{{ $typeLabel }}</span>
-                                        <span class="bk-pax-num-lbl">
-                                            @if($pax['is_primary']) ★ @endif
-                                            Passenger {{ $i + 1 }}
-                                        </span>
-                                        @if($isComplete)
-                                            <span class="bk-pax-complete">✓ {{ strtoupper($pax['first_name']) }} {{ strtoupper($pax['last_name']) }}</span>
-                                        @else
-                                            <span class="bk-pax-progress">{{ $filledCount }}/4 added</span>
-                                        @endif
-                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="cardOpen ? 'transform:rotate(180deg)' : ''" style="color:var(--gray-400);flex-shrink:0;transition:transform .2s;"><polyline points="6 9 12 15 18 9"/></svg>
-                                    </div>
-
-                                    <div x-show="cardOpen" x-transition>
-                                        <div class="bk-pax-notice">
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                            Enter your name as it is mentioned on your passport. Passport should be valid for a minimum of 6 months from date of travel.
-                                        </div>
-
-                                        <div class="bk-form-grid">
-                                            <div class="bk-field">
-                                                <label class="bk-label">Title <span class="bk-req">*</span></label>
-                                                <select class="bk-select" wire:model="passengers.{{ $i }}.title">
-                                                    <option value="">–</option>
-                                                    @foreach(['Mr','Mrs','Ms','Miss','Dr','Master'] as $t)
-                                                        <option value="{{ $t }}">{{ $t }}</option>
-                                                    @endforeach
-                                                </select>
-                                                @error("passengers.{$i}.title") <span class="bk-error">{{ $message }}</span> @enderror
-                                            </div>
-
-                                            <div class="bk-field">
-                                                <label class="bk-label">Last Name <span class="bk-req">*</span></label>
-                                                <input class="bk-input" type="text" placeholder="Last Name"
-                                                       wire:model.blur="passengers.{{ $i }}.last_name">
-                                                @error("passengers.{$i}.last_name") <span class="bk-error">{{ $message }}</span> @enderror
-                                            </div>
-                                        
-                                            <div class="bk-field">
-                                                <label class="bk-label">First Name <span class="bk-req">*</span></label>
-                                                <input class="bk-input" type="text" placeholder="First Name"
-                                                       wire:model.blur="passengers.{{ $i }}.first_name">
-                                                @error("passengers.{$i}.first_name") <span class="bk-error">{{ $message }}</span> @enderror
-                                            </div>
-
-                                            <div class="bk-field">
-                                                <label class="bk-label">Middle Name</label>
-                                                <input class="bk-input" type="text" placeholder="Middle Name"
-                                                       wire:model.blur="passengers.{{ $i }}.middle_name">
-                                            </div>
-
-                                            <div class="bk-field">
-                                                <label class="bk-label">Date of Birth <span class="bk-req">*</span></label>
-                                                <input class="bk-input" type="date"
-                                                       wire:model.blur="passengers.{{ $i }}.dob"
-                                                       placeholder="yyyy-mm-dd"
-                                                       max="{{ now()->subDay()->format('Y-m-d') }}">
-                                                @if($pax['type'] === 'CHD') <span class="bk-hint">Must be 2–11 years old at travel</span>
-                                                @elseif($pax['type'] === 'INF') <span class="bk-hint">Must be under 2 at travel</span> @endif
-                                                @error("passengers.{$i}.dob") <span class="bk-error">{{ $message }}</span> @enderror
-                                            </div>
-
-                                            <div class="bk-field">
-                                                <label class="bk-label">Nationality <span class="bk-req">*</span></label>
-                                                <select class="bk-select" wire:model="passengers.{{ $i }}.nationality">
-                                                    @foreach($this->nationalities as $code => $name)
-                                                        <option value="{{ $code }}">{{ $name }}</option>
-                                                    @endforeach
-                                                </select>
-                                                @error("passengers.{$i}.nationality") <span class="bk-error">{{ $message }}</span> @enderror
-                                            </div>
-                                            <div class="bk-field">
-                                                <label class="bk-label">Gender <span class="bk-req">*</span></label>
-                                                <div class="bk-radio-group">
-                                                    <label class="bk-radio-opt">
-                                                        <input type="radio" wire:model="passengers.{{ $i }}.gender" value="M"> Male
-                                                    </label>
-                                                    <label class="bk-radio-opt">
-                                                        <input type="radio" wire:model="passengers.{{ $i }}.gender" value="F"> Female
-                                                    </label>
+                        <div x-show="open" x-transition>
+                            <div class="bk-acc-body">
+                                <div>
+                                    <div class="bk-pax-counter"> 
+                                        <div class="bk-pax-col">
+                                            <div class="bk-pax-info">
+                                                <div>
+                                                    <div class="bk-pax-col-label">Adults</div>
+                                                    <div class="bk-pax-col-sub">12+ years</div>
                                                 </div>
-                                                @error("passengers.{$i}.gender") <span class="bk-error">{{ $message }}</span> @enderror
-                                            </div>
 
-                                            <div class="bk-field">
-                                                <label class="bk-label">Passport Number</label>
-                                                <input class="bk-input" type="text" placeholder="e.g. A12345678"
-                                                        wire:model.blur="passengers.{{ $i }}.passport_no">
-                                                @error("passengers.{$i}.passport_no") <span class="bk-error">{{ $message }}</span> @enderror
-                                            </div>
-                                            <div class="bk-field">
-                                                <label class="bk-label">Expiry Date</label>
-                                                <input class="bk-input" type="date"
-                                                        wire:model.blur="passengers.{{ $i }}.passport_exp"
-                                                        min="{{ now()->addDay()->format('Y-m-d') }}">
-                                                <span class="bk-hint">Must be valid beyond travel dates</span>
-                                                @error("passengers.{$i}.passport_exp") <span class="bk-error">{{ $message }}</span> @enderror
-                                            </div>
-                                            {{-- Passport Issuing Country (passportIssueCountry in API) --}}
-                                            <div class="bk-field">
-                                                <label class="bk-label">Passport Issuing Country</label>
-                                                <select class="bk-select" wire:model="passengers.{{ $i }}.passport_issue_country">
-                                                    @foreach($this->nationalities as $code => $name)
-                                                        <option value="{{ $code }}">{{ $name }}</option>
-                                                    @endforeach
-                                                </select>
-                                                @error("passengers.{$i}.passport_issue_country") <span class="bk-error">{{ $message }}</span> @enderror
-                                            </div>
-
-                                            {{-- Passport Issue Date (passportIssueDate in API) --}}
-                                            <div class="bk-field">
-                                                <label class="bk-label">Passport Issue Date</label>
-                                                <input class="bk-input" type="date"
-                                                        wire:model.blur="passengers.{{ $i }}.passport_issue_date"
-                                                        max="{{ now()->format('Y-m-d') }}">
-                                                <span class="bk-hint">Date passport was issued</span>
-                                                @error("passengers.{$i}.passport_issue_date") <span class="bk-error">{{ $message }}</span> @enderror
-                                            </div>
-                                            <div class="bk-field">
-                                                <label class="bk-label">Frequent Flyer Number</label>
-                                                <input class="bk-input" type="text" placeholder="e.g. BA12345678"
-                                                    wire:model.blur="passengers.{{ $i }}.frequent_flyer_number">
-                                                <span class="bk-hint">Optional — enter your airline loyalty number</span>
-                                                @error("passengers.{$i}.frequent_flyer_number") <span class="bk-error">{{ $message }}</span> @enderror
+                                                <div class="bk-pax-ctr">
+                                                    <span class="bk-pax-num">{{ $this->adultCount }}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                            
-                                            
+                                        <div class="bk-pax-col">
+                                            <div class="bk-pax-info">
+                                                <div>
+                                                    <div class="bk-pax-col-label">Children</div>
+                                                    <div class="bk-pax-col-sub">2–11 years</div>
+                                                </div>
+
+                                                <div class="bk-pax-ctr">
+                                                    <span class="bk-pax-num">{{ $this->childCount }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="bk-pax-col">
+                                            <div class="bk-pax-info">
+                                                <div>
+                                                    <div class="bk-pax-col-label">Infants</div>
+                                                    <div class="bk-pax-col-sub">Under 2</div>
+                                                </div>
+                                                <div class="bk-pax-ctr">
+                                                    <span class="bk-pax-num">{{ $this->infantCount }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            @endforeach
-
-                        </div>
-                    </div>
-                </div>
-
-                {{-- ── 6. Contact Details (accordion) ── --}}
-                <div class="bk-acc" x-data="{ open: true }">
-                    <div class="bk-acc-head" :class="{ open }" @click="open = !open">
-                        <div class="bk-acc-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        </div>
-                        <div>
-                            <div class="bk-acc-title">Contact Details</div>
-                            <div class="bk-acc-sub">E-ticket and confirmation sent here</div>
-                        </div>
-                        <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div x-show="open" x-transition>
-                        <div class="bk-acc-body">
-                            <div class="bk-contact-grid">
-                                <div class="bk-field">
-                                    <label class="bk-label">Email Address <span class="bk-req">*</span></label>
-                                    <input class="bk-input" type="email" placeholder="you@example.com"
-                                           wire:model.blur="contactEmail">
-                                    @error('contactEmail') <span class="bk-error">{{ $message }}</span> @enderror
-                                </div>
-                                <div class="bk-field">
-                                    <label class="bk-label">Confirm Email <span class="bk-req">*</span></label>
-                                    <input class="bk-input" type="email" placeholder="Re-enter email"
-                                           wire:model.blur="contactEmailConfirm">
-                                    @error('contactEmailConfirm') <span class="bk-error">{{ $message }}</span> @enderror
-                                </div>
-                                <div class="bk-field bk-contact-full">
-                                    <label class="bk-label">Mobile No <span class="bk-req"></span></label>
-                                    <input class="bk-input" type="tel" placeholder="+234 800 000 0000"
-                                                                            wire:model.blur="contactPhone">
-                                    <span class="bk-hint">Include country code · e.g. +234 for Nigeria</span>
-                                    @error('contactPhone') <span class="bk-error">{{ $message }}</span> @enderror
-                                </div>
-                                <div class="bk-field">
-                                    <label class="bk-label">Area Code <span class="bk-req"></span></label>
-                                    <input class="bk-input" type="text" placeholder="e.g. 080"
-                                                                            wire:model.blur="contactAreaCode">
-                                    <span class="bk-hint">Local area code</span>
-                                    @error('contactAreaCode') <span class="bk-error">{{ $message }}</span> @enderror
-                                </div>
-                                <div class="bk-field">
-                                    <label class="bk-label">Country Dialling Code <span class="bk-req">*</span></label>
-                                    <input class="bk-input" type="text" placeholder="e.g. 234"
-                                                                            wire:model.blur="contactCountryCode">
-                                    <span class="bk-hint">Country code without + e.g. 234</span>
-                                    @error('contactCountryCode') <span class="bk-error">{{ $message }}</span> @enderror
+                                
+                                <div class="bk-total-bar">
+                                    <span class="bk-total-label">✈ Total passengers</span>
+                                    <span class="bk-total-val">{{ $this->getTotalPassengers() }} passenger{{ $this->getTotalPassengers() > 1 ? 's' : '' }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-            
-                {{-- Actions --}}
-                <div class="bk-actions">
-                    <a href="{{ route('air.flight-s') }}" class="bk-btn-ghost">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                        Go Back
-                    </a>
-                    <button class="bk-btn-next"
-                            wire:click="proceed"
-                            wire:loading.attr="disabled"
-                            wire:target="proceed">
-                        <span wire:loading.remove wire:target="proceed" style="display:inline-flex;align-items:center;gap:7px; color:#fff;">
-                            Continue
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                        </span>
-                        <span wire:loading wire:target="proceed">Validating…</span>
-                    </button>
-                </div>
-
-            @endif {{-- /step 1 --}}
-
-            {{-- ════════ STEP 2 ════════ --}}
-            @if($step === 2)
-
-                <div class="bk-notice info" style="margin-bottom:4px;">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    <span>Review all details carefully before payment. Name corrections after ticketing may incur fees.</span>
-                </div>
-
-                {{-- Review accordion --}}
-                <div class="bk-acc" x-data="{ open: true }">
-                    <div class="bk-acc-head" :class="{ open }" @click="open = !open">
-                        <div class="bk-acc-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    {{-- ── 5. Traveller Details (accordion, one card per passenger) ── --}}
+                    <div class="bk-acc" x-data="{ open: true }">
+                        <div class="bk-acc-head" :class="{ open }" @click="open = !open">
+                            <div class="bk-acc-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+                            </div>
+                            <div>
+                                <div class="bk-acc-title">Traveller Details</div>
+                                <div class="bk-acc-sub">Names must match ID or passport exactly</div>
+                            </div>
+                            <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
-                        <div>
-                            <div class="bk-acc-title">Booking Summary</div>
-                            <div class="bk-acc-sub">Confirm all details are correct before paying</div>
-                        </div>
-                        <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                    </div>
-                    <div x-show="open" x-transition>
-                        <div class="bk-acc-body">
+                        <div x-show="open" x-transition>
+                            <div class="bk-acc-body">
 
-                            <div class="bk-review-section">
-                                <div class="bk-review-title">Passengers ({{ $this->getTotalPassengers() }})</div>
                                 @foreach($this->passengers as $i => $pax)
                                     @php
-                                        $ptLabel = match($pax['type']) { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Pax' };
-                                        $dobStr  = !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '—';
-                                        $natName = $this->nationalities[$pax['nationality']] ?? $pax['nationality'];
+                                        $typeLabel  = match($pax['type']) { 'ADT' => 'Adult (12 yrs+)', 'CHD' => 'Child (2–11 yrs)', 'INF' => 'Infant (under 2)', default => 'Passenger' };
+                                        $badgeClass = strtolower($pax['type']);
+                                        $showPp     = !empty($pax['show_passport']);
+                                        $hasPpData  = !empty($pax['passport_no']);
+                                        $isComplete = !empty($pax['first_name']) && !empty($pax['last_name']) && !empty($pax['dob']);
+                                        $filledCount= (int)!empty($pax['first_name']) + (int)!empty($pax['last_name']) + (int)!empty($pax['dob']) + (int)!empty($pax['nationality']);
                                     @endphp
-                                    <div class="bk-review-row">
-                                        <span class="bk-review-label">{{ $ptLabel }} {{ $i + 1 }}{{ $pax['is_primary'] ? ' ★' : '' }}</span>
-                                        <span class="bk-review-val">
-                                            {{ $pax['title'] }} {{ strtoupper($pax['first_name']) }} {{ strtoupper($pax['last_name']) }}
-                                            <br><span style="font-size:11px;color:var(--gray-500);font-weight:500;">DOB: {{ $dobStr }} · {{ $natName }}@if(!empty($pax['passport_no'])) · Passport: {{ $pax['passport_no'] }} @endif</span>
-                                        </span>
+
+                                    <div class="bk-pax-card" wire:key="pax-{{ $i }}-{{ $pax['type'] }}"
+                                        x-data="{ cardOpen: {{ $i === 0 ? 'true' : 'false' }} }">
+
+                                        <div class="bk-pax-card-head" @click="cardOpen = !cardOpen">
+                                            <span class="bk-pax-badge {{ $badgeClass }}">{{ $typeLabel }}</span>
+                                            <span class="bk-pax-num-lbl">
+                                                @if($pax['is_primary']) ★ @endif
+                                                Passenger {{ $i + 1 }}
+                                            </span>
+                                            @if($isComplete)
+                                                <span class="bk-pax-complete">✓ {{ strtoupper($pax['first_name']) }} {{ strtoupper($pax['last_name']) }}</span>
+                                            @else
+                                                <span class="bk-pax-progress">{{ $filledCount }}/4 added</span>
+                                            @endif
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="cardOpen ? 'transform:rotate(180deg)' : ''" style="color:var(--gray-400);flex-shrink:0;transition:transform .2s;"><polyline points="6 9 12 15 18 9"/></svg>
+                                        </div>
+
+                                        <div x-show="cardOpen" x-transition>
+                                            <div class="bk-pax-notice">
+                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                                Enter your name as it is mentioned on your passport. Passport should be valid for a minimum of 6 months from date of travel.
+                                            </div>
+
+                                            <div class="bk-form-grid">
+                                                <div class="bk-field">
+                                                    <label class="bk-label">Title <span class="bk-req">*</span></label>
+                                                    <select class="bk-select" wire:model="passengers.{{ $i }}.title">
+                                                        <option value="">–</option>
+                                                        @foreach(['Mr','Mrs','Ms','Miss','Dr','Master'] as $t)
+                                                            <option value="{{ $t }}">{{ $t }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error("passengers.{$i}.title") <span class="bk-error">{{ $message }}</span> @enderror
+                                                </div>
+
+                                                <div class="bk-field">
+                                                    <label class="bk-label">Last Name <span class="bk-req">*</span></label>
+                                                    <input class="bk-input" type="text" placeholder="Last Name"
+                                                        wire:model.blur="passengers.{{ $i }}.last_name">
+                                                    @error("passengers.{$i}.last_name") <span class="bk-error">{{ $message }}</span> @enderror
+                                                </div>
+                                            
+                                                <div class="bk-field">
+                                                    <label class="bk-label">First Name <span class="bk-req">*</span></label>
+                                                    <input class="bk-input" type="text" placeholder="First Name"
+                                                        wire:model.blur="passengers.{{ $i }}.first_name">
+                                                    @error("passengers.{$i}.first_name") <span class="bk-error">{{ $message }}</span> @enderror
+                                                </div>
+
+                                                <div class="bk-field">
+                                                    <label class="bk-label">Middle Name</label>
+                                                    <input class="bk-input" type="text" placeholder="Middle Name"
+                                                        wire:model.blur="passengers.{{ $i }}.middle_name">
+                                                </div>
+
+                                                <div class="bk-field">
+                                                    <label class="bk-label">Date of Birth <span class="bk-req">*</span></label>
+                                                    <input class="bk-input" type="date"
+                                                        wire:model.blur="passengers.{{ $i }}.dob"
+                                                        placeholder="yyyy-mm-dd"
+                                                        max="{{ now()->subDay()->format('Y-m-d') }}">
+                                                    @if($pax['type'] === 'CHD') <span class="bk-hint">Must be 2–11 years old at travel</span>
+                                                    @elseif($pax['type'] === 'INF') <span class="bk-hint">Must be under 2 at travel</span> @endif
+                                                    @error("passengers.{$i}.dob") <span class="bk-error">{{ $message }}</span> @enderror
+                                                </div>
+
+                                                <div class="bk-field">
+                                                    <label class="bk-label">Nationality <span class="bk-req">*</span></label>
+                                                    <select class="bk-select" wire:model="passengers.{{ $i }}.nationality">
+                                                        @foreach($this->nationalities as $code => $name)
+                                                            <option value="{{ $code }}">{{ $name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error("passengers.{$i}.nationality") <span class="bk-error">{{ $message }}</span> @enderror
+                                                </div>
+                                                <div class="bk-field">
+                                                    <label class="bk-label">Gender <span class="bk-req">*</span></label>
+                                                    <div class="bk-radio-group">
+                                                        <label class="bk-radio-opt">
+                                                            <input type="radio" wire:model="passengers.{{ $i }}.gender" value="M"> Male
+                                                        </label>
+                                                        <label class="bk-radio-opt">
+                                                            <input type="radio" wire:model="passengers.{{ $i }}.gender" value="F"> Female
+                                                        </label>
+                                                    </div>
+                                                    @error("passengers.{$i}.gender") <span class="bk-error">{{ $message }}</span> @enderror
+                                                </div>
+
+                                                <div class="bk-field">
+                                                    <label class="bk-label">Passport Number</label>
+                                                    <input class="bk-input" type="text" placeholder="e.g. A12345678"
+                                                            wire:model.blur="passengers.{{ $i }}.passport_no">
+                                                    @error("passengers.{$i}.passport_no") <span class="bk-error">{{ $message }}</span> @enderror
+                                                </div>
+                                                <div class="bk-field">
+                                                    <label class="bk-label">Expiry Date</label>
+                                                    <input class="bk-input" type="date"
+                                                            wire:model.blur="passengers.{{ $i }}.passport_exp"
+                                                            min="{{ now()->addDay()->format('Y-m-d') }}">
+                                                    <span class="bk-hint">Must be valid beyond travel dates</span>
+                                                    @error("passengers.{$i}.passport_exp") <span class="bk-error">{{ $message }}</span> @enderror
+                                                </div>
+                                                {{-- Passport Issuing Country (passportIssueCountry in API) --}}
+                                                <div class="bk-field">
+                                                    <label class="bk-label">Passport Issuing Country</label>
+                                                    <select class="bk-select" wire:model="passengers.{{ $i }}.passport_issue_country">
+                                                        @foreach($this->nationalities as $code => $name)
+                                                            <option value="{{ $code }}">{{ $name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error("passengers.{$i}.passport_issue_country") <span class="bk-error">{{ $message }}</span> @enderror
+                                                </div>
+
+                                                {{-- Passport Issue Date (passportIssueDate in API) --}}
+                                                <div class="bk-field">
+                                                    <label class="bk-label">Passport Issue Date</label>
+                                                    <input class="bk-input" type="date"
+                                                            wire:model.blur="passengers.{{ $i }}.passport_issue_date"
+                                                            max="{{ now()->format('Y-m-d') }}">
+                                                    <span class="bk-hint">Date passport was issued</span>
+                                                    @error("passengers.{$i}.passport_issue_date") <span class="bk-error">{{ $message }}</span> @enderror
+                                                </div>
+                                                <div class="bk-field">
+                                                    <label class="bk-label">Frequent Flyer Number</label>
+                                                    <input class="bk-input" type="text" placeholder="e.g. BA12345678"
+                                                        wire:model.blur="passengers.{{ $i }}.frequent_flyer_number">
+                                                    <span class="bk-hint">Optional — enter your airline loyalty number</span>
+                                                    @error("passengers.{$i}.frequent_flyer_number") <span class="bk-error">{{ $message }}</span> @enderror
+                                                </div>
+                                            </div>
+                                                
+                                                
+                                        </div>
                                     </div>
                                 @endforeach
-                            </div>
 
-                            <div class="bk-review-section">
-                                <div class="bk-review-title">Contact</div>
-                                <div class="bk-review-row">
-                                    <span class="bk-review-label">Email</span>
-                                    <span class="bk-review-val">{{ $contactEmail }}</span>
-                                </div>
-                                <div class="bk-review-row">
-                                    <span class="bk-review-label">Phone</span>
-                                    <span class="bk-review-val">{{ $contactPhone }}</span>
-                                </div>
-                            </div>
-
-                            <div class="bk-review-section" style="margin-bottom:0;">
-                                <div class="bk-review-title">Fare Policy</div>
-                                @foreach($breakdown as $fb)
-                                    @php
-                                        $ptl    = match($fb['passengerType'] ?? '') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' };
-                                        $bagStr = implode(' / ', array_unique(array_filter((array)($fb['baggage'] ?? []), fn($v) => $v !== ''))) ?: '—';
-                                        $refund = !empty($fb['refundAllowed']);
-                                        $change = !empty($fb['changeAllowed']);
-                                    @endphp
-                                    <div class="bk-review-row">
-                                        <span class="bk-review-label">{{ $ptl }} · Baggage</span>
-                                        <span class="bk-review-val">{{ $bagStr }}</span>
-                                    </div>
-                                    <div class="bk-review-row">
-                                        <span class="bk-review-label">{{ $ptl }} · Refund</span>
-                                        <span class="bk-review-val" style="color:{{ $refund ? 'var(--green)' : 'var(--red)' }}">{{ $refund ? '✓ Allowed' : '✗ Not allowed' }}</span>
-                                    </div>
-                                    <div class="bk-review-row">
-                                        <span class="bk-review-label">{{ $ptl }} · Changes</span>
-                                        <span class="bk-review-val">
-                                            @if($change) <span style="color:var(--green)">✓ Allowed</span> · Fee {{ $fmt($fb['changePenalty'] ?? 0) }}
-                                            @else <span style="color:var(--red)">✗ Not allowed</span> @endif
-                                        </span>
-                                    </div>
-                                @endforeach
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <form id="bk-form" method="POST" action="{{ route('flights.book') }}" style="display:none;">
-                    @csrf
-                    <input type="hidden" name="fare_source_code" value="{{ $flight['flight']['fareSourceCode'] ?? $flight['fareSourceCode'] ?? '' }}">
-                    <input type="hidden" name="session_id"            value="{{ $sessionId }}">
-                    <input type="hidden" name="contact[email]"        value="{{ $contactEmail }}">
-                    <input type="hidden" name="contact[phone]"        value="{{ $contactPhone }}">
-                    <input type="hidden" name="contact[area_code]"    value="{{ $contactAreaCode }}">
-                    <input type="hidden" name="contact[country_code]" value="{{ $contactCountryCode }}">
-                    @foreach($this->passengers as $i => $pax)
-                    @foreach([
-                    'type','title','first_name','middle_name','last_name',
-                    'gender','dob','nationality',
-                    'passport_no','passport_issue_country','passport_issue_date','passport_exp', 'frequent_flyer_number'
-                    ] as $field)
-                    <input type="hidden" name="passengers[{{ $i }}][{{ $field }}]" value="{{ $pax[$field] ?? '' }}">
-                    @endforeach
-                    @endforeach
-                </form>
-
-               
-
-                <div class="bk-actions">
-                    <button class="bk-btn-ghost" wire:click="back">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                        Edit Details
-                    </button>
-                    <button class="bk-btn-pay" @click="submitForm()">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                        Confirm &amp; Pay {{ $fmt($this->getTotalPrice()) }}
-                    </button>
-                </div>
-
-            @endif {{-- /step 2 --}}
-
-        </div>{{-- /bk-main --}}
-
-
-        {{-- ══════════════ RIGHT RAIL: MY CART ══════════════ --}}
-        <aside class="bk-rail">
-
-            {{-- My Cart --}}
-            <div class="bk-cart">
-                <div class="bk-cart-head">
-                    <div class="bk-cart-title">My Cart</div>
-                </div>
-                <div class="bk-cart-body">
-                    <div class="bk-cart-section">
-                        <div class="bk-cart-section-lbl">Flight</div>
-
-                        {{-- Outbound --}}
-                        <div class="bk-cart-flight-row">
-                            <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                    {{-- ── 6. Contact Details (accordion) ── --}}
+                    <div class="bk-acc" x-data="{ open: true }">
+                        <div class="bk-acc-head" :class="{ open }" @click="open = !open">
+                            <div class="bk-acc-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            </div>
                             <div>
-                                <div class="bk-cart-route">{{ ($firstSeg['from'] ?? '') }} to {{ ($lastSeg['to'] ?? '') }} ({{ strtoupper($firstSeg['from'] ?? '') }})</div>
-                                <div class="bk-cart-sub">{{ $cabin }} · {{ $tripLabel }}</div>
+                                <div class="bk-acc-title">Contact Details</div>
+                                <div class="bk-acc-sub">E-ticket and confirmation sent here</div>
                             </div>
+                            <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
-
-                        {{-- Return --}}
-                        @if($isReturn && !empty($retSegs))
-                            <div class="bk-cart-flight-row">
-                                <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="transform:scaleX(-1);"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
-                                <div>
-                                    <div class="bk-cart-route">{{ ($retSegs[0]['from'] ?? '') }} to {{ ($retSegs[count($retSegs)-1]['to'] ?? '') }} ({{ strtoupper($retSegs[0]['from'] ?? '') }})</div>
-                                    <div class="bk-cart-sub">{{ $cabin }} · Round Trip</div>
+                        <div x-show="open" x-transition>
+                            <div class="bk-acc-body">
+                                <div class="bk-contact-grid">
+                                    <div class="bk-field">
+                                        <label class="bk-label">Email Address <span class="bk-req">*</span></label>
+                                        <input class="bk-input" type="email" placeholder="you@example.com"
+                                            wire:model.blur="contactEmail">
+                                        @error('contactEmail') <span class="bk-error">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div class="bk-field">
+                                        <label class="bk-label">Confirm Email <span class="bk-req">*</span></label>
+                                        <input class="bk-input" type="email" placeholder="Re-enter email"
+                                            wire:model.blur="contactEmailConfirm">
+                                        @error('contactEmailConfirm') <span class="bk-error">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div class="bk-field bk-contact-full">
+                                        <label class="bk-label">Mobile No <span class="bk-req"></span></label>
+                                        <input class="bk-input" type="tel" placeholder="+234 800 000 0000"
+                                                                                wire:model.blur="contactPhone">
+                                        <span class="bk-hint">without country code · e.g. 800 000 0000</span>
+                                        @error('contactPhone') <span class="bk-error">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div class="bk-field">
+                                        <label class="bk-label">Area Code <span class="bk-req"></span></label>
+                                        <input class="bk-input" type="text" placeholder="e.g. 080"
+                                                                                wire:model.blur="contactAreaCode">
+                                        <span class="bk-hint">Local area code</span>
+                                        @error('contactAreaCode') <span class="bk-error">{{ $message }}</span> @enderror
+                                    </div>
+                                    <div class="bk-field">
+                                        <label class="bk-label">Country Dialling Code <span class="bk-req">*</span></label>
+                                        <input class="bk-input" type="text" placeholder="e.g. 234"
+                                                                                wire:model.blur="contactCountryCode">
+                                        <span class="bk-hint">Country code without + e.g. 234</span>
+                                        @error('contactCountryCode') <span class="bk-error">{{ $message }}</span> @enderror
+                                    </div>
                                 </div>
                             </div>
-                        @endif
+                        </div>
                     </div>
-                </div>
 
-                {{-- Fare summary using real revalidate data --}}
-                <div class="bk-fare-section">
-                    <div class="bk-fare-title">Flight Fare Summary</div>
+                
+                    {{-- Actions --}}
+                    <div class="bk-actions">
+                        <a href="{{ route('air.flight-s') }}" class="bk-btn-ghost">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                            Go Back
+                        </a>
+                        <button class="bk-btn-next"
+                                wire:click="proceed"
+                                wire:loading.attr="disabled"
+                                wire:target="proceed">
+                            <span wire:loading.remove wire:target="proceed" style="display:inline-flex;align-items:center;gap:7px; color:#fff;">
+                                Continue
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            </span>
+                            <span wire:loading wire:target="proceed">Validating…</span>
+                        </button>
+                    </div>
 
-                    @foreach($fareBreakdown as $fb)
-                        @php
-                            $ptCode  = $fb['PassengerTypeQuantity']['Code'] ?? 'ADT';
-                            $ptQty   = (int)($fb['PassengerTypeQuantity']['Quantity'] ?? 1);
-                            $ptLabel = match($ptCode) { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' };
-                            $paxFare = $fb['PassengerFare'] ?? [];
-                            $base    = (float)($paxFare['BaseFare']['Amount'] ?? 0);
-                            $taxes   = $paxFare['Taxes'] ?? [];
+        
 
-                            // Group and sum taxes
-                            $taxGroups = [];
-                            foreach ($taxes as $tax) {
-                                $code = $tax['TaxCode'] ?? 'OtherTaxes';
-                                $taxGroups[$code] = ($taxGroups[$code] ?? 0) + (float)($tax['Amount'] ?? 0);
-                            }
-                            $totalTaxAmt = array_sum($taxGroups);
-                            $totalPaxFare = (float)($paxFare['TotalFare']['Amount'] ?? 0);
+                @endif {{-- /STEP 1 --}}
 
-                            // Baggage from FareBreakdown
-                            $bagArr = (array)($fb['Baggage'] ?? []);
-                            $cabArr = (array)($fb['CabinBaggage'] ?? []);
-                            $bagStr = implode(', ', array_unique(array_filter($bagArr))) ?: '—';
-                            $cabStr = implode(', ', array_unique(array_filter($cabArr))) ?: '—';
-                        @endphp
+                {{-- ════════ STEP 2 ════════ --}}
+                @if($step === 2)
 
-                        <div style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--gray-100);"
-                            x-data="{ showTax: false }">
+                    <div class="bk-notice info" style="margin-bottom:4px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Review all details carefully before payment. Name corrections after ticketing may incur fees.</span>
+                    </div>
 
-                            <div class="bk-fare-row" style="padding-bottom:4px;">
-                                <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">{{ $ptLabel }} × {{ $ptQty }}</span>
-                                <span class="bk-fare-val" style="font-weight:800;">{{ $fmt($totalPaxFare * $ptQty) }}</span>
+                    {{-- Review accordion --}}
+                    <div class="bk-acc" x-data="{ open: true }">
+                        <div class="bk-acc-head" :class="{ open }" @click="open = !open">
+                            <div class="bk-acc-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                             </div>
-
-                            <div class="bk-fare-row">
-                                <span class="bk-fare-lbl">Base Fare</span>
-                                <span class="bk-fare-val">{{ $fmt($base) }}</span>
+                            <div>
+                                <div class="bk-acc-title">Booking Summary</div>
+                                <div class="bk-acc-sub">Confirm all details are correct before paying</div>
                             </div>
+                            <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                        </div>
+                        <div x-show="open" x-transition>
+                            <div class="bk-acc-body">
 
-                            <div class="bk-fare-row">
-                                <span class="bk-fare-lbl">
-                                    Taxes & Fees
-                                    <button type="button" @click="showTax = !showTax"
-                                        style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:11px;font-family:var(--font);padding:0;margin-left:4px;"
-                                        x-text="showTax ? '▲ hide' : '▼ breakdown'">
-                                    </button>
-                                </span>
-                                <span class="bk-fare-val">{{ $fmt($totalTaxAmt) }}</span>
-                            </div>
+                                <div class="bk-review-section">
+                                    <div class="bk-review-title">Passengers ({{ $this->getTotalPassengers() }})</div>
+                                    @foreach($this->passengers as $i => $pax)
+                                        @php
+                                            $ptLabel = match($pax['type']) { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Pax' };
+                                            $dobStr  = !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '—';
+                                            $natName = $this->nationalities[$pax['nationality']] ?? $pax['nationality'];
+                                        @endphp
+                                        <div class="bk-review-row">
+                                            <span class="bk-review-label">{{ $ptLabel }} {{ $i + 1 }}{{ $pax['is_primary'] ? ' ★' : '' }}</span>
+                                            <span class="bk-review-val">
+                                                {{ $pax['title'] }} {{ strtoupper($pax['first_name']) }} {{ strtoupper($pax['last_name']) }}
+                                                <br><span style="font-size:11px;color:var(--gray-500);font-weight:500;">DOB: {{ $dobStr }} · {{ $natName }}@if(!empty($pax['passport_no'])) · Passport: {{ $pax['passport_no'] }} @endif</span>
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </div>
 
-                            {{-- Tax breakdown --}}
-                            <div x-show="showTax" x-transition style="margin:4px 0 2px;">
-                                <div class="bk-tax-detail">
-                                    @foreach($taxGroups as $code => $amount)
-                                    <div class="bk-tax-row">
-                                        <span class="bk-tax-lbl">
-                                            {{ $taxLabels[$code] ?? $code }}
-                                            <span class="bk-tax-code">({{ $code }})</span>
-                                        </span>
-                                        <span class="bk-tax-val">{{ $fmt($amount) }}</span>
+                                <div class="bk-review-section">
+                                    <div class="bk-review-title">Contact</div>
+                                    <div class="bk-review-row">
+                                        <span class="bk-review-label">Email</span>
+                                        <span class="bk-review-val">{{ $contactEmail }}</span>
                                     </div>
+                                    <div class="bk-review-row">
+                                        <span class="bk-review-label">Phone</span>
+                                        <span class="bk-review-val">{{ $contactPhone }}</span>
+                                    </div>
+                                </div>
+
+                                <div class="bk-review-section" style="margin-bottom:0;">
+                                    <div class="bk-review-title">Fare Policy</div>
+                                    @foreach($breakdown as $fb)
+                                        @php
+                                            $ptl    = match($fb['passengerType'] ?? '') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' };
+                                            $bagStr = implode(' / ', array_unique(array_filter((array)($fb['baggage'] ?? []), fn($v) => $v !== ''))) ?: '—';
+                                            $refund = !empty($fb['refundAllowed']);
+                                            $change = !empty($fb['changeAllowed']);
+                                        @endphp
+                                        <div class="bk-review-row">
+                                            <span class="bk-review-label">{{ $ptl }} · Baggage</span>
+                                            <span class="bk-review-val">{{ $bagStr }}</span>
+                                        </div>
+                                        <div class="bk-review-row">
+                                            <span class="bk-review-label">{{ $ptl }} · Refund</span>
+                                            <span class="bk-review-val" style="color:{{ $refund ? 'var(--green)' : 'var(--red)' }}">{{ $refund ? '✓ Allowed' : '✗ Not allowed' }}</span>
+                                        </div>
+                                        <div class="bk-review-row">
+                                            <span class="bk-review-label">{{ $ptl }} · Changes</span>
+                                            <span class="bk-review-val">
+                                                @if($change) <span style="color:var(--green)">✓ Allowed</span> · Fee {{ $fmt($fb['changePenalty'] ?? 0) }}
+                                                @else <span style="color:var(--red)">✗ Not allowed</span> @endif
+                                            </span>
+                                        </div>
                                     @endforeach
                                 </div>
                             </div>
-
-                            {{-- Baggage info --}}
-                            <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
-                                <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--green);font-weight:600;background:var(--green-lt);padding:2px 8px;border-radius:999px;">
-                                    🧳 {{ $bagStr }}
-                                </span>
-                                <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--blue);font-weight:600;background:var(--blue-lt);padding:2px 8px;border-radius:999px;">
-                                    💼 {{ $cabStr }}
-                                </span>
-                            </div>
                         </div>
-                    @endforeach
-
-                    @if($discount > 0)
-                    <div class="bk-fare-row">
-                        <span class="bk-fare-lbl bk-fare-disc">Discount</span>
-                        <span class="bk-fare-val bk-fare-disc">−{{ $fmt($discount) }}</span>
                     </div>
-                    @endif
-                </div>
 
-                <div class="bk-fare-total-row">
-                    <span class="bk-fare-total-lbl">Trip Total</span>
-                    <span class="bk-fare-total-val">{{ $fmt($totalPrice) }}</span>
-                </div>
+                    <form id="bk-form" method="POST" action="{{ route('flights.book') }}" style="display:none;">
+                        @csrf
+                        <input type="hidden" name="fare_source_code" value="{{ $flight['flight']['fareSourceCode'] ?? $flight['fareSourceCode'] ?? '' }}">
+                        <input type="hidden" name="session_id"            value="{{ $sessionId }}">
+                        <input type="hidden" name="contact[email]"        value="{{ $contactEmail }}">
+                        <input type="hidden" name="contact[phone]"        value="{{ $contactPhone }}">
+                        <input type="hidden" name="contact[area_code]"    value="{{ $contactAreaCode }}">
+                        <input type="hidden" name="contact[country_code]" value="{{ $contactCountryCode }}">
+                        @foreach($this->passengers as $i => $pax)
+                        @foreach([
+                        'type','title','first_name','middle_name','last_name',
+                        'gender','dob','nationality',
+                        'passport_no','passport_issue_country','passport_issue_date','passport_exp', 'frequent_flyer_number'
+                        ] as $field)
+                        <input type="hidden" name="passengers[{{ $i }}][{{ $field }}]" value="{{ $pax[$field] ?? '' }}">
+                        @endforeach
+                        @endforeach
+                    </form>
 
-                {{-- Promo codes --}}
-                <div class="bk-promo">
-                    <div class="bk-promo-title">Promo Codes</div>
-                    <div class="bk-promo-row">
-                        <input class="bk-promo-input" type="text" placeholder="Enter your promocode...">
-                        <button class="bk-promo-btn" type="button">Apply</button>
+                
+
+                    <div class="bk-actions">
+                        <button class="bk-btn-ghost" wire:click="back">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                            Edit Details
+                        </button>
+                        <button class="bk-btn-pay" @click="submitForm()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                            Confirm &amp; Pay {{ $fmt($this->getTotalPrice()) }}
+                        </button>
                     </div>
+
+                @endif {{-- /step 2 --}}
+
+            </div>{{-- /bk-main --}}
+
+
+            {{-- ══════════════ RIGHT RAIL: MY CART ══════════════ --}}
+            <aside class="bk-rail">
+
+                {{-- My Cart --}}
+                <div class="bk-cart">
+                    <div class="bk-cart-head">
+                        <div class="bk-cart-title">My Cart</div>
+                    </div>
+                    <div class="bk-cart-body">
+    <div class="bk-cart-section">
+        <div class="bk-cart-section-lbl">Flight</div>
+
+        @if($isMulti && !empty($allLegs))
+            @foreach($allLegs as $leg)
+                <div class="bk-cart-flight-row">
+                    <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                    <div>
+                        <div class="bk-cart-route">{{ $leg['route'] ?? '' }}</div>
+                        <div class="bk-cart-sub">{{ $cabin }} · {{ $leg['label'] ?? 'Multi-city' }}</div>
+                    </div>
+                </div>
+            @endforeach
+        @else
+            {{-- Outbound --}}
+            <div class="bk-cart-flight-row">
+                <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                <div>
+                    <div class="bk-cart-route">{{ ($firstSeg['from'] ?? '') }} to {{ ($lastSeg['to'] ?? '') }} ({{ strtoupper($firstSeg['from'] ?? '') }})</div>
+                    <div class="bk-cart-sub">{{ $cabin }} · {{ $tripLabel }}</div>
                 </div>
             </div>
 
-        </aside>
+            {{-- Return --}}
+            @if($isReturn && !empty($retSegs))
+                <div class="bk-cart-flight-row">
+                    <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="transform:scaleX(-1);"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                    <div>
+                        <div class="bk-cart-route">{{ ($retSegs[0]['from'] ?? '') }} to {{ ($retSegs[count($retSegs)-1]['to'] ?? '') }} ({{ strtoupper($retSegs[0]['from'] ?? '') }})</div>
+                        <div class="bk-cart-sub">{{ $cabin }} · Round Trip</div>
+                    </div>
+                </div>
+            @endif
+        @endif
+    </div>
+</div>
 
-    </div>{{-- /bk-page --}}
-</div>{{-- /bk-wrap --}}
+                    {{-- Fare summary using real revalidate data --}}
+                    <div class="bk-fare-section">
+                        <div class="bk-fare-title">Flight Fare Summary</div>
+
+                        @foreach($breakdown as $fb)
+                            @php
+                                $ptCode  = $fb['passengerType'] ?? ($fb['PassengerTypeQuantity']['Code'] ?? 'ADT');
+                                $ptQty   = (int)($fb['qty'] ?? ($fb['PassengerTypeQuantity']['Quantity'] ?? 1));
+                                $ptLabel = match($ptCode) { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' };
+                                $paxFare = $fb['PassengerFare'] ?? [];
+                                $base    = (float)($fb['baseFare'] ?? ($paxFare['BaseFare']['Amount'] ?? 0));
+                                $taxes   = $fb['taxes'] ?? ($paxFare['Taxes'] ?? []);
+                                $serviceTax = (float)($fb['serviceTax'] ?? ($paxFare['ServiceTax']['Amount'] ?? 0));
+                                $surcharges = (float)($fb['surcharges'] ?? ($paxFare['Surcharges']['Amount'] ?? 0));
+
+                                // Group and sum taxes
+                                $taxGroups = [];
+                                foreach ($taxes as $tax) {
+                                    $code = $tax['TaxCode'] ?? 'OtherTaxes';
+                                    $taxGroups[$code] = ($taxGroups[$code] ?? 0) + (float)($tax['Amount'] ?? 0);
+                                }
+                                $rawTaxBreakdownTotal = array_sum($taxGroups);
+                                $rawTotalPaxFare = (float)($fb['totalFare'] ?? ($paxFare['TotalFare']['Amount'] ?? 0));
+                                $hasNegativeTaxLine = collect($taxGroups)->contains(fn($amount) => $amount < 0);
+                                $preferredTaxTotal = $serviceTax > 0
+                                    ? $serviceTax + $surcharges
+                                    : ($hasNegativeTaxLine ? 0.0 : max($rawTaxBreakdownTotal + $surcharges, 0));
+
+                                if ($rawTotalPaxFare <= 0) {
+                                    $totalPaxFare = $base + $preferredTaxTotal;
+                                } elseif ($rawTotalPaxFare < $base) {
+                                    $totalPaxFare = $base + $rawTotalPaxFare;
+                                } else {
+                                    $totalPaxFare = $rawTotalPaxFare;
+                                }
+
+                                $derivedTaxAmt = max($totalPaxFare - $base, 0);
+
+                                if ($hasNegativeTaxLine || $rawTaxBreakdownTotal <= 0 || abs($preferredTaxTotal - $derivedTaxAmt) > 1) {
+                                    $taxGroups = $derivedTaxAmt > 0 ? ['OtherTaxes' => $derivedTaxAmt] : [];
+                                    $totalTaxAmt = $derivedTaxAmt;
+                                } else {
+                                    $totalTaxAmt = $preferredTaxTotal;
+                                }
+                                $baseTotal = $base * $ptQty;
+                                $taxTotal = $totalTaxAmt * $ptQty;
+
+                                // Baggage from FareBreakdown
+                                $bagArr = (array)($fb['baggage'] ?? ($fb['Baggage'] ?? []));
+                                $cabArr = (array)($fb['cabinBaggage'] ?? ($fb['CabinBaggage'] ?? []));
+                                $bagStr = implode(', ', array_unique(array_filter($bagArr))) ?: '—';
+                                $cabStr = implode(', ', array_unique(array_filter($cabArr))) ?: '—';
+                            @endphp
+
+                            <div style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--gray-100);"
+                                x-data="{ showTax: false }">
+
+                                <div class="bk-fare-row" style="padding-bottom:4px;">
+                                    <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">{{ $ptLabel }} × {{ $ptQty }}</span>
+                                    <span class="bk-fare-val" style="font-weight:800;">{{ $fmt($totalPaxFare * $ptQty) }}</span>
+                                </div>
+
+                                <div class="bk-fare-row">
+                                    <span class="bk-fare-lbl">Base Fare</span>
+                                    <span class="bk-fare-val">{{ $fmt($baseTotal) }}</span>
+                                </div>
+
+                                <div class="bk-fare-row">
+                                    <span class="bk-fare-lbl">
+                                        Taxes & Fees
+                                        <button type="button" @click="showTax = !showTax"
+                                            style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:11px;font-family:var(--font);padding:0;margin-left:4px;"
+                                            x-text="showTax ? '▲ hide' : '▼ breakdown'">
+                                        </button>
+                                    </span>
+                                    <span class="bk-fare-val">{{ $fmt($taxTotal) }}</span>
+                                </div>
+
+                                {{-- Tax breakdown --}}
+                                <div x-show="showTax" x-transition style="margin:4px 0 2px;">
+                                    <div class="bk-tax-detail">
+                                        @foreach($taxGroups as $code => $amount)
+                                        <div class="bk-tax-row">
+                                            <span class="bk-tax-lbl">
+                                                {{ $taxLabels[$code] ?? $code }}
+                                                <span class="bk-tax-code">({{ $code }})</span>
+                                            </span>
+                                            <span class="bk-tax-val">{{ $fmt($amount * $ptQty) }}</span>
+                                        </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+
+                                {{-- Baggage info --}}
+                                <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+                                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--green);font-weight:600;background:var(--green-lt);padding:2px 8px;border-radius:999px;">
+                                        🧳 {{ $bagStr }}
+                                    </span>
+                                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--blue);font-weight:600;background:var(--blue-lt);padding:2px 8px;border-radius:999px;">
+                                        💼 {{ $cabStr }}
+                                    </span>
+                                </div>
+                            </div>
+                        @endforeach
+
+                        @if($discount > 0)
+                        <div class="bk-fare-row">
+                            <span class="bk-fare-lbl bk-fare-disc">Discount</span>
+                            <span class="bk-fare-val bk-fare-disc">−{{ $fmt($discount) }}</span>
+                        </div>
+                        @endif
+                    </div>
+
+                    <div class="bk-fare-total-row">
+                        <span class="bk-fare-total-lbl">Trip Total</span>
+                        <span class="bk-fare-total-val">{{ $fmt($totalPrice) }}</span>
+                    </div>
+
+                    {{-- Promo codes --}}
+                    <div class="bk-promo">
+                        <div class="bk-promo-title">Promo Codes</div>
+                        <div class="bk-promo-row">
+                            <input class="bk-promo-input" type="text" placeholder="Enter your promocode...">
+                            <button class="bk-promo-btn" type="button">Apply</button>
+                        </div>
+                    </div>
+                </div>
+
+            </aside>
+
+        </div>{{-- /bk-page --}}
+    </div>{{-- /bk-wrap --}}
 </div>{{-- /Livewire root --}}

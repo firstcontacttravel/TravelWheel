@@ -388,19 +388,26 @@
         .sr-tb-pill-value { font-size: 11px; }
     }
 
-    /* Multi-city card grid */
-    .mc-grid{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #f1f5f9;}
+    /* Multi-city card grid — stacked single column */
+    .mc-grid{display:flex;flex-direction:column;gap:10px;border-top:1px solid #f1f5f9;padding-top:10px;}
     .mc-leg {
-        margin-top: 5px;
         padding: 12px 16px 14px;
-        border: 1px solid #f1f5f9;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
-
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        position: relative;
     }
-    .mc-leg:nth-child(even){border-right:none;}
-    /* last odd leg spans full width 
-    .mc-leg.mc-span{grid-column:1/-1;border-right:none;}*/
+    .mc-leg + .mc-leg::before {
+        content: '';
+        display: block;
+        width: 2px;
+        height: 10px;
+        background: #cbd5e1;
+        position: absolute;
+        top: -10px;
+        left: 24px;
+    }
     .mc-leg-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:2px;display:flex;align-items:center;gap:6px;}
     .mc-leg-airline{font-size:10.5px;color:#64748b;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
     .mc-leg-airline img{width:16px;height:16px;object-fit:contain;border-radius:3px;background:#f1f5f9;}
@@ -417,9 +424,6 @@
     .mc-stop.direct{color:#059669;}
     .mc-stop.hasstop{color:#d97706;}
     @media(max-width:580px){
-        .mc-grid{grid-template-columns:1fr;}
-        .mc-leg{border-right:none;}
-        .mc-leg.mc-span{grid-column:1;}
         .mc-time{font-size:17px;}
     }
 </style>
@@ -782,16 +786,33 @@
                     {{-- Card Head --}}
                     <div class="sr-card-head">
                         <div class="sr-airline-logo-wrap">
-                            <template x-if="flight.airlineLogo">
-                                <img :src="flight.airlineLogo" :alt="flight.airline">
+                            <template x-if="(flight.multiLegs && flight.multiLegs.length > 0) ? flight.validatingLogo : flight.airlineLogo">
+                                <img :src="(flight.multiLegs && flight.multiLegs.length > 0) ? flight.validatingLogo : flight.airlineLogo"
+                                     :alt="(flight.multiLegs && flight.multiLegs.length > 0) ? flight.validatingAirline : flight.airline">
                             </template>
-                            <template x-if="!flight.airlineLogo">
-                                <span x-text="flight.airlineCode" style="font-size:8px;font-weight:800;color:var(--gray-600);text-align:center;line-height:1.2;"></span>
+                            <template x-if="!((flight.multiLegs && flight.multiLegs.length > 0) ? flight.validatingLogo : flight.airlineLogo)">
+                                <span x-text="flight.validatingCode || flight.airlineCode" style="font-size:8px;font-weight:800;color:var(--gray-600);text-align:center;line-height:1.2;"></span>
                             </template>
                         </div>
-                        <div>
-                            <div class="sr-card-airline" x-text="flight.airline"></div>
-                            <div class="sr-card-class" x-text="flight.cabin + ' · ' + (flight.stops === 0 ? 'Direct' : flight.stops + ' Stop' + (flight.stops > 1 ? 's' : ''))"></div>
+                        <div style="flex:1;min-width:0;">
+                            {{-- Multi-city: show full route chain --}}
+                            <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
+                                <div>
+                                    <div class="sr-card-airline" style="font-size:13px;">
+                                        <span x-text="flight.multiLegs.map(l => (l.fromCity||l.from||'').split('(')[0].trim()).join(' → ') + ' → ' + ((flight.multiLegs[flight.multiLegs.length-1].toCity||flight.multiLegs[flight.multiLegs.length-1].to||'').split('(')[0].trim())"></span>
+                                    </div>
+                                    <div class="sr-card-class">
+                                        <span x-text="(flight.validatingAirline || flight.airline) + ' · ' + flight.cabin + ' · ' + flight.multiLegs.length + ' legs'"></span>
+                                    </div>
+                                </div>
+                            </template>
+                            {{-- One-way / return: original display --}}
+                            <template x-if="!flight.multiLegs || flight.multiLegs.length === 0">
+                                <div>
+                                    <div class="sr-card-airline" x-text="flight.airline"></div>
+                                    <div class="sr-card-class" x-text="flight.cabin + ' · ' + (flight.stops === 0 ? 'Direct' : flight.stops + ' Stop' + (flight.stops > 1 ? 's' : ''))"></div>
+                                </div>
+                            </template>
                         </div>
                         <div class="sr-card-price-wrap">
                             <div class="sr-card-price-label">Full Pay</div>
@@ -881,9 +902,12 @@
                                 <div class="mc-leg"
                                     :class="(flight.multiLegs.length % 2 !== 0 && li === flight.multiLegs.length - 1) ? 'mc-span' : ''">
                 
-                                    {{-- Label: first leg = Depart, rest = Connecting --}}
+                                    {{-- Label: Leg 1, Leg 2... with route --}}
                                     <div class="mc-leg-lbl">
-                                        <span x-text="li === 0 ? 'Depart' : 'Connecting'"></span>
+                                        <span x-text="'Leg ' + (li + 1)"
+                                              :style="li === 0 ? 'color:#1d4ed8;' : 'color:#d97706;'"></span>
+                                        <span style="font-weight:500;color:#94a3b8;margin-left:2px;"
+                                              x-text="(leg.fromCity ? leg.fromCity.split('(')[0].trim() : leg.from) + ' → ' + (leg.toCity ? leg.toCity.split('(')[0].trim() : leg.to)"></span>
                                         <span x-show="leg.departDateLabel"
                                             style="font-weight:500;color:#94a3b8;"
                                             x-text="'· ' + leg.departDateLabel"></span>

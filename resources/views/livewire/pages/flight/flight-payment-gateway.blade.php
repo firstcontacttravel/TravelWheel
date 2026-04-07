@@ -8,8 +8,26 @@
     $fmt      = fn($v) => $sym . number_format((float)$v, 2);
     $total    = $flight['price'] ?? 0;
     $segments = $flight['segments'] ?? [];
+    $multiLegs = $flight['multiLegs'] ?? [];
+    $isMulti = count($multiLegs) > 0;
     $firstSeg = $segments[0] ?? [];
     $lastSeg  = !empty($segments) ? $segments[count($segments)-1] : [];
+    $routeLines = [];
+    if ($isMulti) {
+        foreach ($multiLegs as $li => $leg) {
+            $routeLines[] = [
+                'label' => 'Leg ' . ($li + 1),
+                'route' => ($leg['from'] ?? ($leg['segments'][0]['from'] ?? '')) . ' → ' . ($leg['to'] ?? ''),
+                'date'  => $leg['departDateLabel'] ?? '',
+            ];
+        }
+    } else {
+        $routeLines[] = [
+            'label' => 'Flight',
+            'route' => ($firstSeg['from'] ?? '') . ' → ' . ($lastSeg['to'] ?? ''),
+            'date'  => $flight['departDateLabel'] ?? '',
+        ];
+    }
     $errors   = session('errors') ?? [];
 @endphp
 
@@ -98,6 +116,19 @@
                 {{-- Flight strip --}}
                 <div class="gw-flight-strip">
                     <div>
+                        @if($isMulti)
+                            <div style="display:flex;flex-direction:column;gap:6px;">
+                                @foreach($routeLines as $line)
+                                    <div class="gw-route" style="font-size:15px;">
+                                        <span>{{ $line['route'] }}</span>
+                                        <span style="font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-lt);padding:2px 8px;border-radius:999px;">{{ $line['label'] }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                            <div class="gw-route-sub">
+                                {{ $flight['airline'] ?? '' }} · {{ count($routeLines) }} legs · {{ $flight['cabin'] ?? 'Economy' }}
+                            </div>
+                        @else
                         <div class="gw-route">
                             {{ $firstSeg['from'] ?? '' }}
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -108,6 +139,7 @@
                             @if(!empty($flight['departDateLabel'])) · {{ $flight['departDateLabel'] }} @endif
                             · {{ $flight['cabin'] ?? 'Economy' }}
                         </div>
+                        @endif
                     </div>
                     <div class="gw-amount-tag">{{ $fmt($total) }}</div>
                 </div>
@@ -153,7 +185,18 @@
             <div style="padding:14px 18px;">
                 <div class="gw-rail-row">
                     <span class="gw-rail-lbl">Route</span>
+                    @if($isMulti)
+                    <span class="gw-rail-val" style="font-family:var(--font);font-weight:800;">
+                        @foreach($routeLines as $line)
+                            <div>{{ $line['route'] }}</div>
+                            @if(!empty($line['date']))
+                                <div style="font-size:11px;color:var(--gray-400);font-weight:600;">{{ $line['label'] }} · {{ $line['date'] }}</div>
+                            @endif
+                        @endforeach
+                    </span>
+                    @else
                     <span class="gw-rail-val" style="font-family:var(--font);font-weight:800;">{{ ($firstSeg['from'] ?? '') }} → {{ ($lastSeg['to'] ?? '') }}</span>
+                    @endif
                 </div>
                 <div class="gw-rail-row">
                     <span class="gw-rail-lbl">Fare Type</span>

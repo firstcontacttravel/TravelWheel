@@ -121,7 +121,18 @@ class FlightBooking extends Component
  
     private function getFlight(): array
     {
-        return session('bookingFlight', []);
+        $bookingFlight = session('bookingFlight', []);
+        $mappedFlight  = $bookingFlight['flight'] ?? [];
+
+        if (! empty($mappedFlight)) {
+            return array_merge($mappedFlight, [
+                'fareBreakdown' => $bookingFlight['fareBreakdown'] ?? ($mappedFlight['fareBreakdown'] ?? []),
+                'segments'      => $bookingFlight['segments'] ?? ($mappedFlight['segments'] ?? []),
+                'revalidate'    => $bookingFlight['revalidate'] ?? [],
+            ]);
+        }
+
+        return $bookingFlight;
     }
  
     private function _rebuildPassengers(): void
@@ -210,15 +221,35 @@ class FlightBooking extends Component
     {
         $flight    = $this->getFlight();
         $breakdown = $flight['fareBreakdown'] ?? [];
-        $currency  = $flight['currency'] ?? 'NGN';
+        $currency  = $flight['currency'] ?? data_get($flight, 'revalidate.AirRevalidateResponse.AirRevalidateResult.FareItineraries.FareItinerary.AirItineraryFareInfo.ItinTotalFares.TotalFare.CurrencyCode', 'NGN');
  
         $rates = [];
         foreach ($breakdown as $fb) {
+            $baseFare = (float) ($fb['baseFare'] ?? 0);
+            $rawTotalFare = (float) ($fb['totalFare'] ?? 0);
+            $taxes = $fb['taxes'] ?? [];
+            $serviceTax = (float) ($fb['serviceTax'] ?? 0);
+            $surcharges = (float) ($fb['surcharges'] ?? 0);
+            $rawTaxSum = collect($taxes)->sum(fn($tax) => (float) ($tax['Amount'] ?? 0));
+            $hasNegativeTaxLine = collect($taxes)->contains(fn($tax) => (float) ($tax['Amount'] ?? 0) < 0);
+            $preferredTaxTotal = $serviceTax > 0
+                ? $serviceTax + $surcharges
+                : ($hasNegativeTaxLine ? 0.0 : max($rawTaxSum + $surcharges, 0));
+
+            if ($rawTotalFare <= 0) {
+                $effectiveTotalFare = $baseFare + $preferredTaxTotal;
+            } elseif ($rawTotalFare < $baseFare) {
+                // Some responses expose passenger totalFare as the tax portion only.
+                $effectiveTotalFare = $baseFare + $rawTotalFare;
+            } else {
+                $effectiveTotalFare = $rawTotalFare;
+            }
+
             $type = $fb['passengerType'] ?? 'ADT';
             $rates[$type] = [
-                'baseFare'      => (float) ($fb['baseFare']      ?? 0),
-                'totalFare'     => (float) ($fb['totalFare']     ?? 0),
-                'taxes'         => $fb['taxes']         ?? [],
+                'baseFare'      => $baseFare,
+                'totalFare'     => $effectiveTotalFare,
+                'taxes'         => $taxes,
                 'baggage'       => $fb['baggage']       ?? [],
                 'cabinBaggage'  => $fb['cabinBaggage']  ?? [],
                 'changeAllowed' => $fb['changeAllowed'] ?? false,

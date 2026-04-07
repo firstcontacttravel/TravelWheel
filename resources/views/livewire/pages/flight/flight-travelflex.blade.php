@@ -36,6 +36,15 @@
         ['bank' => 'Zenith Bank',  'account_number' => '2109876543', 'account_name' => 'Travelwheel Limited'],
         ['bank' => 'GTBank',       'account_number' => '0156789234', 'account_name' => 'Travelwheel Limited'],
     ];
+
+    // Add these lines to define $isReturn, $isMulti, $multiLegs, $tripLabel
+    $mf = $mappedFlight;
+    $isReturn   = isset($mf['returnSegments']) && is_array($mf['returnSegments']) && count($mf['returnSegments']) > 0;
+    $isMulti    = isset($mf['multiLegs']) && is_array($mf['multiLegs']) && count($mf['multiLegs']) > 0;
+    $multiLegs  = $mf['multiLegs'] ?? [];
+    $tripLabel  = $isReturn ? 'Round Trip' : ($isMulti ? 'Multi-City' : 'One Way');
+    $returnDateLabel = $mf['returnDateLabel'] ?? '';
+    $tfRetDate  = $mf['returnDateLabel'] ?? '';  // ← ADD THIS LINE
 @endphp
 
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -429,7 +438,7 @@
                             Back
                         </button>
                         <button type="button" class="tf-btn-primary" @click="calculate()" x-show="!calculated || repaymentPlan !== lastPlan">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="2" y="2" width="20" height="20" rx="3"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                             Calculate Plan
                         </button>
                         <button type="button" class="tf-btn-secondary" x-show="calculated && repaymentPlan === lastPlan" @click="proceedToPayment()">
@@ -464,11 +473,34 @@
                     {{-- Plan recap --}}
                     <div class="tf-summary-strip" style="margin-bottom:20px;">
                         <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:8px;">Plan Summary</div>
-                        <div class="tf-sum-row"><span class="tf-sum-lbl">Flight</span><span class="tf-sum-val" style="font-family:var(--font)">{{ ($firstSeg['from']??'') }} → {{ ($lastSeg['to']??'') }}</span></div>
-                        <div class="tf-sum-row"><span class="tf-sum-lbl">Travel Date</span><span class="tf-sum-val" style="font-family:var(--font)">{{ $departDateLabel }}</span></div>
-                        <div class="tf-sum-row"><span class="tf-sum-lbl">Repayment Plan</span><span class="tf-sum-val" style="font-family:var(--font)" x-text="repaymentPlan"></span></div>
-                        <div class="tf-sum-row"><span class="tf-sum-lbl">Instalments</span><span class="tf-sum-val" style="font-family:var(--font)" x-text="schedule.length + ' payment(s)'"></span></div>
-                        <div class="tf-sum-row"><span class="tf-sum-lbl">Total Payable</span><span class="tf-sum-val" x-text="formatCurrency(grandTotal)"></span></div>
+                        <div class="tf-sum-row"><span class="tf-sum-lbl">Flight</span>
+                            <span class="tf-sum-val" style="font-family:var(--font);">{{ ($firstSeg['from']??'') }} → {{ ($lastSeg['to']??'') }}</span>
+                        </div>
+                        <div class="tf-sum-row"><span class="tf-sum-lbl">Travel Date</span>
+                            <span class="tf-sum-val" style="font-family:var(--font);">{{ $departDateLabel }}</span>
+                        </div>
+                        @if($isReturn)
+                        <div class="tf-sum-row"><span class="tf-sum-lbl">Return Date</span>
+                            <span class="tf-sum-val" style="font-family:var(--font);">{{ $returnDateLabel ?? '' }}</span>
+                        </div>
+                        @endif
+                        @if($isMulti)
+                        <div class="tf-sum-row"><span class="tf-sum-lbl">Total Legs</span>
+                            <span class="tf-sum-val" style="font-family:var(--font);">{{ 1 + count($multiLegs) }} flights</span>
+                        </div>
+                        @endif
+                        <div class="tf-sum-row"><span class="tf-sum-lbl">Trip Type</span>
+                            <span class="tf-sum-val" style="font-family:var(--font);">{{ $tripLabel }}</span>
+                        </div>
+                        <div class="tf-sum-row"><span class="tf-sum-lbl">Repayment Plan</span>
+                            <span class="tf-sum-val" style="font-family:var(--font);" x-text="repaymentPlan"></span>
+                        </div>
+                        <div class="tf-sum-row"><span class="tf-sum-lbl">Instalments</span>
+                            <span class="tf-sum-val" style="font-family:var(--font);" x-text="schedule.length + ' payment(s)'"></span>
+                        </div>
+                        <div class="tf-sum-row"><span class="tf-sum-lbl">Total Payable</span>
+                            <span class="tf-sum-val" x-text="formatCurrency(grandTotal)"></span>
+                        </div>
                     </div>
 
                     {{-- ── Payment Option 1: Bank Transfer ── --}}
@@ -480,7 +512,7 @@
                                 <div style="font-size:14px;font-weight:800;color:var(--gray-900);">Direct Bank Transfer</div>
                                 <div style="font-size:12px;color:var(--gray-500);margin-top:2px;">Transfer down payment to our account</div>
                             </div>
-                            <span style="margin-left:auto;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--tf-amber-lt);color:var(--tf-amber);flex-shrink:0;">Manual</span>
+                            <!-- <span style="margin-left:auto;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--tf-amber-lt);color:var(--tf-amber);flex-shrink:0;">Manual</span> -->
                         </div>
                         <div class="tf-pay-option-body">
                             <div class="tf-notice warn" style="margin-top:12px">
@@ -500,7 +532,7 @@
                             @endforeach
                             <form method="POST" action="{{ route('flights.travelflex.application') }}" id="tf-bank-form">
                                 @csrf
-                                <!-- <input type="hidden" name="pay_method" value="bank_transfer">
+                                <input type="hidden" name="pay_method" value="bank_transfer">
                                 <input type="hidden" name="down_payment" :value="downPaymentAmount" x-bind:value="downPaymentAmount">
                                 <input type="hidden" name="down_percent" :value="downPercent" x-bind:value="downPercent">
                                 <input type="hidden" name="repayment_plan" :value="repaymentPlan" x-bind:value="repaymentPlan">
@@ -508,7 +540,7 @@
                                 <input type="hidden" name="total_interest" :value="totalInterest" x-bind:value="totalInterest">
                                 <input type="hidden" name="schedule_json" :value="JSON.stringify(schedule)" x-bind:value="JSON.stringify(schedule)">
                                 <label class="tf-ref-label" style="margin-top:14px;">Your Payment Reference (optional)</label>
-                                <input class="tf-ref-input" type="text" name="payment_reference" placeholder="e.g. bank transaction ref or your name"> -->
+                                <input class="tf-ref-input" type="text" name="payment_reference" placeholder="e.g. bank transaction ref or your name">
                                 <button type="submit" class="tf-btn-bank">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                                     I Have Made Payment
@@ -526,7 +558,7 @@
                                 <div style="font-size:14px;font-weight:800;color:var(--gray-900);">Pay Online</div>
                                 <div style="font-size:12px;color:var(--gray-500);margin-top:2px;">Card, bank transfer or USSD — instant confirmation</div>
                             </div>
-                            <span style="margin-left:auto;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--tf-green-lt);color:var(--tf-green);flex-shrink:0;">Instant</span>
+                            <!-- <span style="margin-left:auto;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--tf-green-lt);color:var(--tf-green);flex-shrink:0;">Instant</span> -->
                         </div>
                         <div class="tf-pay-option-body">
                             <div class="tf-notice green" style="margin-top:12px">
@@ -536,12 +568,12 @@
                             <form method="POST" action="{{ route('flights.travelflex.application') }}" id="tf-gw-form" style="margin-top:12px;">
                                 @csrf
                                 <input type="hidden" name="pay_method" value="gateway">
-                                <!-- <input type="hidden" name="down_payment" :value="downPaymentAmount" x-bind:value="downPaymentAmount">
+                                <input type="hidden" name="down_payment" :value="downPaymentAmount" x-bind:value="downPaymentAmount">
                                 <input type="hidden" name="down_percent" :value="downPercent" x-bind:value="downPercent">
                                 <input type="hidden" name="repayment_plan" :value="repaymentPlan" x-bind:value="repaymentPlan">
                                 <input type="hidden" name="grand_total" :value="grandTotal" x-bind:value="grandTotal">
                                 <input type="hidden" name="total_interest" :value="totalInterest" x-bind:value="totalInterest">
-                                <input type="hidden" name="schedule_json" :value="JSON.stringify(schedule)" x-bind:value="JSON.stringify(schedule)"> -->
+                                <input type="hidden" name="schedule_json" :value="JSON.stringify(schedule)" x-bind:value="JSON.stringify(schedule)">
                                 <button type="submit" class="tf-btn-pay" id="tf-gw-btn">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                                     Pay <span x-text="formatCurrency(downPaymentAmount)" style="margin:0 4px;"></span> Down Payment Now
@@ -569,14 +601,62 @@
                     <div class="tf-rail-sub">Your instalment plan summary</div>
                 </div>
                 <div class="tf-rail-body">
+                    @php
+                        $tfOutFirst = $firstSeg ?? [];
+                        $tfOutLast  = !empty($segments) ? $segments[count($segments)-1] : [];
+                        $tfOutRoute = ($tfOutFirst['from']??'') . ' → ' . ($tfOutLast['to']??'');
+                        
+                        $tfRetFirst = ($mf['returnSegments'][0] ?? []);
+                    $tfRetLast  = !empty($mf['returnSegments']) ? $mf['returnSegments'][count($mf['returnSegments'])-1] : [];
+                    $tfRetRoute = ($tfRetFirst['from']??'') . ' → ' . ($tfRetLast['to']??'');
+                    
+                    $tfIsReturn = count($mf['returnSegments'] ?? []) > 0;
+                    $tfIsMulti  = count($mf['multiLegs'] ?? []) > 0;
+                    $tfTripLabel= $tfIsReturn ? 'Round Trip' : ($tfIsMulti ? 'Multi-City' : 'One Way');
+                    $tfRouteLines = [];
+                    if ($tfIsMulti) {
+                        foreach (($mf['multiLegs'] ?? []) as $li => $leg) {
+                            $tfRouteLines[] = [
+                                'label' => 'Leg ' . ($li + 1),
+                                'route' => ($leg['from'] ?? '') . ' → ' . ($leg['to'] ?? ''),
+                                'date'  => $leg['departDateLabel'] ?? '',
+                            ];
+                        }
+                    }
+                @endphp
+                    
                     <div class="tf-rail-row">
                         <span class="tf-rail-lbl">Flight</span>
-                        <span class="tf-rail-val" style="font-size:13px;font-weight:800;">{{ ($firstSeg['from']??'') }} → {{ ($lastSeg['to']??'') }}</span>
+                        <span class="tf-rail-val" style="font-size:13px;font-weight:800;">
+                        @if($tfIsMulti)
+                            @foreach($tfRouteLines as $line)
+                                <div>{{ $line['route'] }}</div>
+                                @if(!empty($line['date']))
+                                    <span style="font-size:11px;color:var(--gray-400);">{{ $line['label'] }} · {{ $line['date'] }}</span>
+                                @endif
+                            @endforeach
+                        @elseif($tfIsReturn)
+                            {{ $tfOutRoute }}<br><span style="font-size:11px;color:var(--gray-400);">{{ $tfRetRoute }}</span>
+                        @else
+                            {{ $tfOutRoute }}
+                            @endif
+                        </span>
+                    </div>
+                    <div class="tf-rail-row">
+                        <span class="tf-rail-lbl">Trip Type</span>
+                        <span class="tf-rail-val">{{ $tfTripLabel }}</span>
                     </div>
                     <div class="tf-rail-row">
                         <span class="tf-rail-lbl">Travel Date</span>
                         <span class="tf-rail-val" style="font-size:12px">{{ $departDateLabel }}</span>
                     </div>
+                    @if($tfIsReturn && $tfRetDate)
+                    <div class="tf-rail-row">
+                        <span class="tf-rail-lbl">Return Date</span>
+                        <span class="tf-rail-val" style="font-size:11.5px;">{{ $tfRetDate }}</span>
+                    </div>
+                    @endif
+                    
                     <div class="tf-rail-row">
                         <span class="tf-rail-lbl">Airline</span>
                         <span class="tf-rail-val">{{ $airline }}</span>

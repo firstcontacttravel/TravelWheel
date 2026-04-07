@@ -155,7 +155,7 @@
                         <div class="po-option-title">Direct Bank Transfer</div>
                         <div class="po-option-sub">Transfer to our account and confirm payment</div>
                     </div>
-                    <span class="po-option-badge manual">Manual</span>
+                    <!-- <span class="po-option-badge manual">Manual</span> -->
                 </div>
                 <div class="po-option-body">
                     <div class="po-notice warn">
@@ -201,7 +201,7 @@
                         <div class="po-option-title">Pay Online</div>
                         <div class="po-option-sub">Card, bank transfer or USSD — instant confirmation</div>
                     </div>
-                    <span class="po-option-badge instant">Instant</span>
+                    <!-- <span class="po-option-badge instant">Instant</span> -->
                 </div>
                 <div class="po-option-body">
                     <div class="po-notice info">
@@ -213,7 +213,7 @@
                         @csrf
                         <button type="submit" class="po-action-btn gw" id="gw-ticket-btn">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                            Pay {{ $fmt($total) }} &amp; Issue Ticket Now
+                            Pay {{ $fmt($total) }} Now
                         </button>
                     </form>
                 </div>
@@ -272,10 +272,77 @@
                     <div class="po-rail-title">Booking Summary</div>
                 </div>
                 <div class="po-rail-body">
-                    <div class="po-rail-row">
-                        <span class="po-rail-lbl">Route</span>
-                        <span class="po-rail-val" style="font-family:var(--font);font-weight:800;font-size:13px;">{{ ($firstSeg['from']??'') }} → {{ ($lastSeg['to']??'') }}</span>
-                    </div>
+                @php
+                    $poSegs      = $flight['segments']       ?? [];
+                    $poRetSegs   = $flight['returnSegments']  ?? [];
+                    $poMultiLegs = $flight['multiLegs']       ?? [];
+                    $poIsReturn  = count($poRetSegs) > 0;
+                    $poIsMulti   = count($poMultiLegs) > 0;
+                    $poTripLabel = $poIsReturn ? 'Round Trip' : ($poIsMulti ? 'Multi-City' : 'One Way');
+                    
+                    // Outbound route
+                    $poOutFirst = $poSegs[0] ?? [];
+                    $poOutLast  = !empty($poSegs) ? $poSegs[count($poSegs)-1] : [];
+                    $poOutRoute = ($poOutFirst['from']??'') . ' → ' . ($poOutLast['to']??'');
+                    
+                    // Return route (if applicable)
+                    $poRetFirst = $poRetSegs[0] ?? [];
+                    $poRetLast  = !empty($poRetSegs) ? $poRetSegs[count($poRetSegs)-1] : [];
+                    $poRetRoute = ($poRetFirst['from']??'') . ' → ' . ($poRetLast['to']??'');
+                    $poRouteLines = [];
+                    if ($poIsMulti) {
+                        foreach ($poMultiLegs as $li => $leg) {
+                            $poLegSegs = $leg['segments'] ?? [];
+                            $poLegFirst = $poLegSegs[0] ?? [];
+                            $poLegLast = !empty($poLegSegs) ? $poLegSegs[count($poLegSegs)-1] : [];
+                            $poRouteLines[] = [
+                                'label' => 'Leg ' . ($li + 1),
+                                'route' => ($leg['from'] ?? ($poLegFirst['from'] ?? '')) . ' → ' . ($leg['to'] ?? ($poLegLast['to'] ?? '')),
+                                'date'  => $leg['departDateLabel'] ?? '',
+                            ];
+                        }
+                    }
+                @endphp
+            
+                <div class="po-rail-row">
+                    <span class="po-rail-lbl">Trip</span>
+                    <span class="po-rail-val" style="font-family:var(--font);font-weight:800;font-size:13px;">
+                        @if($poIsMulti)
+                            @foreach($poRouteLines as $line)
+                                <div>{{ $line['route'] }}</div>
+                                @if(!empty($line['date']))
+                                    <span style="font-size:11px;color:var(--gray-400);">{{ $line['label'] }} · {{ $line['date'] }}</span>
+                                @endif
+                            @endforeach
+                        @elseif($poIsReturn)
+                            {{ $poOutRoute }}<br><span style="font-size:11px;color:var(--gray-400);">{{ $poRetRoute }}</span>
+                        @else
+                            {{ $poOutRoute }}
+                        @endif
+                    </span>
+                </div>
+                <div class="po-rail-row">
+                    <span class="po-rail-lbl">Type</span>
+                    <span class="po-rail-val" style="font-family:var(--font)">{{ $poTripLabel }}</span>
+                </div>
+                @if(!empty($flight['departDateLabel']))
+                <div class="po-rail-row">
+                    <span class="po-rail-lbl">Depart</span>
+                    <span class="po-rail-val" style="font-family:var(--font)">{{ $flight['departDateLabel'] }}</span>
+                </div>
+                @endif
+                @if($poIsReturn && !empty($flight['returnDateLabel']))
+                <div class="po-rail-row">
+                    <span class="po-rail-lbl">Return</span>
+                    <span class="po-rail-val" style="font-family:var(--font)">{{ $flight['returnDateLabel'] }}</span>
+                </div>
+                @endif
+                @if($poIsMulti)
+                <div class="po-rail-row">
+                    <span class="po-rail-lbl">Legs</span>
+                    <span class="po-rail-val" style="font-family:var(--font)">{{ count($poMultiLegs) }} flights</span>
+                </div>
+                @endif
                     @if($uniqueId)
                     <div class="po-rail-row">
                         <span class="po-rail-lbl">Booking Ref</span>
