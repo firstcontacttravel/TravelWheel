@@ -362,7 +362,7 @@ class FlightController extends Controller
                 $lastSeg         = !empty($segments) ? end($segments) : [];
                 if ($tripType === 'multi') {
                     // First leg drives the top-level fields (for backward compatibility)
-                    $firstSeg    = $multiLegs[0]['segments'][0] ?? [];
+                    $firstSeg = $multiLegs[0]['segments'][0] ?? ($multiLegs[0]['segments'] ?? []);
                     $lastSeg     = !empty($multiLegs) ? end($multiLegs)['segments'] : [];
                     
                 }

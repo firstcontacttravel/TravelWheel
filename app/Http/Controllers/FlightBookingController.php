@@ -16,163 +16,351 @@ class FlightBookingController extends Controller
     //  select() — revalidate + extra services + fare rules → store in session
     // =========================================================================
     public function select(Request $request)
-    {
-        $validated = $request->validate([
-            'fare_source_code' => 'required|string',
-            'session_id'       => 'required|string',
-        ]);
-
-        $payload = [
-            'session_id'       => $validated['session_id'],
-            'fare_source_code' => $validated['fare_source_code'],
-        ];
-
-        // ── 1. Revalidate ─────────────────────────────────────────────────────
-        $revalidateResponse = Http::timeout(60)
-            ->post('https://travelnext.works/api/aeroVE5/revalidate', $payload);
-
-        if ($revalidateResponse->failed()) {
-            return back()->withErrors(['error' => 'Revalidation failed. Please try again.']);
-        }
-
-        $revalidateData = $revalidateResponse->json();
-        $isValid = data_get($revalidateData, 'AirRevalidateResponse.AirRevalidateResult.IsValid');
-
-        if (!$isValid) {
-            return back()->withErrors([
-                'error' => 'This fare is no longer available. Please select another flight.'
-            ])->withInput();
-        }
-
-        $fi = data_get(
-            $revalidateData,
-            'AirRevalidateResponse.AirRevalidateResult.FareItineraries.FareItinerary',
-            []
-        );
-
-        if (empty($fi)) {
-            return back()->withErrors(['error' => 'No fare data returned from revalidation.']);
-        }
-
-        // ── Reference data ────────────────────────────────────────────────────
-        $airlines = collect(json_decode(file_get_contents(public_path('assets/data/airline.json')), true))->keyBy('AirLineCode');
-        $airports = collect(json_decode(file_get_contents(public_path('assets/data/airportsCode.json')), true))->keyBy('AirportCode');
-        $searchParams = session('searchParamsStore', []);
-        $tripType     = strtolower($searchParams['trip'] ?? 'oneway');
-        $searchLegs   = $searchParams['multi_legs'] ?? [];
-
-        // ── Segment mapper ────────────────────────────────────────────────────
-        $mapSegments = function (array $odo) use ($airlines, $airports): array {
-            return collect($odo)->map(function ($seg) use ($airlines, $airports) {
-                $fs = $seg['FlightSegment'];
-                $dep = \Carbon\Carbon::parse($fs['DepartureDateTime']);
-                $arr = \Carbon\Carbon::parse($fs['ArrivalDateTime']);
-                $airlineCode = $fs['MarketingAirlineCode'];
-                $airline     = $airlines->get($airlineCode);
-                $fromCode    = $fs['DepartureAirportLocationCode'];
-                $toCode      = $fs['ArrivalAirportLocationCode'];
-                $fromAirport = $airports->get($fromCode);
-                $toAirport   = $airports->get($toCode);
-                $opCode      = $fs['OperatingAirline']['Code'] ?? $airlineCode;
-                $opAirline   = $airlines->get($opCode);
-                return [
-                    'from' => $fromCode, 'to' => $toCode,
-                    'fromCity'    => $fromAirport ? ($fromAirport['City'].'('.$fromCode.')') : $fromCode,
-                    'toCity'      => $toAirport   ? ($toAirport['City']  .'('.$toCode  .')') : $toCode,
-                    'fromAirport' => $fromAirport['AirportName'] ?? $fromCode,
-                    'toAirport'   => $toAirport['AirportName']   ?? $toCode,
-                    'fromCountry' => $fromAirport['Country']     ?? '',
-                    'toCountry'   => $toAirport['Country']       ?? '',
-                    'departTime'  => $dep->format('H:i'), 'arriveTime' => $arr->format('H:i'),
-                    'departDate'  => $dep->format('D, d M Y'), 'arriveDate' => $arr->format('D, d M Y'),
-                    'departDT'    => $fs['DepartureDateTime'], 'arriveDT' => $fs['ArrivalDateTime'],
-                    'duration'    => (int) $fs['JourneyDuration'],
-                    'flightNo'    => $airlineCode.$fs['FlightNumber'],
-                    'airline'     => $fs['MarketingAirlineName'],
-                    'airlineCode' => $airlineCode,
-                    'airlineLogo' => $airline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
-                    'equipment'   => $fs['OperatingAirline']['Equipment'] ?? '',
-                    'cabin'       => $fs['CabinClassText'] ?? '', 'cabinCode' => $fs['CabinClassCode'] ?? 'Y',
-                    'resBookCode' => $seg['ResBookDesigCode'] ?? '', 'mealCode' => $fs['MealCode'] ?? '',
-                    'seatsLeft'   => (int)($seg['SeatsRemaining']['Number'] ?? 9),
-                    'belowMinimum'=> (bool)($seg['SeatsRemaining']['BelowMinimum'] ?? false),
-                    'isCodeshare' => $opCode !== $airlineCode, 'operatingCode' => $opCode,
-                    'operatingAirline'  => $fs['OperatingAirline']['Name']           ?? '',
-                    'operatingFlightNo' => $opCode.($fs['OperatingAirline']['FlightNumber'] ?? ''),
-                    'operatingLogo'     => $opAirline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
-                    'eticket'     => (bool)($fs['Eticket'] ?? true),
-                ];
-            })->values()->toArray();
-        };
-
-        $calcLayovers    = function (array $s): array { $o=[]; for($i=0;$i<count($s)-1;$i++){$m=\Carbon\Carbon::parse($s[$i]['arriveDT'])->diffInMinutes(\Carbon\Carbon::parse($s[$i+1]['departDT']));$o[]=floor($m/60).'h '.($m%60).'m';} return $o; };
-        $calcLayoverMins = function (array $s): int   { $t=0; for($i=0;$i<count($s)-1;$i++){$t+=(int)\Carbon\Carbon::parse($s[$i]['arriveDT'])->diffInMinutes(\Carbon\Carbon::parse($s[$i+1]['departDT']));} return $t; };
-        $fmtMins         = fn(int $m): string => floor($m/60).'h '.($m%60).'m';
-        $splitMultiLegs  = function (array $all, array $legs) use (&$splitMultiLegs): array {
-            if (empty($legs)) return array_map(fn($s) => [$s], $all);
-            $result=[]; $remaining=$all;
-            foreach ($legs as $idx => $legDef) {
-                $iata = preg_match('/\(([A-Z]{3})\)/', $legDef['to']??'', $m) ? $m[1] : strtoupper(trim($legDef['to']??''));
-                if ($idx === count($legs)-1) { $result[]=$remaining; break; }
-                $cut=-1; foreach($remaining as $si=>$seg){if(strtoupper($seg['to'])===$iata){$cut=$si;break;}}
-                $result[] = $cut===-1 ? array_splice($remaining,0,1) : array_splice($remaining,0,$cut+1);
-            }
-            if(!empty($remaining)) $result[]=$remaining;
-            return $result;
-        };
-
-        $fareInfo = $fi['AirItineraryFareInfo'];
-        $odos     = $fi['OriginDestinationOptions'] ?? [];
-        $segments=$layoverDurations=$returnSegments=$returnLayoverDurations=$multiLegs=[];
-        $totalStops=$totalMins=$totalTimeMins=$returnStops=$returnTotalTimeMins=0;
-        $returnDurationLabel=$returnTotalTimeLabel=$returnDateLabel=$departDateLabel='';
-
-        if ($tripType === 'oneway') {
-            $odo0=$odos[0]['OriginDestinationOption']??[];
-            $segments=$mapSegments($odo0); $totalStops=(int)($odos[0]['TotalStops']??max(0,count($odo0)-1));
-            $totalMins=array_sum(array_column($segments,'duration')); $layoverDurations=$calcLayovers($segments);
-            $totalTimeMins=$totalMins+$calcLayoverMins($segments);
-        } elseif ($tripType === 'return') {
-            $odo0=$odos[0]['OriginDestinationOption']??[];
-            $segments=$mapSegments($odo0); $totalStops=(int)($odos[0]['TotalStops']??max(0,count($odo0)-1));
-            $totalMins=array_sum(array_column($segments,'duration')); $layoverDurations=$calcLayovers($segments);
-            $totalTimeMins=$totalMins+$calcLayoverMins($segments);
-            if(!empty($odos[1])){$odo1=$odos[1]['OriginDestinationOption']??[];$returnSegments=$mapSegments($odo1);$returnStops=(int)($odos[1]['TotalStops']??max(0,count($odo1)-1));$rm=array_sum(array_column($returnSegments,'duration'));$returnDurationLabel=$fmtMins($rm);$returnLayoverDurations=$calcLayovers($returnSegments);$returnTotalTimeMins=$rm+$calcLayoverMins($returnSegments);$returnTotalTimeLabel=$fmtMins($returnTotalTimeMins);if(!empty($returnSegments[0]['departDT']))$returnDateLabel=\Carbon\Carbon::parse($returnSegments[0]['departDT'])->format('D, d M');}
-        } elseif ($tripType === 'multi') {
-            $odo0=$odos[0]['OriginDestinationOption']??[];$allSegs=$mapSegments($odo0);$totalStops=(int)($odos[0]['TotalStops']??max(0,count($odo0)-1));
-            $legArrays=$splitMultiLegs($allSegs,$searchLegs);
-            foreach($legArrays as $ls){
-                if (empty($ls)) continue;
-                $lm=array_sum(array_column($ls,'duration'));$ll=$calcLayoverMins($ls);$lastLegSeg=end($ls);
-                $multiLegs[]=['segments'=>$ls,'durationLabel'=>$fmtMins($lm),'stops'=>max(0,count($ls)-1),'layoverDurations'=>$calcLayovers($ls),'departDateLabel'=>!empty($ls[0]['departDT'])?\Carbon\Carbon::parse($ls[0]['departDT'])->format('D, d M'):'','totalTimeMins'=>$lm+$ll,'totalTimeLabel'=>$fmtMins($lm+$ll),'from'=>$ls[0]['from']??'','to'=>$lastLegSeg['to']??'','fromCity'=>$ls[0]['fromCity']??'','toCity'=>$lastLegSeg['toCity']??'','departTime'=>$ls[0]['departTime']??'','arriveTime'=>$lastLegSeg['arriveTime']??'','departDT'=>$ls[0]['departDT']??'','arriveDT'=>$lastLegSeg['arriveDT']??''];
-            }
-            $segments=$multiLegs[0]['segments']??[];
-            $totalMins=array_sum(array_column($segments,'duration'));$layoverDurations=$calcLayovers($segments);$totalTimeMins=$totalMins+$calcLayoverMins($segments);
-        }
-
-        $firstSeg=$segments[0]??[]; $lastSeg=!empty($segments)?end($segments):[];
-        if ($tripType === 'multi' && !empty($multiLegs)) {
-            $firstSeg = $multiLegs[0]['segments'][0] ?? [];
-            $lastMultiSegs = $multiLegs[count($multiLegs) - 1]['segments'] ?? [];
-            $lastSeg = !empty($lastMultiSegs) ? $lastMultiSegs[count($lastMultiSegs) - 1] : [];
-        }
-        $deptHour=(int)substr($firstSeg['departTime']??'00:00',0,2); $arrHour=(int)substr($lastSeg['arriveTime']??'00:00',0,2);
-        if(!empty($firstSeg['departDT'])) $departDateLabel=\Carbon\Carbon::parse($firstSeg['departDT'])->format('D, d M');
-        $validatingCode=$fi['ValidatingAirlineCode']??''; $validatingAirline=$airlines->get($validatingCode);
-
-        $breakdown=collect($fareInfo['FareBreakdown']??[])->map(fn($fb)=>['passengerType'=>$fb['PassengerTypeQuantity']['Code'],'qty'=>(int)$fb['PassengerTypeQuantity']['Quantity'],'baseFare'=>(float)$fb['PassengerFare']['BaseFare']['Amount'],'totalFare'=>(float)$fb['PassengerFare']['TotalFare']['Amount'],'currency'=>$fb['PassengerFare']['TotalFare']['CurrencyCode'],'baggage'=>$fb['Baggage']??[],'cabinBaggage'=>$fb['CabinBaggage']??[],'taxes'=>$fb['PassengerFare']['Taxes']??[],'serviceTax'=>(float)($fb['PassengerFare']['ServiceTax']['Amount']??0),'surcharges'=>(float)($fb['PassengerFare']['Surcharges']['Amount']??0),'changeAllowed'=>$fb['PenaltyDetails']['ChangeAllowed']??false,'changePenalty'=>$fb['PenaltyDetails']['ChangePenaltyAmount']??'0.00','refundAllowed'=>$fb['PenaltyDetails']['RefundAllowed']??false,'refundPenalty'=>$fb['PenaltyDetails']['RefundPenaltyAmount']??'0.00'])->values()->toArray();
-
-        $mappedFlight=['fareSourceCode'=>$fareInfo['FareSourceCode'],'airline'=>$firstSeg['airline']??'','airlineCode'=>$firstSeg['airlineCode']??'','airlineLogo'=>$firstSeg['airlineLogo']??'/assets/img/airlines/default.png','validatingCode'=>$validatingCode,'validatingAirline'=>$validatingAirline['AirLineName']??$validatingCode,'validatingLogo'=>$validatingAirline['AirLineLogo']??'/assets/img/airlines/default.png','cabin'=>$firstSeg['cabin']??'','cabinCode'=>$firstSeg['cabinCode']??'Y','stops'=>$totalStops,'price'=>(float)$fareInfo['ItinTotalFares']['TotalFare']['Amount'],'baseFare'=>(float)$fareInfo['ItinTotalFares']['BaseFare']['Amount'],'totalTax'=>(float)($fareInfo['ItinTotalFares']['TotalTax']['Amount']??0),'currency'=>$fareInfo['ItinTotalFares']['TotalFare']['CurrencyCode'],'isRefundable'=>strtolower($fareInfo['IsRefundable']??'no')==='yes','fareType'=>$fareInfo['FareType']??'Public','ticketType'=>$fi['TicketType']??'eTicket','isPassportMandatory'=>(bool)($fi['IsPassportMandatory']??false),'directionInd'=>$fi['DirectionInd']??'','ticketAdvisory'=>trim($fi['TicketAdvisory']??''),'segments'=>$segments,'departTime'=>$firstSeg['departTime']??'','arriveTime'=>$lastSeg['arriveTime']??'','departDT'=>$firstSeg['departDT']??'','arriveDT'=>$lastSeg['arriveDT']??'','totalDuration'=>$totalMins,'durationLabel'=>$fmtMins($totalMins),'layoverDurations'=>$layoverDurations,'departDateLabel'=>$departDateLabel,'totalTimeMins'=>$totalTimeMins,'totalTimeLabel'=>$fmtMins($totalTimeMins),'returnSegments'=>$returnSegments,'returnStops'=>$returnStops,'returnDurationLabel'=>$returnDurationLabel,'returnDateLabel'=>$returnDateLabel,'returnLayoverDurations'=>$returnLayoverDurations,'returnTotalTimeMins'=>$returnTotalTimeMins,'returnTotalTimeLabel'=>$returnTotalTimeLabel,'multiLegs'=>$multiLegs,'departSlot'=>$deptHour<12?'morning':($deptHour<18?'afternoon':'evening'),'arrivalSlot'=>$arrHour<12?'morning':($arrHour<18?'afternoon':'evening'),'fareBreakdown'=>$breakdown];
-
-        $extraResponse     = Http::timeout(60)->post('https://travelnext.works/api/aeroVE5/extra_services', $payload);
-        if ($extraResponse->failed()) return back()->withErrors(['error' => 'Extra services fetch failed.']);
-        $fareRulesResponse = Http::timeout(60)->post('https://travelnext.works/api/aeroVE5/fare_rules', $payload);
-        if ($fareRulesResponse->failed()) return back()->withErrors(['error' => 'Fare rules fetch failed.']);
-
-        session(['bookingFlight'=>['flight'=>$mappedFlight,'revalidate'=>$revalidateData,'segments'=>$mappedFlight['segments'],'fareBreakdown'=>$mappedFlight['fareBreakdown']],'bookingSessionId'=>$validated['session_id'],'bookingSearchParams'=>$searchParams,'extraServices'=>$extraResponse->json(),'fareRules'=>$fareRulesResponse->json(),'tripType'=>$mappedFlight['directionInd']??'N/A']);
-
-        return redirect()->route('flights.booking');
+{
+    $validated = $request->validate([
+        'fare_source_code' => 'required|string',
+        'session_id'       => 'required|string',
+    ]);
+ 
+    $payload = [
+        'session_id'       => $validated['session_id'],
+        'fare_source_code' => $validated['fare_source_code'],
+    ];
+ 
+    // ── 1. Revalidate ─────────────────────────────────────────────────────────
+    $revalidateResponse = Http::timeout(60)
+        ->post('https://travelnext.works/api/aeroVE5/revalidate', $payload);
+ 
+    if ($revalidateResponse->failed()) {
+        return back()->withErrors(['error' => 'Revalidation failed. Please try again.']);
     }
+ 
+    $revalidateData = $revalidateResponse->json();
+    $isValid = data_get($revalidateData, 'AirRevalidateResponse.AirRevalidateResult.IsValid');
+ 
+    if (!$isValid) {
+        return back()->withErrors([
+            'error' => 'This fare is no longer available. Please select another flight.'
+        ])->withInput();
+    }
+ 
+    $fi = data_get(
+        $revalidateData,
+        'AirRevalidateResponse.AirRevalidateResult.FareItineraries.FareItinerary',
+        []
+    );
+ 
+    if (empty($fi)) {
+        return back()->withErrors(['error' => 'No fare data returned from revalidation.']);
+    }
+ 
+    // ── 2. Reference data ─────────────────────────────────────────────────────
+    $airlines     = collect(json_decode(file_get_contents(public_path('assets/data/airline.json')), true))->keyBy('AirLineCode');
+    $airports     = collect(json_decode(file_get_contents(public_path('assets/data/airportsCode.json')), true))->keyBy('AirportCode');
+    $searchParams = session('searchParamsStore', []);
+    $tripType     = strtolower($searchParams['trip'] ?? 'oneway');
+ 
+    // ── 3. Segment mapper ─────────────────────────────────────────────────────
+    $mapSegments = function (array $odo) use ($airlines, $airports): array {
+        return collect($odo)->map(function ($seg) use ($airlines, $airports) {
+            $fs          = $seg['FlightSegment'];
+            $dep         = \Carbon\Carbon::parse($fs['DepartureDateTime']);
+            $arr         = \Carbon\Carbon::parse($fs['ArrivalDateTime']);
+            $airlineCode = $fs['MarketingAirlineCode'];
+            $airline     = $airlines->get($airlineCode);
+            $fromCode    = $fs['DepartureAirportLocationCode'];
+            $toCode      = $fs['ArrivalAirportLocationCode'];
+            $fromAirport = $airports->get($fromCode);
+            $toAirport   = $airports->get($toCode);
+            $opCode      = $fs['OperatingAirline']['Code'] ?? $airlineCode;
+            $opAirline   = $airlines->get($opCode);
+ 
+            return [
+                'from'              => $fromCode,
+                'to'                => $toCode,
+                'fromCity'          => $fromAirport ? ($fromAirport['City'] . ' (' . $fromCode . ')') : $fromCode,
+                'toCity'            => $toAirport   ? ($toAirport['City']   . ' (' . $toCode   . ')') : $toCode,
+                'fromAirport'       => $fromAirport['AirportName'] ?? $fromCode,
+                'toAirport'         => $toAirport['AirportName']   ?? $toCode,
+                'fromCountry'       => $fromAirport['Country']     ?? '',
+                'toCountry'         => $toAirport['Country']       ?? '',
+                'fromLat'           => $fromAirport['Latitude']    ?? null,
+                'fromLon'           => $fromAirport['Longitude']   ?? null,
+                'toLat'             => $toAirport['Latitude']      ?? null,
+                'toLon'             => $toAirport['Longitude']     ?? null,
+                'departTime'        => $dep->format('H:i'),
+                'arriveTime'        => $arr->format('H:i'),
+                'departDate'        => $dep->format('D, d M Y'),
+                'arriveDate'        => $arr->format('D, d M Y'),
+                'departDT'          => $fs['DepartureDateTime'],
+                'arriveDT'          => $fs['ArrivalDateTime'],
+                'duration'          => (int) $fs['JourneyDuration'],
+                'flightNo'          => $airlineCode . $fs['FlightNumber'],
+                'airline'           => $fs['MarketingAirlineName'],
+                'airlineCode'       => $airlineCode,
+                'airlineLogo'       => $airline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+                'equipment'         => $fs['OperatingAirline']['Equipment'] ?? '',
+                'cabin'             => $fs['CabinClassText'] ?? '',
+                'cabinCode'         => $fs['CabinClassCode'] ?? 'Y',
+                'resBookCode'       => $seg['ResBookDesigCode'] ?? '',
+                'mealCode'          => $fs['MealCode']          ?? '',
+                'seatsLeft'         => (int)  ($seg['SeatsRemaining']['Number']       ?? 9),
+                'belowMinimum'      => (bool) ($seg['SeatsRemaining']['BelowMinimum'] ?? false),
+                'isCodeshare'       => $opCode !== $airlineCode,
+                'operatingCode'     => $opCode,
+                'operatingAirline'  => $fs['OperatingAirline']['Name']         ?? '',
+                'operatingFlightNo' => $opCode . ($fs['OperatingAirline']['FlightNumber'] ?? ''),
+                'operatingLogo'     => $opAirline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+                'eticket'           => (bool) ($fs['Eticket'] ?? true),
+            ];
+        })->values()->toArray();
+    };
+ 
+    // ── 4. Helpers ────────────────────────────────────────────────────────────
+    $calcLayovers = function (array $segs): array {
+        $out = [];
+        for ($i = 0; $i < count($segs) - 1; $i++) {
+            $mins  = \Carbon\Carbon::parse($segs[$i]['arriveDT'])
+                        ->diffInMinutes(\Carbon\Carbon::parse($segs[$i + 1]['departDT']));
+            $out[] = floor($mins / 60) . 'h ' . ($mins % 60) . 'm';
+        }
+        return $out;
+    };
+ 
+    $calcLayoverMins = function (array $segs): int {
+        $total = 0;
+        for ($i = 0; $i < count($segs) - 1; $i++) {
+            $total += (int) \Carbon\Carbon::parse($segs[$i]['arriveDT'])
+                                ->diffInMinutes(\Carbon\Carbon::parse($segs[$i + 1]['departDT']));
+        }
+        return $total;
+    };
+ 
+    $fmtMins = fn(int $m): string => floor($m / 60) . 'h ' . ($m % 60) . 'm';
+ 
+    // ── 5. Map segments by trip type ──────────────────────────────────────────
+    $fareInfo = $fi['AirItineraryFareInfo'];
+    $odos     = $fi['OriginDestinationOptions'] ?? [];
+ 
+    $segments               = [];
+    $layoverDurations       = [];
+    $returnSegments         = [];
+    $returnLayoverDurations = [];
+    $multiLegs              = [];
+    $totalStops             = 0;
+    $totalMins              = 0;
+    $totalTimeMins          = 0;
+    $returnStops            = 0;
+    $returnTotalTimeMins    = 0;
+    $returnDurationLabel    = '';
+    $returnTotalTimeLabel   = '';
+    $returnDateLabel        = '';
+    $departDateLabel        = '';
+ 
+    // ── ONE WAY ───────────────────────────────────────────────────────────────
+    if ($tripType === 'oneway') {
+ 
+        $odo0             = $odos[0]['OriginDestinationOption'] ?? [];
+        $segments         = $mapSegments($odo0);
+        $totalStops       = (int) ($odos[0]['TotalStops'] ?? max(0, count($odo0) - 1));
+        $totalMins        = array_sum(array_column($segments, 'duration'));
+        $layoverDurations = $calcLayovers($segments);
+        $totalTimeMins    = $totalMins + $calcLayoverMins($segments);
+ 
+    // ── RETURN ────────────────────────────────────────────────────────────────
+    } elseif ($tripType === 'return') {
+ 
+        $odo0             = $odos[0]['OriginDestinationOption'] ?? [];
+        $segments         = $mapSegments($odo0);
+        $totalStops       = (int) ($odos[0]['TotalStops'] ?? max(0, count($odo0) - 1));
+        $totalMins        = array_sum(array_column($segments, 'duration'));
+        $layoverDurations = $calcLayovers($segments);
+        $totalTimeMins    = $totalMins + $calcLayoverMins($segments);
+ 
+        if (!empty($odos[1])) {
+            $odo1                   = $odos[1]['OriginDestinationOption'] ?? [];
+            $returnSegments         = $mapSegments($odo1);
+            $returnStops            = (int) ($odos[1]['TotalStops'] ?? max(0, count($odo1) - 1));
+            $returnMins             = array_sum(array_column($returnSegments, 'duration'));
+            $returnDurationLabel    = $fmtMins($returnMins);
+            $returnLayoverDurations = $calcLayovers($returnSegments);
+            $returnTotalTimeMins    = $returnMins + $calcLayoverMins($returnSegments);
+            $returnTotalTimeLabel   = $fmtMins($returnTotalTimeMins);
+ 
+            if (!empty($returnSegments[0]['departDT'])) {
+                $returnDateLabel = \Carbon\Carbon::parse($returnSegments[0]['departDT'])->format('D, d M');
+            }
+        }
+ 
+    // ── MULTI-CITY ────────────────────────────────────────────────────────────
+    // The revalidate API returns each leg in its OWN OriginDestinationOptions
+    // entry — unlike search() which puts all segments in one flat ODO[0].
+    // So we iterate the ODOs directly instead of splitting a flat list.
+    } elseif ($tripType === 'multi') {
+ 
+        $totalStops = 0;
+ 
+        foreach ($odos as $odoEntry) {
+ 
+            $odo = $odoEntry['OriginDestinationOption'] ?? [];
+            if (empty($odo)) continue;
+ 
+            $legSegs      = $mapSegments($odo);
+            $legFirst     = $legSegs[0]                         ?? [];
+            $legLast      = !empty($legSegs) ? end($legSegs)    : [];
+            $legMins      = array_sum(array_column($legSegs, 'duration'));
+            $legLayovers  = $calcLayovers($legSegs);
+            $legLayoverMs = $calcLayoverMins($legSegs);
+            $legTotalTime = $legMins + $legLayoverMs;
+            $legStops     = (int) ($odoEntry['TotalStops'] ?? max(0, count($odo) - 1));
+ 
+            $totalStops += $legStops;
+ 
+            $multiLegs[] = [
+                'segments'         => $legSegs,
+                'stops'            => $legStops,
+                'durationLabel'    => $fmtMins($legMins),
+                'layoverDurations' => $legLayovers,
+                'totalTimeMins'    => $legTotalTime,
+                'totalTimeLabel'   => $fmtMins($legTotalTime),
+                'departDateLabel'  => !empty($legFirst['departDT'])
+                                        ? \Carbon\Carbon::parse($legFirst['departDT'])->format('D, d M')
+                                        : '',
+                // ── Shortcut fields so the blade never digs into segments[] ──
+                'from'       => $legFirst['from']       ?? '',
+                'to'         => $legLast['to']          ?? '',
+                'fromCity'   => $legFirst['fromCity']   ?? ($legFirst['from'] ?? ''),
+                'toCity'     => $legLast['toCity']      ?? ($legLast['to']   ?? ''),
+                'departTime' => $legFirst['departTime'] ?? '',
+                'arriveTime' => $legLast['arriveTime']  ?? '',
+                'departDT'   => $legFirst['departDT']   ?? '',
+                'arriveDT'   => $legLast['arriveDT']    ?? '',
+            ];
+        }
+ 
+        // First leg drives the top-level outbound fields for the card header
+        //$segments         = $multiLegs[0]['segments'] ?? [];
+        $totalMins        = array_sum(array_column($segments, 'duration'));
+        $layoverDurations = $calcLayovers($segments);
+        $totalTimeMins    = $totalMins + $calcLayoverMins($segments);
+    }
+ 
+    // ── 6. Shared shortcuts ───────────────────────────────────────────────────
+    $firstSeg = $segments[0] ?? [];
+    $lastSeg  = !empty($segments) ? end($segments) : [];
+ 
+    // For multi-city: first seg of trip = multiLegs[0].segments[0]
+    //                 last  seg of trip = last segment of final leg
+    if ($tripType === 'multi' && !empty($multiLegs)) {
+        $firstSeg      = $multiLegs[0]['segments'][0] ?? [];
+        $lastMultiSegs = end($multiLegs)['segments']  ?? [];
+        $lastSeg       = !empty($lastMultiSegs) ? end($lastMultiSegs) : [];
+    }
+ 
+    $deptHour = (int) substr($firstSeg['departTime'] ?? '00:00', 0, 2);
+    $arrHour  = (int) substr($lastSeg['arriveTime']  ?? '00:00', 0, 2);
+ 
+    if (!empty($firstSeg['departDT'])) {
+        $departDateLabel = \Carbon\Carbon::parse($firstSeg['departDT'])->format('D, d M');
+    }
+ 
+    $validatingCode    = $fi['ValidatingAirlineCode'] ?? '';
+    $validatingAirline = $airlines->get($validatingCode);
+ 
+    // ── 7. Fare breakdown ─────────────────────────────────────────────────────
+    $breakdown = collect($fareInfo['FareBreakdown'] ?? [])->map(function ($fb) {
+        return [
+            'passengerType' => $fb['PassengerTypeQuantity']['Code'],
+            'qty'           => (int)   $fb['PassengerTypeQuantity']['Quantity'],
+            'baseFare'      => (float) $fb['PassengerFare']['BaseFare']['Amount'],
+            'totalFare'     => (float) $fb['PassengerFare']['TotalFare']['Amount'],
+            'currency'      => $fb['PassengerFare']['TotalFare']['CurrencyCode'],
+            'baggage'       => $fb['Baggage']      ?? [],
+            'cabinBaggage'  => $fb['CabinBaggage'] ?? [],
+            'taxes'         => $fb['PassengerFare']['Taxes'] ?? [],
+            'serviceTax'    => (float) ($fb['PassengerFare']['ServiceTax']['Amount'] ?? 0),
+            'surcharges'    => (float) ($fb['PassengerFare']['Surcharges']['Amount'] ?? 0),
+            'changeAllowed' => $fb['PenaltyDetails']['ChangeAllowed']       ?? false,
+            'changePenalty' => $fb['PenaltyDetails']['ChangePenaltyAmount'] ?? '0.00',
+            'refundAllowed' => $fb['PenaltyDetails']['RefundAllowed']       ?? false,
+            'refundPenalty' => $fb['PenaltyDetails']['RefundPenaltyAmount'] ?? '0.00',
+        ];
+    })->values()->toArray();
+ 
+    // ── 8. Assemble mapped flight ─────────────────────────────────────────────
+    $mappedFlight = [
+        'fareSourceCode'         => $fareInfo['FareSourceCode'],
+        'airline'                => $firstSeg['airline']     ?? '',
+        'airlineCode'            => $firstSeg['airlineCode'] ?? '',
+        'airlineLogo'            => $firstSeg['airlineLogo'] ?? '/assets/img/airlines/default.png',
+        'validatingCode'         => $validatingCode,
+        'validatingAirline'      => $validatingAirline['AirLineName'] ?? $validatingCode,
+        'validatingLogo'         => $validatingAirline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+        'cabin'                  => $firstSeg['cabin']     ?? '',
+        'cabinCode'              => $firstSeg['cabinCode'] ?? 'Y',
+        'stops'                  => $totalStops,
+        'price'                  => (float) $fareInfo['ItinTotalFares']['TotalFare']['Amount'],
+        'baseFare'               => (float) $fareInfo['ItinTotalFares']['BaseFare']['Amount'],
+        'totalTax'               => (float) ($fareInfo['ItinTotalFares']['TotalTax']['Amount'] ?? 0),
+        'currency'               => $fareInfo['ItinTotalFares']['TotalFare']['CurrencyCode'],
+        'isRefundable'           => strtolower($fareInfo['IsRefundable'] ?? 'no') === 'yes',
+        'fareType'               => $fareInfo['FareType']             ?? 'Public',
+        'ticketType'             => $fi['TicketType']                 ?? 'eTicket',
+        'isPassportMandatory'    => (bool) ($fi['IsPassportMandatory'] ?? false),
+        'directionInd'           => $tripType               ?? '',
+        'ticketAdvisory'         => trim($fi['TicketAdvisory']        ?? ''),
+        'segments'               => $segments,
+        'departTime'             => $firstSeg['departTime'] ?? '',
+        'arriveTime'             => $lastSeg['arriveTime']  ?? '',
+        'departDT'               => $firstSeg['departDT']   ?? '',
+        'arriveDT'               => $lastSeg['arriveDT']    ?? '',
+        'totalDuration'          => $totalMins,
+        'durationLabel'          => $fmtMins($totalMins),
+        'layoverDurations'       => $layoverDurations,
+        'departDateLabel'        => $departDateLabel,
+        'totalTimeMins'          => $totalTimeMins,
+        'totalTimeLabel'         => $fmtMins($totalTimeMins),
+        'returnSegments'         => $returnSegments,
+        'returnStops'            => $returnStops,
+        'returnDurationLabel'    => $returnDurationLabel,
+        'returnDateLabel'        => $returnDateLabel,
+        'returnLayoverDurations' => $returnLayoverDurations,
+        'returnTotalTimeMins'    => $returnTotalTimeMins,
+        'returnTotalTimeLabel'   => $returnTotalTimeLabel,
+        'multiLegs'              => $multiLegs,
+        'departSlot'             => $deptHour < 12 ? 'morning' : ($deptHour < 18 ? 'afternoon' : 'evening'),
+        'arrivalSlot'            => $arrHour  < 12 ? 'morning' : ($arrHour  < 18 ? 'afternoon' : 'evening'),
+        'fareBreakdown'          => $breakdown,
+    ];
+ 
+    // ── 9. Fetch extra services & fare rules ──────────────────────────────────
+    $extraResponse = Http::timeout(60)
+        ->post('https://travelnext.works/api/aeroVE5/extra_services', $payload);
+ 
+    if ($extraResponse->failed()) {
+        return back()->withErrors(['error' => 'Extra services fetch failed.']);
+    }
+ 
+    $fareRulesResponse = Http::timeout(60)
+        ->post('https://travelnext.works/api/aeroVE5/fare_rules', $payload);
+ 
+    if ($fareRulesResponse->failed()) {
+        return back()->withErrors(['error' => 'Fare rules fetch failed.']);
+    }
+ 
+    //dd($mappedFlight);
+    // ── 10. Store in session & redirect ──────────────────────────────────────
+    session([
+        'bookingFlight'       => $mappedFlight,
+        'bookingSessionId'    => $validated['session_id'],
+        'bookingSearchParams' => $searchParams,
+        'extraServices'       => $extraResponse->json(),
+        'fareRules'           => $fareRulesResponse->json(),
+        'tripType'            => $mappedFlight['directionInd'] ?? 'N/A',
+    ]);
+ 
+    return redirect()->route('flights.booking');
+}
 
     // =========================================================================
     //  booking() — show Livewire booking form

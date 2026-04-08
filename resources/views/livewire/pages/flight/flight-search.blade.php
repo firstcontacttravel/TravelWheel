@@ -438,7 +438,7 @@
                     </div>
                 </template>
             </div>
-            <button type="button" class="fw-add-leg-btn" style="margin-top:10px;" @click="addLeg">
+            <button type="button" class="fw-add-leg-btn" style="margin-top:10px;" @click="addLeg" :disabled="multiLegs.length >= 6">
                 + Add another flight
             </button>
         </div>
