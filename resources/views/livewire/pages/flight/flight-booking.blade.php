@@ -189,7 +189,7 @@
     /* Form grid */
     .bk-form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 16px 15px; }
     .bk-col-2    { grid-column: span 2; }
-    .bk-col-full { grid-column: 1 / -1; }
+    .bk-col-full { grid-column: 1 / -3; }
     .bk-col-half { grid-column: span 1; }
     .bk-field { display: flex; flex-direction: column; gap: 5px; }
     .bk-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gray-400); }
@@ -219,7 +219,7 @@
 
     /* ── Contact ── */
     .bk-contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .bk-contact-full { grid-column: 1 / -1; }
+    .bk-contact-full { grid-column: 3 / 3; }
 
     /* ── Seat selection (Image 3 style) ── */
     .bk-seat-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--gray-100); }
@@ -1282,12 +1282,14 @@
                                             wire:model.blur="contactEmailConfirm">
                                         @error('contactEmailConfirm') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
-                                    <div class="bk-field bk-contact-full">
-                                        <label class="bk-label">Mobile No <span class="bk-req"></span></label>
-                                        <input class="bk-input" type="tel" placeholder="+234 800 000 0000"
-                                                                                wire:model.blur="contactPhone">
-                                        <span class="bk-hint">without country code · e.g. 800 000 0000</span>
-                                        @error('contactPhone') <span class="bk-error">{{ $message }}</span> @enderror
+                                </div> 
+                                <div class="bk-contact-grid" style="margin-top:15px;"> 
+                                    <div class="bk-field">
+                                        <label class="bk-label">Country Dialling Code <span class="bk-req">*</span></label>
+                                        <input class="bk-input" type="text" placeholder="e.g. 234"
+                                                                                wire:model.blur="contactCountryCode">
+                                        <span class="bk-hint">Country code without + e.g. 234</span>
+                                        @error('contactCountryCode') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
                                     <div class="bk-field">
                                         <label class="bk-label">Area Code <span class="bk-req"></span></label>
@@ -1296,13 +1298,15 @@
                                         <span class="bk-hint">Local area code</span>
                                         @error('contactAreaCode') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
-                                    <div class="bk-field">
-                                        <label class="bk-label">Country Dialling Code <span class="bk-req">*</span></label>
-                                        <input class="bk-input" type="text" placeholder="e.g. 234"
-                                                                                wire:model.blur="contactCountryCode">
-                                        <span class="bk-hint">Country code without + e.g. 234</span>
-                                        @error('contactCountryCode') <span class="bk-error">{{ $message }}</span> @enderror
+                                    
+                                    <div class="bk-field bk-contact-full">
+                                        <label class="bk-label">Mobile No <span class="bk-req"></span></label>
+                                        <input class="bk-input" type="tel" placeholder="+234 800 000 0000"
+                                                                                wire:model.blur="contactPhone">
+                                        <span class="bk-hint">without country code · e.g. 800 000 0000</span>
+                                        @error('contactPhone') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
+                                    
                                 </div>
                             </div>
                         </div>
