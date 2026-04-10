@@ -36,14 +36,14 @@
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--navy:#0a1940;--blue:#1d4ed8;--blue-lt:#eff6ff;--blue-md:#bfdbfe;--green:#059669;--green-lt:#f0fdf4;--amber:#d97706;--amber-lt:#fff7ed;--red:#dc2626;--red-lt:#fef2f2;--gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;--gray-300:#cbd5e1;--gray-400:#94a3b8;--gray-500:#64748b;--gray-700:#334155;--gray-900:#0f172a;--font:'Plus Jakarta Sans',sans-serif;--mono:'DM Mono',monospace}
     body{font-family:var(--font);background:var(--gray-50);color:var(--gray-900);font-size:14px;margin-top:110px}
-    .po-wrap{max-width:1100px;margin:0 auto;padding:28px 16px 80px}
+    .po-wrap{max-width:1100px;margin:0 auto;padding:28px 16px 80px} 
     /* Hold banner */
-    .po-hold-banner{background:linear-gradient(135deg,#78350f 0%,#d97706 100%);color:#fff;border-radius:14px;padding:22px 28px;margin-bottom:24px;display:flex;align-items:flex-start;gap:18px}
+    .po-hold-banner{background: linear-gradient(135deg, var(--navy) 0%, #1e3a8a 100%);color:#fff;border-radius:14px;padding:22px 28px;margin-bottom:24px;display:flex;align-items:flex-start;gap:18px}
     .po-hold-icon{font-size:36px;flex-shrink:0}
-    .po-hold-title{font-size:18px;font-weight:800;margin-bottom:4px}
-    .po-hold-sub{font-size:13px;opacity:.9;line-height:1.6}
-    .po-hold-ref{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:7px 14px;background:rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:700;font-family:var(--mono)}
-    .po-hold-deadline{display:inline-flex;align-items:center;gap:6px;margin-top:8px;margin-left:8px;padding:7px 14px;background:rgba(255,255,255,.12);border-radius:8px;font-size:12px;font-weight:600}
+    .po-hold-title{font-size:18px;font-weight:800;color:#ffffff; margin-bottom:4px}
+    .po-hold-sub{font-size:13px;opacity:.9;color:#ffffff;line-height:1.6}
+    .po-hold-ref{display:inline-flex;align-items:center;gap:8px;margin-top:10px;padding:7px 14px;background:#ffffff;border-radius:8px;font-size:13px;font-weight:700;font-family:var(--mono)}
+    .po-hold-deadline{display:inline-flex;align-items:center;gap:6px;margin-top:8px;margin-left:8px;padding:7px 14px;background:#ffffff;border-radius:8px;font-size:12px;font-weight:600}
     /* Layout */
     .po-grid{display:grid;grid-template-columns:1fr 320px;gap:22px;align-items:start}
     .po-main{display:flex;flex-direction:column;gap:16px}
@@ -114,7 +114,7 @@
         <div style="flex:1">
             <div class="po-hold-title">Your seat is reserved — complete payment to confirm your ticket</div>
             <div class="po-hold-sub">
-                Your booking is currently <strong>on hold</strong>. Your seats are secured and waiting. 
+                Your booking is currently <strong style="color:#ffffff;">on hold</strong>. Your seats are secured and waiting. 
                 Complete your payment before the deadline to have your e-ticket issued immediately.
             </div>
             <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;">
