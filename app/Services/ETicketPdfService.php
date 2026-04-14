@@ -1,0 +1,125 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Booking;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
+class ETicketPdfService
+{
+    /**
+     * Generate the e-ticket PDF for a booking and return the raw PDF bytes.
+     *
+     * @param  Booking  $booking    Eloquent model (must have relations loaded)
+     * @param  array    $tripDetails  Live data from the trip_details API call
+     * @return string   Raw PDF binary string
+     */
+    public function generate(Booking $booking, array $tripDetails = []): string
+    {
+        $data = $this->buildViewData($booking, $tripDetails);
+
+        $pdf = Pdf::loadView('pdf.eticket', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont'     => 'DejaVu Sans',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => false,   // set true only if you embed remote images
+                'dpi'             => 150,
+            ]);
+
+        return $pdf->output();
+    }
+
+    /**
+     * Generate the PDF and store it to disk, returning the storage path.
+     *
+     * @param  Booking  $booking
+     * @param  array    $tripDetails
+     * @param  string   $disk   Storage disk name (default: 'local')
+     * @return string   Storage path, e.g. "etickets/TW-2025-84721.pdf"
+     */
+    public function store(Booking $booking, array $tripDetails = [], string $disk = 'local'): string
+    {
+        $bytes = $this->generate($booking, $tripDetails);
+        $path  = 'etickets/' . $booking->booking_ref . '.pdf';
+
+        Storage::disk($disk)->put($path, $bytes);
+
+        return $path;
+    }
+
+    /**
+     * Build the view-data array that the Blade template expects.
+     */
+    public function buildViewData(Booking $booking, array $tripDetails): array
+    {
+        // ── Session / booking fields ──────────────────────────────────────
+        $mf          = $booking->flight_data ?? [];
+        $passengers  = $booking->passengers ?? [];   // cast to array in model
+        $contact     = $booking->contact ?? [];
+        $breakdown   = $mf['fareBreakdown'] ?? $mf['fare_breakdown'] ?? [];
+        $currency    = $mf['currency'] ?? 'NGN';
+        $sym         = match ($currency) {
+            'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency . ' '
+        };
+
+        // ── Trip details (live from API) ──────────────────────────────────
+        $ticketStatus  = strtoupper($tripDetails['TicketStatus']  ?? '');
+        $bookingStatus = strtoupper($tripDetails['BookingStatus'] ?? 'CONFIRMED');
+        $isTicketed    = $ticketStatus === 'TICKETED';
+
+        // Build e-ticket map from CustomerInfos
+        $customerInfos = collect(
+            data_get($tripDetails, 'ItineraryInfo.CustomerInfos', [])
+        )->map(fn($c) => $c['CustomerInfo'] ?? $c);
+
+        // Enrich passenger records with eticket numbers
+        $passengers = collect($passengers)->map(function ($pax, $i) use ($customerInfos) {
+            $info = $customerInfos->get($i, []);
+            return array_merge($pax, [
+                'eticket' => $info['eTicketNumber'] ?? null,
+            ]);
+        })->all();
+
+        // ── Segments ──────────────────────────────────────────────────────
+        $outboundSegments = $mf['segments']        ?? [];
+        $returnSegments   = $mf['returnSegments']  ?? [];
+        $multiLegs        = $mf['multiLegs']       ?? [];
+
+        $isReturn = count($returnSegments) > 0;
+        $isMulti  = count($multiLegs) > 0;
+        $tripLabel = $isReturn ? 'Round Trip' : ($isMulti ? 'Multi-City' : 'One Way');
+
+        return [
+            // Meta
+            'bookingRef'       => $booking->booking_ref,
+            'uniqueId'         => $booking->api_ref ?? '',
+            'tripLabel'        => $tripLabel,
+            'airline'          => $mf['airline'] ?? '',
+            'cabin'            => $mf['cabin']   ?? 'Economy',
+            'isTicketed'       => $isTicketed,
+            'bookingStatus'    => $bookingStatus,
+            'ticketStatus'     => $ticketStatus,
+
+            // Segments
+            'outboundSegments' => $outboundSegments,
+            'returnSegments'   => $returnSegments,
+            'multiLegs'        => $multiLegs,
+
+            // People
+            'passengers'       => $passengers,
+
+            // Contact
+            'contactEmail'     => $contact['email'] ?? $booking->contact_email ?? '',
+            'contactPhone'     => $contact['phone'] ?? $booking->contact_phone ?? '',
+
+            // Fare
+            'fareBreakdown'    => $breakdown,
+            'totalAmount'      => (float) ($mf['price'] ?? $booking->total_amount ?? 0),
+            'currencySymbol'   => $sym,
+            'paymentMethod'    => $booking->payment_method ?? 'gateway',
+        ];
+    }
+}

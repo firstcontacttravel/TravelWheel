@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use app\jobs\SendETicketJob;
 
 class FlightBookingController extends Controller
 {
@@ -1052,25 +1053,48 @@ class FlightBookingController extends Controller
         ], $overrides));
     }
 
-    private function _sendConfirmedEmail(FlightBooking $booking): void
+    private function _sendConfirmedEmail(FlightBooking $booking, array $tripDetails = []): void
     {
-        if ($booking->confirmation_email_sent || empty($booking->contact_email)) return;
+        if ($booking->confirmation_email_sent || empty($booking->contact_email)) {
+            return;
+        }
+ 
+        // Fetch trip details from the API if the caller didn't supply them.
+        // _callTripDetailsApi() already handles errors gracefully (returns []).
+        if (empty($tripDetails) && !empty($booking->unique_id)) {
+            $tripDetails = $this->_callTripDetailsApi($booking->unique_id);
+        }
+ 
         try {
-            Mail::to($booking->contact_email)->send(new BookingConfirmedMail($booking));
+            // Dispatch to the queue — PDF generation is CPU-heavy, keep it async.
+            SendETicketJob::dispatch($booking, $tripDetails);
+ 
+            // Mark as sent immediately so concurrent requests don't double-send.
             $booking->update(['confirmation_email_sent' => true]);
         } catch (\Throwable $e) {
-            Log::error('BookingConfirmedMail failed', ['id' => $booking->id, 'err' => $e->getMessage()]);
+            Log::error('_sendConfirmedEmail: failed to dispatch SendETicketJob', [
+                'booking_ref' => $booking->booking_ref,
+                'error'       => $e->getMessage(),
+            ]);
         }
     }
 
     private function _sendPendingEmail(FlightBooking $booking, string $method = 'bank_transfer'): void
     {
-        if ($booking->pending_email_sent || empty($booking->contact_email)) return;
+        if ($booking->pending_email_sent || empty($booking->contact_email)) {
+            return;
+        }
+ 
         try {
-            Mail::to($booking->contact_email)->send(new BookingPendingMail($booking, $method));
+            Mail::to($booking->contact_email)
+                ->send(new BookingPendingMail($booking, $method));
+ 
             $booking->update(['pending_email_sent' => true]);
         } catch (\Throwable $e) {
-            Log::error('BookingPendingMail failed', ['id' => $booking->id, 'err' => $e->getMessage()]);
+            Log::error('BookingPendingMail failed', [
+                'booking_ref' => $booking->booking_ref,
+                'error'       => $e->getMessage(),
+            ]);
         }
     }
 

@@ -78,7 +78,7 @@
                 </div>
                 <div class="pc-body" style="padding:14px 20px 4px;">
                     @foreach([
-                        ['done',    '✓', 'Booking Created',          'Your seats are reserved with the airline. Ref: '.$uniqueId],
+                        ['done',    '✓', 'Booking Created',          'Your seats are reserved with the airline. Ref: '.$bookingRef],
                         ['done',    '✓', 'Payment Notified',         'You\'ve confirmed your bank transfer.'],
                         ['current', '⏳','Payment Verification',      'Our team is verifying your transfer. Expected: 2–4 business hours (Mon–Fri 8am–6pm).'],
                         ['pending', '4', 'E-Ticket Issued',           'Your ticket will be emailed to '.($contact['email']??'you').' immediately after verification.'],
@@ -244,7 +244,7 @@
                 <div style="font-size:12.5px;color:var(--gray-500);line-height:1.65;">
                     📧 <a href="mailto:support@travelwheel.com" style="color:var(--blue);font-weight:600;">support@travelwheel.com</a><br>
                     📞 <strong>+234 800 000 0000</strong><br>
-                    Quote: <strong style="font-family:var(--mono);color:var(--navy);">{{ $uniqueId }}</strong>
+                    Quote: <strong style="font-family:var(--mono);color:var(--navy);">{{ $bookingRef }}</strong>
                 </div>
             </div>
         </aside>
