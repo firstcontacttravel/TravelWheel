@@ -2,25 +2,40 @@
 
 namespace App\Services;
 
-use App\Models\Booking;
+use App\Models\FlightBooking;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class ETicketPdfService
 {
     /**
      * Generate the e-ticket PDF for a booking and return the raw PDF bytes.
      *
-     * @param  Booking  $booking    Eloquent model (must have relations loaded)
+    * @param  FlightBooking  $booking    Eloquent model (must have relations loaded)
      * @param  array    $tripDetails  Live data from the trip_details API call
      * @return string   Raw PDF binary string
      */
-    public function generate(Booking $booking, array $tripDetails = []): string
+    public function generate(FlightBooking $booking, array $tripDetails = [], string $view = 'pdf.eticket'): string
     {
+        Log::info('[ETicketPdfService] generate start', [
+            'booking_id'       => $booking->id,
+            'booking_ref'      => $booking->booking_ref,
+            'trip_details_key' => array_keys($tripDetails),
+            'view'             => $view,
+        ]);
+
         $data = $this->buildViewData($booking, $tripDetails);
 
-        $pdf = Pdf::loadView('pdf.eticket', $data)
+        Log::info('[ETicketPdfService] view data built', [
+            'booking_ref'    => $booking->booking_ref,
+            'passengers'     => count($data['passengers'] ?? []),
+            'outbound_count' => count($data['outboundSegments'] ?? []),
+            'return_count'   => count($data['returnSegments'] ?? []),
+            'multi_legs'     => count($data['multiLegs'] ?? []),
+        ]);
+
+        $pdf = Pdf::loadView($view, $data)
             ->setPaper('a4', 'portrait')
             ->setOptions([
                 'defaultFont'     => 'DejaVu Sans',
@@ -29,18 +44,25 @@ class ETicketPdfService
                 'dpi'             => 150,
             ]);
 
-        return $pdf->output();
+        $bytes = $pdf->output();
+
+        Log::info('[ETicketPdfService] generate complete', [
+            'booking_ref' => $booking->booking_ref,
+            'size_bytes'  => strlen($bytes),
+        ]);
+
+        return $bytes;
     }
 
     /**
      * Generate the PDF and store it to disk, returning the storage path.
      *
-     * @param  Booking  $booking
+    * @param  FlightBooking  $booking
      * @param  array    $tripDetails
      * @param  string   $disk   Storage disk name (default: 'local')
      * @return string   Storage path, e.g. "etickets/TW-2025-84721.pdf"
      */
-    public function store(Booking $booking, array $tripDetails = [], string $disk = 'local'): string
+    public function store(FlightBooking $booking, array $tripDetails = [], string $disk = 'local'): string
     {
         $bytes = $this->generate($booking, $tripDetails);
         $path  = 'etickets/' . $booking->booking_ref . '.pdf';
@@ -53,12 +75,15 @@ class ETicketPdfService
     /**
      * Build the view-data array that the Blade template expects.
      */
-    public function buildViewData(Booking $booking, array $tripDetails): array
+    public function buildViewData(FlightBooking $booking, array $tripDetails): array
     {
         // ── Session / booking fields ──────────────────────────────────────
-        $mf          = $booking->flight_data ?? [];
-        $passengers  = $booking->passengers ?? [];   // cast to array in model
-        $contact     = $booking->contact ?? [];
+        $mf          = $booking->flight_snapshot ?? [];
+        $passengers  = $booking->passengers_snapshot ?? [];   // cast to array in model
+        $contact     = [
+            'email' => $booking->contact_email,
+            'phone' => $booking->contact_phone,
+        ];
         $breakdown   = $mf['fareBreakdown'] ?? $mf['fare_breakdown'] ?? [];
         $currency    = $mf['currency'] ?? 'NGN';
         $sym         = match ($currency) {
@@ -95,7 +120,7 @@ class ETicketPdfService
         return [
             // Meta
             'bookingRef'       => $booking->booking_ref,
-            'uniqueId'         => $booking->api_ref ?? '',
+            'uniqueId'         => $booking->unique_id ?? '',
             'tripLabel'        => $tripLabel,
             'airline'          => $mf['airline'] ?? '',
             'cabin'            => $mf['cabin']   ?? 'Economy',
@@ -117,7 +142,7 @@ class ETicketPdfService
 
             // Fare
             'fareBreakdown'    => $breakdown,
-            'totalAmount'      => (float) ($mf['price'] ?? $booking->total_amount ?? 0),
+            'totalAmount'      => (float) ($mf['price'] ?? $booking->total_price ?? 0),
             'currencySymbol'   => $sym,
             'paymentMethod'    => $booking->payment_method ?? 'gateway',
         ];

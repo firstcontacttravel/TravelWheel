@@ -124,6 +124,11 @@
                     Ref: {{ $uniqueId }}
                 </div>
                 @endif
+                @if(!empty($bookingRef))
+                <div class="po-hold-deadline">
+                    Booking Ref: {{ $bookingRef }}
+                </div>
+                @endif
                 @if($tktFormatted)
                 <div class="po-hold-deadline">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="6" x2="12" y2="12"/><line x1="16" y1="14" x2="12" y2="12"/></svg>
@@ -343,9 +348,15 @@
                     <span class="po-rail-val" style="font-family:var(--font)">{{ count($poMultiLegs) }} flights</span>
                 </div>
                 @endif
-                    @if($uniqueId)
+                    @if(!empty($bookingRef))
                     <div class="po-rail-row">
                         <span class="po-rail-lbl">Booking Ref</span>
+                        <span class="po-rail-val" style="color:var(--blue)">{{ $bookingRef }}</span>
+                    </div>
+                    @endif
+                    @if($uniqueId)
+                    <div class="po-rail-row">
+                        <span class="po-rail-lbl">Hold Ref</span>
                         <span class="po-rail-val" style="color:var(--blue)">{{ $uniqueId }}</span>
                     </div>
                     @endif

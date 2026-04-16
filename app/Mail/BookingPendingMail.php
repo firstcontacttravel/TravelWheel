@@ -8,42 +8,55 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\URL;
 
-/**
- * Sent when a booking is on hold, awaiting bank-transfer verification.
- * No PDF attachment — ticket hasn't been issued yet.
- * The e-ticket PDF email (BookingConfirmedMail) is sent once payment is verified
- * and ticket_order succeeds.
- */
 class BookingPendingMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public function __construct(
-        public readonly FlightBooking $booking,
-        public readonly string        $paymentMethod = 'bank_transfer',
-    ) {}
+        public FlightBooking $booking,
+        public string $method = 'bank_transfer'
+    )
+    {
+        \Log::info('BookingPendingMail instantiated', [
+            'booking_id' => $booking->id ?? null,
+            'method' => $method
+        ]);
+    }
 
     public function envelope(): Envelope
     {
+        \Log::info('BookingPendingMail envelope method called');
+        
         return new Envelope(
-            subject: '📬 Booking On Hold — ' . $this->booking->booking_ref . ' | TravelWheel',
+            subject: 'Booking Pending - ' . ($this->booking->booking_ref ?? 'N/A'),
         );
     }
 
     public function content(): Content
     {
+        \Log::info('BookingPendingMail content method called');
+
+        $resumePaymentUrl = null;
+
+        if ($this->booking->booking_ref && $this->booking->booking_status === 'on_hold') {
+            $resumePaymentUrl = URL::temporarySignedRoute(
+                'flights.payment.options.resume',
+                $this->booking->tkt_time_limit ?? now()->addDays(7),
+                ['bookingRef' => $this->booking->booking_ref]
+            );
+        }
+        
         return new Content(
             view: 'emails.booking-pending',
             with: [
-                'booking'       => $this->booking,
-                'paymentMethod' => $this->paymentMethod,
+                'booking' => $this->booking,
+                'paymentMethod' => $this->method,
+                'resumePaymentUrl' => $resumePaymentUrl,
+                'isHoldNotice' => $this->method === 'hold',
+                'isBankTransferNotice' => $this->method === 'bank_transfer',
             ],
         );
-    }
-
-    public function attachments(): array
-    {
-        return []; // No PDF until ticket is issued
     }
 }

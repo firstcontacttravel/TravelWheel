@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Mail\ETicketMail;
-use App\Models\Booking;
+use App\Models\FlightBooking;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -20,15 +20,13 @@ class SendETicketJob implements ShouldQueue
     public int $backoff = 60; // seconds between retries
 
     public function __construct(
-        public readonly Booking $booking,
+        public readonly FlightBooking $booking,
         public readonly array   $tripDetails = [],
     ) {}
 
     public function handle(): void
     {
-        $email = $this->booking->contact['email']
-            ?? $this->booking->contact_email
-            ?? null;
+        $email = $this->booking->contact_email ?: null;
 
         if (!$email) {
             Log::warning('[ETicket] No contact email for booking', [

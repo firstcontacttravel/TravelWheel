@@ -19,6 +19,34 @@
             $tktHours = max(0, (int) now()->diffInHours($td, false));
         } catch (\Throwable) {}
     }
+
+    $resumePaymentUrl = $resumePaymentUrl ?? null;
+    $paymentMethod = $paymentMethod ?? ($method ?? 'bank_transfer');
+    $isHoldNotice = $isHoldNotice ?? false;
+    $isBankTransferNotice = $isBankTransferNotice ?? false;
+    if (! $isHoldNotice && ! $isBankTransferNotice) {
+        $isHoldNotice = $paymentMethod === 'hold';
+        $isBankTransferNotice = $paymentMethod === 'bank_transfer';
+    }
+    $headline = $isHoldNotice ? 'Your Booking is On Hold' : 'Your Payment is Being Verified';
+    $subhead = $isHoldNotice
+        ? 'Your seat is reserved while you complete payment'
+        : 'Payment received - our team is reviewing your transfer';
+    $intro = $isHoldNotice
+        ? "Thank you for choosing TravelWheel. Your seat has been booked on hold with the airline, and your reservation is waiting for payment. Use the secure link below to continue payment before the hold deadline."
+        : "Thank you for choosing TravelWheel. We've received your payment notification and your booking is currently on hold with the airline while our team verifies your transfer.";
+    $statusRows = $isHoldNotice
+        ? [
+            ['done', '1', 'Seat Held', 'Your booking has been placed on hold with the airline.'],
+            ['current', '2', 'Payment Pending', 'Complete payment online or by bank transfer before the deadline below.'],
+            ['pending', '3', 'E-Ticket Issued', 'Your ticket will be sent to ' . $booking->contact_email . ' once payment is confirmed.'],
+        ]
+        : [
+            ['done', '1', 'Booking Created', 'Your seats are reserved. Ref: ' . $booking->booking_ref],
+            ['done', '2', 'Payment Notified', "You've confirmed that payment was made."],
+            ['current', '3', 'Verification in Progress', 'Our team is checking your payment. Expected turnaround: 2-4 business hours.'],
+            ['pending', '4', 'E-Ticket Issued', 'Your ticket will be emailed to ' . $booking->contact_email . ' immediately after verification.'],
+        ];
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -45,6 +73,9 @@
     .deadline-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 18px;margin:18px 0}
     .deadline-title{font-size:13px;font-weight:800;color:#92400e;margin-bottom:4px}
     .deadline-sub{font-size:12px;color:#78350f;line-height:1.6}
+    .btn-wrap{text-align:center;margin:24px 0 8px}
+    .btn{display:inline-block;padding:13px 22px;border-radius:10px;background:#0f172a;color:#ffffff!important;text-decoration:none;font-size:13px;font-weight:800}
+    .disclaimer{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 18px;margin:18px 0;font-size:12px;color:#78350f;line-height:1.7}
     .footer{background:#f8fafc;padding:20px 32px;text-align:center;border-top:1px solid #f1f5f9;font-size:12px;color:#94a3b8}
     .footer a{color:#1d4ed8;text-decoration:none}
 </style>
@@ -54,17 +85,14 @@
 
     <div class="header">
         <div class="header-icon">📬</div>
-        <div class="header-title">Your Booking is On Hold</div>
-        <div class="header-sub">Payment received — we're verifying your transfer</div>
+        <div class="header-title">{{ $headline }}</div>
+        <div class="header-sub">{{ $subhead }}</div>
     </div>
 
     <div class="body">
         <p style="font-size:14px;line-height:1.7;margin-bottom:20px;color:#334155">
             Hi <strong>{{ $firstName }}</strong>,<br><br>
-            Thank you for choosing TravelWheel. We've received your payment notification and
-            your booking is currently <strong>on hold</strong> with the airline.
-            Our team is verifying your bank transfer and will issue your e-ticket
-            within <strong>2–4 business hours</strong>.
+            {{ $intro }}
         </p>
 
         <div class="ref-box">
@@ -79,30 +107,39 @@
             <tr><td>Cabin</td><td>{{ $booking->cabin }}</td></tr>
             <tr><td>Fare Type</td><td>{{ $booking->fare_type }}</td></tr>
             <tr><td>Total Amount</td><td style="color:#0a1940">{{ $price }}</td></tr>
-            <tr><td>Payment Method</td><td>Bank Transfer</td></tr>
+            <tr><td>Hold Reference</td><td>{{ $booking->unique_id ?: 'N/A' }}</td></tr>
+            <tr><td>Payment Method</td><td>{{ $isBankTransferNotice ? 'Bank Transfer' : 'Online or Bank Transfer' }}</td></tr>
         </table>
 
         @if($tktFmt)
         <div class="deadline-box">
-            <div class="deadline-title">⏰ Ticketing Deadline</div>
+            <div class="deadline-title">Ticketing Deadline</div>
             <div class="deadline-sub">
                 Your booking hold expires on <strong>{{ $tktFmt }}</strong>
                 ({{ $tktHours }} hour{{ $tktHours === 1 ? '' : 's' }} remaining).
-                Please ensure your payment clears before this time.
+                Please ensure payment is completed before this time.
             </div>
         </div>
         @endif
+
+        @if($resumePaymentUrl)
+        <div class="btn-wrap">
+            <a href="{{ $resumePaymentUrl }}" class="btn">Continue Payment</a>
+        </div>
+        <p style="font-size:12px;color:#64748b;line-height:1.7;text-align:center;margin-bottom:0">
+            You can use this link later to return directly to your payment options.
+        </p>
+        @endif
+
+        <div class="disclaimer">
+            Your reservation is held subject to airline rules and availability. It can be canceled at the discretion of the airline on or before the due date.
+        </div>
 
         <div class="section-title">What Happens Next</div>
 
         {{-- Steps rendered as a table for email-client compatibility --}}
         <table width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0">
-            @foreach([
-                ['done',    '✓', 'Booking Created',               'Your seats are reserved. Ref: ' . $booking->booking_ref],
-                ['done',    '✓', 'Payment Notified',              'You\'ve confirmed that bank transfer was made.'],
-                ['current', '⏳','Payment Verification (In Progress)', 'Our team is verifying your transfer. Expected: 2–4 business hours.'],
-                ['pending', '4', 'E-Ticket Issued',               'Your ticket will be emailed to ' . $booking->contact_email . ' immediately after verification.'],
-            ] as [$state, $icon, $title, $sub])
+            @foreach($statusRows as [$state, $icon, $title, $sub])
             <tr style="margin-bottom:14px">
                 <td style="width:36px;vertical-align:top;padding:0 12px 14px 0">
                     <div style="
@@ -122,7 +159,7 @@
 
         <p style="font-size:13px;color:#64748b;line-height:1.7;margin-top:16px">
             <strong>Need help?</strong> Our team is available Mon–Fri 8am–6pm WAT.<br>
-            Email: <a href="mailto:support@travelwheel.com">support@travelwheel.com</a>
+            Email: <a href="mailto:support@travelwheel.ng">support@travelwheel.ng</a>
             | Phone: +234 800 000 0000<br>
             Always quote your booking reference: <strong>{{ $booking->booking_ref }}</strong>
         </p>

@@ -50,6 +50,8 @@ Route::post('/flights/book', [FlightBookingController::class, 'book'])
      
     // Non-LCC: 3-option payment page (booking already on hold)
     Route::get( '/flights/payment/options',         [FlightBookingController::class, 'paymentOptions'])->name('flights.payment.options');
+    Route::get('/flights/payment/options/resume/{bookingRef}', [FlightBookingController::class, 'resumePaymentOptions'])
+        ->name('flights.payment.options.resume');
      
     // Non-LCC: Bank transfer — user clicks "I have paid"
     Route::post('/flights/payment/bank-transfer',   [FlightBookingController::class, 'bankTransferNotify'])->name('flights.payment.bank-transfer');

@@ -108,8 +108,8 @@
                 @foreach([
                     ['&#9992;', 'Check-in', 'Arrive 2 hrs before domestic, 3 hrs before international flights.'],
                     ['&#128282;', 'Valid ID', 'Carry a valid photo ID or passport. Names must match your ticket exactly.'],
-                    ['&#128123;', 'Baggage', 'Check your airline's baggage allowance. Excess fees apply at the airport.'],
-                    ['&#128241;', 'Online Check-in', 'Opens 24–48 hours before departure on your airline's website.'],
+                    ['&#128123;', 'Baggage', "Check your airline's baggage allowance. Excess fees apply at the airport."],
+                    ['&#128241;', 'Online Check-in', "Opens 24–48 hours before departure on your airline's website."],
                 ] as [$icon, $title, $text])
                 <tr>
                     <td style="padding:6px 0;vertical-align:top;width:24px;font-size:16px;">{{ $icon }}</td>

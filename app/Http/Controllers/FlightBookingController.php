@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\BookingConfirmedMail;
 use App\Mail\BookingPendingMail;
+use App\Mail\ETicketMail;
 use App\Models\FlightBooking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use app\jobs\SendETicketJob;
 
 class FlightBookingController extends Controller
 {
@@ -458,6 +457,8 @@ class FlightBookingController extends Controller
             'flightBookingDbId'   => $dbBooking->id,
         ]);
 
+        $this->_sendPendingEmail($dbBooking, 'hold');
+
         return redirect()->route('flights.payment.options');
     }
 
@@ -549,15 +550,55 @@ class FlightBookingController extends Controller
 
         $bookingFlight = session('bookingFlight', []);
         $mappedFlight  = $bookingFlight['flight'] ?? $bookingFlight;
+        $bookingRef    = session('bookingRef', '');
 
         return view('livewire.pages.flight.flight-payment-options', [
             'flight'       => $mappedFlight,
             'uniqueId'     => session('bookingUniqueId'),
+            'bookingRef'   => $bookingRef,
             'tktTimeLimit' => session('bookingTktTimeLimit'),
             'contact'      => session('bookingContact', []),
             'passengers'   => session('bookingPassengers', []),
             'dbId'         => session('flightBookingDbId'),
         ]);
+    }
+
+    // =========================================================================
+    //  resumePaymentOptions() - Restore a held booking from email and reopen payment options
+    // =========================================================================
+    public function resumePaymentOptions(Request $request, string $bookingRef)
+    {
+        $booking = FlightBooking::where('booking_ref', $bookingRef)->firstOrFail();
+
+        if (! $request->hasValidSignature()) {
+            abort(403);
+        }
+
+        if (empty($booking->unique_id)) {
+            return redirect()->route('air.flight-s')->withErrors([
+                'error' => 'This booking cannot be resumed because no hold reference was found.',
+            ]);
+        }
+
+        if ($booking->ticket_ordered || $booking->booking_status === 'ticketed') {
+            $this->_primeBookingSession($booking);
+            session([
+                'paymentMethod' => $booking->payment_method,
+                'bookingStatus' => strtoupper((string) $booking->booking_status),
+            ]);
+
+            return redirect()->route('flights.confirmation');
+        }
+
+        if ($booking->tkt_time_limit && now()->greaterThan($booking->tkt_time_limit)) {
+            return redirect()->route('air.flight-s')->withErrors([
+                'error' => 'This booking hold has already expired. Please search again for a fresh fare.',
+            ]);
+        }
+
+        $this->_primeBookingSession($booking);
+
+        return redirect()->route('flights.payment.options');
     }
 
     // =========================================================================
@@ -1055,47 +1096,120 @@ class FlightBookingController extends Controller
 
     private function _sendConfirmedEmail(FlightBooking $booking, array $tripDetails = []): void
     {
-        if ($booking->confirmation_email_sent || empty($booking->contact_email)) {
+        if ($booking->confirmation_email_sent) {
+            Log::info('_sendConfirmedEmail: skipped (already sent)', [
+                'booking_id'  => $booking->id,
+                'booking_ref' => $booking->booking_ref,
+            ]);
             return;
         }
+
+        if (empty($booking->contact_email)) {
+            Log::warning('_sendConfirmedEmail: skipped (missing contact_email)', [
+                'booking_id'  => $booking->id,
+                'booking_ref' => $booking->booking_ref,
+            ]);
+            return;
+        }
+
+        Log::info('_sendConfirmedEmail: start', [
+            'booking_id'       => $booking->id,
+            'booking_ref'      => $booking->booking_ref,
+            'recipient'        => $booking->contact_email,
+            'mail_default'     => config('mail.default'),
+            'mail_from'        => config('mail.from.address'),
+            'has_trip_details' => !empty($tripDetails),
+            'has_unique_id'    => !empty($booking->unique_id),
+        ]);
  
         // Fetch trip details from the API if the caller didn't supply them.
         // _callTripDetailsApi() already handles errors gracefully (returns []).
         if (empty($tripDetails) && !empty($booking->unique_id)) {
+            Log::info('_sendConfirmedEmail: fetching trip details', [
+                'booking_ref' => $booking->booking_ref,
+                'unique_id'   => $booking->unique_id,
+            ]);
             $tripDetails = $this->_callTripDetailsApi($booking->unique_id);
+
+            Log::info('_sendConfirmedEmail: trip details fetched', [
+                'booking_ref'       => $booking->booking_ref,
+                'trip_details_keys' => array_keys($tripDetails),
+            ]);
         }
  
         try {
-            // Dispatch to the queue — PDF generation is CPU-heavy, keep it async.
-            SendETicketJob::dispatch($booking, $tripDetails);
- 
-            // Mark as sent immediately so concurrent requests don't double-send.
-            $booking->update(['confirmation_email_sent' => true]);
-        } catch (\Throwable $e) {
-            Log::error('_sendConfirmedEmail: failed to dispatch SendETicketJob', [
+            Log::info('_sendConfirmedEmail: sending ETicketMail', [
                 'booking_ref' => $booking->booking_ref,
+                'recipient'   => $booking->contact_email,
+            ]);
+
+            Mail::to($booking->contact_email)->send(
+                new ETicketMail($booking, $tripDetails)
+            );
+
+            $booking->update(['confirmation_email_sent' => true]);
+
+            Log::info('_sendConfirmedEmail: mail sent successfully', [
+                'booking_id'  => $booking->id,
+                'booking_ref' => $booking->booking_ref,
+                'recipient'   => $booking->contact_email,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('_sendConfirmedEmail: failed to send ETicketMail', [
+                'booking_id'  => $booking->id,
+                'booking_ref' => $booking->booking_ref,
+                'recipient'   => $booking->contact_email,
                 'error'       => $e->getMessage(),
+                'exception'   => get_class($e),
+                'trace'       => $e->getTraceAsString(),
             ]);
         }
     }
 
     private function _sendPendingEmail(FlightBooking $booking, string $method = 'bank_transfer'): void
     {
-        if ($booking->pending_email_sent || empty($booking->contact_email)) {
-            return;
-        }
- 
         try {
+            \Log::info('Attempting to send pending email', [
+                'booking_id' => $booking->id,
+                'email' => $booking->contact_email,
+                'method' => $method
+            ]);
+    
             Mail::to($booking->contact_email)
                 ->send(new BookingPendingMail($booking, $method));
- 
-            $booking->update(['pending_email_sent' => true]);
-        } catch (\Throwable $e) {
-            Log::error('BookingPendingMail failed', [
-                'booking_ref' => $booking->booking_ref,
-                'error'       => $e->getMessage(),
+    
+            \Log::info('Pending email sent successfully', [
+                'booking_id' => $booking->id
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to send pending email', [
+                'booking_id' => $booking->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
         }
+    }
+
+    private function _primeBookingSession(FlightBooking $booking): void
+    {
+        $flight = $booking->flight_snapshot ?? [];
+        $contact = [
+            'email' => $booking->contact_email,
+            'phone' => $booking->contact_phone,
+        ];
+        $passengers = $booking->passengers_snapshot ?? [];
+
+        session([
+            'bookingFlight'      => ['flight' => $flight],
+            'bookingContact'     => $contact,
+            'bookingPassengers'  => $passengers,
+            'bookingUniqueId'    => $booking->unique_id,
+            'bookingRef'         => $booking->booking_ref,
+            'bookingTktTimeLimit'=> optional($booking->tkt_time_limit)->toIso8601String(),
+            'bookingStatus'      => strtoupper((string) $booking->booking_status),
+            'flightBookingDbId'  => $booking->id,
+            'tripType'           => $booking->trip_type,
+        ]);
     }
 
     private function _callTripDetailsApi(string $uniqueId): array

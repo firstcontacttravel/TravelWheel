@@ -2,7 +2,7 @@
 
 namespace App\Mail;
 
-use App\Models\Booking;
+use App\Models\FlightBooking;
 use App\Services\ETicketPdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -10,13 +10,14 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class ETicketMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public function __construct(
-        public readonly Booking $booking,
+        public readonly FlightBooking $booking,
         public readonly array   $tripDetails = [],
     ) {}
 
@@ -29,23 +30,49 @@ class ETicketMail extends Mailable
 
     public function content(): Content
     {
-        // This renders the HTML email body (a simpler version of the PDF)
+        // Reuse the same normalized data contract as the PDF view.
+        $pdfService = app(ETicketPdfService::class);
+        $viewData   = $pdfService->buildViewData($this->booking, $this->tripDetails);
+
+        // This renders the HTML email body from the pdf template.
         return new Content(
-            view: 'mail.eticket',
-            with: [
+            view: 'pdf.eticket',
+            with: array_merge($viewData, [
                 'booking'    => $this->booking,
                 'bookingRef' => $this->booking->booking_ref,
                 'isTicketed' => strtoupper($this->tripDetails['TicketStatus'] ?? '') === 'TICKETED',
                 'tripDetails'=> $this->tripDetails,
-            ],
+            ]),
         );
     }
 
     public function attachments(): array
     {
-        // Generate the PDF on the fly and attach it
-        $pdfService = app(ETicketPdfService::class);
-        $pdfBytes   = $pdfService->generate($this->booking, $this->tripDetails);
+        try {
+            Log::info('[ETicketMail] attachment build start', [
+                'booking_id'  => $this->booking->id,
+                'booking_ref' => $this->booking->booking_ref,
+            ]);
+
+            // Generate the PDF on the fly and attach it
+            $pdfService = app(ETicketPdfService::class);
+            $pdfBytes   = $pdfService->generate($this->booking, $this->tripDetails, 'mail.eticket');
+
+            Log::info('[ETicketMail] attachment pdf generated', [
+                'booking_ref' => $this->booking->booking_ref,
+                'size_bytes'  => strlen($pdfBytes),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('[ETicketMail] attachment generation failed', [
+                'booking_id'  => $this->booking->id,
+                'booking_ref' => $this->booking->booking_ref,
+                'error'       => $e->getMessage(),
+                'exception'   => get_class($e),
+                'trace'       => $e->getTraceAsString(),
+            ]);
+
+            throw $e;
+        }
 
         return [
             Attachment::fromData(
