@@ -38,7 +38,7 @@
     body{font-family:var(--font);background:var(--gray-50);color:var(--gray-900);font-size:14px;margin-top:110px}
     .po-wrap{max-width:1100px;margin:0 auto;padding:28px 16px 80px} 
     /* Hold banner */
-    .po-hold-banner{background: linear-gradient(135deg, var(--navy) 0%, #1e3a8a 100%);color:#fff;border-radius:14px;padding:22px 28px;margin-bottom:24px;display:flex;align-items:flex-start;gap:18px}
+    .po-hold-banner{background: linear-gradient(135deg, #0a1940 0%, #1e3a8a 100%);color:#fff;border-radius:14px;padding:22px 28px;margin-bottom:24px;display:flex;align-items:flex-start;gap:18px}
     .po-hold-icon{font-size:36px;flex-shrink:0}
     .po-hold-title{font-size:18px;font-weight:800;color:#ffffff; margin-bottom:4px}
     .po-hold-sub{font-size:13px;opacity:.9;color:#ffffff;line-height:1.6}
@@ -119,10 +119,11 @@
             </div>
             <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;">
                 @if($uniqueId)
-                <div class="po-hold-ref">
+                {{--<div class="po-hold-ref">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
                     Ref: {{ $uniqueId }}
                 </div>
+                --}}
                 @endif
                 @if(!empty($bookingRef))
                 <div class="po-hold-deadline">
@@ -355,10 +356,10 @@
                     </div>
                     @endif
                     @if($uniqueId)
-                    <div class="po-rail-row">
+                    {{--<div class="po-rail-row">
                         <span class="po-rail-lbl">Hold Ref</span>
                         <span class="po-rail-val" style="color:var(--blue)">{{ $uniqueId }}</span>
-                    </div>
+                    </div>--}}
                     @endif
                     <div class="po-rail-row">
                         <span class="po-rail-lbl">Fare Type</span>

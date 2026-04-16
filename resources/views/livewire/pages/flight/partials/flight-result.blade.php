@@ -826,7 +826,7 @@
                     <template x-if="!flight.multiLegs || flight.multiLegs.length === 0">
                         <div class="sr-depart-return">
                             {{-- Outbound --}}
-                            <div class="sr-dr-col">
+                            <div class="sr-dr-col" style="padding-right:10px;">
                                 <div class="sr-dr-label" x-text="'Depart ' + flight.departTime + ' · ' + flight.airline"></div>
                                 <div class="sr-segments">
                                     <div class="sr-seg">
@@ -849,7 +849,7 @@
                             </div>
                             {{-- Return inbound --}}
                             <template x-if="flight.returnSegments && flight.returnSegments.length > 0">
-                                <div class="sr-dr-col">
+                                <div class="sr-dr-col" style="padding-left:10px;">
                                     <div class="sr-dr-label" x-text="'Return ' + (flight.returnSegments[0]?.departTime || '') + ' · ' + flight.airline"></div>
                                     <div class="sr-segments">
                                         <div class="sr-seg">

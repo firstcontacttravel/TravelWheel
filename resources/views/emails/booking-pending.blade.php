@@ -57,7 +57,7 @@
 <style>
     body{margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;font-size:14px;color:#0f172a}
     .wrap{max-width:600px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.1)}
-    .header{background:linear-gradient(135deg,#78350f,#d97706);padding:28px 32px;text-align:center;color:#fff}
+    .header{background:linear-gradient(135deg,#0a1940,#1e3a8a);padding:28px 32px;text-align:center;color:#fff}
     .header-icon{font-size:42px;margin-bottom:8px}
     .header-title{font-size:20px;font-weight:800;margin-bottom:4px}
     .header-sub{font-size:13px;opacity:.85}
@@ -107,7 +107,7 @@
             <tr><td>Cabin</td><td>{{ $booking->cabin }}</td></tr>
             <tr><td>Fare Type</td><td>{{ $booking->fare_type }}</td></tr>
             <tr><td>Total Amount</td><td style="color:#0a1940">{{ $price }}</td></tr>
-            <tr><td>Hold Reference</td><td>{{ $booking->unique_id ?: 'N/A' }}</td></tr>
+            {{--<tr><td>Hold Reference</td><td>{{ $booking->unique_id ?: 'N/A' }}</td></tr>--}}
             <tr><td>Payment Method</td><td>{{ $isBankTransferNotice ? 'Bank Transfer' : 'Online or Bank Transfer' }}</td></tr>
         </table>
 

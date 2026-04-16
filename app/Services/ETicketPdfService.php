@@ -35,13 +35,17 @@ class ETicketPdfService
             'multi_legs'     => count($data['multiLegs'] ?? []),
         ]);
 
+        
+
         $pdf = Pdf::loadView($view, $data)
             ->setPaper('a4', 'portrait')
             ->setOptions([
-                'defaultFont'     => 'DejaVu Sans',
+                'defaultFont' => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => false,   // set true only if you embed remote images
-                'dpi'             => 150,
+                'isRemoteEnabled' => true, // important if using logos/images
+                'dpi' => 150,
+                'enable_php' => false, // security
+                'enable_javascript' => false, // usually not needed
             ]);
 
         $bytes = $pdf->output();
