@@ -1143,6 +1143,8 @@ class FlightBookingController extends Controller
                 'recipient'   => $booking->contact_email,
             ]);
 
+            //dd($tripDetails['ItineraryInfo']['ReservationItems'][0]['ReservationItem']['AirlinePNR']);
+           
             Mail::to($booking->contact_email)->send(
                 new ETicketMail($booking, $tripDetails)
             );
@@ -1232,6 +1234,7 @@ class FlightBookingController extends Controller
             if (!$success) return [];
             
             $tripData = $result['TravelItinerary'] ?? [];
+            //dd($tripData['ItineraryInfo']['ReservationItems'][0]['ReservationItem']['AirlinePNR']);
             $bookingStatus = $tripData['BookingStatus'] ?? '';
             $ticketStatus = $tripData['TicketStatus'] ?? '';
             

@@ -354,12 +354,11 @@
             </td>
             <td class="ref-block last">
                 <div class="ref-lbl">Airline PNR</div>
-                <div class="ref-val pnr">{{ $pnr ?? '—' }}</div>
+                <div class="ref-val pnr">{{ $ticketPNR  ?? 'PNRQWX-NO' }}</div>
                 <div class="ref-sub">For online check-in &amp; seat selection</div>
             </td>
         </tr>
     </table>
-
     {{-- ══ CONFIRM STRIP ══ --}}
     <div class="confirm-strip">
         <table>

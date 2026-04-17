@@ -41,7 +41,7 @@ class ETicketMail extends Mailable
                 'booking'    => $this->booking,
                 'bookingRef' => $this->booking->booking_ref,
                 'isTicketed' => strtoupper($this->tripDetails['TicketStatus'] ?? '') === 'TICKETED',
-                'tripDetails'=> $this->tripDetails,
+                'tripDetails'=> $this->tripDetails, 
             ]),
         );
     }

@@ -120,6 +120,8 @@ class ETicketPdfService
         $isReturn = count($returnSegments) > 0;
         $isMulti  = count($multiLegs) > 0;
         $tripLabel = $isReturn ? 'Round Trip' : ($isMulti ? 'Multi-City' : 'One Way');
+        $ticketPNR = $tripDetails['ItineraryInfo']['ReservationItems'][0]['ReservationItem']['AirlinePNR'];  
+
 
         return [
             // Meta
@@ -131,6 +133,7 @@ class ETicketPdfService
             'isTicketed'       => $isTicketed,
             'bookingStatus'    => $bookingStatus,
             'ticketStatus'     => $ticketStatus,
+            'ticketPNR'        => $ticketPNR ?? 'PNRQWX',
 
             // Segments
             'outboundSegments' => $outboundSegments,
