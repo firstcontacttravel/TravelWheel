@@ -846,88 +846,202 @@
                         </div>
                         <div x-show="open" x-transition>
                             <div class="bk-acc-body" style="padding-top:0;">
-
-                                {{-- ── Extra Baggage ── --}}
+                        
+                                {{-- ── EXTRA BAGGAGE ── --}}
                                 @if(!empty($baggageOutbound) || !empty($baggageInbound))
-                                <div style="padding:14px 0 10px; border-bottom:1px solid var(--gray-100);">
+                                <div style="padding:14px 0 10px;border-bottom:1px solid var(--gray-100);">
+                        
                                     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;">
                                         🧳 Extra Check-in Baggage
                                     </div>
-
-                                    @foreach([['Outbound', $baggageOutbound], ['Inbound', $baggageInbound]] as [$dir, $bagOpts])
-                                        @if(!empty($bagOpts))
-                                        <div style="margin-bottom:14px;">
-                                            <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">{{ $dir }}</div>
-                                            <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                                                @foreach($bagOpts as $svc)
-                                                <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:9px;cursor:pointer;background:#fff;transition:all .15s;flex:1;min-width:160px;"
-                                                    x-data="{}"
-                                                    :style="$el.querySelector('input').checked ? 'border-color:var(--blue);background:var(--blue-lt);' : ''">
+                        
+                                    @foreach([['outbound', $baggageOutbound], ['inbound', $baggageInbound]] as [$dir, $bagOpts])
+                                    @if(!empty($bagOpts))
+                                    <div style="margin-bottom:14px;">
+                                        <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">
+                                            {{ ucfirst($dir) }}
+                                        </div>
+                        
+                                        <div style="display:flex;flex-direction:column;gap:8px;">
+                                            @foreach($bagOpts as $svc)
+                                            @php
+                                                $svcId  = $svc['ServiceId'];
+                                                $maxQty = (int) ($svc['MaximumQuantity'] ?? 3);
+                                                $price  = (float) ($svc['ServiceCost']['Amount'] ?? 0);
+                                                $curr   = $svc['ServiceCost']['CurrencyCode'] ?? 'USD';
+                                                $sym    = match($curr) { 'NGN' => '₦', 'USD' => '$', 'AED' => 'AED ', default => $curr . ' ' };
+                                                $currentQty = (int) ($selectedBaggage[$dir][$svcId] ?? 0);
+                                            @endphp
+                        
+                                            <div style="display:flex;align-items:center;gap:14px;padding:11px 14px;
+                                                        border:1.5px solid {{ $currentQty > 0 ? 'var(--blue)' : 'var(--gray-200)' }};
+                                                        border-radius:10px;background:{{ $currentQty > 0 ? 'var(--blue-lt)' : '#fff' }};
+                                                        transition:all .2s;">
+                        
+                                                {{-- Description --}}
+                                                <div style="flex:1;">
+                                                    <div style="font-size:13px;font-weight:700;color:var(--gray-900);">
+                                                        {{ $svc['Description'] }}
+                                                    </div>
+                                                    <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">
+                                                        {{ $svc['FareDescription'] ?? 'per passenger' }}
+                                                    </div>
+                                                </div>
+                        
+                                                {{-- Price --}}
+                                                <div style="font-size:13px;font-weight:800;color:var(--blue);
+                                                            white-space:nowrap;font-family:var(--mono);min-width:70px;text-align:right;">
+                                                    +{{ $sym }}{{ number_format($price, 2) }}
+                                                    <div style="font-size:10px;color:var(--gray-400);font-weight:500;font-family:var(--font);">
+                                                        per bag
+                                                    </div>
+                                                </div>
+                        
+                                                {{-- Quantity stepper --}}
+                                                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                                                    <button type="button"
+                                                        style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--gray-200);
+                                                            background:#fff;font-size:16px;color:var(--gray-700);cursor:pointer;
+                                                            display:flex;align-items:center;justify-content:center;transition:all .15s;
+                                                            {{ $currentQty === 0 ? 'opacity:.35;cursor:not-allowed;' : '' }}"
+                                                        wire:click="$set('selectedBaggage.{{ $dir }}.{{ $svcId }}', {{ max(0, $currentQty - 1) }})"
+                                                        {{ $currentQty === 0 ? 'disabled' : '' }}>
+                                                        −
+                                                    </button>
+                        
+                                                    <span style="font-size:16px;font-weight:800;color:var(--gray-900);
+                                                                min-width:20px;text-align:center;">
+                                                        {{ $currentQty }}
+                                                    </span>
+                        
+                                                    <button type="button"
+                                                        style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--gray-200);
+                                                            background:#fff;font-size:16px;color:var(--gray-700);cursor:pointer;
+                                                            display:flex;align-items:center;justify-content:center;transition:all .15s;
+                                                            {{ $currentQty >= $maxQty ? 'opacity:.35;cursor:not-allowed;' : '' }}"
+                                                        wire:click="$set('selectedBaggage.{{ $dir }}.{{ $svcId }}', {{ min($maxQty, $currentQty + 1) }})"
+                                                        {{ $currentQty >= $maxQty ? 'disabled' : '' }}>
+                                                        +
+                                                    </button>
+                                                </div>
+                        
+                                                {{-- Line total --}}
+                                                @if($currentQty > 0)
+                                                <div style="font-size:12px;font-weight:800;color:var(--green);
+                                                            white-space:nowrap;font-family:var(--mono);min-width:65px;text-align:right;">
+                                                    = {{ $sym }}{{ number_format($price * $currentQty, 2) }}
+                                                </div>
+                                                @endif
+                        
+                                                {{-- Hidden input for form submission --}}
+                                                @if($currentQty > 0)
+                                                <input type="hidden"
+                                                    name="extra_baggage[{{ $dir }}][{{ $svcId }}]"
+                                                    value="{{ $currentQty }}">
+                                                @endif
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                    @endif
+                                    @endforeach
+                                </div>
+                                @endif
+                        
+                                {{-- ── MEALS ── --}}
+                                @if(!empty($mealOutbound) || !empty($mealInbound))
+                                <div style="padding-top:14px;">
+                        
+                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;">
+                                        🍽️ Meal Preferences
+                                    </div>
+                        
+                                    @foreach([['outbound', $mealOutbound], ['inbound', $mealInbound]] as [$dir, $mealSegs])
+                                    @if(!empty($mealSegs))
+                                    <div style="margin-bottom:14px;">
+                                        <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">
+                                            {{ ucfirst($dir) }}
+                                        </div>
+                        
+                                        @foreach($mealSegs as $si => $segMeals)
+                                        <div style="margin-bottom:10px;">
+                                            <div style="font-size:10.5px;font-weight:700;color:var(--gray-400);
+                                                        text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
+                                                Segment {{ $si + 1 }}
+                                            </div>
+                        
+                                            <div style="display:flex;flex-direction:column;gap:7px;">
+                                                @foreach($segMeals as $svc)
+                                                @php
+                                                    $svcId    = $svc['ServiceId'];
+                                                    $price    = (float) ($svc['ServiceCost']['Amount'] ?? 0);
+                                                    $curr     = $svc['ServiceCost']['CurrencyCode'] ?? 'AED';
+                                                    $sym      = match($curr) { 'NGN' => '₦', 'USD' => '$', 'AED' => 'AED ', default => $curr . ' ' };
+                                                    $isChecked = !empty($selectedMeals[$dir][$si][$svcId]);
+                                                @endphp
+                        
+                                                <label style="display:flex;align-items:center;gap:12px;padding:10px 14px;
+                                                            border:1.5px solid {{ $isChecked ? 'var(--amber)' : 'var(--gray-200)' }};
+                                                            border-radius:10px;cursor:pointer;
+                                                            background:{{ $isChecked ? 'var(--amber-lt)' : '#fff' }};
+                                                            transition:all .2s;">
+                        
                                                     <input type="checkbox"
-                                                        name="extra_baggage[{{ strtolower($dir) }}][]"
-                                                        value="{{ $svc['ServiceId'] }}"
-                                                        style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;flex-shrink:0;">
+                                                        wire:model.live="selectedMeals.{{ $dir }}.{{ $si }}.{{ $svcId }}"
+                                                        style="width:16px;height:16px;accent-color:var(--amber);
+                                                                cursor:pointer;flex-shrink:0;">
+                        
                                                     <div style="flex:1;">
-                                                        <div style="font-size:13px;font-weight:700;color:var(--gray-900);">{{ $svc['Description'] }}</div>
-                                                        <div style="font-size:11px;color:var(--gray-400);margin-top:1px;">per passenger</div>
+                                                        <div style="font-size:12.5px;font-weight:700;color:var(--gray-900);">
+                                                            {{ $svc['Description'] }}
+                                                        </div>
                                                     </div>
-                                                    <div style="font-size:13px;font-weight:800;color:var(--blue);white-space:nowrap;font-family:var(--mono);">
-                                                        + {{ $esFmt($svc) }}
+                        
+                                                    <div style="font-size:12.5px;font-weight:800;
+                                                                color:{{ $isChecked ? 'var(--amber)' : 'var(--gray-500)' }};
+                                                                white-space:nowrap;font-family:var(--mono);">
+                                                        +{{ $sym }}{{ number_format($price, 2) }}
                                                     </div>
+                        
+                                                    @if($isChecked)
+                                                    <span style="font-size:11px;font-weight:700;color:var(--amber);white-space:nowrap;">✓ Added</span>
+                                                    @endif
+                        
+                                                    {{-- Hidden input for form submission --}}
+                                                    @if($isChecked)
+                                                    <input type="hidden"
+                                                        name="extra_meal[{{ $dir }}][{{ $si }}][]"
+                                                        value="{{ $svcId }}">
+                                                    @endif
                                                 </label>
                                                 @endforeach
                                             </div>
                                         </div>
-                                        @endif
-                                    @endforeach
-                                </div>
-                                @endif
-
-                                {{-- ── Meals ── --}}
-                                @if(!empty($mealOutbound) || !empty($mealInbound))
-                                <div style="padding-top:14px;">
-                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;">
-                                        🍽️ Meal Preferences
+                                        @endforeach
                                     </div>
-
-                                    @foreach([['Outbound', $mealOutbound], ['Inbound', $mealInbound]] as [$dir, $mealSegs])
-                                        @if(!empty($mealSegs))
-                                        <div style="margin-bottom:14px;">
-                                            <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">{{ $dir }}</div>
-                                            @foreach($mealSegs as $si => $segMeals)
-                                            <div style="margin-bottom:10px;">
-                                                <div style="font-size:10.5px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
-                                                    Segment {{ $si + 1 }}
-                                                </div>
-                                                <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                                                    @foreach($segMeals as $svc)
-                                                    <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:9px;cursor:pointer;background:#fff;transition:all .15s;flex:1;min-width:180px;"
-                                                        x-data="{}"
-                                                        :style="$el.querySelector('input').checked ? 'border-color:var(--amber);background:var(--amber-lt);' : ''">
-                                                        <input type="checkbox"
-                                                            name="extra_meal[{{ strtolower($dir) }}][{{ $si }}][]"
-                                                            value="{{ $svc['ServiceId'] }}"
-                                                            style="width:16px;height:16px;accent-color:var(--amber);cursor:pointer;flex-shrink:0;">
-                                                        <div style="flex:1;">
-                                                            <div style="font-size:12.5px;font-weight:700;color:var(--gray-900);">{{ $svc['Description'] }}</div>
-                                                        </div>
-                                                        <div style="font-size:12.5px;font-weight:800;color:var(--amber);white-space:nowrap;font-family:var(--mono);">
-                                                            + {{ $esFmt($svc) }}
-                                                        </div>
-                                                    </label>
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                            @endforeach
-                                        </div>
-                                        @endif
+                                    @endif
                                     @endforeach
                                 </div>
                                 @endif
-
+                        
+                                {{-- ── LIVE EXTRAS SUMMARY (shows only when something selected) ── --}}
+                                @if($extrasTotal > 0)
+                                <div style="margin-top:14px;padding:12px 16px;background:var(--green-lt);
+                                            border:1.5px solid #a7f3d0;border-radius:10px;
+                                            display:flex;align-items:center;justify-content:space-between;">
+                                    <span style="font-size:12.5px;font-weight:700;color:var(--green);">
+                                        ✓ Extras selected
+                                    </span>
+                                    <span style="font-size:14px;font-weight:800;color:var(--green);font-family:var(--mono);">
+                                        +{{ $esFmt(['ServiceCost' => ['CurrencyCode' => 'NGN', 'Amount' => $extrasTotal]]) }}
+                                    </span>
+                                </div>
+                                @endif
+                        
                             </div>
                         </div>
                     </div>
+
                     @else
                     {{-- Fallback banner if no extra services available --}}
                     <div class="bk-bags-banner">
@@ -1457,148 +1571,219 @@
                         <div class="bk-cart-title">My Cart</div>
                     </div>
                     <div class="bk-cart-body">
-    <div class="bk-cart-section">
-        <div class="bk-cart-section-lbl">Flight</div>
+                        <div class="bk-cart-section">
+                            <div class="bk-cart-section-lbl">Flight</div>
 
-        @if($isMulti && !empty($allLegs))
-            @foreach($allLegs as $leg)
-                <div class="bk-cart-flight-row">
-                    <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
-                    <div>
-                        <div class="bk-cart-route">{{ $leg['route'] ?? '' }}</div>
-                        <div class="bk-cart-sub">{{ $cabin }} · {{ $leg['label'] ?? 'Multi-city' }}</div>
-                    </div>
-                </div>
-            @endforeach
-        @else
-            {{-- Outbound --}}
-            <div class="bk-cart-flight-row">
-                <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
-                <div>
-                    <div class="bk-cart-route">{{ ($firstSeg['from'] ?? '') }} to {{ ($lastSeg['to'] ?? '') }} ({{ strtoupper($firstSeg['from'] ?? '') }})</div>
-                    <div class="bk-cart-sub">{{ $cabin }} · {{ $tripLabel }}</div>
-                </div>
-            </div>
-
-            {{-- Return --}}
-            @if($isReturn && !empty($retSegs))
-                <div class="bk-cart-flight-row">
-                    <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="transform:scaleX(-1);"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
-                    <div>
-                        <div class="bk-cart-route">{{ ($retSegs[0]['from'] ?? '') }} to {{ ($retSegs[count($retSegs)-1]['to'] ?? '') }} ({{ strtoupper($retSegs[0]['from'] ?? '') }})</div>
-                        <div class="bk-cart-sub">{{ $cabin }} · Round Trip</div>
-                    </div>
-                </div>
-            @endif
-        @endif
-    </div>
-</div>
-
-                    {{-- Fare summary using real revalidate data --}}
-                    <div class="bk-fare-section">
-                        <div class="bk-fare-title">Flight Fare Summary</div>
-
-                        @foreach($breakdown as $fb)
-                            @php
-                                $ptCode  = $fb['passengerType'] ?? ($fb['PassengerTypeQuantity']['Code'] ?? 'ADT');
-                                $ptQty   = (int)($fb['qty'] ?? ($fb['PassengerTypeQuantity']['Quantity'] ?? 1));
-                                $ptLabel = match($ptCode) { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' };
-                                $paxFare = $fb['PassengerFare'] ?? [];
-                                $base    = (float)($fb['baseFare'] ?? ($paxFare['BaseFare']['Amount'] ?? 0));
-                                $taxes   = $fb['taxes'] ?? ($paxFare['Taxes'] ?? []);
-                                $serviceTax = (float)($fb['serviceTax'] ?? ($paxFare['ServiceTax']['Amount'] ?? 0));
-                                $surcharges = (float)($fb['surcharges'] ?? ($paxFare['Surcharges']['Amount'] ?? 0));
-
-                                // Group and sum taxes
-                                $taxGroups = [];
-                                foreach ($taxes as $tax) {
-                                    $code = $tax['TaxCode'] ?? 'OtherTaxes';
-                                    $taxGroups[$code] = ($taxGroups[$code] ?? 0) + (float)($tax['Amount'] ?? 0);
-                                }
-                                $rawTaxBreakdownTotal = array_sum($taxGroups);
-                                $rawTotalPaxFare = (float)($fb['totalFare'] ?? ($paxFare['TotalFare']['Amount'] ?? 0));
-                                $hasNegativeTaxLine = collect($taxGroups)->contains(fn($amount) => $amount < 0);
-                                $preferredTaxTotal = $serviceTax > 0
-                                    ? $serviceTax + $surcharges
-                                    : ($hasNegativeTaxLine ? 0.0 : max($rawTaxBreakdownTotal + $surcharges, 0));
-
-                                if ($rawTotalPaxFare <= 0) {
-                                    $totalPaxFare = $base + $preferredTaxTotal;
-                                } elseif ($rawTotalPaxFare < $base) {
-                                    $totalPaxFare = $base + $rawTotalPaxFare;
-                                } else {
-                                    $totalPaxFare = $rawTotalPaxFare;
-                                }
-
-                                $derivedTaxAmt = max($totalPaxFare - $base, 0);
-
-                                if ($hasNegativeTaxLine || $rawTaxBreakdownTotal <= 0 || abs($preferredTaxTotal - $derivedTaxAmt) > 1) {
-                                    $taxGroups = $derivedTaxAmt > 0 ? ['OtherTaxes' => $derivedTaxAmt] : [];
-                                    $totalTaxAmt = $derivedTaxAmt;
-                                } else {
-                                    $totalTaxAmt = $preferredTaxTotal;
-                                }
-                                $baseTotal = $base * $ptQty;
-                                $taxTotal = $totalTaxAmt * $ptQty;
-
-                                // Baggage from FareBreakdown
-                                $bagArr = (array)($fb['baggage'] ?? ($fb['Baggage'] ?? []));
-                                $cabArr = (array)($fb['cabinBaggage'] ?? ($fb['CabinBaggage'] ?? []));
-                                $bagStr = implode(', ', array_unique(array_filter($bagArr))) ?: '—';
-                                $cabStr = implode(', ', array_unique(array_filter($cabArr))) ?: '—';
-                            @endphp
-
-                            <div style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--gray-100);"
-                                x-data="{ showTax: false }">
-
-                                <div class="bk-fare-row" style="padding-bottom:4px;">
-                                    <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">{{ $ptLabel }} × {{ $ptQty }}</span>
-                                    <span class="bk-fare-val" style="font-weight:800;">{{ $fmt($totalPaxFare * $ptQty) }}</span>
-                                </div>
-
-                                <div class="bk-fare-row">
-                                    <span class="bk-fare-lbl">Base Fare</span>
-                                    <span class="bk-fare-val">{{ $fmt($baseTotal) }}</span>
-                                </div>
-
-                                <div class="bk-fare-row">
-                                    <span class="bk-fare-lbl">
-                                        Taxes & Fees
-                                        <button type="button" @click="showTax = !showTax"
-                                            style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:11px;font-family:var(--font);padding:0;margin-left:4px;"
-                                            x-text="showTax ? '▲ hide' : '▼ breakdown'">
-                                        </button>
-                                    </span>
-                                    <span class="bk-fare-val">{{ $fmt($taxTotal) }}</span>
-                                </div>
-
-                                {{-- Tax breakdown --}}
-                                <div x-show="showTax" x-transition style="margin:4px 0 2px;">
-                                    <div class="bk-tax-detail">
-                                        @foreach($taxGroups as $code => $amount)
-                                        <div class="bk-tax-row">
-                                            <span class="bk-tax-lbl">
-                                                {{ $taxLabels[$code] ?? $code }}
-                                                <span class="bk-tax-code">({{ $code }})</span>
-                                            </span>
-                                            <span class="bk-tax-val">{{ $fmt($amount * $ptQty) }}</span>
+                            @if($isMulti && !empty($allLegs))
+                                @foreach($allLegs as $leg)
+                                    <div class="bk-cart-flight-row">
+                                        <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                                        <div>
+                                            <div class="bk-cart-route">{{ $leg['route'] ?? '' }}</div>
+                                            <div class="bk-cart-sub">{{ $cabin }} · {{ $leg['label'] ?? 'Multi-city' }}</div>
                                         </div>
-                                        @endforeach
+                                    </div>
+                                @endforeach
+                            @else
+                                {{-- Outbound --}}
+                                <div class="bk-cart-flight-row">
+                                    <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                                    <div>
+                                        <div class="bk-cart-route">{{ ($firstSeg['from'] ?? '') }} to {{ ($lastSeg['to'] ?? '') }} ({{ strtoupper($firstSeg['from'] ?? '') }})</div>
+                                        <div class="bk-cart-sub">{{ $cabin }} · {{ $tripLabel }}</div>
                                     </div>
                                 </div>
 
-                                {{-- Baggage info --}}
-                                <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
-                                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--green);font-weight:600;background:var(--green-lt);padding:2px 8px;border-radius:999px;">
-                                        🧳 {{ $bagStr }}
-                                    </span>
-                                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--blue);font-weight:600;background:var(--blue-lt);padding:2px 8px;border-radius:999px;">
-                                        💼 {{ $cabStr }}
-                                    </span>
+                                {{-- Return --}}
+                                @if($isReturn && !empty($retSegs))
+                                    <div class="bk-cart-flight-row">
+                                        <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="transform:scaleX(-1);"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                                        <div>
+                                            <div class="bk-cart-route">{{ ($retSegs[0]['from'] ?? '') }} to {{ ($retSegs[count($retSegs)-1]['to'] ?? '') }} ({{ strtoupper($retSegs[0]['from'] ?? '') }})</div>
+                                            <div class="bk-cart-sub">{{ $cabin }} · Round Trip</div>
+                                        </div>
+                                    </div>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- Fare summary using real revalidate data --}}
+                    
+
+                    <div class="bk-fare-section">
+                        <div class="bk-fare-title">Flight Fare Summary BAG</div>
+                    
+                        @foreach($breakdown as $fb)
+                        @php
+                            $ptCode  = $fb['passengerType'] ?? ($fb['PassengerTypeQuantity']['Code'] ?? 'ADT');
+                            $ptQty   = (int)($fb['qty'] ?? ($fb['PassengerTypeQuantity']['Quantity'] ?? 1));
+                            $ptLabel = match($ptCode) { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' };
+                            $paxFare = $fb['PassengerFare'] ?? [];
+                            $base    = (float)($fb['baseFare'] ?? ($paxFare['BaseFare']['Amount'] ?? 0));
+                            $taxes   = $fb['taxes'] ?? ($paxFare['Taxes'] ?? []);
+                            $serviceTax  = (float)($fb['serviceTax']  ?? ($paxFare['ServiceTax']['Amount']  ?? 0));
+                            $surcharges  = (float)($fb['surcharges']  ?? ($paxFare['Surcharges']['Amount']  ?? 0));
+                    
+                            $taxGroups = [];
+                            foreach ($taxes as $tax) {
+                                $code = $tax['TaxCode'] ?? 'OtherTaxes';
+                                $taxGroups[$code] = ($taxGroups[$code] ?? 0) + (float)($tax['Amount'] ?? 0);
+                            }
+                            $rawTaxBreakdownTotal = array_sum($taxGroups);
+                            $rawTotalPaxFare = (float)($fb['totalFare'] ?? ($paxFare['TotalFare']['Amount'] ?? 0));
+                            $hasNegativeTaxLine = collect($taxGroups)->contains(fn($amount) => $amount < 0);
+                            $preferredTaxTotal = $serviceTax > 0
+                                ? $serviceTax + $surcharges
+                                : ($hasNegativeTaxLine ? 0.0 : max($rawTaxBreakdownTotal + $surcharges, 0));
+                    
+                            if ($rawTotalPaxFare <= 0) { $totalPaxFare = $base + $preferredTaxTotal; }
+                            elseif ($rawTotalPaxFare < $base) { $totalPaxFare = $base + $rawTotalPaxFare; }
+                            else { $totalPaxFare = $rawTotalPaxFare; }
+                    
+                            $derivedTaxAmt = max($totalPaxFare - $base, 0);
+                            if ($hasNegativeTaxLine || $rawTaxBreakdownTotal <= 0 || abs($preferredTaxTotal - $derivedTaxAmt) > 1) {
+                                $taxGroups   = $derivedTaxAmt > 0 ? ['OtherTaxes' => $derivedTaxAmt] : [];
+                                $totalTaxAmt = $derivedTaxAmt;
+                            } else {
+                                $totalTaxAmt = $preferredTaxTotal;
+                            }
+                            $baseTotal = $base * $ptQty;
+                            $taxTotal  = $totalTaxAmt * $ptQty;
+                            $bagArr = (array)($fb['baggage']      ?? ($fb['Baggage']      ?? []));
+                            $cabArr = (array)($fb['cabinBaggage'] ?? ($fb['CabinBaggage'] ?? []));
+                            $bagStr = implode(', ', array_unique(array_filter($bagArr))) ?: '—';
+                            $cabStr = implode(', ', array_unique(array_filter($cabArr))) ?: '—';
+                        @endphp
+                    
+                        <div style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--gray-100);"
+                            x-data="{ showTax: false }">
+                    
+                            <div class="bk-fare-row" style="padding-bottom:4px;">
+                                <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">{{ $ptLabel }} × {{ $ptQty }}</span>
+                                <span class="bk-fare-val" style="font-weight:800;">{{ $fmt($totalPaxFare * $ptQty) }}</span>
+                            </div>
+                            <div class="bk-fare-row">
+                                <span class="bk-fare-lbl">Base Fare</span>
+                                <span class="bk-fare-val">{{ $fmt($baseTotal) }}</span>
+                            </div>
+                            <div class="bk-fare-row">
+                                <span class="bk-fare-lbl">
+                                    Taxes & Fees
+                                    <button type="button" @click="showTax = !showTax"
+                                        style="background:none;border:none;color:var(--blue);cursor:pointer;
+                                            font-size:11px;font-family:var(--font);padding:0;margin-left:4px;"
+                                        x-text="showTax ? '▲ hide' : '▼ breakdown'">
+                                    </button>
+                                </span>
+                                <span class="bk-fare-val">{{ $fmt($taxTotal) }}</span>
+                            </div>
+                            <div x-show="showTax" x-transition style="margin:4px 0 2px;">
+                                <div class="bk-tax-detail">
+                                    @foreach($taxGroups as $code => $amount)
+                                    <div class="bk-tax-row">
+                                        <span class="bk-tax-lbl">
+                                            {{ $taxLabels[$code] ?? $code }}
+                                            <span class="bk-tax-code">({{ $code }})</span>
+                                        </span>
+                                        <span class="bk-tax-val">{{ $fmt($amount * $ptQty) }}</span>
+                                    </div>
+                                    @endforeach
                                 </div>
                             </div>
+                            <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+                                <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--green);font-weight:600;background:var(--green-lt);padding:2px 8px;border-radius:999px;">
+                                    🧳 {{ $bagStr }}
+                                </span>
+                                <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--blue);font-weight:600;background:var(--blue-lt);padding:2px 8px;border-radius:999px;">
+                                    💼 {{ $cabStr }}
+                                </span>
+                            </div>
+                        </div>
                         @endforeach
-
+                    
+                        {{-- ── EXTRAS LINE — only shows when something selected ── --}}
+                        @if($extrasTotal > 0)
+                        <div style="padding:10px 0;border-bottom:1px solid var(--gray-100);">
+                            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;
+                                        color:var(--gray-400);margin-bottom:8px;">Extras Added</div>
+                    
+                            {{-- Baggage lines --}}
+                            @foreach($selectedBaggage as $dir => $items)
+                                @foreach($items as $svcId => $qty)
+                                    @if($qty > 0)
+                                    @php
+                                        // Find the service from parsed extras
+                                        $matchedSvc = null;
+                                        foreach ($dynBaggage as $bag) {
+                                            $bagDir = str_contains(strtoupper($bag['Behavior'] ?? ''), 'OUTBOUND') ? 'outbound' : 'inbound';
+                                            if ($bagDir === $dir) {
+                                                foreach (($bag['Services'][0] ?? []) as $s) {
+                                                    if ((string)$s['ServiceId'] === (string)$svcId) { $matchedSvc = $s; break 2; }
+                                                }
+                                            }
+                                        }
+                                        $bagPrice = (float) ($matchedSvc['ServiceCost']['Amount'] ?? 0);
+                                        $bagCurr  = $matchedSvc['ServiceCost']['CurrencyCode'] ?? 'USD';
+                                        $bagSym   = match($bagCurr) { 'NGN' => '₦', 'USD' => '$', 'AED' => 'AED ', default => $bagCurr . ' ' };
+                                        $lineTotal = $bagPrice * $qty;
+                                    @endphp
+                                    <div class="bk-fare-row" style="padding:3px 0;">
+                                        <span class="bk-fare-lbl" style="font-size:11.5px;">
+                                            🧳 {{ $matchedSvc['Description'] ?? 'Baggage' }}
+                                            <span style="color:var(--gray-400);font-size:10.5px;">× {{ $qty }} ({{ ucfirst($dir) }})</span>
+                                        </span>
+                                        <span class="bk-fare-val" style="color:var(--green);">
+                                            +{{ $bagSym }}{{ number_format($lineTotal, 2) }}
+                                        </span>
+                                    </div>
+                                    @endif
+                                @endforeach
+                            @endforeach
+                    
+                            {{-- Meal lines --}}
+                            @foreach($selectedMeals as $dir => $segments)
+                                @foreach($segments as $si => $items)
+                                    @foreach($items as $svcId => $checked)
+                                        @if($checked)
+                                        @php
+                                            $matchedMeal = null;
+                                            foreach ($dynMeal as $meal) {
+                                                $mDir = str_contains(strtoupper($meal['Behavior'] ?? ''), 'OUTBOUND') ? 'outbound' : 'inbound';
+                                                if ($mDir === $dir) {
+                                                    foreach (($meal['Services'][$si] ?? []) as $s) {
+                                                        if ((string)$s['ServiceId'] === (string)$svcId) { $matchedMeal = $s; break 2; }
+                                                    }
+                                                }
+                                            }
+                                            $mealPrice = (float) ($matchedMeal['ServiceCost']['Amount'] ?? 0);
+                                            $mealCurr  = $matchedMeal['ServiceCost']['CurrencyCode'] ?? 'AED';
+                                            $mealSym   = match($mealCurr) { 'NGN' => '₦', 'USD' => '$', 'AED' => 'AED ', default => $mealCurr . ' ' };
+                                        @endphp
+                                        <div class="bk-fare-row" style="padding:3px 0;">
+                                            <span class="bk-fare-lbl" style="font-size:11.5px;">
+                                                🍽️ {{ $matchedMeal['Description'] ?? 'Meal' }}
+                                                <span style="color:var(--gray-400);font-size:10.5px;">(Seg {{ $si + 1 }}, {{ ucfirst($dir) }})</span>
+                                            </span>
+                                            <span class="bk-fare-val" style="color:var(--amber);">
+                                                +{{ $mealSym }}{{ number_format($mealPrice, 2) }}
+                                            </span>
+                                        </div>
+                                        @endif
+                                    @endforeach
+                                @endforeach
+                            @endforeach
+                    
+                            {{-- Extras subtotal --}}
+                            <div class="bk-fare-row" style="padding-top:6px;border-top:1px dashed var(--gray-200);margin-top:4px;">
+                                <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">Extras Subtotal</span>
+                                <span class="bk-fare-val" style="font-weight:800;color:var(--green);">
+                                    +{{ $esFmt(['ServiceCost' => ['CurrencyCode' => 'USD', 'Amount' => $extrasTotal]]) }}
+                                </span>
+                            </div>
+                        </div>
+                        @endif
+                    
                         @if($discount > 0)
                         <div class="bk-fare-row">
                             <span class="bk-fare-lbl bk-fare-disc">Discount</span>
@@ -1608,8 +1793,22 @@
                     </div>
 
                     <div class="bk-fare-total-row">
-                        <span class="bk-fare-total-lbl">Trip Total</span>
-                        <span class="bk-fare-total-val">{{ $fmt($totalPrice) }}</span>
+                        <div>
+                            <span class="bk-fare-total-lbl">Trip Total</span>
+                            @if($extrasTotal > 0)
+                            <div style="font-size:10.5px;color:var(--gray-400);margin-top:2px;">
+                                Flight + Extras
+                            </div>
+                            @endif
+                        </div>
+                        <div style="text-align:right;">
+                            <span class="bk-fare-total-val">{{ $fmt($this->getTotalPrice()) }}</span>
+                            @if($extrasTotal > 0)
+                            <div style="font-size:10.5px;color:var(--gray-400);margin-top:1px;">
+                                incl. {{ $esFmt(['ServiceCost' => ['CurrencyCode' => 'USD', 'Amount' => $extrasTotal]]) }} extras
+                            </div>
+                            @endif
+                        </div>
                     </div>
 
                     {{-- Promo codes --}}

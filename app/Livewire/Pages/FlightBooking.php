@@ -38,6 +38,12 @@ class FlightBooking extends Component
     public int  $step       = 1;
     public bool $submitting = false;
 
+    // ── Public properties (add to your class) ───────────────────────────────────
+    public array $selectedBaggage = [];   // ['outbound' => ['svcId' => qty, ...], 'inbound' => [...]]
+    public array $selectedMeals   = [];   // ['outbound' => [segIdx => ['svcId' => 1, ...]], 'inbound' => [...]]
+    public float $extrasTotal     = 0.0;  // live running total
+    
+
     // ── Nationalities (country code → name) ───────────────────────────────────
     public array $nationalities = [
         'NG' => 'Nigerian',      'GB' => 'British',       'US' => 'American',
@@ -299,9 +305,17 @@ class FlightBooking extends Component
         return ['rows' => $rows, 'total' => $grand, 'currency' => $currency];
     }
  
-    public function getTotalPrice(): float
+    public function getTotalPrice1(): float
     {
         return $this->getComputedFare()['total'];
+    }
+
+    // ── Helper: grand total for pay button ─────────────────────────────────────
+    public function getTotalPrice(): float
+    {
+        $flight      = session('bookingFlight', []);
+        $mappedFlight = $flight['flight'] ?? $flight;
+        return (float) ($mappedFlight['price'] ?? 0) + $this->extrasTotal;
     }
  
     // ─────────────────────────────────────────────────────────────────────────
@@ -361,6 +375,65 @@ class FlightBooking extends Component
         $this->step = 1;
         $this->dispatch('scrollTop');
     }
+
+    public function recalcExtrasTotal(): void
+    {
+        $extraServices = session('extraServices', []);
+        $esResult      = $extraServices['ExtraServicesResponse']['ExtraServicesResult']['ExtraServicesData'] ?? [];
+        $dynBaggage    = $esResult['DynamicBaggage'] ?? [];
+        $dynMeal       = $esResult['DynamicMeal']    ?? [];
+    
+        // Build lookup: serviceId => amount (always in USD or AED — keep raw for display)
+        $bagLookup  = [];
+        foreach ($dynBaggage as $bag) {
+            $dir      = str_contains(strtoupper($bag['Behavior'] ?? ''), 'OUTBOUND') ? 'outbound' : 'inbound';
+            $services = $bag['Services'][0] ?? [];
+            foreach ($services as $svc) {
+                $bagLookup[$dir][$svc['ServiceId']] = (float) ($svc['ServiceCost']['Amount'] ?? 0);
+            }
+        }
+    
+        $mealLookup = [];
+        foreach ($dynMeal as $meal) {
+            $dir      = str_contains(strtoupper($meal['Behavior'] ?? ''), 'OUTBOUND') ? 'outbound' : 'inbound';
+            $services = $meal['Services'] ?? [];
+            foreach ($services as $si => $segMeals) {
+                foreach ($segMeals as $svc) {
+                    $mealLookup[$dir][$si][$svc['ServiceId']] = (float) ($svc['ServiceCost']['Amount'] ?? 0);
+                }
+            }
+        }
+    
+        $total = 0.0;
+    
+        // Sum baggage
+        foreach ($this->selectedBaggage as $dir => $items) {
+            foreach ($items as $svcId => $qty) {
+                $price  = $bagLookup[$dir][$svcId] ?? 0.0;
+                $total += $price * max(0, (int) $qty);
+            }
+        }
+    
+        // Sum meals
+        foreach ($this->selectedMeals as $dir => $segments) {
+            foreach ($segments as $si => $items) {
+                foreach ($items as $svcId => $checked) {
+                    if ($checked) {
+                        $total += $mealLookup[$dir][$si][$svcId] ?? 0.0;
+                    }
+                }
+            }
+        }
+    
+        $this->extrasTotal = $total;
+    }
+ 
+    // ── Livewire lifecycle hooks (add to your class) ────────────────────────────
+    public function updatedSelectedBaggage(): void { $this->recalcExtrasTotal(); }
+    public function updatedSelectedMeals(): void   { $this->recalcExtrasTotal(); }
+    
+
+ 
  
     public function render()
     {
