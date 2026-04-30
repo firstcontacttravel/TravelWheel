@@ -47,6 +47,13 @@
             ['current', '3', 'Verification in Progress', 'Our team is checking your payment. Expected turnaround: 2-4 business hours.'],
             ['pending', '4', 'E-Ticket Issued', 'Your ticket will be emailed to ' . $booking->contact_email . ' immediately after verification.'],
         ];
+
+    // Extract flight snapshot for itinerary display
+    $flightSnapshot = $booking->flight_snapshot ?? [];
+    $segments = $flightSnapshot['segments'] ?? [];
+    $returnSegments = $flightSnapshot['returnSegments'] ?? [];
+    $multiLegs = $flightSnapshot['multiLegs'] ?? [];
+    $tripType = strtolower($booking->trip_type ?? 'oneway');
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -78,6 +85,25 @@
     .disclaimer{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 18px;margin:18px 0;font-size:12px;color:#78350f;line-height:1.7}
     .footer{background:#f8fafc;padding:20px 32px;text-align:center;border-top:1px solid #f1f5f9;font-size:12px;color:#94a3b8}
     .footer a{color:#1d4ed8;text-decoration:none}
+    /* Itinerary Styles */
+    .itinerary-container{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin:16px 0}
+    .itinerary-leg{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:12px}
+    .itinerary-leg-header{font-size:12px;font-weight:700;color:#0f172a;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid #e2e8f0}
+    .flight-segment{margin-bottom:14px}
+    .flight-segment:last-child{margin-bottom:0}
+    .segment-row{display:table;width:100%;margin-bottom:10px}
+    .segment-time{display:table-cell;width:80px;font-size:16px;font-weight:700;color:#0a1940;vertical-align:middle}
+    .segment-route{display:table-cell;padding:0 12px;vertical-align:middle;border-left:2px solid #e2e8f0;border-right:2px solid #e2e8f0}
+    .segment-airline{display:table-cell;width:120px;text-align:right;font-size:12px;color:#64748b;vertical-align:middle}
+    .airport-code{font-size:13px;font-weight:700;color:#0f172a}
+    .airport-name{font-size:11px;color:#64748b}
+    .flight-info{font-size:11px;color:#64748b;margin-top:6px}
+    .flight-info-item{display:inline-block;margin-right:12px}
+    .duration-badge{background:#e0e7ff;color:#3730a3;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:700;display:inline-block;margin-top:6px}
+    .layover-badge{background:#fef3c7;color:#92400e;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:700;display:inline-block;margin-top:6px}
+    .leg-summary{background:#f0f9ff;border-left:3px solid #0284c7;padding:10px 12px;margin-top:12px;font-size:12px;color:#0c4a6e}
+    .leg-summary-row{margin-bottom:4px}
+    .leg-summary-row:last-child{margin-bottom:0}
 </style>
 </head>
 <body>
@@ -100,14 +126,281 @@
             <div class="ref-value">{{ $booking->booking_ref }}</div>
         </div>
 
-        <div class="section-title">Booking Details</div>
+        {{-- ITINERARY SECTION --}}
+        <div class="section-title">Flight Itinerary</div>
+        <div class="itinerary-container">
+            @if($tripType === 'oneway' || $tripType === 'return')
+                {{-- OUTBOUND LEG --}}
+                @if(!empty($segments))
+                <div class="itinerary-leg">
+                    <div class="itinerary-leg-header">
+                        ✈️ 
+                        @if($segments[0])
+                            {{ $segments[0]['from'] ?? 'DEP' }} → {{ $segments[count($segments)-1]['to'] ?? 'ARR' }}
+                        @endif
+                        @if($flightSnapshot['departDateLabel'])
+                            | {{ $flightSnapshot['departDateLabel'] }}
+                        @endif
+                    </div>
+                    
+                    @foreach($segments as $index => $segment)
+                    <div class="flight-segment">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+                            <tr>
+                                <td style="width:70px;font-size:16px;font-weight:700;color:#0a1940;vertical-align:middle;padding-right:8px">
+                                    {{ $segment['departTime'] ?? '—' }}
+                                </td>
+                                <td style="vertical-align:middle;padding:0 12px;border-left:2px solid #e2e8f0;border-right:2px solid #e2e8f0">
+                                    <div class="airport-code">{{ $segment['from'] ?? 'N/A' }}</div>
+                                    <div class="airport-name" style="font-size:11px;color:#64748b">{{ $segment['fromCity'] ?? '' }}</div>
+                                </td>
+                                <td style="text-align:center;padding:0 12px;font-size:12px;color:#64748b;width:60px">
+                                    @if($segment['duration'])
+                                        {{ floor($segment['duration'] / 60) }}h {{ $segment['duration'] % 60 }}m
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td style="vertical-align:middle;padding:0 12px;border-left:2px solid #e2e8f0;border-right:2px solid #e2e8f0">
+                                    <div class="airport-code">{{ $segment['to'] ?? 'N/A' }}</div>
+                                    <div class="airport-name" style="font-size:11px;color:#64748b">{{ $segment['toCity'] ?? '' }}</div>
+                                </td>
+                                <td style="font-size:16px;font-weight:700;color:#0a1940;vertical-align:middle;padding-left:8px;text-align:right;width:70px">
+                                    {{ $segment['arriveTime'] ?? '—' }}
+                                </td>
+                            </tr>
+                        </table>
+                        <div style="font-size:12px;color:#64748b;margin-top:6px;padding-left:8px">
+                            <span style="font-weight:700;color:#0f172a">{{ $segment['airlineCode'] ?? '' }} {{ $segment['flightNo'] ?? '' }}</span>
+                            @if($segment['equipment'])
+                                | Aircraft: {{ $segment['equipment'] }}
+                            @endif
+                            @if($segment['cabin'])
+                                | Cabin: {{ $segment['cabin'] }}
+                            @endif
+                        </div>
+                        
+                        {{-- Layover info --}}
+                        @if($index < count($segments) - 1)
+                            @php
+                                $currentArriveStr = ($segment['arriveDT'] ?? '');
+                                $nextDepartStr = ($segments[$index + 1]['departDT'] ?? '');
+                                if ($currentArriveStr && $nextDepartStr) {
+                                    try {
+                                        $arrivalTime = \Carbon\Carbon::parse($currentArriveStr);
+                                        $departureTime = \Carbon\Carbon::parse($nextDepartStr);
+                                        $layoverMins = (int)$arrivalTime->diffInMinutes($departureTime);
+                                        $layoverHours = floor($layoverMins / 60);
+                                        $layoverMins = $layoverMins % 60;
+                                    } catch (\Throwable) {
+                                        $layoverMins = 0;
+                                        $layoverHours = 0;
+                                    }
+                                }
+                            @endphp
+                            @if(($layoverHours ?? 0) > 0)
+                            <div style="background:#fef3c7;border-left:3px solid #d97706;padding:8px 10px;margin-top:10px;font-size:11px;color:#92400e;font-weight:700">
+                                ⏱️ Layover: {{ $layoverHours }}h {{ $layoverMins }}m in {{ $segment['arriveCity'] ?? $segment['arriveAirport'] ?? 'N/A' }}
+                            </div>
+                            @endif
+                        @endif
+                    </div>
+                    @endforeach
+
+                    <div style="background:#f0f9ff;border-left:3px solid #0284c7;padding:10px 12px;margin-top:12px;font-size:12px;color:#0c4a6e">
+                        <div style="margin-bottom:4px"><strong>Total Duration:</strong> {{ $flightSnapshot['durationLabel'] ?? '—' }}</div>
+                        <div><strong>Stops:</strong> {{ $flightSnapshot['stops'] ?? 0 }}</div>
+                    </div>
+                </div>
+                @endif
+
+                {{-- RETURN LEG --}}
+                @if($tripType === 'return' && !empty($returnSegments))
+                <div class="itinerary-leg">
+                    <div class="itinerary-leg-header">
+                        ✈️ RETURN
+                        @if($returnSegments[0])
+                            {{ $returnSegments[0]['from'] ?? 'DEP' }} → {{ $returnSegments[count($returnSegments)-1]['to'] ?? 'ARR' }}
+                        @endif
+                        @if($flightSnapshot['returnDateLabel'])
+                            | {{ $flightSnapshot['returnDateLabel'] }}
+                        @endif
+                    </div>
+                    
+                    @foreach($returnSegments as $index => $segment)
+                    <div class="flight-segment">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+                            <tr>
+                                <td style="width:70px;font-size:16px;font-weight:700;color:#0a1940;vertical-align:middle;padding-right:8px">
+                                    {{ $segment['departTime'] ?? '—' }}
+                                </td>
+                                <td style="vertical-align:middle;padding:0 12px;border-left:2px solid #e2e8f0;border-right:2px solid #e2e8f0">
+                                    <div class="airport-code">{{ $segment['from'] ?? 'N/A' }}</div>
+                                    <div class="airport-name" style="font-size:11px;color:#64748b">{{ $segment['fromCity'] ?? '' }}</div>
+                                </td>
+                                <td style="text-align:center;padding:0 12px;font-size:12px;color:#64748b;width:60px">
+                                    @if($segment['duration'])
+                                        {{ floor($segment['duration'] / 60) }}h {{ $segment['duration'] % 60 }}m
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td style="vertical-align:middle;padding:0 12px;border-left:2px solid #e2e8f0;border-right:2px solid #e2e8f0">
+                                    <div class="airport-code">{{ $segment['to'] ?? 'N/A' }}</div>
+                                    <div class="airport-name" style="font-size:11px;color:#64748b">{{ $segment['toCity'] ?? '' }}</div>
+                                </td>
+                                <td style="font-size:16px;font-weight:700;color:#0a1940;vertical-align:middle;padding-left:8px;text-align:right;width:70px">
+                                    {{ $segment['arriveTime'] ?? '—' }}
+                                </td>
+                            </tr>
+                        </table>
+                        <div style="font-size:12px;color:#64748b;margin-top:6px;padding-left:8px">
+                            <span style="font-weight:700;color:#0f172a">{{ $segment['airlineCode'] ?? '' }} {{ $segment['flightNo'] ?? '' }}</span>
+                            @if($segment['equipment'])
+                                | Aircraft: {{ $segment['equipment'] }}
+                            @endif
+                            @if($segment['cabin'])
+                                | Cabin: {{ $segment['cabin'] }}
+                            @endif
+                        </div>
+                        
+                        {{-- Layover info --}}
+                        @if($index < count($returnSegments) - 1)
+                            @php
+                                $currentArriveStr = ($segment['arriveDT'] ?? '');
+                                $nextDepartStr = ($returnSegments[$index + 1]['departDT'] ?? '');
+                                if ($currentArriveStr && $nextDepartStr) {
+                                    try {
+                                        $arrivalTime = \Carbon\Carbon::parse($currentArriveStr);
+                                        $departureTime = \Carbon\Carbon::parse($nextDepartStr);
+                                        $layoverMins = (int)$arrivalTime->diffInMinutes($departureTime);
+                                        $layoverHours = floor($layoverMins / 60);
+                                        $layoverMins = $layoverMins % 60;
+                                    } catch (\Throwable) {
+                                        $layoverMins = 0;
+                                        $layoverHours = 0;
+                                    }
+                                }
+                            @endphp
+                            @if(($layoverHours ?? 0) > 0)
+                            <div style="background:#fef3c7;border-left:3px solid #d97706;padding:8px 10px;margin-top:10px;font-size:11px;color:#92400e;font-weight:700">
+                                ⏱️ Layover: {{ $layoverHours }}h {{ $layoverMins }}m in {{ $segment['arriveCity'] ?? $segment['arriveAirport'] ?? 'N/A' }}
+                            </div>
+                            @endif
+                        @endif
+                    </div>
+                    @endforeach
+
+                    <div style="background:#f0f9ff;border-left:3px solid #0284c7;padding:10px 12px;margin-top:12px;font-size:12px;color:#0c4a6e">
+                        <div style="margin-bottom:4px"><strong>Total Duration:</strong> {{ $flightSnapshot['returnDurationLabel'] ?? '—' }}</div>
+                        <div><strong>Stops:</strong> {{ $flightSnapshot['returnStops'] ?? 0 }}</div>
+                    </div>
+                </div>
+                @endif
+
+            @elseif($tripType === 'multi' && !empty($multiLegs))
+                {{-- MULTI-CITY LEGS --}}
+                @foreach($multiLegs as $legIndex => $leg)
+                <div class="itinerary-leg">
+                    <div class="itinerary-leg-header">
+                        ✈️ LEG {{ $legIndex + 1 }}
+                        @php
+                            $legSegments = $leg['segments'] ?? [];
+                            if ($legSegments) {
+                                echo $legSegments[0]['from'] ?? 'DEP';
+                                echo ' → ';
+                                echo $legSegments[count($legSegments)-1]['to'] ?? 'ARR';
+                            }
+                        @endphp
+                        @if($leg['departDateLabel'])
+                            | {{ $leg['departDateLabel'] }}
+                        @endif
+                    </div>
+                    
+                    @php $legSegments = $leg['segments'] ?? []; @endphp
+                    @foreach($legSegments as $index => $segment)
+                    <div class="flight-segment">
+                        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">
+                            <tr>
+                                <td style="width:70px;font-size:16px;font-weight:700;color:#0a1940;vertical-align:middle;padding-right:8px">
+                                    {{ $segment['departTime'] ?? '—' }}
+                                </td>
+                                <td style="vertical-align:middle;padding:0 12px;border-left:2px solid #e2e8f0;border-right:2px solid #e2e8f0">
+                                    <div class="airport-code">{{ $segment['from'] ?? 'N/A' }}</div>
+                                    <div class="airport-name" style="font-size:11px;color:#64748b">{{ $segment['fromCity'] ?? '' }}</div>
+                                </td>
+                                <td style="text-align:center;padding:0 12px;font-size:12px;color:#64748b;width:60px">
+                                    @if($segment['duration'])
+                                        {{ floor($segment['duration'] / 60) }}h {{ $segment['duration'] % 60 }}m
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td style="vertical-align:middle;padding:0 12px;border-left:2px solid #e2e8f0;border-right:2px solid #e2e8f0">
+                                    <div class="airport-code">{{ $segment['to'] ?? 'N/A' }}</div>
+                                    <div class="airport-name" style="font-size:11px;color:#64748b">{{ $segment['toCity'] ?? '' }}</div>
+                                </td>
+                                <td style="font-size:16px;font-weight:700;color:#0a1940;vertical-align:middle;padding-left:8px;text-align:right;width:70px">
+                                    {{ $segment['arriveTime'] ?? '—' }}
+                                </td>
+                            </tr>
+                        </table>
+                        <div style="font-size:12px;color:#64748b;margin-top:6px;padding-left:8px">
+                            <span style="font-weight:700;color:#0f172a">{{ $segment['airlineCode'] ?? '' }} {{ $segment['flightNo'] ?? '' }}</span>
+                            @if($segment['equipment'])
+                                | Aircraft: {{ $segment['equipment'] }}
+                            @endif
+                            @if($segment['cabin'])
+                                | Cabin: {{ $segment['cabin'] }}
+                            @endif
+                        </div>
+                        
+                        {{-- Layover info --}}
+                        @if($index < count($legSegments) - 1)
+                            @php
+                                $currentArriveStr = ($segment['arriveDT'] ?? '');
+                                $nextDepartStr = ($legSegments[$index + 1]['departDT'] ?? '');
+                                if ($currentArriveStr && $nextDepartStr) {
+                                    try {
+                                        $arrivalTime = \Carbon\Carbon::parse($currentArriveStr);
+                                        $departureTime = \Carbon\Carbon::parse($nextDepartStr);
+                                        $layoverMins = (int)$arrivalTime->diffInMinutes($departureTime);
+                                        $layoverHours = floor($layoverMins / 60);
+                                        $layoverMins = $layoverMins % 60;
+                                    } catch (\Throwable) {
+                                        $layoverMins = 0;
+                                        $layoverHours = 0;
+                                    }
+                                }
+                            @endphp
+                            @if(($layoverHours ?? 0) > 0)
+                            <div style="background:#fef3c7;border-left:3px solid #d97706;padding:8px 10px;margin-top:10px;font-size:11px;color:#92400e;font-weight:700">
+                                ⏱️ Layover: {{ $layoverHours }}h {{ $layoverMins }}m in {{ $segment['arriveCity'] ?? $segment['arriveAirport'] ?? 'N/A' }}
+                            </div>
+                            @endif
+                        @endif
+                    </div>
+                    @endforeach
+
+                    <div style="background:#f0f9ff;border-left:3px solid #0284c7;padding:10px 12px;margin-top:12px;font-size:12px;color:#0c4a6e">
+                        <div style="margin-bottom:4px"><strong>Duration:</strong> {{ $leg['durationLabel'] ?? '—' }}</div>
+                        <div><strong>Stops:</strong> {{ $leg['stops'] ?? 0 }}</div>
+                    </div>
+                </div>
+                @endforeach
+            @else
+                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:12px;font-size:12px;color:#7f1d1d">
+                    No itinerary details available
+                </div>
+            @endif
+        </div>
+
+        <div class="section-title">Booking Summary</div>
         <table class="detail">
-            <tr><td>Route</td><td>{{ $booking->route }}</td></tr>
             <tr><td>Airline</td><td>{{ $booking->airline }}</td></tr>
             <tr><td>Cabin</td><td>{{ $booking->cabin }}</td></tr>
             <tr><td>Fare Type</td><td>{{ $booking->fare_type }}</td></tr>
             <tr><td>Total Amount</td><td style="color:#0a1940">{{ $price }}</td></tr>
-            {{--<tr><td>Hold Reference</td><td>{{ $booking->unique_id ?: 'N/A' }}</td></tr>--}}
             <tr><td>Payment Method</td><td>{{ $isBankTransferNotice ? 'Bank Transfer' : 'Online or Bank Transfer' }}</td></tr>
         </table>
 

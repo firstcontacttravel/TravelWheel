@@ -1401,18 +1401,11 @@
                                             <span class="bk-review-label">{{ $ptl }} · Baggage</span>
                                             <span class="bk-review-val">{{ $bagStr }}</span>
                                         </div>
-                                        <div class="bk-review-row">
-                                            <span class="bk-review-label">{{ $ptl }} · Refund</span>
-                                            <span class="bk-review-val" style="color:{{ $refund ? 'var(--green)' : 'var(--red)' }}">{{ $refund ? '✓ Allowed' : '✗ Not allowed' }}</span>
-                                        </div>
-                                        <div class="bk-review-row">
-                                            <span class="bk-review-label">{{ $ptl }} · Changes</span>
-                                            <span class="bk-review-val">
-                                                @if($change) <span style="color:var(--green)">✓ Allowed</span> · Fee {{ $fmt($fb['changePenalty'] ?? 0) }}
-                                                @else <span style="color:var(--red)">✗ Not allowed</span> @endif
-                                            </span>
-                                        </div>
                                     @endforeach
+                                    <div class="bk-review-row">
+                                            <span class="bk-review-label">Refund</span>
+                                            <span class="bk-review-val" style="color:{{ $flight['isRefundable'] ? 'var(--green)' : 'var(--red)' }}">{{  $flight['isRefundable'] ? '✓ Allowed' : '✗ Not allowed' }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
