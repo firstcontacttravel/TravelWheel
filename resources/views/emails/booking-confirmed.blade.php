@@ -137,10 +137,10 @@
 
         <p style="font-size:13px;color:#64748b;line-height:1.7;margin-top:22px">
             <strong>Important reminders:</strong><br>
-            • Arrive at least 2 hrs before domestic / 3 hrs before international flights.<br>
-            • Carry a valid photo ID or passport — name must match your ticket exactly.<br>
-            • Check your airline's baggage policy before departure.<br>
-            • Online check-in typically opens 24–48 hrs before departure.<br><br>
+            Arrive at least 2 hrs before domestic / 3 hrs before international flights.<br>
+            Carry a valid photo ID or passport — name must match your ticket exactly.<br>
+            Check your airline's baggage policy before departure.<br>
+            Online check-in typically opens 24–48 hrs before departure.<br><br>
             <strong>Need help?</strong> Email
             <a href="mailto:support@travelwheel.com">support@travelwheel.com</a>
             or call +234 800 000 0000 (Mon–Fri 8am–6pm).<br>
