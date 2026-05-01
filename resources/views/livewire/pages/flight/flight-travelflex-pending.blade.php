@@ -42,6 +42,24 @@
             ];
         }
     }
+
+    // ── Extra Services ────────────────────────────────────────────────────────
+    $dbId          = session('flightBookingDbId');
+    $dbBooking     = $dbId ? \App\Models\FlightBooking::find($dbId) : null;
+    $extraServices = $dbBooking?->extra_services_snapshot ?? [];
+    $extrasTotal   = 0.0;
+    if (!empty($extraServices)) {
+        if (!empty($extraServices['baggage'])) {
+            foreach ($extraServices['baggage'] as $item) {
+                $extrasTotal += (float) ($item['line_total'] ?? 0);
+            }
+        }
+        if (!empty($extraServices['meal'])) {
+            foreach ($extraServices['meal'] as $item) {
+                $extrasTotal += (float) ($item['unit_price'] ?? 0);
+            }
+        }
+    }
 @endphp
 
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -186,6 +204,56 @@
                             </tr>
                             @endforeach
                         </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+
+            {{-- ── Extra Services (TravelFlex) ── --}}
+            @if(!empty($extraServices['baggage']) || !empty($extraServices['meal']))
+            <div class="pc">
+                <div class="pc-head">
+                    <div class="pc-icon" style="background:#fef3c7;color:#d97706;">🎁</div>
+                    <div>
+                        <div class="pc-title">Extra Services</div>
+                        <div class="pc-sub">Included in TravelFlex payment plan</div>
+                    </div>
+                </div>
+                <div class="pc-body" style="padding:0;">
+                    <table class="pax-table">
+                        <thead><tr><th>Service</th><th>Details</th><th>Price</th></tr></thead>
+                        <tbody>
+                            @if(!empty($extraServices['baggage']))
+                                @foreach($extraServices['baggage'] as $baggage)
+                                <tr>
+                                    <td><strong style="color:#059669;">🧳 Extra Baggage</strong></td>
+                                    <td>
+                                        {{ $baggage['description'] ?? '' }}
+                                        <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($baggage['direction'] ?? '') }} · Qty: {{ $baggage['quantity'] ?? 1 }}</span>
+                                    </td>
+                                    <td style="font-weight:700;color:#0f172a;">{{ $sym }}{{ number_format((float)($baggage['line_total'] ?? 0), 2) }}</td>
+                                </tr>
+                                @endforeach
+                            @endif
+                            @if(!empty($extraServices['meal']))
+                                @foreach($extraServices['meal'] as $meal)
+                                <tr>
+                                    <td><strong style="color:#d97706;">🍽️ Meal</strong></td>
+                                    <td>
+                                        {{ $meal['description'] ?? '' }}
+                                        <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($meal['direction'] ?? '') }} · Segment {{ ($meal['segment'] ?? 0) + 1 }}</span>
+                                    </td>
+                                    <td style="font-weight:700;color:#0f172a;">{{ $sym }}{{ number_format((float)($meal['unit_price'] ?? 0), 2) }}</td>
+                                </tr>
+                                @endforeach
+                            @endif
+                        </tbody>
+                        <tfoot>
+                            <tr style="background:#fef3c7;">
+                                <td colspan="2" style="padding:10px 14px;font-weight:700;color:#d97706;">Total Extras</td>
+                                <td style="padding:10px 14px;font-weight:800;color:#d97706;font-size:14px;">{{ $fmt($extrasTotal) }}</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>

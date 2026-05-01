@@ -44,9 +44,7 @@
             </p>
             <p style="font-size:13px;color:#475569;line-height:1.6;margin-bottom:0;">
                 @if($isTicketed)
-                    Great news! Your booking is confirmed and your e-ticket has been issued.
-                    Your ticket PDF is attached to this email — please keep it safe and
-                    present it at the check-in counter along with a valid photo ID.
+                    Great news! Your booking is confirmed and your e-ticket has been issued. A copy of your E-ticket is attached in PDF to this email — please keep it safe and present it at the check-in counter along with your valid Passport and Visa.
                 @else
                     Your booking is confirmed and your seat is reserved. Your e-ticket is
                     being processed and will be sent to you shortly (usually within 15–30 minutes).
@@ -68,7 +66,7 @@
                         <div style="font-size:11px;color:#64748B;">
                             {{ $booking->flight_data['tripLabel'] ?? 'Flight' }}<br>
                             {{ $booking->flight_data['airline'] ?? '' }}<br>
-                            {{ $booking->flight_data['cabin'] ?? 'Economy' }}
+                            {{ $booking->cabin }}
                         </div>
                     </td>
                 </tr>
@@ -107,12 +105,11 @@
             <table width="100%" cellspacing="0" cellpadding="0">
                 @foreach([
                     ['&#9992;', 'Check-in', 'Arrive 2 hrs before domestic, 3 hrs before international flights.'],
-                    ['&#128282;', 'Valid ID', 'Carry a valid photo ID or passport. Names must match your ticket exactly.'],
+                    ['&#128282;', 'Valid ID', 'Carry a valid passport, with at least 6 Months to expire. Names must match your ticket exactly.'],
                     ['&#128123;', 'Baggage', "Check your airline's baggage allowance. Excess fees apply at the airport."],
                     ['&#128241;', 'Online Check-in', "Opens 24–48 hours before departure on your airline's website."],
                 ] as [$icon, $title, $text])
                 <tr>
-                    <td style="padding:6px 0;vertical-align:top;width:24px;font-size:16px;">{{ $icon }}</td>
                     <td style="padding:6px 0 6px 8px;">
                         <strong style="font-size:12px;color:#0F172A;">{{ $title }}:</strong>
                         <span style="font-size:12px;color:#475569;"> {{ $text }}</span>

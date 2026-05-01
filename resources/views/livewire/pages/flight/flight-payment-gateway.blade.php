@@ -6,7 +6,7 @@
     $currency = $flight['currency'] ?? 'NGN';
     $sym      = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
     $fmt      = fn($v) => $sym . number_format((float)$v, 2);
-    $total    = $flight['price'] ?? 0;
+    $total    = ($flight['price'] ?? 0) + ($extrasTotal ?? 0);
     $segments = $flight['segments'] ?? [];
     $multiLegs = $flight['multiLegs'] ?? [];
     $isMulti = count($multiLegs) > 0;
@@ -28,7 +28,6 @@
             'date'  => $flight['departDateLabel'] ?? '',
         ];
     }
-    $errors   = session('errors') ?? [];
 @endphp
 
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -95,7 +94,7 @@
         @if(session('error') || $errors->has('error'))
         <div class="gw-error">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span>{{ session('error') ?? $errors->first('error') }}</span>
+            <span>{{ session('error') ?? $errors->first('error') ?? 'Payment error occurred' }}</span>
         </div>
         @endif
 
@@ -103,11 +102,11 @@
             <div class="gw-head">
                 <div class="gw-head-icon">💳</div>
                 <div>
-                    <div class="gw-head-title">Secure Payment</div>
-                    <div class="gw-head-sub">Your payment is protected by 256-bit SSL encryption</div>
+                    <div class="gw-head-title text-white">Payment</div>
+                    <!-- <div class="gw-head-sub">Your payment is protected by 256-bit SSL encryption</div> -->
                 </div>
-                <div class="gw-lock">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <div class="gw-lock text-white">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     Secured
                 </div>
             </div>
@@ -229,6 +228,36 @@
                         <span class="gw-rail-val">{{ $sym }}{{ number_format(($fb['totalFare']??0) * $qty, 2) }}</span>
                     </div>
                 @endforeach
+            </div>
+            @endif
+
+            {{-- Extras section --}}
+            @if(($extrasTotal ?? 0) > 0)
+            <div style="padding:0 18px 12px;border-top:1px solid var(--gray-100);padding-top:12px;">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:10px;">Extras Added</div>
+                
+                {{-- Baggage items --}}
+                @forelse($selectedExtras['baggage'] ?? [] as $baggage)
+                    <div class="gw-rail-row">
+                        <span class="gw-rail-lbl">{{ $baggage['description'] ?? 'Baggage' }} × {{ $baggage['quantity'] ?? 1 }}</span>
+                        <span class="gw-rail-val">{{ $fmt($baggage['line_total'] ?? 0) }}</span>
+                    </div>
+                @empty
+                @endforelse
+                
+                {{-- Meal items --}}
+                @forelse($selectedExtras['meal'] ?? [] as $meal)
+                    <div class="gw-rail-row">
+                        <span class="gw-rail-lbl">{{ $meal['description'] ?? 'Meal' }}</span>
+                        <span class="gw-rail-val">{{ $fmt($meal['unit_price'] ?? 0) }}</span>
+                    </div>
+                @empty
+                @endforelse
+                
+                <div class="gw-rail-row" style="padding-top:8px;border-top:1px dashed var(--gray-200);margin-top:8px;padding-bottom:0;">
+                    <span class="gw-rail-lbl" style="font-weight:700;">Extras Subtotal</span>
+                    <span class="gw-rail-val" style="font-weight:700;">{{ $fmt($extrasTotal) }}</span>
+                </div>
             </div>
             @endif
 

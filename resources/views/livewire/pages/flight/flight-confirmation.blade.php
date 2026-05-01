@@ -31,6 +31,13 @@
         $tripDetails   = $tripDetails ?? [];   // passed from controller after _callTripDetailsApi()
         $dbBooking     = $dbBooking   ?? null;
 
+        // ── Extra Services (from DB snapshot) ──────────────────────────────────
+        $extraServices = $dbBooking?->extra_services_snapshot ?? [];
+        $baggageItems  = $extraServices['baggage'] ?? [];
+        $mealItems     = $extraServices['meal'] ?? [];
+        $extrasTotal   = $extraServices['total_amount'] ?? 0;
+        $extrasCurrency = $extraServices['currency'] ?? 'USD';
+
         // Live data from trip_details API
         $resItems      = collect(data_get($tripDetails, 'ItineraryInfo.ReservationItems', []))->map(fn($r) => $r['ReservationItem'] ?? $r);
         $customerInfos = collect(data_get($tripDetails, 'ItineraryInfo.CustomerInfos', []))->map(fn($c) => $c['CustomerInfo'] ?? $c);
@@ -442,9 +449,29 @@
                     </div>
                     @endforeach
                 </div>
+
+                {{-- ── Extra Services (if any) ── --}}
+                @if(!empty($baggageItems) || !empty($mealItems))
+                <div style="padding:12px 16px;border-top:1px solid var(--gray-100);background:var(--gray-50);">
+                    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:8px;">Extra Services</div>
+                    @foreach($baggageItems as $bag)
+                    <div class="fare-row">
+                        <span class="fare-lbl">🧳 {{ $bag['description'] }} ({{ ucfirst($bag['direction']) }})</span>
+                        <span class="fare-val" style="color:var(--green);">{{ match($bag['currency']){'NGN'=>'₦','USD'=>'$','GBP'=>'£','EUR'=>'€',default=>$bag['currency'].' '} }}{{ number_format($bag['line_total'], 2) }}</span>
+                    </div>
+                    @endforeach
+                    @foreach($mealItems as $meal)
+                    <div class="fare-row">
+                        <span class="fare-lbl">🍽️ {{ $meal['description'] }} (Seg {{ $meal['segment'] + 1 }}, {{ ucfirst($meal['direction']) }})</span>
+                        <span class="fare-val" style="color:var(--amber);">{{ match($meal['currency']){'NGN'=>'₦','USD'=>'$','GBP'=>'£','EUR'=>'€',default=>$meal['currency'].' '} }}{{ number_format($meal['unit_price'], 2) }}</span>
+                    </div>
+                    @endforeach
+                </div>
+                @endif
+
                 <div class="fare-total">
                     <span class="fare-total-lbl">Total Paid</span>
-                    <span class="fare-total-val">{{ $fmt($total) }}</span>
+                    <span class="fare-total-val">{{ $fmt($total + $extrasTotal) }}</span>
                 </div>
             </div>
 

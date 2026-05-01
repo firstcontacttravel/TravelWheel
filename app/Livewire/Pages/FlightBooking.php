@@ -103,29 +103,30 @@ class FlightBooking extends Component
     ];
 
     // ─────────────────────────────────────────────────────────────────────────
-   public function mount(): void
+    public function mount(): void
     {
         $this->sessionId    = session('bookingSessionId', '');
         $this->searchParams = session('bookingSearchParams', []);
- 
+
         $this->adultCount  = (int) ($this->searchParams['adults'] ?? 1);
         $this->childCount  = (int) ($this->searchParams['childs'] ?? 0);
         $this->infantCount = (int) ($this->searchParams['kids']   ?? 0);
- 
+
         $this->bookingFlight        = session('bookingFlight', []);
         $this->bookingSearchParams  = session('bookingSearchParams', []);
         $this->bookingSessionId     = session('bookingSessionId', '');
         $this->extraServices        = session('extraServices', []);
         $this->fareRules            = session('fareRules', []);
         $this->tripType             = session('tripType', '');
- 
+
         $this->contactAreaCode    = '080';
         $this->contactCountryCode = '234';
- 
+
         $this->_rebuildPassengers();
-    }
- 
-    private function getFlight(): array
+
+        // ── Initialize extras total on mount ──────────────────────────────────
+        $this->recalcExtrasTotal();
+    }    private function getFlight(): array
     {
         $bookingFlight = session('bookingFlight', []);
         $mappedFlight  = $bookingFlight['flight'] ?? [];

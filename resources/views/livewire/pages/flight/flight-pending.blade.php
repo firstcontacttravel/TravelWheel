@@ -28,6 +28,12 @@
     if ($tktLimit) {
         try { $td = \Carbon\Carbon::parse($tktLimit); $tktFmt = $td->format('D, d M Y \a\t H:i'); $tktHours = max(0,(int)now()->diffInHours($td,false)); } catch (\Throwable $e) {}
     }
+    
+    // ── Extra Services (from DB snapshot) ──────────────────────────────────
+    $extraServices = $dbBooking?->extra_services_snapshot ?? [];
+    $baggageItems  = $extraServices['baggage'] ?? [];
+    $mealItems     = $extraServices['meal'] ?? [];
+    $extrasTotal   = $extraServices['total_amount'] ?? 0;
     $equipMap = ['73H'=>'Boeing 737-800','738'=>'Boeing 737-800','7M8'=>'Boeing 737 MAX 8','789'=>'Boeing 787-9','788'=>'Boeing 787-8','320'=>'Airbus A320','321'=>'Airbus A321','332'=>'Airbus A330-200','333'=>'Airbus A330-300','E90'=>'Embraer E190'];
     $routeLines = [];
     if ($isMulti) {
@@ -234,9 +240,29 @@
                         <span class="status-badge status-pending" style="font-size:10.5px;">⏳ Awaiting Verification</span>
                     </span></div>
                 </div>
+
+                {{-- ── Extra Services (if any) ── --}}
+                @if(!empty($baggageItems) || !empty($mealItems))
+                <div style="padding:12px 16px;border-top:1px solid var(--gray-100);background:var(--gray-50);">
+                    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:8px;">Extra Services</div>
+                    @foreach($baggageItems as $bag)
+                    <div class="fare-row">
+                        <span class="fare-lbl" style="font-size:11px;">🧳 {{ $bag['description'] }}</span>
+                        <span class="fare-val" style="color:var(--green);font-size:11px;">{{ match($bag['currency']){'NGN'=>'₦','USD'=>'$','GBP'=>'£','EUR'=>'€',default=>$bag['currency'].' '} }}{{ number_format($bag['line_total'], 2) }}</span>
+                    </div>
+                    @endforeach
+                    @foreach($mealItems as $meal)
+                    <div class="fare-row">
+                        <span class="fare-lbl" style="font-size:11px;">🍽️ {{ $meal['description'] }}</span>
+                        <span class="fare-val" style="color:var(--amber);font-size:11px;">{{ match($meal['currency']){'NGN'=>'₦','USD'=>'$','GBP'=>'£','EUR'=>'€',default=>$meal['currency'].' '} }}{{ number_format($meal['unit_price'], 2) }}</span>
+                    </div>
+                    @endforeach
+                </div>
+                @endif
+
                 <div class="fare-total">
                     <span class="fare-total-lbl">Total</span>
-                    <span class="fare-total-val">{{ $fmt($total) }}</span>
+                    <span class="fare-total-val">{{ $fmt($total + $extrasTotal) }}</span>
                 </div>
             </div>
             <div style="background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);">

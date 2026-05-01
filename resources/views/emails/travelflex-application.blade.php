@@ -86,12 +86,66 @@
             <tr><td>Ticket Cost</td><td><strong>{{ $sym }}{{ number_format((float)($flightInfo['price']??0), 2) }}</strong></td></tr>
         </table>
 
+        {{-- ── Extra Services ── --}}
+        @php
+            $extraServices = $flightInfo['extra_services_snapshot'] ?? [];
+            $extrasTotal   = 0.0;
+            if (!empty($extraServices)) {
+                if (!empty($extraServices['baggage'])) {
+                    foreach ($extraServices['baggage'] as $item) {
+                        $extrasTotal += (float) ($item['line_total'] ?? 0);
+                    }
+                }
+                if (!empty($extraServices['meal'])) {
+                    foreach ($extraServices['meal'] as $item) {
+                        $extrasTotal += (float) ($item['unit_price'] ?? 0);
+                    }
+                }
+            }
+        @endphp
+        @if(!empty($extraServices['baggage']) || !empty($extraServices['meal']))
+        <h4>🎁 Extra Services</h4>
+        <table class="schedule-table">
+            <thead><tr><th>Service Type</th><th>Description</th><th>Details</th><th>Price</th></tr></thead>
+            <tbody>
+                @if(!empty($extraServices['baggage']))
+                    @foreach($extraServices['baggage'] as $bag)
+                    <tr>
+                        <td>🧳 Baggage</td>
+                        <td>{{ $bag['description'] ?? '' }}</td>
+                        <td style="font-size:11px;">{{ ucfirst($bag['direction'] ?? '') }} · Qty: {{ $bag['quantity'] ?? 1 }}</td>
+                        <td><strong>{{ $sym }}{{ number_format((float)($bag['line_total'] ?? 0), 2) }}</strong></td>
+                    </tr>
+                    @endforeach
+                @endif
+                @if(!empty($extraServices['meal']))
+                    @foreach($extraServices['meal'] as $meal)
+                    <tr>
+                        <td>🍽️ Meal</td>
+                        <td>{{ $meal['description'] ?? '' }}</td>
+                        <td style="font-size:11px;">{{ ucfirst($meal['direction'] ?? '') }} · Segment {{ ($meal['segment'] ?? 0) + 1 }}</td>
+                        <td><strong>{{ $sym }}{{ number_format((float)($meal['unit_price'] ?? 0), 2) }}</strong></td>
+                    </tr>
+                    @endforeach
+                @endif
+            </tbody>
+            <tfoot>
+                <tr style="background:#f8fafc;font-weight:700;">
+                    <td colspan="3">Total Extra Services</td>
+                    <td><strong>{{ $sym }}{{ number_format($extrasTotal, 2) }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+        @endif
+
         {{-- ── Loan Details ── --}}
         <h4>💰 Loan Details</h4>
         <table>
-            <tr><td>Total Loan Amount</td><td><strong>{{ $sym }}{{ number_format((float)($loanPlan['grand_total']??0), 2) }}</strong></td></tr>
+            <tr><td>Flight Cost</td><td><strong>{{ $sym }}{{ number_format((float)($flightInfo['price']??0), 2) }}</strong></td></tr>
+            @if($extrasTotal > 0)<tr><td>Extra Services</td><td><strong>{{ $sym }}{{ number_format($extrasTotal, 2) }}</strong></td></tr>@endif
+            <tr><td>Total Loan Amount</td><td><strong style="color:#7c3aed;">{{ $sym }}{{ number_format((float)($loanPlan['grand_total']??0), 2) }}</strong></td></tr>
             <tr><td>Down Payment</td><td>{{ $sym }}{{ number_format((float)($loanPlan['down_payment']??0), 2) }} ({{ $loanPlan['down_percent']??30 }}%)</td></tr>
-            <tr><td>Remaining Balance</td><td>{{ $sym }}{{ number_format((float)($flightInfo['price']??0) - (float)($loanPlan['down_payment']??0), 2) }}</td></tr>
+            <tr><td>Remaining Balance</td><td>{{ $sym }}{{ number_format((float)($loanPlan['grand_total']??0) - (float)($loanPlan['down_payment']??0), 2) }}</td></tr>
             <tr><td>Repayment Plan</td><td>{{ $loanPlan['repayment_plan'] ?? '—' }}</td></tr>
             <tr><td>Total Interest</td><td>{{ $sym }}{{ number_format((float)($loanPlan['total_interest']??0), 2) }}</td></tr>
             <tr><td>Payment Method</td><td>{{ ucfirst($loanPlan['payment_method'] ?? '—') }}</td></tr>

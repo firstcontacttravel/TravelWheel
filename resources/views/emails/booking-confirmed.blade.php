@@ -16,6 +16,14 @@
     $currency = $booking->currency ?? 'NGN';
     $sym      = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency . ' ' };
     $price    = $sym . number_format((float)($booking->total_price ?? 0), 2);
+
+    // ── Extra Services ────────────────────────────────────────────────────────
+    $extraServices = $booking->extra_services_snapshot ?? [];
+    $baggageItems  = $extraServices['baggage'] ?? [];
+    $mealItems     = $extraServices['meal'] ?? [];
+    $extrasTotal   = $extraServices['total_amount'] ?? 0;
+    $extrasCurrency = $extraServices['currency'] ?? 'USD';
+    $extrasSym = match($extrasCurrency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $extrasCurrency . ' ' };
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -56,7 +64,7 @@
     <div class="header">
         <div class="header-icon">✅</div>
         <div class="header-title">Booking Confirmed!</div>
-        <div class="header-sub">Your e-ticket has been issued. Have a great flight! ✈️</div>
+        <div class="header-sub">Your e-ticket is ready. Have a great flight! ✈️</div>
     </div>
 
     <div class="body">
@@ -64,8 +72,7 @@
             Hi <strong>{{ $firstName }}</strong>,<br><br>
             Great news! Your booking is <strong>confirmed</strong> and your e-ticket has been issued.
             @if($hasEtickets)
-                Your e-ticket PDF is attached to this email — keep it safe and present it
-                at check-in along with a valid photo ID.
+                A copy of your E-ticket is attached in PDF to this email — please keep it safe and present it at the check-in counter along with your valid Passport and Visa.
             @else
                 Your ticket details are below. If a PDF attachment is not visible,
                 please contact us and we will resend it.
@@ -129,16 +136,35 @@
         </table>
         @endif
 
+        {{-- ── Extra Services (if any) ── --}}
+        @if(!empty($baggageItems) || !empty($mealItems))
+        <div class="section-title">Extra Services</div>
+        <table class="detail">
+            @foreach($baggageItems as $bag)
+            <tr>
+                <td>🧳 {{ $bag['description'] }}</td>
+                <td>{{ $extrasSym }}{{ number_format($bag['line_total'], 2) }}</td>
+            </tr>
+            @endforeach
+            @foreach($mealItems as $meal)
+            <tr>
+                <td>🍽️ {{ $meal['description'] }} (Seg {{ $meal['segment'] + 1 }})</td>
+                <td>{{ $extrasSym }}{{ number_format($meal['unit_price'], 2) }}</td>
+            </tr>
+            @endforeach
+        </table>
+        @endif
+
         {{-- Total --}}
         <div class="total-row" style="display:table;width:100%;box-sizing:border-box;">
             <span style="font-size:14px;font-weight:800;color:#064e3b;display:table-cell;">Total Paid</span>
-            <span style="font-size:20px;font-weight:800;color:#064e3b;font-family:'Courier New',monospace;display:table-cell;text-align:right;">{{ $price }}</span>
+            <span style="font-size:20px;font-weight:800;color:#064e3b;font-family:'Courier New',monospace;display:table-cell;text-align:right;">{{ $sym }}{{ number_format((float)($booking->total_price ?? 0) + $extrasTotal, 2) }}</span>
         </div>
 
         <p style="font-size:13px;color:#64748b;line-height:1.7;margin-top:22px">
             <strong>Important reminders:</strong><br>
             Arrive at least 2 hrs before domestic / 3 hrs before international flights.<br>
-            Carry a valid photo ID or passport — name must match your ticket exactly.<br>
+            Carry a valid passport, with at least 6 Months to expire. Names must match your ticket exactly.<br>
             Check your airline's baggage policy before departure.<br>
             Online check-in typically opens 24–48 hrs before departure.<br><br>
             <strong>Need help?</strong> Email

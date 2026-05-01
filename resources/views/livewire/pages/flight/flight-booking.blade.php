@@ -1542,6 +1542,26 @@
                         <input type="hidden" name="passengers[{{ $i }}][{{ $field }}]" value="{{ $pax[$field] ?? '' }}">
                         @endforeach
                         @endforeach
+
+                        {{-- ── Extra Services (baggage) ── --}}
+                        @foreach($selectedBaggage as $direction => $items)
+                            @foreach($items as $svcId => $qty)
+                                @if($qty > 0)
+                                <input type="hidden" name="extra_baggage[{{ $direction }}][{{ $svcId }}]" value="{{ $qty }}">
+                                @endif
+                            @endforeach
+                        @endforeach
+
+                        {{-- ── Extra Services (meals) ── --}}
+                        @foreach($selectedMeals as $direction => $segments)
+                            @foreach($segments as $segmentIndex => $items)
+                                @foreach($items as $svcId => $checked)
+                                    @if($checked)
+                                    <input type="hidden" name="extra_meal[{{ $direction }}][{{ $segmentIndex }}][{{ $svcId }}]" value="1">
+                                    @endif
+                                @endforeach
+                            @endforeach
+                        @endforeach
                     </form>
 
                 
@@ -1612,7 +1632,7 @@
                     
 
                     <div class="bk-fare-section">
-                        <div class="bk-fare-title">Flight Fare Summary BAG</div>
+                        <div class="bk-fare-title">Flight Fare Summary</div>
                     
                         @foreach($breakdown as $fb)
                         @php
@@ -1726,7 +1746,7 @@
                                         $bagPrice = (float) ($matchedSvc['ServiceCost']['Amount'] ?? 0);
                                         $bagCurr  = $matchedSvc['ServiceCost']['CurrencyCode'] ?? 'USD';
                                         $bagSym   = match($bagCurr) { 'NGN' => '₦', 'USD' => '$', 'AED' => 'AED ', default => $bagCurr . ' ' };
-                                        $lineTotal = $bagPrice * $qty;
+                                        $lineTotal = $bagPrice * (int)$qty;
                                     @endphp
                                     <div class="bk-fare-row" style="padding:3px 0;">
                                         <span class="bk-fare-lbl" style="font-size:11.5px;">

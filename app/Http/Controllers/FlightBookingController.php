@@ -417,6 +417,10 @@ class FlightBookingController extends Controller
             'extraMeal'         => $request->input('extra_meal', []),
         ]);
 
+        // ── Collect selected extra services ────────────────────────────────
+        $selectedExtras = $this->_collectSelectedExtras($request);
+        session(['selectedExtras' => $selectedExtras]);
+
         $bookingFlight = session('bookingFlight', []);
         $mappedFlight  = $bookingFlight['flight'] ?? $bookingFlight;
         $fareType      = strtolower($mappedFlight['fareType'] ?? 'public');
@@ -451,6 +455,7 @@ class FlightBookingController extends Controller
             'booking_status' => 'on_hold',
             'payment_status' => 'pending',
             'tkt_time_limit' => $tktTimeLimit ?: null,
+            'extra_services_snapshot' => session('selectedExtras', []),
         ]);
 
         session([
@@ -478,10 +483,31 @@ class FlightBookingController extends Controller
 
         $bookingFlight = session('bookingFlight', []);
         $mappedFlight  = $bookingFlight['flight'] ?? $bookingFlight;
+        $extraServices = session('extraServices', []);
+        $selectedExtras = session('selectedExtras', []);
+
+        // Calculate extras total for display
+        $extrasTotal = 0.0;
+        if (!empty($selectedExtras)) {
+            foreach ($selectedExtras as $category) {
+                if (is_array($category)) {
+                    foreach ($category as $item) {
+                        if (isset($item['line_total'])) {
+                            $extrasTotal += (float) $item['line_total'];
+                        } elseif (isset($item['unit_price'])) {
+                            $extrasTotal += (float) $item['unit_price'];
+                        }
+                    }
+                }
+            }
+        }
 
         return view('livewire.pages.flight.flight-payment-gateway', [
-            'flight'  => $mappedFlight,
-            'contact' => session('bookingContact', []),
+            'flight'           => $mappedFlight,
+            'contact'          => session('bookingContact', []),
+            'selectedExtras'   => $selectedExtras,
+            'extraServices'    => $extraServices,
+            'extrasTotal'      => $extrasTotal,
         ]);
     }
 
@@ -528,6 +554,7 @@ class FlightBookingController extends Controller
             'booking_status' => 'confirmed',
             'payment_status' => 'paid',
             'payment_method' => 'gateway',
+            'extra_services_snapshot' => session('selectedExtras', []),
         ]);
 
         $this->_sendConfirmedEmail($dbBooking);
@@ -721,6 +748,7 @@ class FlightBookingController extends Controller
                 'payment_status'            => 'awaiting_bank_transfer',
                 'bank_transfer_reference'   => $request->input('payment_reference'),
                 'bank_transfer_notified_at' => now(),
+                'extra_services_snapshot'   => session('selectedExtras', []),
             ]);
             // Send pending email
             $this->_sendPendingEmail($dbBooking, 'bank_transfer');
@@ -743,6 +771,7 @@ class FlightBookingController extends Controller
                 'bank_transfer_reference'   => $request->input('payment_reference'),
                 'bank_transfer_notified_at' => now(),
                 'tkt_time_limit'            => session('bookingTktTimeLimit'),
+                'extra_services_snapshot'   => session('selectedExtras', []),
             ]);
  
             session(['flightBookingDbId' => $dbBooking->id, 'bookingRef' => $dbBooking->booking_ref]);
@@ -849,6 +878,7 @@ class FlightBookingController extends Controller
                 'booking_status' => 'confirmed',
                 'payment_status' => 'paid',
                 'payment_method' => 'flex_gateway',
+                'extra_services_snapshot' => session('selectedExtras', []),
             ]);
  
             $this->_sendConfirmedEmail($dbBooking);
@@ -1563,6 +1593,7 @@ class FlightBookingController extends Controller
                     'booking_status' => 'confirmed',
                     'payment_status' => 'paid',
                     'payment_method' => 'flex_gateway',
+                    'extra_services_snapshot' => session('selectedExtras', []),
                 ]);
  
                 $this->_sendConfirmedEmail($dbBooking);
@@ -1613,6 +1644,96 @@ class FlightBookingController extends Controller
         }
     }
 
+    /**
+     * Collect and structure the selected extra services (baggage, meals) from the request
+     * Returns a formatted array containing all selected services with their details
+     */
+    private function _collectSelectedExtras(Request $request): array
+    {
+        $extraServices = session('extraServices', []);
+        $extraBaggage = $request->input('extra_baggage', []);
+        $extraMeal = $request->input('extra_meal', []);
+
+        // Parse extra services API response
+        $esResult = $extraServices['ExtraServicesResponse']['ExtraServicesResult']['ExtraServicesData'] ?? [];
+        $dynBaggage = $esResult['DynamicBaggage'] ?? [];
+        $dynMeal = $esResult['DynamicMeal'] ?? [];
+
+        $collected = [
+            'baggage' => [],
+            'meal' => [],
+            'total_amount' => 0,
+            'currency' => 'USD',
+        ];
+
+        // ── Process selected baggage ──────────────────────────────────────
+        foreach ($extraBaggage as $direction => $items) {
+            foreach ($items as $serviceId => $quantity) {
+                if ($quantity <= 0) continue;
+
+                // Find matching baggage service from API data
+                foreach ($dynBaggage as $bag) {
+                    $bagDir = str_contains(strtoupper($bag['Behavior'] ?? ''), 'OUTBOUND') ? 'outbound' : 'inbound';
+                    if ($bagDir === $direction) {
+                        foreach (($bag['Services'][0] ?? []) as $svc) {
+                            if ((string)$svc['ServiceId'] === (string)$serviceId) {
+                                $price = (float)($svc['ServiceCost']['Amount'] ?? 0);
+                                $currency = $svc['ServiceCost']['CurrencyCode'] ?? 'USD';
+                                $collected['currency'] = $currency;
+                                $collected['total_amount'] += $price * $quantity;
+                                $collected['baggage'][] = [
+                                    'service_id' => $serviceId,
+                                    'description' => $svc['Description'] ?? 'Baggage',
+                                    'direction' => $direction,
+                                    'quantity' => $quantity,
+                                    'unit_price' => $price,
+                                    'currency' => $currency,
+                                    'line_total' => $price * $quantity,
+                                ];
+                                break 2;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Process selected meals ───────────────────────────────────────
+        foreach ($extraMeal as $direction => $segments) {
+            foreach ($segments as $segmentIndex => $items) {
+                foreach ($items as $serviceId => $checked) {
+                    if (!$checked) continue;
+
+                    // Find matching meal service from API data
+                    foreach ($dynMeal as $meal) {
+                        $mealDir = str_contains(strtoupper($meal['Behavior'] ?? ''), 'OUTBOUND') ? 'outbound' : 'inbound';
+                        if ($mealDir === $direction) {
+                            foreach (($meal['Services'][$segmentIndex] ?? []) as $svc) {
+                                if ((string)$svc['ServiceId'] === (string)$serviceId) {
+                                    $price = (float)($svc['ServiceCost']['Amount'] ?? 0);
+                                    $currency = $svc['ServiceCost']['CurrencyCode'] ?? 'USD';
+                                    $collected['currency'] = $currency;
+                                    $collected['total_amount'] += $price;
+                                    $collected['meal'][] = [
+                                        'service_id' => $serviceId,
+                                        'description' => $svc['Description'] ?? 'Meal',
+                                        'direction' => $direction,
+                                        'segment' => $segmentIndex,
+                                        'unit_price' => $price,
+                                        'currency' => $currency,
+                                    ];
+                                    break 2;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return $collected;
+    }
 
     
 }
+

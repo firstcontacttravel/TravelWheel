@@ -498,6 +498,34 @@
                             </table>
                         </div>
                         @endforeach
+
+                        {{-- Extras Added --}}
+                        @if(!empty($extraServicesSnapshot) && (count($extraServicesSnapshot['baggage'] ?? []) > 0 || count($extraServicesSnapshot['meal'] ?? []) > 0))
+                        <hr class="fare-divider">
+                        <div style="margin-bottom:6px;">
+                            @foreach($extraServicesSnapshot['baggage'] ?? [] as $baggage)
+                            <div class="fare-row">
+                                <table>
+                                    <tr>
+                                        <td class="fare-lbl">{{ $baggage['description'] ?? 'Baggage' }} × {{ $baggage['quantity'] ?? 1 }}</td>
+                                        <td class="fare-val">{{ $currencySymbol }}{{ number_format($baggage['line_total'] ?? 0, 2) }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            @endforeach
+                            @foreach($extraServicesSnapshot['meal'] ?? [] as $meal)
+                            <div class="fare-row">
+                                <table>
+                                    <tr>
+                                        <td class="fare-lbl">{{ $meal['description'] ?? 'Meal' }}</td>
+                                        <td class="fare-val">{{ $currencySymbol }}{{ number_format($meal['unit_price'] ?? 0, 2) }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            @endforeach
+                        </div>
+                        @endif
+
                         <hr class="fare-divider">
                         <table>
                             <tr>

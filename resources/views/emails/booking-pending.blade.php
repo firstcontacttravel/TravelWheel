@@ -20,6 +20,14 @@
         } catch (\Throwable) {}
     }
 
+    // ── Extra Services (from DB snapshot) ──────────────────────────────────
+    $extraServices = $booking->extra_services_snapshot ?? [];
+    $baggageItems  = $extraServices['baggage'] ?? [];
+    $mealItems     = $extraServices['meal'] ?? [];
+    $extrasTotal   = $extraServices['total_amount'] ?? 0;
+    $extrasCurrency = $extraServices['currency'] ?? 'USD';
+    $extrasSym = match($extrasCurrency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $extrasCurrency . ' ' };
+
     $resumePaymentUrl = $resumePaymentUrl ?? null;
     $paymentMethod = $paymentMethod ?? ($method ?? 'bank_transfer');
     $isHoldNotice = $isHoldNotice ?? false;
@@ -400,7 +408,16 @@
             <tr><td>Airline</td><td>{{ $booking->airline }}</td></tr>
             <tr><td>Cabin</td><td>{{ $booking->cabin }}</td></tr>
             <tr><td>Fare Type</td><td>{{ $booking->fare_type }}</td></tr>
-            <tr><td>Total Amount</td><td style="color:#0a1940">{{ $price }}</td></tr>
+            @if(!empty($baggageItems) || !empty($mealItems))
+                <tr><td colspan="2" style="padding:8px 0;border-bottom:1px dashed #cbd5e1"><strong>Extra Services</strong></td></tr>
+                @foreach($baggageItems as $bag)
+                <tr><td>🧳 {{ $bag['description'] }}</td><td style="color:#059669">{{ $extrasSym }}{{ number_format($bag['line_total'], 2) }}</td></tr>
+                @endforeach
+                @foreach($mealItems as $meal)
+                <tr><td>🍽️ {{ $meal['description'] }}</td><td style="color:#d97706">{{ $extrasSym }}{{ number_format($meal['unit_price'], 2) }}</td></tr>
+                @endforeach
+            @endif
+            <tr><td>Total Amount</td><td style="color:#0a1940;font-size:15px"><strong>{{ $sym }}{{ number_format((float)($booking->total_price ?? 0) + $extrasTotal, 2) }}</strong></td></tr>
             <tr><td>Payment Method</td><td>{{ $isBankTransferNotice ? 'Bank Transfer' : 'Online or Bank Transfer' }}</td></tr>
         </table>
 
