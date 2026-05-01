@@ -269,61 +269,65 @@
 
     /* ── Right Rail ── */
     .sr-rail { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 78px; }
-    .sr-promo-label { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #aa1818; margin-bottom: 6px; }
-    .sr-promo-title { font-size: 13px; font-weight: 700; line-height: 1.3; margin-bottom: 8px; color: #ffffff;}
-    .sr-promo-body { font-size: 12px; color: rgba(255,255,255,.65); line-height: 1.5; margin-bottom: 14px; }
-    .sr-promo-btn { display: inline-block; padding: 8px 18px; background: #fff; color: var(--navy); border-radius: 8px; font-size: 12.5px; font-weight: 700; text-decoration: none; cursor: pointer; transition: opacity .15s; }
-    .sr-promo-btn:hover { opacity: .9; }
-    .sr-promo { position: relative; background: linear-gradient(135deg, var(--navy) 0%, #1e3a8a 100%); padding: 16px; border-radius: 12px; border: 1px solid var(--gray-200); overflow: hidden;}
-    .sr-promo-slide { min-height: 120px; }
-    .sr-promo-controls { position: absolute; top: 10px; right: 10px;  display: flex; gap: 6px; }
-    .sr-promo-controls button { background: #f3f4f6; border: none; padding: 4px 8px; cursor: pointer; border-radius: 6px;}
-    .sr-promo { overflow: hidden; position: relative;}
-    .sr-promo-track { display: flex; transition: transform 0.6s ease-in-out; width: 100%; }
-    .sr-promo-slide { min-width: 100%; flex-shrink: 0; padding: 20px; box-sizing: border-box;}
 
     .sr-promo {
     position: relative;
-    overflow: hidden;
     background: linear-gradient(135deg, var(--navy) 0%, #1e3a8a 100%);
-    padding: 0; /* important for sliding */
-    border-radius: 12px;
-}
+    border-radius: 14px;
+    overflow: hidden;
+    min-height: 164px;
+    }
+    .sr-promo-slides { position: relative; width: 100%; min-height: 164px; }
+    .sr-promo-slide {
+    position: absolute; inset: 0;
+    padding: 15px 15px 52px;
+    opacity: 0;
+    transition: opacity 0.55s ease;
+    pointer-events: none;
+    }
+    .sr-promo-slide.active { opacity: 1; pointer-events: auto; }
+    .sr-promo-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,.12); color: rgba(255, 255, 255, 0.75);
+    padding: 3px 10px; border-radius: 20px; margin-bottom: 10px;
+    }
+    .sr-promo-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: #38bdf8; }
+    .sr-promo-title { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.3; margin-bottom: 7px; }
+    .sr-promo-body  { font-size: 10px; color: rgba(255,255,255,.6); line-height: 1.55; margin-bottom: 14px; }
+    .sr-promo-btn {
+    display: inline-block; padding: 7px 16px;
+    background: #fff; color: var(--navy);
+    border-radius: 8px; font-size: 12px; font-weight: 700;
+    text-decoration: none; border: none; cursor: pointer;
+    transition: opacity .15s;
+    }
+    .sr-promo-btn:hover { opacity: .88; }
+    .sr-promo-footer {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 10px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    }
+    .sr-promo-dots { display: flex; gap: 5px; align-items: center; }
+    .sr-promo-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(255,255,255,.28);
+    cursor: pointer; border: none; padding: 0;
+    transition: background .3s, transform .3s;
+    }
+    .sr-promo-dot.active { background: #fff; transform: scale(1.3); }
+    .sr-promo-arrows { display: flex; gap: 6px; }
+    .sr-promo-arrow {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    color: #fff; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background .15s;
+    }
+    .sr-promo-arrow:hover { background: rgba(255,255,255,.22); }
 
-.sr-promo-track {
-    display: flex;
-    transition: transform 0.5s ease-in-out;
-}
-
-.sr-promo-slide {
-    min-width: 100%;
-    flex-shrink: 0;
-    padding: 16px;
-    box-sizing: border-box;
-}
-
-/* keep your styles */
-.sr-promo-label { font-size: 12px; font-weight: 700; color: #aa1818; }
-.sr-promo-title { font-size: 13px; font-weight: 700; color: #fff; }
-.sr-promo-body { font-size: 12px; color: rgba(255,255,255,.65); }
-.sr-promo-btn { background: #fff; color: #000; padding: 8px 18px; }
-
-/* controls */
-.sr-promo-controls {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    display: flex;
-    gap: 6px;
-}
-
-.sr-promo-controls button {
-    background: #fff;
-    border: none;
-    padding: 4px 8px;
-    cursor: pointer;
-}
-    
     .sr-tip-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); padding: 16px; }
     .sr-tip-title { font-size: 12.5px; font-weight: 700; color: var(--gray-900); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
     .sr-tip-icon { font-size: 16px; }
@@ -365,6 +369,7 @@
         color: rgba(255,255,255,.7); display: flex; align-items: center;
         justify-content: center; cursor: pointer; transition: all .15s; padding: 0;
     }
+
     .sr-modify-close:hover { background: rgba(255,255,255,.18); color: #fff; }
     .sr-modify-body { max-width: 1280px; margin: 0 auto; padding: 24px 32px 32px; box-sizing: border-box; }
     .sr-modify-body .fw-card-outer { background: none !important; padding: 0 !important; min-height: unset !important; }
@@ -1345,20 +1350,45 @@
 
         {{-- ══ RIGHT RAIL ══ --}}
         <aside class="sr-rail">
-            <div class="sr-promo" x-data="promoSlider()" x-init="init()">
+            <div class="sr-promo" 
+                x-data="{
+                    current: 0,
+                    timer: null,
+                    items: [
+                        { label:'Hotel Booking',    title:'Find the best hotel deals',        body:'Book top-rated hotels at better prices worldwide.',         cta:'Explore Hotels', link:'#' },
+                        { label:'Airport Protocol', title:'VIP airport assistance',           body:'Skip queues and enjoy fast-track services at the airport.', cta:'Book Protocol',  link:'#' },
+                        { label:'Airport Lounge',   title:'Relax before your flight',         body:'Access premium airport lounges around the world.',          cta:'View Lounges',   link:'#' },
+                        { label:'Travel Insurance', title:'Travel with peace of mind',        body:'Coverage for delays, medical emergencies, and more.',       cta:'Get Covered',    link:'#' },
+                        { label:'Visa Assistance',  title:'Hassle-free visa processing',      body:'Let us handle your visa application start to finish.',      cta:'Apply Now',      link:'#' },
+                        { label:'Air Cargo',        title:'Fast & Reliable cargo delivery', body:'Ship goods locally and internationally with ease.',         cta:'Send Cargo',     link:'#' }
+                    ],
+                    goTo(idx) {
+                        this.current = (idx + this.items.length) % this.items.length;
+                    },
+                    next() { this.goTo(this.current + 1); },
+                    prev() { this.goTo(this.current - 1); },
+                    start() { this.timer = setInterval(() => this.next(), 5000); },
+                    pause() { clearInterval(this.timer); }
+                }"
+                x-init="start()"
+                @mouseenter="pause()"
+                @mouseleave="start()">
 
-                <template x-for="(item, index) in items" :key="index">
-                    <div class="sr-promo-slide" x-show="current === index" x-transition>
-                        
-                        <div class="sr-promo-label" >💡 <span style="color: #ffffff;" x-text="item.label"></span></div>
-                        <div class="sr-promo-title" x-text="item.title"></div>
-                        <div class="sr-promo-body" x-text="item.body"></div>
+                <div class="sr-promo-slides">
+                    <template x-for="(item, i) in items" :key="i">
+                        <div class="sr-promo-slide" :class="{ active: current === i }">
+                            <div class="sr-promo-chip">
+                                <span class="sr-promo-chip-dot"></span>
+                                <span x-text="item.label" style="color: #fff;"></span>
+                            </div>
+                            <div class="sr-promo-title" x-text="item.title"></div>
+                            <div class="sr-promo-body" style="color: #fff;"  x-text="item.body"></div>
+                            <a class="sr-promo-btn" :href="item.link" x-text="item.cta"></a>
+                        </div>
+                    </template>
+                </div>
 
-                        <a class="sr-promo-btn" :href="item.link" x-text="item.cta"></a>
-                    </div>
-                </template>
-
-
+                
             </div>
             <div class="sr-tip-card">
                 <div class="sr-tip-title"><span class="sr-tip-icon">🛡️</span> Flexible Booking</div>
@@ -1559,81 +1589,7 @@
         };
     }
 </script>
-<script>
-    function promoSlider() {
-        return {
-            current: 0,
-            interval: null,
 
-            items: [
-                {
-                    label: 'Hotel Booking',
-                    title: 'Find the best hotel deals',
-                    body: 'Book top-rated hotels at better prices.',
-                    cta: 'Explore Hotels',
-                    link: '#'
-                },
-                {
-                    label: 'Airport Protocol',
-                    title: 'VIP airport assistance',
-                    body: 'Skip queues and enjoy fast-track services at the airport.',
-                    cta: 'Book Protocol',
-                    link: '#'
-                },
-                {
-                    label: 'Airport Lounge',
-                    title: 'Relax before your flight',
-                    body: 'Access premium airport lounges worldwide.',
-                    cta: 'View Lounges',
-                    link: '#'
-                },
-                {
-                    label: 'Travel Insurance',
-                    title: 'Travel with peace of mind',
-                    body: 'Get coverage for delays, medical emergencies, and more.',
-                    cta: 'Get Covered',
-                    link: '#'
-                },
-                {
-                    label: 'Visa Assistance',
-                    title: 'Hassle-free visa processing',
-                    body: 'Let us handle your visa application from start to finish.',
-                    cta: 'Apply Now',
-                    link: '#'
-                },
-                {
-                    label: 'Air Cargo',
-                    title: 'Fast and reliable cargo delivery',
-                    body: 'Ship goods locally and internationally with ease.',
-                    cta: 'Send Cargo',
-                    link: '#'
-                }
-            ],
-
-            next() {
-                this.current = (this.current + 1) % this.items.length;
-            },
-
-            prev() {
-                this.current = (this.current - 1 + this.items.length) % this.items.length;
-            },
-
-            start() {
-                this.interval = setInterval(() => {
-                    this.next();
-                }, 5000);
-            },
-
-            pause() {
-                clearInterval(this.interval);
-            },
-
-            init() {
-                this.start();
-            }
-        }
-    }
-</script>
 <script>
     function toast() {
         return {
