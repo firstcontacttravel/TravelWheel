@@ -30,18 +30,22 @@ class FlightBookingController extends Controller
         // ── 1. Revalidate ─────────────────────────────────────────────────────────
         $revalidateResponse = Http::timeout(60)
             ->post('https://travelnext.works/api/aeroVE5/revalidate', $payload);
+        
     
         if ($revalidateResponse->failed()) {
-            return back()->withErrors(['error' => 'Revalidation failed. Please try again.']);
+
+            return back()->with('error', 'Revalidation failed. Please try again.');
+
+            
         }
     
         $revalidateData = $revalidateResponse->json();
         $isValid = data_get($revalidateData, 'AirRevalidateResponse.AirRevalidateResult.IsValid');
-    
+        
+        //dd($revalidateResponse->json());
+        
         if (!$isValid) {
-            return back()->withErrors([
-                'error' => 'This fare is no longer available. Please select another flight.'
-            ])->withInput();
+            return back()->with('error', 'This fare is no longer available. Please select another flight.');
         }
     
         $fi = data_get(
@@ -51,7 +55,7 @@ class FlightBookingController extends Controller
         );
     
         if (empty($fi)) {
-            return back()->withErrors(['error' => 'No fare data returned from revalidation.']);
+            return back()->with('error', 'No fare data returned from revalidation.');
         }
     
         // ── 2. Reference data ─────────────────────────────────────────────────────
