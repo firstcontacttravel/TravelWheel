@@ -278,6 +278,52 @@
     .sr-promo-slide { min-height: 120px; }
     .sr-promo-controls { position: absolute; top: 10px; right: 10px;  display: flex; gap: 6px; }
     .sr-promo-controls button { background: #f3f4f6; border: none; padding: 4px 8px; cursor: pointer; border-radius: 6px;}
+    .sr-promo { overflow: hidden; position: relative;}
+    .sr-promo-track { display: flex; transition: transform 0.6s ease-in-out; width: 100%; }
+    .sr-promo-slide { min-width: 100%; flex-shrink: 0; padding: 20px; box-sizing: border-box;}
+
+    .sr-promo {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--navy) 0%, #1e3a8a 100%);
+    padding: 0; /* important for sliding */
+    border-radius: 12px;
+}
+
+.sr-promo-track {
+    display: flex;
+    transition: transform 0.5s ease-in-out;
+}
+
+.sr-promo-slide {
+    min-width: 100%;
+    flex-shrink: 0;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+/* keep your styles */
+.sr-promo-label { font-size: 12px; font-weight: 700; color: #aa1818; }
+.sr-promo-title { font-size: 13px; font-weight: 700; color: #fff; }
+.sr-promo-body { font-size: 12px; color: rgba(255,255,255,.65); }
+.sr-promo-btn { background: #fff; color: #000; padding: 8px 18px; }
+
+/* controls */
+.sr-promo-controls {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 6px;
+}
+
+.sr-promo-controls button {
+    background: #fff;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+    
     .sr-tip-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); padding: 16px; }
     .sr-tip-title { font-size: 12.5px; font-weight: 700; color: var(--gray-900); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
     .sr-tip-icon { font-size: 16px; }
@@ -422,6 +468,22 @@
         .mc-leg.mc-span{grid-column:1;}
         .mc-time{font-size:17px;}
     }
+
+    .tw-toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+    .tw-toast {  min-width: 280px; max-width: 350px; padding: 14px 16px; border-radius: 8px; color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; }
+    .tw-toast-content { display: flex; align-items: center; gap: 10px; color: #fff; }
+    .tw-toast-icon { font-size: 18px; }
+    .tw-toast-message { font-size: 14px;}
+    .tw-toast-close { background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; }
+
+    /* Types */
+    .tw-toast.error { background: #e3342f; }
+    .tw-toast.success { background: #38c172; }
+
+    /* Animations */
+    .tw-toast-enter { transition: all 0.3s ease; transform: translateY(-10px); opacity: 0; }
+    .tw-toast-leave { transition: all 0.3s ease; transform: translateY(-10px); opacity: 0; }
+
 </style>
 
 
@@ -494,6 +556,31 @@
         }
     }
 @endphp
+
+<div 
+    x-data="toast()"
+    x-init="init()"
+    class="tw-toast-container"
+>
+    <div 
+        x-show="show"
+        x-transition:enter="tw-toast-enter"
+        x-transition:leave="tw-toast-leave"
+        :class="type"
+        class="tw-toast"
+    >
+        <div class="tw-toast-content">
+            <span class="tw-toast-icon" x-text="icon"></span>
+            <span class="tw-toast-message" x-text="message" style="color: #fff;"></span>
+        </div>
+
+        <button class="tw-toast-close" @click="show = false">×</button>
+    </div>
+</div>
+
+
+
+
 
 {{-- ══ SINGLE ALPINE SCOPE wraps EVERYTHING ══ --}}
 <div x-data="flightResults()" x-init="init()">
@@ -1531,10 +1618,45 @@
                 this.current = (this.current - 1 + this.items.length) % this.items.length;
             },
 
-            init() {
+            start() {
                 this.interval = setInterval(() => {
                     this.next();
-                }, 5000); // auto slide every 5s
+                }, 5000);
+            },
+
+            pause() {
+                clearInterval(this.interval);
+            },
+
+            init() {
+                this.start();
+            }
+        }
+    }
+</script>
+<script>
+    function toast() {
+        return {
+            show: false,
+            message: '',
+            type: 'error',
+            icon: '⚠️',
+
+            init() {
+                let error = @json(session('error'));
+                let success = @json(session('success'));
+
+                if (error) this.showToast(error, 'error');
+                if (success) this.showToast(success, 'success');
+            },
+
+            showToast(msg, type = 'error') {
+                this.message = msg;
+                this.type = type;
+                this.icon = type === 'success' ? '✅' : '⚠️';
+                this.show = true;
+
+                setTimeout(() => this.show = false, 9000);
             }
         }
     }
