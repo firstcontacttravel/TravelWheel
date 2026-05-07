@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 
 class FlightController extends Controller
 {
@@ -56,6 +57,13 @@ class FlightController extends Controller
         }
 
         $validated = $request->validate($rules);
+
+        $totalPassengers = (int) $validated['adults'] + (int) ($validated['childs'] ?? 0) + (int) ($validated['kids'] ?? 0);
+        if ($totalPassengers > 9) {
+            throw ValidationException::withMessages([
+                'passengers' => 'The total number of passengers must not exceed 9 per booking.',
+            ]);
+        }
 
         // ── Build origin-destination payload ──────────────────────────────────
         $originDestination = [];

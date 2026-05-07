@@ -3,8 +3,12 @@
 
     @php
         // ── Core session data ──────────────────────────────────────────────────────
+        $dbBooking      = $dbBooking ?? null;
         $bookingFlight  = session('bookingFlight', []);
-        $mf             = $bookingFlight['flight'] ?? $bookingFlight;
+        $mf             = $flight ?? ($bookingFlight['flight'] ?? $bookingFlight);
+        if (empty($mf) && $dbBooking) {
+            $mf = $dbBooking->flight_snapshot ?? [];
+        }
 
         $currency  = $mf['currency'] ?? 'NGN';
         $sym       = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
@@ -22,14 +26,19 @@
         $finalDest = $isReturn && !empty($retSegs) ? $retSegs[count($retSegs)-1] : $lastSeg;
 
         $breakdown     = $bookingFlight['fareBreakdown'] ?? $mf['fareBreakdown'] ?? [];
-        $contact       = session('bookingContact', []);
-        $passengers    = session('bookingPassengers', []);
+        $contact       = $contact ?? session('bookingContact', []);
+        if (empty($contact) && $dbBooking) {
+            $contact = ['email' => $dbBooking->contact_email, 'phone' => $dbBooking->contact_phone];
+        }
+        $passengers    = $passengers ?? session('bookingPassengers', []);
+        if (empty($passengers) && $dbBooking) {
+            $passengers = $dbBooking->passengers_snapshot ?? [];
+        }
         $total         = (float)($mf['price'] ?? 0);
-        $uniqueId      = session('bookingUniqueId', '');    // API e-ticket / hold ref
+        $uniqueId      = $uniqueId ?? session('bookingUniqueId', $dbBooking?->unique_id ?? '');    // API e-ticket / hold ref
         $bookingRef    = $bookingRef ?? session('bookingRef', $dbBooking?->booking_ref ?? ''); // OUR ref
-        $paymentMethod = session('paymentMethod', 'gateway');
+        $paymentMethod = $paymentMethod ?? session('paymentMethod', $dbBooking?->payment_method ?? 'gateway');
         $tripDetails   = $tripDetails ?? [];   // passed from controller after _callTripDetailsApi()
-        $dbBooking     = $dbBooking   ?? null;
 
         // ── Extra Services (from DB snapshot) ──────────────────────────────────
         $extraServices = $dbBooking?->extra_services_snapshot ?? [];
@@ -156,6 +165,13 @@
             @endif
         </div>
     </div>
+
+    @if($errors->has('error'))
+    <div class="notice" style="background:var(--red-lt);color:var(--red);border:1px solid #fca5a5;border-radius:12px;margin-bottom:20px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div>{{ $errors->first('error') }}</div>
+    </div>
+    @endif
 
     <div class="pg-grid">
 

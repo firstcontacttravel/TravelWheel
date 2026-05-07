@@ -64,6 +64,8 @@ Route::post('/flights/book', [FlightBookingController::class, 'book'])
      
     // Final confirmation (WebFare confirmed OR Non-LCC ticketed)
     Route::get('/flights/confirmation',  [FlightBookingController::class, 'confirmation'])->name('flights.confirmation');
+    Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerbitCallback'])->name('payments.seerbit.callback');
+    Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->name('payments.seerbit.webhook');
     Route::get( '/flights/travelflex',                       [FlightBookingController::class, 'travelFlex'])->name('flights.travelflex');
     Route::post('/flights/travelflex/application',           [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application');
     Route::get( '/flights/travelflex/application',           [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application.get');

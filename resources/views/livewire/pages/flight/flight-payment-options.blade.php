@@ -5,7 +5,9 @@
     $currency    = $flight['currency'] ?? 'NGN';
     $sym         = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
     $fmt         = fn($v) => $sym . number_format((float)$v, 2);
-    $total       = $flight['price'] ?? 0;
+    $selectedExtras = $selectedExtras ?? session('selectedExtras', []);
+    $extrasTotal = (float) ($extrasTotal ?? 0);
+    $total       = (float) ($flight['price'] ?? 0) + $extrasTotal;
     $segments    = $flight['segments'] ?? [];
     $firstSeg    = $segments[0] ?? [];
     $lastSeg     = !empty($segments) ? $segments[count($segments)-1] : [];
@@ -147,6 +149,11 @@
         <div class="po-main">
 
             <div class="po-section-title">Choose how you'd like to pay</div>
+            @if($errors->has('error'))
+                <div class="po-notice" style="background:var(--red-lt);color:var(--red);border:1px solid #fca5a5;margin-bottom:16px;">
+                    {{ $errors->first('error') }}
+                </div>
+            @endif
             @if($errors->has('flex_error'))
                 <div class="po-notice" style="background:var(--red-lt);color:var(--red);border:1px solid #fca5a5;margin-bottom:16px;">
                     {{ $errors->first('flex_error') }}
@@ -394,7 +401,29 @@
                 </div>
                 @endif
 
-                <div class="po-rail-total-row">
+                @if(($extrasTotal ?? 0) > 0)
+                <div style="padding:0 18px 12px;border-top:1px solid var(--gray-100);padding-top:12px;">
+                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:8px">Extras Added</div>
+                    @foreach($selectedExtras['baggage'] ?? [] as $baggage)
+                        <div class="po-rail-row">
+                            <span class="po-rail-lbl">{{ $baggage['description'] ?? 'Baggage' }} × {{ $baggage['quantity'] ?? 1 }}</span>
+                            <span class="po-rail-val">{{ $fmt($baggage['line_total'] ?? 0) }}</span>
+                        </div>
+                    @endforeach
+                    @foreach($selectedExtras['meal'] ?? [] as $meal)
+                        <div class="po-rail-row">
+                            <span class="po-rail-lbl">{{ $meal['description'] ?? 'Meal' }}</span>
+                            <span class="po-rail-val">{{ $fmt($meal['unit_price'] ?? 0) }}</span>
+                        </div>
+                    @endforeach
+                    <div class="po-rail-row" style="padding-top:8px;border-top:1px dashed var(--gray-200);margin-top:8px;padding-bottom:0;">
+                        <span class="po-rail-lbl" style="font-weight:700;">Extras Subtotal</span>
+                        <span class="po-rail-val" style="font-weight:700;">{{ $fmt($extrasTotal) }}</span>
+                    </div>
+                </div>
+                @endif
+
+            <div class="po-rail-total-row">
                     <span class="po-rail-total-lbl">Total</span>
                     <span class="po-rail-total-val">{{ $fmt($total) }}</span>
                 </div>

@@ -22,6 +22,14 @@ class FlightBooking extends Model
         'booking_status',
         'payment_status',
         'payment_method',
+        'payment_reference',
+        'payment_gateway',
+        'payment_flow',
+        'payment_amount',
+        'payment_charged_amount',
+        'payment_currency',
+        'payment_verified_at',
+        'payment_gateway_response',
         'tkt_time_limit',
         'ticket_ordered',
         'ticket_ordered_at',
@@ -39,6 +47,7 @@ class FlightBooking extends Model
         'bank_transfer_notified_at',
         'confirmation_email_sent',
         'pending_email_sent',
+        'payment_receipt_sent',
     ];
 
     protected $casts = [
@@ -47,13 +56,18 @@ class FlightBooking extends Model
         'passengers_snapshot'        => 'array',
         'flight_snapshot'            => 'array',
         'extra_services_snapshot'    => 'array',
+        'payment_gateway_response'   => 'array',
         'tkt_time_limit'             => 'datetime',
+        'payment_verified_at'        => 'datetime',
         'ticket_ordered_at'          => 'datetime',
         'bank_transfer_notified_at'  => 'datetime',
         'ticket_ordered'             => 'boolean',
         'confirmation_email_sent'    => 'boolean',
         'pending_email_sent'         => 'boolean',
+        'payment_receipt_sent'       => 'boolean',
         'total_price'                => 'decimal:2',
+        'payment_amount'             => 'decimal:2',
+        'payment_charged_amount'     => 'decimal:2',
     ];
 
     // ── Helpers ───────────────────────────────────────────────────────────────

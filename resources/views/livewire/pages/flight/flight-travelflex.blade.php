@@ -9,7 +9,18 @@
     $lastSeg        = !empty($segments) ? $segments[count($segments)-1] : [];
     $currency       = $mappedFlight['currency'] ?? 'NGN';
     $sym            = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
-    $totalPrice     = (float) ($mappedFlight['price'] ?? 0);
+    $selectedExtras = session('selectedExtras', []);
+    $extrasTotal    = 0.0;
+    foreach ($selectedExtras as $category) {
+        if (!is_array($category)) continue;
+        foreach ($category as $item) {
+            if (!is_array($item)) continue;
+            $extrasTotal += isset($item['line_total'])
+                ? (float) $item['line_total']
+                : ((float) ($item['unit_price'] ?? 0)) * max(1, (int) ($item['quantity'] ?? 1));
+        }
+    }
+    $totalPrice     = (float) ($mappedFlight['price'] ?? 0) + $extrasTotal;
     $fareType       = $mappedFlight['fareType'] ?? 'Public';
     $airline        = $mappedFlight['airline']  ?? '';
     $cabin          = $mappedFlight['cabin']    ?? 'Economy';
@@ -243,6 +254,13 @@
             </div>
         </div>
     </div>
+
+    @if($errors->has('error'))
+    <div class="tf-notice" style="background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5;margin-bottom:22px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>{{ $errors->first('error') }}</span>
+    </div>
+    @endif
 
     @if(!$eligible)
     {{-- ── Ineligibility Notice ── --}}

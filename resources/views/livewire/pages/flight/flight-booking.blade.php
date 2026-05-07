@@ -1162,7 +1162,7 @@
                                             <div class="bk-pax-info">
                                                 <div>
                                                     <div class="bk-pax-col-label">Adults</div>
-                                                    <div class="bk-pax-col-sub">12+ years</div>
+                                                    <div class="bk-pax-col-sub">18+ years</div>
                                                 </div>
 
                                                 <div class="bk-pax-ctr">
@@ -1174,7 +1174,7 @@
                                             <div class="bk-pax-info">
                                                 <div>
                                                     <div class="bk-pax-col-label">Children</div>
-                                                    <div class="bk-pax-col-sub">2–11 years</div>
+                                                    <div class="bk-pax-col-sub">2–12 years</div>
                                                 </div>
 
                                                 <div class="bk-pax-ctr">
@@ -1200,6 +1200,7 @@
                                     <span class="bk-total-label">✈ Total passengers</span>
                                     <span class="bk-total-val">{{ $this->getTotalPassengers() }} passenger{{ $this->getTotalPassengers() > 1 ? 's' : '' }}</span>
                                 </div>
+                                @error('passengers') <span class="bk-error">{{ $message }}</span> @enderror
                             </div>
                         </div>
                     </div>
@@ -1221,7 +1222,7 @@
 
                                 @foreach($this->passengers as $i => $pax)
                                     @php
-                                        $typeLabel  = match($pax['type']) { 'ADT' => 'Adult (12 yrs+)', 'CHD' => 'Child (2–11 yrs)', 'INF' => 'Infant (under 2)', default => 'Passenger' };
+                                        $typeLabel  = match($pax['type']) { 'ADT' => 'Adult (18 yrs+)', 'CHD' => 'Child (2–12 yrs)', 'INF' => 'Infant (under 2)', default => 'Passenger' };
                                         $badgeClass = strtolower($pax['type']);
                                         $showPp     = !empty($pax['show_passport']);
                                         $hasPpData  = !empty($pax['passport_no']);
@@ -1290,7 +1291,7 @@
                                                         wire:model.blur="passengers.{{ $i }}.dob"
                                                         placeholder="yyyy-mm-dd"
                                                         max="{{ now()->subDay()->format('Y-m-d') }}">
-                                                    @if($pax['type'] === 'CHD') <span class="bk-hint">Must be 2–11 years old at travel</span>
+                                                    @if($pax['type'] === 'CHD') <span class="bk-hint">Must be 2–12 years old at travel</span>
                                                     @elseif($pax['type'] === 'INF') <span class="bk-hint">Must be under 2 at travel</span> @endif
                                                     @error("passengers.{$i}.dob") <span class="bk-error">{{ $message }}</span> @enderror
                                                 </div>

@@ -98,6 +98,41 @@
     {{-- Divider --}}
     <tr><td style="padding:0 28px;"><hr style="border:none;border-top:1px solid #E2E8F0;"></td></tr>
 
+    {{-- Fare and extras --}}
+    <tr>
+        <td style="padding:16px 28px 0;">
+            <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Fare Summary</div>
+            <table width="100%" cellspacing="0" cellpadding="0" style="font-size:12px;color:#475569;">
+                @foreach($fareBreakdown ?? [] as $fb)
+                @php
+                    $ptLabel = match($fb['passengerType'] ?? 'ADT') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' };
+                    $qty = $fb['qty'] ?? 1;
+                @endphp
+                <tr>
+                    <td style="padding:5px 0;border-bottom:1px solid #F1F5F9;">{{ $ptLabel }} x {{ $qty }}</td>
+                    <td align="right" style="padding:5px 0;border-bottom:1px solid #F1F5F9;font-weight:700;">{{ $currencySymbol }}{{ number_format((float)($fb['totalFare'] ?? 0) * $qty, 2) }}</td>
+                </tr>
+                @endforeach
+                @foreach($extraServicesSnapshot['baggage'] ?? [] as $baggage)
+                <tr>
+                    <td style="padding:5px 0;border-bottom:1px solid #F1F5F9;">{{ $baggage['description'] ?? 'Baggage' }} x {{ $baggage['quantity'] ?? 1 }}</td>
+                    <td align="right" style="padding:5px 0;border-bottom:1px solid #F1F5F9;font-weight:700;">{{ $currencySymbol }}{{ number_format((float)($baggage['line_total'] ?? 0), 2) }}</td>
+                </tr>
+                @endforeach
+                @foreach($extraServicesSnapshot['meal'] ?? [] as $meal)
+                <tr>
+                    <td style="padding:5px 0;border-bottom:1px solid #F1F5F9;">{{ $meal['description'] ?? 'Meal' }}</td>
+                    <td align="right" style="padding:5px 0;border-bottom:1px solid #F1F5F9;font-weight:700;">{{ $currencySymbol }}{{ number_format((float)($meal['unit_price'] ?? 0), 2) }}</td>
+                </tr>
+                @endforeach
+                <tr>
+                    <td style="padding:8px 0;font-weight:700;color:#0F172A;">Total Paid</td>
+                    <td align="right" style="padding:8px 0;font-weight:700;color:#0F172A;">{{ $currencySymbol }}{{ number_format((float)$totalAmount, 2) }}</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+
     {{-- Reminders --}}
     <tr>
         <td style="padding:16px 28px 0;">

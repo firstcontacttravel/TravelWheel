@@ -158,7 +158,7 @@
         {{-- Total --}}
         <div class="total-row" style="display:table;width:100%;box-sizing:border-box;">
             <span style="font-size:14px;font-weight:800;color:#064e3b;display:table-cell;">Total Paid</span>
-            <span style="font-size:20px;font-weight:800;color:#064e3b;font-family:'Courier New',monospace;display:table-cell;text-align:right;">{{ $sym }}{{ number_format((float)($booking->total_price ?? 0) + $extrasTotal, 2) }}</span>
+            <span style="font-size:20px;font-weight:800;color:#064e3b;font-family:'Courier New',monospace;display:table-cell;text-align:right;">{{ $price }}</span>
         </div>
 
         <p style="font-size:13px;color:#64748b;line-height:1.7;margin-top:22px">

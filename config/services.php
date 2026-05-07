@@ -41,4 +41,11 @@ return [
         'ip' => env('TRAVELNEXT_IP'),
     ],
 
+    'seerbit' => [
+        'base_url' => env('SEERBIT_BASE_URL', 'https://seerbitapi.com'),
+        'public_key' => env('SEERBIT_PUBLIC_KEY'),
+        'secret_key' => env('SEERBIT_SECRET_KEY'),
+        'country' => env('SEERBIT_COUNTRY', 'NG'),
+    ],
+
 ];

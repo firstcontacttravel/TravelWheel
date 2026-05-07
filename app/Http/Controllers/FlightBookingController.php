@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Mail\BookingPendingMail;
 use App\Mail\ETicketMail;
+use App\Mail\PaymentReceiptMail;
 use App\Models\FlightBooking;
+use App\Services\SeerbitPaymentService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class FlightBookingController extends Controller
 {
@@ -413,6 +418,8 @@ class FlightBookingController extends Controller
             'extra_meal'                          => 'nullable|array',
         ]);
 
+        $this->_validateBookingPassengers($validated);
+
         // Persist passenger + contact to session for downstream payment steps
         session([
             'bookingContact'    => $validated['contact'],
@@ -448,9 +455,7 @@ class FlightBookingController extends Controller
         $tktTimeLimit = $bookResult['TktTimeLimit'] ?? '';
 
         if (! $success || empty($uniqueId)) {
-            $errMsg = data_get($bookResult, 'Errors.0.Errors.ErrorMessage')
-                   ?? data_get($bookResult, 'Errors.ErrorMessage')
-                   ?? 'Booking failed. Please try again.';
+            $errMsg = $this->_extractApiErrorMessage($bookResult, 'Booking failed. Please try again.');
             return back()->withErrors(['error' => $errMsg]);
         }
 
@@ -527,52 +532,7 @@ class FlightBookingController extends Controller
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Session expired. Please start over.']);
         }
 
-        $validatedData = [
-            'fare_source_code' => session('bookingFlight.flight.fareSourceCode', session('bookingFlight.fareSourceCode', '')),
-            'session_id'       => session('bookingSessionId', ''),
-            'contact'          => $contact,
-            'passengers'       => $passengers,
-        ];
-
-        $result = $this->_callBookApi($validatedData, $request);
-
-        if ($result['error']) {
-            return redirect()->route('flights.payment.gateway')->withErrors(['error' => $result['message']]);
-        }
-
-        $apiResponse = $result['data'];
-        $bookResult  = $apiResponse['BookFlightResponse']['BookFlightResult'] ?? [];
-        $success     = filter_var($bookResult['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $uniqueId    = $bookResult['UniqueID'] ?? '';
-
-        if (! $success || empty($uniqueId)) {
-            $errMsg = data_get($bookResult, 'Errors.0.Errors.ErrorMessage')
-                   ?? data_get($bookResult, 'Errors.ErrorMessage')
-                   ?? 'Booking failed after payment. Please contact support.';
-            return redirect()->route('flights.payment.gateway')->withErrors(['error' => $errMsg]);
-        }
-
-        $mappedFlight = session('bookingFlight.flight') ?? session('bookingFlight', []);
-        $dbBooking    = $this->_persistBooking($mappedFlight, $validatedData, $apiResponse, [
-            'unique_id'      => $uniqueId,
-            'booking_status' => 'confirmed',
-            'payment_status' => 'paid',
-            'payment_method' => 'gateway',
-            'extra_services_snapshot' => session('selectedExtras', []),
-        ]);
-
-        $this->_sendConfirmedEmail($dbBooking);
-
-        session([
-            'bookingConfirmation' => $apiResponse,
-            'bookingUniqueId'     => $uniqueId,           // API e-ticket ref
-            'bookingRef'          => $dbBooking->booking_ref, // OUR internal booking reference
-            'bookingStatus'       => $bookResult['Status'] ?? 'CONFIRMED',
-            'flightBookingDbId'   => $dbBooking->id,
-            'paymentMethod'       => 'gateway',
-        ]);
-
-        return redirect()->route('flights.confirmation');
+        return $this->_startSeerbitPayment('webfare_full');
     }
 
     // =========================================================================
@@ -587,6 +547,8 @@ class FlightBookingController extends Controller
         $bookingFlight = session('bookingFlight', []);
         $mappedFlight  = $bookingFlight['flight'] ?? $bookingFlight;
         $bookingRef    = session('bookingRef', '');
+        $selectedExtras = session('selectedExtras', []);
+        $extrasTotal = $this->_selectedExtrasTotal($selectedExtras);
 
         return view('livewire.pages.flight.flight-payment-options', [
             'flight'       => $mappedFlight,
@@ -596,6 +558,8 @@ class FlightBookingController extends Controller
             'contact'      => session('bookingContact', []),
             'passengers'   => session('bookingPassengers', []),
             'dbId'         => session('flightBookingDbId'),
+            'selectedExtras' => $selectedExtras,
+            'extrasTotal'  => $extrasTotal,
         ]);
     }
 
@@ -680,37 +644,106 @@ class FlightBookingController extends Controller
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Session expired.']);
         }
 
-        $ticketResult = $this->_callTicketOrderApi($uniqueId);
-
-        // Even if ticketing fails we keep the response for the confirmation page
-        $ticketResponse = $ticketResult['data'];
-        $ticketResult2  = $ticketResponse['AirOrderTicketRS']['TicketOrderResult'] ?? [];
-        $ticketSuccess  = filter_var($ticketResult2['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
-
-        if ($dbId && $dbBooking = FlightBooking::find($dbId)) {
-            $dbBooking->update([
-                'payment_method'      => 'gateway',
-                'payment_status'      => $ticketSuccess ? 'paid'     : 'failed',
-                'booking_status'      => $ticketSuccess ? 'ticketed'  : 'on_hold',
-                'ticket_ordered'      => $ticketSuccess,
-                'ticket_ordered_at'   => $ticketSuccess ? now() : null,
-                'ticket_api_response' => $ticketResponse,
-            ]);
-
-            if ($ticketSuccess) $this->_sendConfirmedEmail($dbBooking);
+        if (! $dbId || ! FlightBooking::find($dbId)) {
+            return redirect()->route('air.flight-s')->withErrors(['error' => 'Booking record not found.']);
         }
 
-        session([
-            'ticketOrderResult' => $ticketResponse,
-            'ticketSuccess'     => $ticketSuccess,
-            'paymentMethod'     => 'gateway',
-            // bookingRef already in session from book() — just ensure uniqueId is the e-ticket ref
-            'bookingUniqueId'   => $ticketSuccess
-                ? (data_get($ticketResponse, 'AirOrderTicketRS.TicketOrderResult.UniqueID', session('bookingUniqueId', '')) ?: session('bookingUniqueId', ''))
-                : session('bookingUniqueId', ''),
+        return $this->_startSeerbitPayment('held_ticket_full');
+    }
+
+    public function seerbitCallback(Request $request, SeerbitPaymentService $seerbit)
+    {
+        $reference = $request->input('paymentReference')
+            ?? $request->input('reference')
+            ?? $request->input('trxref')
+            ?? session('seerbitPaymentReference');
+
+        if (! $reference) {
+            return redirect()->route('air.flight-s')->withErrors(['error' => 'Payment reference missing.']);
+        }
+
+        $booking = FlightBooking::where('payment_reference', $reference)->first();
+        if (! $booking) {
+            return redirect()->route('air.flight-s')->withErrors(['error' => 'Payment record not found.']);
+        }
+
+        if ($booking->payment_status === 'paid' && in_array($booking->booking_status, ['confirmed', 'ticketed'], true)) {
+            $this->_sendPaymentReceipt($booking);
+            $this->_primeBookingSession($booking);
+            session(['paymentMethod' => $booking->payment_method]);
+            return $this->_redirectAfterSeerbitFlow($booking);
+        }
+
+        $verification = $seerbit->verifyPayment($reference);
+        $expectedAmount = round((float) $booking->payment_amount, 2);
+        $verifiedAmount = $verification['amount'] === null ? null : round((float) $verification['amount'], 2);
+        $amountMatches = $verifiedAmount !== null && $verifiedAmount >= $expectedAmount;
+        $currencyMatches = empty($verification['currency'])
+            || strtoupper((string) $verification['currency']) === strtoupper((string) $booking->payment_currency);
+
+        if (! $verification['ok'] || ! $amountMatches || ! $currencyMatches) {
+            $booking->update([
+                'payment_status' => 'failed',
+                'payment_gateway_response' => $verification['raw'] ?? [],
+            ]);
+
+            Log::warning('SeerBit payment verification rejected', [
+                'booking_ref' => $booking->booking_ref,
+                'payment_reference' => $reference,
+                'expected_amount' => $expectedAmount,
+                'verified_amount' => $verifiedAmount,
+                'expected_currency' => $booking->payment_currency,
+                'verified_currency' => $verification['currency'] ?? null,
+            ]);
+
+            return $this->_redirectAfterSeerbitFailure($booking, 'Payment could not be verified. Please contact support if you were debited.');
+        }
+
+        $booking->update([
+            'payment_verified_at' => now(),
+            'payment_charged_amount' => $verifiedAmount,
+            'payment_gateway_response' => $verification['raw'] ?? [],
         ]);
 
-        return redirect()->route('flights.confirmation');
+        $booking = $booking->fresh();
+        $this->_sendPaymentReceipt($booking);
+
+        $this->_primeBookingSession($booking);
+        session([
+            'seerbitPaymentReference' => $reference,
+            'paymentMethod' => $booking->payment_method,
+        ]);
+
+        return match ($booking->payment_flow) {
+            'webfare_full' => $this->_completeWebfarePayment($booking, $request),
+            'held_ticket_full' => $this->_completeHeldTicketPayment($booking),
+            'travelflex_down_payment' => $this->_completeTravelFlexPayment($booking, $request),
+            default => redirect()->route('air.flight-s')->withErrors(['error' => 'Unknown payment flow.']),
+        };
+    }
+
+    public function seerbitWebhook(Request $request, SeerbitPaymentService $seerbit)
+    {
+        $reference = $request->input('paymentReference')
+            ?? $request->input('data.paymentReference')
+            ?? $request->input('data.payments.paymentReference')
+            ?? $request->input('reference');
+
+        if ($reference && $booking = FlightBooking::where('payment_reference', $reference)->first()) {
+            $verification = $seerbit->verifyPayment($reference);
+            if ($verification['ok']) {
+                $booking->update([
+                    'payment_verified_at' => $booking->payment_verified_at ?: now(),
+                    'payment_charged_amount' => $verification['amount'] ?? $booking->payment_charged_amount,
+                    'payment_gateway_response' => $verification['raw'] ?? $request->all(),
+                ]);
+            }
+        }
+
+        return response()->json([
+            'ackReference' => $request->header('ackReference', $reference ?: Str::uuid()->toString()),
+            'status' => 'received',
+        ]);
     }
 
    
@@ -853,6 +886,12 @@ class FlightBookingController extends Controller
                 ]);
                 if ($ticketSuccess) $this->_sendConfirmedEmail($dbBooking);
             }
+
+            if (! $ticketSuccess) {
+                return redirect()->route('flights.travelflex')->withErrors([
+                    'error' => $ticketResult['message'] ?: $this->_extractTicketOrderErrorMessage($ticketResponse),
+                ]);
+            }
  
         } else {
             // WebFare — call book API now
@@ -868,9 +907,7 @@ class FlightBookingController extends Controller
             $uniqueId    = $bookResult['UniqueID'] ?? '';
  
             if (! $success || empty($uniqueId)) {
-                $errMsg = data_get($bookResult, 'Errors.0.Errors.ErrorMessage')
-                       ?? data_get($bookResult, 'Errors.ErrorMessage')
-                       ?? 'Booking failed. Please contact support.';
+                $errMsg = $this->_extractApiErrorMessage($bookResult, 'Booking failed. Please contact support.');
                 return redirect()->route('flights.travelflex')->withErrors(['error' => $errMsg]);
             }
  
@@ -978,9 +1015,504 @@ class FlightBookingController extends Controller
         ]);
     }
 
-     // =========================================================================
+    // =========================================================================
     //  PRIVATE HELPERS
     // =========================================================================
+
+    private function _startSeerbitPayment(string $flow)
+    {
+        try {
+            $booking = $this->_prepareSeerbitBooking($flow);
+            $amount = $this->_paymentAmountForFlow($flow, $booking);
+            $currency = $booking->currency ?: 'NGN';
+            $reference = $this->_generatePaymentReference();
+
+            $booking->update([
+                'payment_reference' => $reference,
+                'payment_gateway' => 'seerbit',
+                'payment_flow' => $flow,
+                'payment_amount' => $amount,
+                'payment_currency' => $currency,
+                'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
+                'payment_status' => 'pending',
+            ]);
+
+            session([
+                'flightBookingDbId' => $booking->id,
+                'bookingRef' => $booking->booking_ref,
+                'seerbitPaymentReference' => $reference,
+                'seerbitPaymentFlow' => $flow,
+            ]);
+
+            $contact = session('bookingContact', []);
+            $passengers = session('bookingPassengers', []);
+            $lead = $passengers[0] ?? [];
+            $fullName = trim(($lead['first_name'] ?? '') . ' ' . ($lead['last_name'] ?? '')) ?: ($contact['email'] ?? 'Travelwheel Customer');
+
+            $seerbit = app(SeerbitPaymentService::class);
+            $checkout = $seerbit->initializePayment([
+                'amount' => number_format($amount, 2, '.', ''),
+                'currency' => $currency,
+                'paymentReference' => $reference,
+                'email' => $contact['email'] ?? $booking->contact_email,
+                'fullName' => $fullName,
+                'mobileNumber' => $contact['phone'] ?? $booking->contact_phone,
+                'callbackUrl' => route('payments.seerbit.callback', ['paymentReference' => $reference]),
+                'productDescription' => $this->_paymentDescription($flow, $booking),
+            ]);
+
+            $booking->update(['payment_gateway_response' => $checkout['raw']]);
+
+            return redirect()->away($checkout['redirect_link']);
+        } catch (\Throwable $e) {
+            Log::error('Unable to start SeerBit payment', [
+                'flow' => $flow,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->_redirectAfterSeerbitFailure(
+                isset($booking) ? $booking : null,
+                $e->getMessage() ?: 'Unable to start payment. Please try again.'
+            );
+        }
+    }
+
+    private function _prepareSeerbitBooking(string $flow): FlightBooking
+    {
+        $bookingFlight = session('bookingFlight', []);
+        $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
+        $contact = session('bookingContact', []);
+        $passengers = session('bookingPassengers', []);
+        $validatedData = [
+            'fare_source_code' => session('bookingFlight.flight.fareSourceCode', session('bookingFlight.fareSourceCode', '')),
+            'session_id' => session('bookingSessionId', ''),
+            'contact' => $contact,
+            'passengers' => $passengers,
+        ];
+
+        $dbId = session('flightBookingDbId');
+        $booking = $dbId ? FlightBooking::find($dbId) : null;
+
+        if (! $booking) {
+            $booking = $this->_persistBooking($mappedFlight, $validatedData, [], [
+                'unique_id' => session('bookingUniqueId', ''),
+                'booking_status' => 'pending_payment',
+                'payment_status' => 'pending',
+                'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
+                'extra_services_snapshot' => session('selectedExtras', []),
+            ]);
+        } else {
+            $booking->update([
+                'payment_status' => 'pending',
+                'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
+                'extra_services_snapshot' => session('selectedExtras', $booking->extra_services_snapshot ?? []),
+            ]);
+        }
+
+        return $booking->fresh();
+    }
+
+    private function _completeWebfarePayment(FlightBooking $booking, Request $request)
+    {
+        $validatedData = [
+            'fare_source_code' => $booking->fare_source_code,
+            'session_id' => $booking->session_id,
+            'contact' => session('bookingContact', []),
+            'passengers' => session('bookingPassengers', []),
+        ];
+
+        $result = $this->_callBookApi($validatedData, $request);
+        if ($result['error']) {
+            $booking->update(['payment_status' => 'paid', 'booking_status' => 'failed']);
+            return redirect()->route('flights.payment.gateway')->withErrors(['error' => $result['message']]);
+        }
+
+        $apiResponse = $result['data'];
+        $bookResult = $apiResponse['BookFlightResponse']['BookFlightResult'] ?? [];
+        $success = filter_var($bookResult['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $uniqueId = $bookResult['UniqueID'] ?? '';
+
+        if (! $success || empty($uniqueId)) {
+            $errMsg = $this->_extractApiErrorMessage($bookResult, 'Booking failed after payment. Please contact support.');
+            $booking->update(['payment_status' => 'paid', 'booking_status' => 'failed', 'booking_api_response' => $apiResponse]);
+            return redirect()->route('flights.payment.gateway')->withErrors(['error' => $errMsg]);
+        }
+
+        $booking->update([
+            'unique_id' => $uniqueId,
+            'booking_status' => 'confirmed',
+            'payment_status' => 'paid',
+            'payment_method' => 'gateway',
+            'booking_api_response' => $apiResponse,
+        ]);
+
+        $this->_sendConfirmedEmail($booking->fresh());
+
+        session([
+            'bookingConfirmation' => $apiResponse,
+            'bookingUniqueId' => $uniqueId,
+            'bookingRef' => $booking->booking_ref,
+            'bookingStatus' => $bookResult['Status'] ?? 'CONFIRMED',
+            'flightBookingDbId' => $booking->id,
+            'paymentMethod' => 'gateway',
+        ]);
+
+        $this->_clearCheckoutSession($booking->fresh(), [
+            'bookingStatus' => $bookResult['Status'] ?? 'CONFIRMED',
+        ]);
+
+        return redirect()->route('flights.confirmation');
+    }
+
+    private function _completeHeldTicketPayment(FlightBooking $booking)
+    {
+        if (! $booking->unique_id) {
+            return redirect()->route('air.flight-s')->withErrors(['error' => 'Booking hold reference missing.']);
+        }
+
+        $ticketResult = $this->_callTicketOrderApi($booking->unique_id);
+        $ticketResponse = $ticketResult['data'];
+        $ticketResult2 = $ticketResponse['AirOrderTicketRS']['TicketOrderResult'] ?? [];
+        $ticketSuccess = filter_var($ticketResult2['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        $booking->update([
+            'payment_method' => 'gateway',
+            'payment_status' => $ticketSuccess ? 'paid' : 'failed',
+            'booking_status' => $ticketSuccess ? 'ticketed' : 'on_hold',
+            'ticket_ordered' => $ticketSuccess,
+            'ticket_ordered_at' => $ticketSuccess ? now() : null,
+            'ticket_api_response' => $ticketResponse,
+        ]);
+
+        if ($ticketSuccess) {
+            $this->_sendConfirmedEmail($booking->fresh());
+        }
+
+        session([
+            'ticketOrderResult' => $ticketResponse,
+            'ticketSuccess' => $ticketSuccess,
+            'paymentMethod' => 'gateway',
+            'bookingUniqueId' => $ticketSuccess
+                ? (data_get($ticketResponse, 'AirOrderTicketRS.TicketOrderResult.UniqueID', $booking->unique_id) ?: $booking->unique_id)
+                : $booking->unique_id,
+        ]);
+
+        if (! $ticketSuccess) {
+            return redirect()->route('flights.payment.options')->withErrors([
+                'error' => $ticketResult['message'] ?: $this->_extractTicketOrderErrorMessage($ticketResponse),
+            ]);
+        }
+
+        $this->_clearCheckoutSession($booking->fresh(), [
+            'ticketOrderResult' => $ticketResponse,
+            'ticketSuccess' => true,
+        ]);
+
+        return redirect()->route('flights.confirmation');
+    }
+
+    private function _completeTravelFlexPayment(FlightBooking $booking, Request $request)
+    {
+        $tfPlan = session('travelFlexPlan', []);
+        $applicant = session('travelFlexApplicant', []);
+        $docPaths = session('travelFlexDocPaths', []);
+
+        if (empty($tfPlan)) {
+            return redirect()->route('flights.travelflex')->withErrors(['error' => 'TravelFlex plan missing.']);
+        }
+
+        if ($booking->unique_id) {
+            $ticketResult = $this->_callTicketOrderApi($booking->unique_id);
+            $ticketResponse = $ticketResult['data'];
+            $ticketResult2 = $ticketResponse['AirOrderTicketRS']['TicketOrderResult'] ?? [];
+            $ticketSuccess = filter_var($ticketResult2['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+            $booking->update([
+                'payment_method' => 'flex_gateway',
+                'payment_status' => $ticketSuccess ? 'paid' : 'failed',
+                'booking_status' => $ticketSuccess ? 'ticketed' : 'on_hold',
+                'ticket_ordered' => $ticketSuccess,
+                'ticket_ordered_at' => $ticketSuccess ? now() : null,
+                'ticket_api_response' => $ticketResponse,
+            ]);
+
+            if ($ticketSuccess) {
+                $this->_sendConfirmedEmail($booking->fresh());
+            }
+
+            session([
+                'ticketOrderResult' => $ticketResponse,
+                'ticketSuccess' => $ticketSuccess,
+                'bookingUniqueId' => $ticketSuccess
+                    ? (data_get($ticketResponse, 'AirOrderTicketRS.TicketOrderResult.UniqueID', $booking->unique_id) ?: $booking->unique_id)
+                    : $booking->unique_id,
+            ]);
+
+            if (! $ticketSuccess) {
+                return redirect()->route('flights.travelflex')->withErrors([
+                    'error' => $ticketResult['message'] ?: $this->_extractTicketOrderErrorMessage($ticketResponse),
+                ]);
+            }
+        } else {
+            if ($message = $this->_completeTravelFlexWebfareBooking($booking, $request)) {
+                return redirect()->route('flights.travelflex')->withErrors(['error' => $message]);
+            }
+        }
+
+        $uploadPaths = array_map(
+            fn($p) => $p ? storage_path('app/' . $p) : null,
+            $docPaths
+        );
+        $this->_sendTravelFlexApplicationEmails($applicant, $tfPlan, $uploadPaths, session('bookingUniqueId', $booking->unique_id ?? ''));
+
+        session(['paymentMethod' => 'flex_gateway']);
+
+        $this->_clearCheckoutSession($booking->fresh(), [
+            'ticketSuccess' => true,
+            'travelFlexPlan' => $tfPlan,
+        ]);
+
+        return redirect()->route('flights.travelflex.confirmation');
+    }
+
+    private function _completeTravelFlexWebfareBooking(FlightBooking $booking, Request $request): ?string
+    {
+        $validatedData = [
+            'fare_source_code' => $booking->fare_source_code,
+            'session_id' => $booking->session_id,
+            'contact' => session('bookingContact', []),
+            'passengers' => session('bookingPassengers', []),
+        ];
+
+        $result = $this->_callBookApi($validatedData, $request);
+        if ($result['error']) {
+            $booking->update(['payment_status' => 'paid', 'booking_status' => 'failed']);
+            return $result['message'];
+        }
+
+        $apiResponse = $result['data'];
+        $bookResult = $apiResponse['BookFlightResponse']['BookFlightResult'] ?? [];
+        $success = filter_var($bookResult['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $uniqueId = $bookResult['UniqueID'] ?? '';
+
+        if (! $success || empty($uniqueId)) {
+            $booking->update(['payment_status' => 'paid', 'booking_status' => 'failed', 'booking_api_response' => $apiResponse]);
+            return $this->_extractApiErrorMessage($bookResult, 'Booking failed after payment. Please contact support.');
+        }
+
+        $booking->update([
+            'unique_id' => $uniqueId,
+            'booking_status' => 'confirmed',
+            'payment_status' => 'paid',
+            'payment_method' => 'flex_gateway',
+            'booking_api_response' => $apiResponse,
+        ]);
+
+        $this->_sendConfirmedEmail($booking->fresh());
+
+        session([
+            'bookingConfirmation' => $apiResponse,
+            'bookingUniqueId' => $uniqueId,
+            'bookingRef' => $booking->booking_ref,
+            'bookingStatus' => $bookResult['Status'] ?? 'CONFIRMED',
+            'flightBookingDbId' => $booking->id,
+        ]);
+
+        return null;
+    }
+
+    private function _paymentAmountForFlow(string $flow, FlightBooking $booking): float
+    {
+        if ($flow === 'travelflex_down_payment') {
+            $tfPlan = session('travelFlexPlan', []);
+            $downPercent = min(90, max(30, (int) data_get($tfPlan, 'down_percent', 30)));
+            $amount = round($this->_fullPayableAmount($booking) * ($downPercent / 100), 2);
+            $tfPlan['down_payment'] = $amount;
+            $tfPlan['down_percent'] = $downPercent;
+            session(['travelFlexPlan' => $tfPlan]);
+
+            return $amount;
+        }
+
+        return $this->_fullPayableAmount($booking);
+    }
+
+    private function _fullPayableAmount(FlightBooking $booking): float
+    {
+        $flight = $booking->flight_snapshot ?? session('bookingFlight.flight', session('bookingFlight', []));
+        $extras = $booking->extra_services_snapshot ?? session('selectedExtras', []);
+
+        return round(((float) ($flight['price'] ?? $booking->total_price ?? 0)) + $this->_selectedExtrasTotal($extras), 2);
+    }
+
+    private function _selectedExtrasTotal(array $selectedExtras = []): float
+    {
+        $total = 0.0;
+
+        foreach ($selectedExtras as $category) {
+            if (! is_array($category)) {
+                continue;
+            }
+
+            foreach ($category as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+
+                if (isset($item['line_total'])) {
+                    $total += (float) $item['line_total'];
+                    continue;
+                }
+
+                $quantity = max(1, (int) ($item['quantity'] ?? 1));
+                $total += ((float) ($item['unit_price'] ?? 0)) * $quantity;
+            }
+        }
+
+        return round($total, 2);
+    }
+
+    private function _generatePaymentReference(): string
+    {
+        do {
+            $reference = 'TW-SEER-' . Str::upper(Str::random(14));
+        } while (FlightBooking::where('payment_reference', $reference)->exists());
+
+        return $reference;
+    }
+
+    private function _paymentDescription(string $flow, FlightBooking $booking): string
+    {
+        return match ($flow) {
+            'travelflex_down_payment' => 'TravelFlex down payment for booking ' . $booking->booking_ref,
+            'held_ticket_full' => 'Flight ticket payment for booking ' . $booking->booking_ref,
+            default => 'Flight payment for booking ' . $booking->booking_ref,
+        };
+    }
+
+    private function _redirectAfterSeerbitFailure(?FlightBooking $booking, string $message)
+    {
+        return match ($booking?->payment_flow) {
+            'held_ticket_full' => redirect()->route('flights.payment.options')->withErrors(['error' => $message]),
+            'travelflex_down_payment' => redirect()->route('flights.travelflex')->withErrors(['error' => $message]),
+            default => redirect()->route('flights.payment.gateway')->withErrors(['error' => $message]),
+        };
+    }
+
+    private function _redirectAfterSeerbitFlow(FlightBooking $booking)
+    {
+        return $booking->payment_flow === 'travelflex_down_payment'
+            ? redirect()->route('flights.travelflex.confirmation')
+            : redirect()->route('flights.confirmation');
+    }
+
+    private function _extractTicketOrderErrorMessage(array $response, string $fallback = 'Ticket order failed.'): string
+    {
+        $result = data_get($response, 'AirOrderTicketRS.TicketOrderResult', $response);
+
+        return is_array($result)
+            ? $this->_extractApiErrorMessage($result, $fallback)
+            : $fallback;
+    }
+
+    private function _extractApiErrorMessage(array $payload, string $fallback): string
+    {
+        $paths = [
+            'Errors.0.Errors.ErrorMessage',
+            'Errors.Errors.ErrorMessage',
+            'Errors.Error.ErrorMessage',
+            'Errors.ErrorMessage',
+            'Error.ErrorMessage',
+            'ErrorMessage',
+            'BookFlightResponse.BookFlightResult.Errors.0.Errors.ErrorMessage',
+            'BookFlightResponse.BookFlightResult.Errors.Errors.ErrorMessage',
+            'BookFlightResponse.BookFlightResult.Errors.ErrorMessage',
+            'AirOrderTicketRS.TicketOrderResult.Errors.Error.ErrorMessage',
+            'AirOrderTicketRS.TicketOrderResult.Errors.ErrorMessage',
+        ];
+
+        foreach ($paths as $path) {
+            $message = data_get($payload, $path);
+            if (is_scalar($message) && trim((string) $message) !== '') {
+                return trim((string) $message);
+            }
+        }
+
+        return $this->_findFirstApiErrorMessage($payload) ?? $fallback;
+    }
+
+    private function _findFirstApiErrorMessage(mixed $value): ?string
+    {
+        if (! is_array($value)) {
+            return null;
+        }
+
+        foreach ($value as $key => $child) {
+            if ($key === 'ErrorMessage' && is_scalar($child) && trim((string) $child) !== '') {
+                return trim((string) $child);
+            }
+
+            $message = $this->_findFirstApiErrorMessage($child);
+            if ($message !== null) {
+                return $message;
+            }
+        }
+
+        return null;
+    }
+
+    private function _validateBookingPassengers(array $validated): void
+    {
+        $passengers = collect($validated['passengers'] ?? []);
+        $messages = [];
+
+        if ($passengers->count() > 9) {
+            $messages['passengers'] = 'The total number of passengers must not exceed 9 per booking.';
+        }
+
+        $travelDate = $this->_bookingTravelDate();
+
+        foreach ($passengers as $i => $pax) {
+            if (empty($pax['dob']) || empty($pax['type'])) {
+                continue;
+            }
+
+            try {
+                $age = Carbon::parse($pax['dob'])->diffInYears($travelDate);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            $key = "passengers.{$i}.dob";
+            if ($pax['type'] === 'ADT' && $age < 18) {
+                $messages[$key] = 'Adult passengers must be at least 18 years old on the travel date.';
+            }
+            if ($pax['type'] === 'CHD' && ($age < 2 || $age > 12)) {
+                $messages[$key] = 'Child passengers must be between 2 and 12 years old on the travel date.';
+            }
+            if ($pax['type'] === 'INF' && $age >= 2) {
+                $messages[$key] = 'Infant passengers must be under 2 years old on the travel date.';
+            }
+        }
+
+        if (! empty($messages)) {
+            throw ValidationException::withMessages($messages);
+        }
+    }
+
+    private function _bookingTravelDate(): Carbon
+    {
+        $bookingFlight = session('bookingFlight', []);
+        $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
+        $date = $mappedFlight['departDT'] ?? data_get($mappedFlight, 'segments.0.departDT');
+        $searchParams = session('bookingSearchParams', []);
+
+        if (! $date && ! empty($searchParams['depart'])) {
+            return Carbon::createFromFormat('d/m/Y', $searchParams['depart'])->startOfDay();
+        }
+
+        return $date ? Carbon::parse($date)->startOfDay() : now()->startOfDay();
+    }
 
     private function _callBookApi(array $validated, Request $request): array
     {
@@ -1070,7 +1602,7 @@ class FlightBookingController extends Controller
             $result = $data['AirOrderTicketRS']['TicketOrderResult'] ?? [];
             $ok     = filter_var($result['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
             if (! $ok) {
-                $errMsg = data_get($result, 'Errors.Error.ErrorMessage') ?? data_get($result, 'Errors.ErrorMessage') ?? 'Ticket order failed.';
+                $errMsg = $this->_extractApiErrorMessage($result, 'Ticket order failed.');
                 return ['error' => true, 'message' => $errMsg, 'data' => $data];
             }
             return ['error' => false, 'message' => '', 'data' => $data];
@@ -1120,7 +1652,7 @@ class FlightBookingController extends Controller
             'airline'              => $mappedFlight['airline']    ?? '',
             'cabin'                => $mappedFlight['cabin']      ?? '',
             'currency'             => $mappedFlight['currency']   ?? 'NGN',
-            'total_price'          => $mappedFlight['price']      ?? 0,
+            'total_price'          => ((float) ($mappedFlight['price'] ?? 0)) + $this->_selectedExtrasTotal($overrides['extra_services_snapshot'] ?? session('selectedExtras', [])),
             'contact_email'        => $contact['email']  ?? '',
             'contact_phone'        => $contact['phone']  ?? '',
             'adult_count'          => collect($passengers)->where('type', 'ADT')->count(),
@@ -1207,6 +1739,44 @@ class FlightBookingController extends Controller
         }
     }
 
+    private function _sendPaymentReceipt(FlightBooking $booking): void
+    {
+        if ($booking->payment_receipt_sent) {
+            Log::info('_sendPaymentReceipt: skipped (already sent)', [
+                'booking_id' => $booking->id,
+                'booking_ref' => $booking->booking_ref,
+            ]);
+            return;
+        }
+
+        if (empty($booking->contact_email)) {
+            Log::warning('_sendPaymentReceipt: skipped (missing contact_email)', [
+                'booking_id' => $booking->id,
+                'booking_ref' => $booking->booking_ref,
+            ]);
+            return;
+        }
+
+        try {
+            Mail::to($booking->contact_email)->send(new PaymentReceiptMail($booking));
+            $booking->update(['payment_receipt_sent' => true]);
+
+            Log::info('_sendPaymentReceipt: mail sent successfully', [
+                'booking_id' => $booking->id,
+                'booking_ref' => $booking->booking_ref,
+                'recipient' => $booking->contact_email,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('_sendPaymentReceipt: failed', [
+                'booking_id' => $booking->id,
+                'booking_ref' => $booking->booking_ref,
+                'recipient' => $booking->contact_email,
+                'error' => $e->getMessage(),
+                'exception' => get_class($e),
+            ]);
+        }
+    }
+
     private function _sendPendingEmail(FlightBooking $booking, string $method = 'bank_transfer'): void
     {
         try {
@@ -1234,11 +1804,11 @@ class FlightBookingController extends Controller
     private function _primeBookingSession(FlightBooking $booking): void
     {
         $flight = $booking->flight_snapshot ?? [];
-        $contact = [
+        $contact = array_merge(session('bookingContact', []), [
             'email' => $booking->contact_email,
             'phone' => $booking->contact_phone,
-        ];
-        $passengers = $booking->passengers_snapshot ?? [];
+        ]);
+        $passengers = session('bookingPassengers', $booking->passengers_snapshot ?? []);
 
         session([
             'bookingFlight'      => ['flight' => $flight],
@@ -1250,7 +1820,39 @@ class FlightBookingController extends Controller
             'bookingStatus'      => strtoupper((string) $booking->booking_status),
             'flightBookingDbId'  => $booking->id,
             'tripType'           => $booking->trip_type,
+            'selectedExtras'     => $booking->extra_services_snapshot ?? [],
         ]);
+    }
+
+    private function _clearCheckoutSession(FlightBooking $booking, array $keep = []): void
+    {
+        $preserved = array_merge([
+            'flightBookingDbId' => $booking->id,
+            'bookingRef' => $booking->booking_ref,
+            'bookingUniqueId' => $booking->unique_id,
+            'bookingStatus' => strtoupper((string) $booking->booking_status),
+            'paymentMethod' => $booking->payment_method,
+            'ticketSuccess' => $booking->ticket_ordered || $booking->booking_status === 'ticketed',
+        ], $keep);
+
+        session()->forget([
+            'bookingFlight',
+            'bookingContact',
+            'bookingPassengers',
+            'selectedExtras',
+            'extraBaggage',
+            'extraMeal',
+            'extraServices',
+            'bookingConfirmation',
+            'bookingTktTimeLimit',
+            'seerbitPaymentReference',
+            'seerbitPaymentFlow',
+            'travelFlexPlan',
+            'travelFlexApplicant',
+            'travelFlexDocPaths',
+        ]);
+
+        session($preserved);
     }
 
     private function _callTripDetailsApi(string $uniqueId): array
@@ -1330,18 +1932,21 @@ class FlightBookingController extends Controller
     // =========================================================================
     public function confirmation()
     {
-        if (! session()->has('bookingConfirmation') && ! session()->has('bookingUniqueId')) {
+        $dbId      = session('flightBookingDbId');
+        $dbBooking = $dbId ? \App\Models\FlightBooking::find($dbId) : null;
+
+        if (! session()->has('bookingConfirmation') && ! session()->has('bookingUniqueId') && ! $dbBooking) {
             return redirect()->route('air.flight-s')->withErrors(['error' => 'No booking found.']);
         }
  
-        $dbId      = session('flightBookingDbId');
-        $dbBooking = $dbId ? \App\Models\FlightBooking::find($dbId) : null;
- 
         $bookingFlight = session('bookingFlight', []);
         $mappedFlight  = $bookingFlight['flight'] ?? $bookingFlight;
+        if (empty($mappedFlight) && $dbBooking) {
+            $mappedFlight = $dbBooking->flight_snapshot ?? [];
+        }
  
-        $uniqueId     = session('bookingUniqueId', '');
-        $paymentMethod= session('paymentMethod', 'gateway');
+        $uniqueId     = session('bookingUniqueId', $dbBooking?->unique_id ?? '');
+        $paymentMethod= session('paymentMethod', $dbBooking?->payment_method ?? 'gateway');
  
         // ── Fetch live trip details if booking is ticketed ────────────────────
         $tripDetails  = [];
@@ -1364,8 +1969,8 @@ class FlightBookingController extends Controller
             'bookingStatus'     => session('bookingStatus', 'CONFIRMED'),
             'paymentMethod'     => $paymentMethod,
             'dbBooking'         => $dbBooking,
-            'contact'           => session('bookingContact', []),
-            'passengers'        => session('bookingPassengers', []),
+            'contact'           => session('bookingContact', ['email' => $dbBooking?->contact_email, 'phone' => $dbBooking?->contact_phone]),
+            'passengers'        => session('bookingPassengers', $dbBooking?->passengers_snapshot ?? []),
             'tripDetails'       => $tripDetails,   // ← NEW: live trip details from API
         ]);
     }
@@ -1533,97 +2138,13 @@ class FlightBookingController extends Controller
     {
         $contact    = session('bookingContact', []);
         $passengers = session('bookingPassengers', []);
-        $applicant  = session('travelFlexApplicant', []);
         $tfPlan     = session('travelFlexPlan', []);
-        $docPaths   = session('travelFlexDocPaths', []);
  
         if (empty($contact) || empty($passengers) || empty($tfPlan)) {
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Session expired.']);
         }
  
-        $validatedData = [
-            'fare_source_code' => session('bookingFlight.flight.fareSourceCode', session('bookingFlight.fareSourceCode', '')),
-            'session_id'       => session('bookingSessionId', ''),
-            'contact'          => $contact,
-            'passengers'       => $passengers,
-        ];
- 
-        $existingUniqueId = session('bookingUniqueId', '');
-        $dbId             = session('flightBookingDbId');
- 
-        if ($existingUniqueId) {
-            // Already on hold — ticket it
-            $ticketResult   = $this->_callTicketOrderApi($existingUniqueId);
-            $ticketResponse = $ticketResult['data'];
-            $ticketSuccess  = filter_var(
-                ($ticketResponse['AirOrderTicketRS']['TicketOrderResult']['Success'] ?? false),
-                FILTER_VALIDATE_BOOLEAN
-            );
- 
-            if ($dbId && $dbBooking = \App\Models\FlightBooking::find($dbId)) {
-                $dbBooking->update([
-                    'payment_method'      => 'flex_gateway',
-                    'payment_status'      => $ticketSuccess ? 'paid'     : 'failed',
-                    'booking_status'      => $ticketSuccess ? 'ticketed' : 'on_hold',
-                    'ticket_ordered'      => $ticketSuccess,
-                    'ticket_ordered_at'   => $ticketSuccess ? now() : null,
-                    'ticket_api_response' => $ticketResponse,
-                ]);
-                if ($ticketSuccess) $this->_sendConfirmedEmail($dbBooking);
-            }
- 
-            session(['ticketOrderResult' => $ticketResponse, 'ticketSuccess' => $ticketSuccess]);
- 
-        } else {
-            // WebFare — call book API
-            $result = $this->_callBookApi($validatedData, $request);
- 
-            if ($result['error']) {
-                return redirect()->route('flights.travelflex.confirmation')
-                    ->withErrors(['error' => $result['message']]);
-            }
- 
-            $apiResponse = $result['data'];
-            $bookResult  = $apiResponse['BookFlightResponse']['BookFlightResult'] ?? [];
-            $success     = filter_var($bookResult['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            $uniqueId    = $bookResult['UniqueID'] ?? '';
- 
-            if ($success && $uniqueId) {
-                $bookingFlight = session('bookingFlight', []);
-                $mappedFlight  = $bookingFlight['flight'] ?? $bookingFlight;
- 
-                $dbBooking = $this->_persistBooking($mappedFlight, $validatedData, $apiResponse, [
-                    'unique_id'      => $uniqueId,
-                    'booking_status' => 'confirmed',
-                    'payment_status' => 'paid',
-                    'payment_method' => 'flex_gateway',
-                    'extra_services_snapshot' => session('selectedExtras', []),
-                ]);
- 
-                $this->_sendConfirmedEmail($dbBooking);
- 
-                session([
-                    'bookingConfirmation' => $apiResponse,
-                    'bookingUniqueId'     => $uniqueId,           // API ref
-                    'bookingRef'          => $dbBooking->booking_ref, // OUR ref
-                    'bookingStatus'       => $bookResult['Status'] ?? 'CONFIRMED',
-                    'flightBookingDbId'   => $dbBooking->id,
-                ]);
-            }
-        }
- 
-        // ── Send TravelFlex application emails ────────────────────────────────
-        $bookingFlight = session('bookingFlight', []);
-        $mappedFlight  = $bookingFlight['flight'] ?? $bookingFlight;
-        $uploadPaths   = array_map(
-            fn($p) => $p ? storage_path('app/' . $p) : null,
-            $docPaths
-        );
-        $this->_sendTravelFlexApplicationEmails($applicant, $tfPlan, $uploadPaths, session('bookingUniqueId', ''));
- 
-        session(['paymentMethod' => 'flex_gateway']);
- 
-        return redirect()->route('flights.travelflex.confirmation');
+        return $this->_startSeerbitPayment('travelflex_down_payment');
     }
  
     // ── Private: send TravelFlex application emails ───────────────────────────
@@ -1740,4 +2261,3 @@ class FlightBookingController extends Controller
 
     
 }
-

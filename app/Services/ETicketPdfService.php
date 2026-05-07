@@ -89,6 +89,8 @@ class ETicketPdfService
             'phone' => $booking->contact_phone,
         ];
         $breakdown   = $mf['fareBreakdown'] ?? $mf['fare_breakdown'] ?? [];
+        $extraServicesSnapshot = $booking->extra_services_snapshot ?? [];
+        $extrasTotal = (float) ($extraServicesSnapshot['total_amount'] ?? 0);
         $currency    = $mf['currency'] ?? 'NGN';
         $sym         = match ($currency) {
             'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency . ' '
@@ -149,7 +151,9 @@ class ETicketPdfService
 
             // Fare
             'fareBreakdown'    => $breakdown,
-            'totalAmount'      => (float) ($mf['price'] ?? $booking->total_price ?? 0),
+            'extraServicesSnapshot' => $extraServicesSnapshot,
+            'extrasTotal'      => $extrasTotal,
+            'totalAmount'      => (float) ($booking->total_price ?? (($mf['price'] ?? 0) + $extrasTotal)),
             'currencySymbol'   => $sym,
             'paymentMethod'    => $booking->payment_method ?? 'gateway',
         ];

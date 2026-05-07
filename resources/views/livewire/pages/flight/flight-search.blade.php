@@ -38,7 +38,10 @@
     .fw-pax-ctr{display:flex;align-items:center;gap:10px}
     .fw-pax-btn{width:30px;height:30px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;font-size:18px;line-height:1;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0;font-family:inherit}
     .fw-pax-btn:hover{background:#eff6ff;border-color:#3b82f6;color:#1d4ed8}
+    .fw-pax-btn:disabled{opacity:.45;cursor:not-allowed;background:#f9fafb;color:#9ca3af;border-color:#e5e7eb}
+    .fw-pax-btn:disabled:hover{background:#f9fafb;color:#9ca3af;border-color:#e5e7eb}
     .fw-pax-num{font-size:14px;font-weight:700;color:#111827;min-width:20px;text-align:center}
+    .fw-pax-limit{margin:10px 16px 0;padding:9px 10px;border-radius:8px;background:#fef2f2;color:#b91c1c;font-size:11.5px;font-weight:600;line-height:1.35}
     .fw-pax-done{display:block;width:calc(100% - 32px);margin:10px 16px;padding:9px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;font-family:inherit}
     .fw-pax-done:hover{background:#1e40af}
     .fw-multi-legs{display:flex;flex-direction:column;gap:12px}
@@ -116,19 +119,19 @@
                 </div>
                 <div class="fw-pax-dropdown" :class="{ 'fw-open': paxOpen }" @click.stop style="left:auto;right:0;">
                     <div class="fw-pax-row">
-                        <div><div class="fw-pax-lbl">Adults</div><div class="fw-pax-sub">12+ yrs</div></div>
+                        <div><div class="fw-pax-lbl">Adults</div><div class="fw-pax-sub">18+ yrs</div></div>
                         <div class="fw-pax-ctr">
                             <button type="button" class="fw-pax-btn" @click="adults = Math.max(1, adults - 1)">−</button>
                             <span class="fw-pax-num" x-text="adults"></span>
-                            <button type="button" class="fw-pax-btn" @click="adults++">+</button>
+                            <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('adults')">+</button>
                         </div>
                     </div>
                     <div class="fw-pax-row">
-                        <div><div class="fw-pax-lbl">Children</div><div class="fw-pax-sub">2–11 yrs</div></div>
+                        <div><div class="fw-pax-lbl">Children</div><div class="fw-pax-sub">2–12 yrs</div></div>
                         <div class="fw-pax-ctr">
                             <button type="button" class="fw-pax-btn" @click="childs = Math.max(0, childs - 1)">−</button>
                             <span class="fw-pax-num" x-text="childs"></span>
-                            <button type="button" class="fw-pax-btn" @click="childs++">+</button>
+                            <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('childs')">+</button>
                         </div>
                     </div>
                     <div class="fw-pax-row">
@@ -136,9 +139,10 @@
                         <div class="fw-pax-ctr">
                             <button type="button" class="fw-pax-btn" @click="kids = Math.max(0, kids - 1)">−</button>
                             <span class="fw-pax-num" x-text="kids"></span>
-                            <button type="button" class="fw-pax-btn" @click="kids++">+</button>
+                            <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('kids')">+</button>
                         </div>
                     </div>
+                    <div x-show="errors.passengers || totalPassengers() >= 9" x-transition class="fw-pax-limit" x-text="errors.passengers || 'Maximum 9 passengers per booking.'"></div>
                     <button type="button" class="fw-pax-done" @click="paxOpen = false">Done</button>
                 </div>
             </div>
@@ -292,19 +296,19 @@
                     </div>
                     <div class="fw-pax-dropdown" :class="{ 'fw-open': paxOpen }" @click.stop>
                         <div class="fw-pax-row">
-                            <div><div class="fw-pax-lbl">Adults</div><div class="fw-pax-sub">12+ yrs</div></div>
+                            <div><div class="fw-pax-lbl">Adults</div><div class="fw-pax-sub">18+ yrs</div></div>
                             <div class="fw-pax-ctr">
                                 <button type="button" class="fw-pax-btn" @click="adults = Math.max(1, adults - 1)">−</button>
                                 <span class="fw-pax-num" x-text="adults"></span>
-                                <button type="button" class="fw-pax-btn" @click="adults++">+</button>
+                                <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('adults')">+</button>
                             </div>
                         </div>
                         <div class="fw-pax-row">
-                            <div><div class="fw-pax-lbl">Children</div><div class="fw-pax-sub">2–11 yrs</div></div>
+                            <div><div class="fw-pax-lbl">Children</div><div class="fw-pax-sub">2–12 yrs</div></div>
                             <div class="fw-pax-ctr">
                                 <button type="button" class="fw-pax-btn" @click="childs = Math.max(0, childs - 1)">−</button>
                                 <span class="fw-pax-num" x-text="childs"></span>
-                                <button type="button" class="fw-pax-btn" @click="childs++">+</button>
+                                <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('childs')">+</button>
                             </div>
                         </div>
                         <div class="fw-pax-row">
@@ -312,9 +316,10 @@
                             <div class="fw-pax-ctr">
                                 <button type="button" class="fw-pax-btn" @click="kids = Math.max(0, kids - 1)">−</button>
                                 <span class="fw-pax-num" x-text="kids"></span>
-                                <button type="button" class="fw-pax-btn" @click="kids++">+</button>
+                                <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('kids')">+</button>
                             </div>
                         </div>
+                        <div x-show="errors.passengers || totalPassengers() >= 9" x-transition class="fw-pax-limit" x-text="errors.passengers || 'Maximum 9 passengers per booking.'"></div>
                         <button type="button" class="fw-pax-done" @click="paxOpen = false">Done</button>
                     </div>
                 </div>
@@ -445,7 +450,7 @@
 
         {{-- ── Search Button ── --}}
         <div class="fw-search-row">
-            <span x-show="errors.general" class="fw-error" style="margin-right:auto;" x-text="errors.general"></span>
+            <span x-show="errors.general || errors.passengers" class="fw-error" style="margin-right:auto;" x-text="errors.general || errors.passengers"></span>
             <button class="fw-search-btn" type="button" @click="search">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 Search Flights
@@ -634,6 +639,16 @@ function flightWidget() {
         // ────────────────────────────────────────────────────────────
         swapRoutes() { [this.from, this.to] = [this.to, this.from]; },
         closePax()   { this.paxOpen = false; },
+        totalPassengers() { return this.adults + this.childs + this.kids; },
+        addPassenger(type) {
+            if (this.totalPassengers() >= 9) {
+                this.errors.passengers = 'The total number of passengers must not exceed 9 per booking.';
+                return;
+            }
+
+            this[type]++;
+            delete this.errors.passengers;
+        },
         addLeg() {
             this.multiLegs.push({
                 from:'', to:'', depart:'', cabin:'Y',
@@ -899,6 +914,9 @@ function flightWidget() {
         // ────────────────────────────────────────────────────────────
         validate() {
             this.errors = {};
+            if (this.totalPassengers() > 9) {
+                this.errors.passengers = 'The total number of passengers must not exceed 9 per booking.';
+            }
             if (this.trip !== 'multi') {
                 if (!this.from.trim())   this.errors.from    = 'Please enter a departure city or airport.';
                 if (!this.to.trim())     this.errors.to      = 'Please enter a destination city or airport.';

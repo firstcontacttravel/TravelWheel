@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Pages;
 
+use Carbon\Carbon;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 class FlightBooking extends Component
@@ -107,10 +109,19 @@ class FlightBooking extends Component
     {
         $this->sessionId    = session('bookingSessionId', '');
         $this->searchParams = session('bookingSearchParams', []);
+        $savedPassengers    = session('bookingPassengers', []);
+        $savedContact       = session('bookingContact', []);
 
-        $this->adultCount  = (int) ($this->searchParams['adults'] ?? 1);
-        $this->childCount  = (int) ($this->searchParams['childs'] ?? 0);
-        $this->infantCount = (int) ($this->searchParams['kids']   ?? 0);
+        if (! empty($savedPassengers)) {
+            $this->adultCount  = collect($savedPassengers)->where('type', 'ADT')->count();
+            $this->childCount  = collect($savedPassengers)->where('type', 'CHD')->count();
+            $this->infantCount = collect($savedPassengers)->where('type', 'INF')->count();
+            $this->passengers  = array_values($savedPassengers);
+        } else {
+            $this->adultCount  = (int) ($this->searchParams['adults'] ?? 1);
+            $this->childCount  = (int) ($this->searchParams['childs'] ?? 0);
+            $this->infantCount = (int) ($this->searchParams['kids']   ?? 0);
+        }
 
         $this->bookingFlight        = session('bookingFlight', []);
         $this->bookingSearchParams  = session('bookingSearchParams', []);
@@ -119,8 +130,11 @@ class FlightBooking extends Component
         $this->fareRules            = session('fareRules', []);
         $this->tripType             = session('tripType', '');
 
-        $this->contactAreaCode    = '080';
-        $this->contactCountryCode = '234';
+        $this->contactEmail        = $savedContact['email'] ?? '';
+        $this->contactEmailConfirm = $savedContact['email'] ?? '';
+        $this->contactPhone        = $savedContact['phone'] ?? '';
+        $this->contactAreaCode     = $savedContact['area_code'] ?? '080';
+        $this->contactCountryCode  = $savedContact['country_code'] ?? '234';
 
         $this->_rebuildPassengers();
 
@@ -367,8 +381,60 @@ class FlightBooking extends Component
     public function proceed(): void
     {
         $this->validate();
+        $this->validatePassengerAges();
         $this->step = 2;
         $this->dispatch('scrollTop');
+    }
+
+    private function validatePassengerAges(): void
+    {
+        $messages = [];
+
+        if ($this->getTotalPassengers() > 9) {
+            $messages['passengers'] = 'The total number of passengers must not exceed 9 per booking.';
+        }
+
+        $travelDate = $this->getTravelDate();
+
+        foreach ($this->passengers as $i => $pax) {
+            if (empty($pax['dob']) || empty($pax['type'])) {
+                continue;
+            }
+
+            try {
+                $age = Carbon::parse($pax['dob'])->diffInYears($travelDate);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            $messages = array_merge($messages, $this->ageValidationMessage((string) $pax['type'], (int) $age, $i));
+        }
+
+        if (! empty($messages)) {
+            throw ValidationException::withMessages($messages);
+        }
+    }
+
+    private function ageValidationMessage(string $type, int $age, int $index): array
+    {
+        return match ($type) {
+            'ADT' => $age >= 18 ? [] : ["passengers.{$index}.dob" => 'Adult passengers must be at least 18 years old on the travel date.'],
+            'CHD' => ($age >= 2 && $age <= 12) ? [] : ["passengers.{$index}.dob" => 'Child passengers must be between 2 and 12 years old on the travel date.'],
+            'INF' => $age < 2 ? [] : ["passengers.{$index}.dob" => 'Infant passengers must be under 2 years old on the travel date.'],
+            default => [],
+        };
+    }
+
+    private function getTravelDate(): Carbon
+    {
+        $flight = $this->getFlight();
+        $date = $flight['departDT'] ?? data_get($flight, 'segments.0.departDT');
+
+        if (! $date && ! empty($this->bookingSearchParams['depart'])) {
+            return Carbon::createFromFormat('d/m/Y', $this->bookingSearchParams['depart'])->startOfDay();
+        }
+
+        return $date ? Carbon::parse($date)->startOfDay() : now()->startOfDay();
     }
  
     public function back(): void
