@@ -22,6 +22,8 @@ class FlightBookingController extends Controller
     // =========================================================================
     public function select(Request $request)
     {
+        $this->_forgetStaleCheckoutSession();
+
         $validated = $request->validate([
             'fare_source_code' => 'required|string',
             'session_id'       => 'required|string',
@@ -109,7 +111,9 @@ class FlightBookingController extends Controller
                     'airlineCode'       => $airlineCode,
                     'airlineLogo'       => $airline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
                     'equipment'         => $fs['OperatingAirline']['Equipment'] ?? '',
-                    'cabin'             => $fs['CabinClassText'] ?? '',
+                    'cabin'             => trim((string) ($fs['CabinClassText'] ?? '')) !== ''
+                        ? $fs['CabinClassText']
+                        : \App\Support\FlightDisplay::cabin(['cabinCode' => $fs['CabinClassCode'] ?? 'Y']),
                     'cabinCode'         => $fs['CabinClassCode'] ?? 'Y',
                     'resBookCode'       => $seg['ResBookDesigCode'] ?? '',
                     'mealCode'          => $fs['MealCode']          ?? '',
@@ -305,7 +309,7 @@ class FlightBookingController extends Controller
             'validatingCode'         => $validatingCode,
             'validatingAirline'      => $validatingAirline['AirLineName'] ?? $validatingCode,
             'validatingLogo'         => $validatingAirline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
-            'cabin'                  => $firstSeg['cabin']     ?? '',
+            'cabin'                  => \App\Support\FlightDisplay::cabin($firstSeg),
             'cabinCode'              => $firstSeg['cabinCode'] ?? 'Y',
             'stops'                  => $totalStops,
             'price'                  => (float) $fareInfo['ItinTotalFares']['TotalFare']['Amount'],
@@ -419,6 +423,7 @@ class FlightBookingController extends Controller
         ]);
 
         $this->_validateBookingPassengers($validated);
+        $this->_validatePassengerCountsAgainstSearch($validated['passengers']);
 
         // Persist passenger + contact to session for downstream payment steps
         session([
@@ -625,6 +630,9 @@ class FlightBookingController extends Controller
                 'bank_transfer_notified_at' => now(),
             ]);
             $this->_sendPendingEmail($dbBooking, 'bank_transfer');
+            $this->_clearCheckoutSession($dbBooking->fresh(), [
+                'paymentMethod' => 'bank_transfer',
+            ]);
         }
 
         session(['paymentMethod' => 'bank_transfer']);
@@ -667,7 +675,7 @@ class FlightBookingController extends Controller
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Payment record not found.']);
         }
 
-        if ($booking->payment_status === 'paid' && in_array($booking->booking_status, ['confirmed', 'ticketed'], true)) {
+        if ($booking->payment_status === 'paid' && in_array($booking->booking_status, ['confirmed', 'ticketed', 'ticketing_failed'], true)) {
             $this->_sendPaymentReceipt($booking);
             $this->_primeBookingSession($booking);
             session(['paymentMethod' => $booking->payment_method]);
@@ -878,18 +886,22 @@ class FlightBookingController extends Controller
             if ($dbId && $dbBooking = \App\Models\FlightBooking::find($dbId)) {
                 $dbBooking->update([
                     'payment_method'      => 'flex_gateway',
-                    'payment_status'      => $ticketSuccess ? 'paid'     : 'failed',
-                    'booking_status'      => $ticketSuccess ? 'ticketed' : 'on_hold',
+                    'payment_status'      => 'paid',
+                    'booking_status'      => $ticketSuccess ? 'ticketed' : 'ticketing_failed',
                     'ticket_ordered'      => $ticketSuccess,
                     'ticket_ordered_at'   => $ticketSuccess ? now() : null,
                     'ticket_api_response' => $ticketResponse,
                 ]);
-                if ($ticketSuccess) $this->_sendConfirmedEmail($dbBooking);
+                if ($ticketSuccess) {
+                    $this->_sendConfirmedEmail($dbBooking);
+                } else {
+                    $this->_sendTicketingFailureAlert($dbBooking->fresh(), $ticketResult['message'] ?: $this->_extractTicketOrderErrorMessage($ticketResponse), $ticketResponse);
+                }
             }
 
             if (! $ticketSuccess) {
-                return redirect()->route('flights.travelflex')->withErrors([
-                    'error' => $ticketResult['message'] ?: $this->_extractTicketOrderErrorMessage($ticketResponse),
+                return redirect()->route('flights.travelflex.confirmation')->withErrors([
+                    'error' => 'Payment received, but ticket issuance needs manual processing. Our team has been notified.',
                 ]);
             }
  
@@ -1177,8 +1189,8 @@ class FlightBookingController extends Controller
 
         $booking->update([
             'payment_method' => 'gateway',
-            'payment_status' => $ticketSuccess ? 'paid' : 'failed',
-            'booking_status' => $ticketSuccess ? 'ticketed' : 'on_hold',
+            'payment_status' => 'paid',
+            'booking_status' => $ticketSuccess ? 'ticketed' : 'ticketing_failed',
             'ticket_ordered' => $ticketSuccess,
             'ticket_ordered_at' => $ticketSuccess ? now() : null,
             'ticket_api_response' => $ticketResponse,
@@ -1186,6 +1198,8 @@ class FlightBookingController extends Controller
 
         if ($ticketSuccess) {
             $this->_sendConfirmedEmail($booking->fresh());
+        } else {
+            $this->_sendTicketingFailureAlert($booking->fresh(), $ticketResult['message'] ?: $this->_extractTicketOrderErrorMessage($ticketResponse), $ticketResponse);
         }
 
         session([
@@ -1198,8 +1212,14 @@ class FlightBookingController extends Controller
         ]);
 
         if (! $ticketSuccess) {
-            return redirect()->route('flights.payment.options')->withErrors([
-                'error' => $ticketResult['message'] ?: $this->_extractTicketOrderErrorMessage($ticketResponse),
+            $this->_clearCheckoutSession($booking->fresh(), [
+                'ticketOrderResult' => $ticketResponse,
+                'ticketSuccess' => false,
+                'bookingStatus' => 'TICKETING_FAILED',
+            ]);
+
+            return redirect()->route('flights.confirmation')->withErrors([
+                'error' => 'Payment received, but ticket issuance needs manual processing. Our team has been notified.',
             ]);
         }
 
@@ -1229,8 +1249,8 @@ class FlightBookingController extends Controller
 
             $booking->update([
                 'payment_method' => 'flex_gateway',
-                'payment_status' => $ticketSuccess ? 'paid' : 'failed',
-                'booking_status' => $ticketSuccess ? 'ticketed' : 'on_hold',
+                'payment_status' => 'paid',
+                'booking_status' => $ticketSuccess ? 'ticketed' : 'ticketing_failed',
                 'ticket_ordered' => $ticketSuccess,
                 'ticket_ordered_at' => $ticketSuccess ? now() : null,
                 'ticket_api_response' => $ticketResponse,
@@ -1238,6 +1258,8 @@ class FlightBookingController extends Controller
 
             if ($ticketSuccess) {
                 $this->_sendConfirmedEmail($booking->fresh());
+            } else {
+                $this->_sendTicketingFailureAlert($booking->fresh(), $ticketResult['message'] ?: $this->_extractTicketOrderErrorMessage($ticketResponse), $ticketResponse);
             }
 
             session([
@@ -1249,8 +1271,22 @@ class FlightBookingController extends Controller
             ]);
 
             if (! $ticketSuccess) {
-                return redirect()->route('flights.travelflex')->withErrors([
-                    'error' => $ticketResult['message'] ?: $this->_extractTicketOrderErrorMessage($ticketResponse),
+                $this->_clearCheckoutSession($booking->fresh(), [
+                    'ticketOrderResult' => $ticketResponse,
+                    'ticketSuccess' => false,
+                    'travelFlexPlan' => $tfPlan,
+                    'bookingStatus' => 'TICKETING_FAILED',
+                    'bookingFlight' => ['flight' => $booking->flight_snapshot ?? []],
+                    'bookingContact' => [
+                        'email' => $booking->contact_email,
+                        'phone' => $booking->contact_phone,
+                    ],
+                    'bookingPassengers' => $booking->passengers_snapshot ?? [],
+                    'selectedExtras' => $booking->extra_services_snapshot ?? [],
+                ]);
+
+                return redirect()->route('flights.travelflex.confirmation')->withErrors([
+                    'error' => 'Down payment received, but ticket issuance needs manual processing. Our team has been notified.',
                 ]);
             }
         } else {
@@ -1473,6 +1509,13 @@ class FlightBookingController extends Controller
         $travelDate = $this->_bookingTravelDate();
 
         foreach ($passengers as $i => $pax) {
+            $title = (string) ($pax['title'] ?? '');
+            $type = (string) ($pax['type'] ?? '');
+
+            if (in_array($type, ['CHD', 'INF'], true) && ! in_array($title, ['Master', 'Miss'], true)) {
+                $messages["passengers.{$i}.title"] = 'Child and infant passenger titles must be Master or Miss.';
+            }
+
             if (empty($pax['dob']) || empty($pax['type'])) {
                 continue;
             }
@@ -1492,6 +1535,30 @@ class FlightBookingController extends Controller
             }
             if ($pax['type'] === 'INF' && $age >= 2) {
                 $messages[$key] = 'Infant passengers must be under 2 years old on the travel date.';
+            }
+        }
+
+        if (! empty($messages)) {
+            throw ValidationException::withMessages($messages);
+        }
+    }
+
+    private function _validatePassengerCountsAgainstSearch(array $passengers): void
+    {
+        $searchParams = session('bookingSearchParams', []);
+        $expected = [
+            'ADT' => (int) ($searchParams['adults'] ?? 1),
+            'CHD' => (int) ($searchParams['childs'] ?? 0),
+            'INF' => (int) ($searchParams['kids'] ?? 0),
+        ];
+
+        $actual = collect($passengers)->countBy('type');
+        $messages = [];
+
+        foreach ($expected as $type => $count) {
+            if ((int) ($actual[$type] ?? 0) !== $count) {
+                $messages['passengers'] = "Passenger count mismatch. Please refresh the booking page and enter details for {$expected['ADT']} adult(s), {$expected['CHD']} child(ren), and {$expected['INF']} infant(s).";
+                break;
             }
         }
 
@@ -1650,7 +1717,7 @@ class FlightBookingController extends Controller
             'trip_type'            => session('tripType', ''),
             'route'                => ($firstSeg['from'] ?? '') . ' → ' . ($lastSeg['to'] ?? ''),
             'airline'              => $mappedFlight['airline']    ?? '',
-            'cabin'                => $mappedFlight['cabin']      ?? '',
+            'cabin'                => \App\Support\FlightDisplay::cabin($mappedFlight),
             'currency'             => $mappedFlight['currency']   ?? 'NGN',
             'total_price'          => ((float) ($mappedFlight['price'] ?? 0)) + $this->_selectedExtrasTotal($overrides['extra_services_snapshot'] ?? session('selectedExtras', [])),
             'contact_email'        => $contact['email']  ?? '',
@@ -1801,6 +1868,44 @@ class FlightBookingController extends Controller
         }
     }
 
+    private function _sendTicketingFailureAlert(FlightBooking $booking, string $message, array $ticketResponse = []): void
+    {
+        try {
+            $flight = $booking->flight_snapshot ?? [];
+            $segments = $flight['segments'] ?? [];
+            $firstSeg = $segments[0] ?? [];
+            $lastSeg = ! empty($segments) ? end($segments) : [];
+
+            $alertData = [
+                'uniqueId'      => $booking->unique_id,
+                'bookingStatus' => 'PAID_UNTICKETED',
+                'ticketStatus'  => 'TICKETING_FAILED',
+                'origin'        => $firstSeg['from'] ?? '',
+                'destination'   => $lastSeg['to'] ?? '',
+                'fareType'      => $booking->fare_type ?? '',
+                'passengers'    => $booking->passengers_snapshot ?? [],
+                'flights'       => [],
+                'pricing'       => [
+                    'booking_ref' => $booking->booking_ref,
+                    'amount_paid' => $booking->payment_charged_amount ?? $booking->payment_amount,
+                    'currency' => $booking->payment_currency,
+                    'payment_reference' => $booking->payment_reference,
+                    'ticket_error' => $message,
+                    'ticket_response' => $ticketResponse,
+                ],
+                'timestamp'     => now(),
+            ];
+
+            Mail::to(config('mail.support_address', 'support@travelwheel.com'))
+                ->send(new \App\Mail\UnTicketedConfirmationAlert($alertData));
+        } catch (\Throwable $e) {
+            Log::error('Ticketing failure alert failed', [
+                'booking_ref' => $booking->booking_ref,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     private function _primeBookingSession(FlightBooking $booking): void
     {
         $flight = $booking->flight_snapshot ?? [];
@@ -1824,6 +1929,36 @@ class FlightBookingController extends Controller
         ]);
     }
 
+    private function _forgetStaleCheckoutSession(): void
+    {
+        session()->forget([
+            'bookingFlight',
+            'bookingSearchParams',
+            'bookingSessionId',
+            'bookingContact',
+            'bookingPassengers',
+            'bookingUniqueId',
+            'bookingRef',
+            'bookingStatus',
+            'bookingConfirmation',
+            'bookingTktTimeLimit',
+            'flightBookingDbId',
+            'selectedExtras',
+            'extraBaggage',
+            'extraMeal',
+            'extraServices',
+            'fareRules',
+            'paymentMethod',
+            'seerbitPaymentReference',
+            'seerbitPaymentFlow',
+            'ticketOrderResult',
+            'ticketSuccess',
+            'travelFlexPlan',
+            'travelFlexApplicant',
+            'travelFlexDocPaths',
+        ]);
+    }
+
     private function _clearCheckoutSession(FlightBooking $booking, array $keep = []): void
     {
         $preserved = array_merge([
@@ -1837,12 +1972,15 @@ class FlightBookingController extends Controller
 
         session()->forget([
             'bookingFlight',
+            'bookingSearchParams',
+            'bookingSessionId',
             'bookingContact',
             'bookingPassengers',
             'selectedExtras',
             'extraBaggage',
             'extraMeal',
             'extraServices',
+            'fareRules',
             'bookingConfirmation',
             'bookingTktTimeLimit',
             'seerbitPaymentReference',

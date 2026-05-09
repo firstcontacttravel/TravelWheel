@@ -1,7 +1,9 @@
 {{-- resources/views/emails/booking-pending.blade.php --}}
 {{-- Email-safe: tables + inline styles only --}}
 @php
-    $firstPax  = collect($booking->passengers_snapshot ?? [])->first();
+    $passengers = \App\Support\FlightDisplay::passengers($booking->passengers_snapshot ?? []);
+    $cabinLabel = \App\Support\FlightDisplay::cabin($booking->flight_snapshot ?? [], $booking);
+    $firstPax  = collect($passengers)->first();
     $firstName = $firstPax['first_name'] ?? 'Traveller';
 
     $currency  = $booking->currency ?? 'NGN';
@@ -85,6 +87,10 @@
     table.detail td{padding:8px 0;border-bottom:1px solid #f1f5f9;vertical-align:top}
     table.detail td:first-child{color:#64748b;width:40%}
     table.detail td:last-child{font-weight:700;text-align:right}
+    .pax-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px;border:1px solid #e2e8f0}
+    .pax-table th{background:#f8fafc;padding:8px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#94a3b8;border-bottom:1px solid #e2e8f0}
+    .pax-table td{padding:10px 12px;border-bottom:1px solid #f1f5f9;color:#334155}
+    .pax-table tr:last-child td{border-bottom:none}
     .deadline-box{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px 18px;margin:18px 0}
     .deadline-title{font-size:13px;font-weight:800;color:#92400e;margin-bottom:4px}
     .deadline-sub{font-size:12px;color:#78350f;line-height:1.6}
@@ -403,10 +409,36 @@
             @endif
         </div>
 
+        @if(!empty($passengers))
+        <div class="section-title">Passengers</div>
+        <table class="pax-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>DOB</th>
+                    <th>Passport</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($passengers as $i => $pax)
+                <tr>
+                    <td>{{ $i + 1 }}</td>
+                    <td><strong>{{ $pax['title'] ?? '' }} {{ strtoupper($pax['first_name'] ?? '') }} {{ strtoupper($pax['last_name'] ?? '') }}</strong></td>
+                    <td>{{ match($pax['type'] ?? 'ADT') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Pax' } }}</td>
+                    <td>{{ !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '-' }}</td>
+                    <td>{{ $pax['passport_no'] ?? '-' }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+        @endif
+
         <div class="section-title">Booking Summary</div>
         <table class="detail">
             <tr><td>Airline</td><td>{{ $booking->airline }}</td></tr>
-            <tr><td>Cabin</td><td>{{ $booking->cabin }}</td></tr>
+            <tr><td>Cabin</td><td>{{ $cabinLabel }}</td></tr>
             <tr><td>Fare Type</td><td>{{ $booking->fare_type }}</td></tr>
             @if(!empty($baggageItems) || !empty($mealItems))
                 <tr><td colspan="2" style="padding:8px 0;border-bottom:1px dashed #cbd5e1"><strong>Extra Services</strong></td></tr>

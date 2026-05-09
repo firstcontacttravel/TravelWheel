@@ -8,6 +8,7 @@
     $selectedExtras = $selectedExtras ?? session('selectedExtras', []);
     $extrasTotal = (float) ($extrasTotal ?? 0);
     $total       = (float) ($flight['price'] ?? 0) + $extrasTotal;
+    $cabinLabel  = \App\Support\FlightDisplay::cabin($flight ?? []);
     $segments    = $flight['segments'] ?? [];
     $firstSeg    = $segments[0] ?? [];
     $lastSeg     = !empty($segments) ? $segments[count($segments)-1] : [];
@@ -378,7 +379,7 @@
                     </div>
                     <div class="po-rail-row">
                         <span class="po-rail-lbl">Cabin</span>
-                        <span class="po-rail-val" style="font-family:var(--font)">{{ $flight['cabin'] ?? 'Economy' }}</span>
+                        <span class="po-rail-val" style="font-family:var(--font)">{{ $cabinLabel }}</span>
                     </div>
                     @if($tktFormatted)
                     <div class="po-rail-row" style="background:#fff7ed;margin:4px -18px;padding:8px 18px;border-radius:0">

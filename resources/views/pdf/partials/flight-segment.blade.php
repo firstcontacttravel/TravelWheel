@@ -62,7 +62,7 @@
                 </td>
                 <td class="detail-cell">
                     <div class="detail-lbl">Cabin</div>
-                    <div class="detail-val">{{ $seg['cabin'] ?? 'Economy' }}</div>
+                    <div class="detail-val">{{ \App\Support\FlightDisplay::cabin($seg ?? []) }}</div>
                 </td>
                 <td class="detail-cell" style="padding-right:0;">
                     <div class="detail-lbl">Equipment</div>

@@ -2,8 +2,12 @@
 @component('layouts.app', ['title' => 'Awaiting Payment Confirmation'])
 
 @php
+    $dbBooking = $dbBooking ?? null;
     $bookingFlight = session('bookingFlight', []);
     $mf            = $bookingFlight['flight'] ?? $bookingFlight;
+    if (empty($mf) && $dbBooking) {
+        $mf = $dbBooking->flight_snapshot ?? [];
+    }
     $currency  = $mf['currency'] ?? 'NGN';
     $sym       = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
     $fmt       = fn($v) => $sym . number_format((float)$v, 2);
@@ -18,12 +22,19 @@
     $finalDest = $isReturn && !empty($retSegs) ? $retSegs[count($retSegs)-1] : $lastSeg;
     $breakdown = $bookingFlight['fareBreakdown'] ?? $mf['fareBreakdown'] ?? [];
     $contact   = session('bookingContact', []);
+    if (empty($contact) && $dbBooking) {
+        $contact = ['email' => $dbBooking->contact_email, 'phone' => $dbBooking->contact_phone];
+    }
     $passengers= session('bookingPassengers', []);
+    if (empty($passengers) && $dbBooking) {
+        $passengers = $dbBooking->passengers_snapshot ?? [];
+    }
+    $passengers = \App\Support\FlightDisplay::passengers($passengers);
+    $cabinLabel = \App\Support\FlightDisplay::cabin($mf, $dbBooking);
     $total     = (float)($mf['price'] ?? 0);
-    $uniqueId  = session('bookingUniqueId', '');   // API hold ref (NOT shown as booking ref)
+    $uniqueId  = session('bookingUniqueId', $dbBooking?->unique_id ?? '');   // API hold ref (NOT shown as booking ref)
     $bookingRef = $bookingRef ?? session('bookingRef', $dbBooking?->booking_ref ?? ''); // OUR ref
-    $tktLimit  = session('bookingTktTimeLimit', '');
-    $dbBooking = $dbBooking ?? null;
+    $tktLimit  = session('bookingTktTimeLimit', optional($dbBooking?->tkt_time_limit)->toIso8601String() ?? '');
     $tktFmt = ''; $tktHours = 0;
     if ($tktLimit) {
         try { $td = \Carbon\Carbon::parse($tktLimit); $tktFmt = $td->format('D, d M Y \a\t H:i'); $tktHours = max(0,(int)now()->diffInHours($td,false)); } catch (\Throwable $e) {}
@@ -123,7 +134,7 @@
                     <div class="pc-icon" style="background:var(--blue-lt);color:var(--blue);">✈️</div>
                     <div>
                         <div class="pc-title">Flight Itinerary</div>
-                        <div class="pc-sub">{{ $tripLabel }} · {{ $mf['cabin'] ?? 'Economy' }} · {{ $mf['airline'] ?? '' }}</div>
+                        <div class="pc-sub">{{ $tripLabel }} · {{ $cabinLabel }} · {{ $mf['airline'] ?? '' }}</div>
                     </div>
                 </div>
 
@@ -234,7 +245,7 @@
                     <div class="dr"><span class="dr-lbl">Trip Type</span><span class="dr-val">{{ $tripLabel }}</span></div>
                     @if($isReturn && !empty($mf['returnDateLabel']))<div class="dr"><span class="dr-lbl">Return Date</span><span class="dr-val">{{ $mf['returnDateLabel'] }}</span></div>@endif
                     <div class="dr"><span class="dr-lbl">Airline</span><span class="dr-val">{{ $mf['airline']??'—' }}</span></div>
-                    <div class="dr"><span class="dr-lbl">Cabin</span><span class="dr-val">{{ $mf['cabin']??'Economy' }}</span></div>
+                    <div class="dr"><span class="dr-lbl">Cabin</span><span class="dr-val">{{ $cabinLabel }}</span></div>
                     @if($uniqueId)<div class="dr"><span class="dr-lbl">Booking Ref</span><span class="dr-val mono">{{ $bookingRef }}</span></div>@endif
                     <div class="dr"><span class="dr-lbl">Payment</span><span class="dr-val">
                         <span class="status-badge status-pending" style="font-size:10.5px;">⏳ Awaiting Verification</span>

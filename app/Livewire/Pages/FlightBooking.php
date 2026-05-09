@@ -111,16 +111,27 @@ class FlightBooking extends Component
         $this->searchParams = session('bookingSearchParams', []);
         $savedPassengers    = session('bookingPassengers', []);
         $savedContact       = session('bookingContact', []);
+        $expectedAdultCount  = (int) ($this->searchParams['adults'] ?? 1);
+        $expectedChildCount  = (int) ($this->searchParams['childs'] ?? 0);
+        $expectedInfantCount = (int) ($this->searchParams['kids']   ?? 0);
+        $savedPassengerCountsMatch = ! empty($savedPassengers)
+            && collect($savedPassengers)->where('type', 'ADT')->count() === $expectedAdultCount
+            && collect($savedPassengers)->where('type', 'CHD')->count() === $expectedChildCount
+            && collect($savedPassengers)->where('type', 'INF')->count() === $expectedInfantCount;
 
-        if (! empty($savedPassengers)) {
+        if ($savedPassengerCountsMatch) {
             $this->adultCount  = collect($savedPassengers)->where('type', 'ADT')->count();
             $this->childCount  = collect($savedPassengers)->where('type', 'CHD')->count();
             $this->infantCount = collect($savedPassengers)->where('type', 'INF')->count();
             $this->passengers  = array_values($savedPassengers);
         } else {
-            $this->adultCount  = (int) ($this->searchParams['adults'] ?? 1);
-            $this->childCount  = (int) ($this->searchParams['childs'] ?? 0);
-            $this->infantCount = (int) ($this->searchParams['kids']   ?? 0);
+            $this->adultCount  = $expectedAdultCount;
+            $this->childCount  = $expectedChildCount;
+            $this->infantCount = $expectedInfantCount;
+            $savedContact = [];
+            if (! empty($savedPassengers)) {
+                session()->forget(['bookingPassengers', 'bookingContact']);
+            }
         }
 
         $this->bookingFlight        = session('bookingFlight', []);
@@ -179,6 +190,8 @@ class FlightBooking extends Component
                 ? array_merge($this->_emptyPassenger('INF'), (array) $prev)
                 : $this->_emptyPassenger('INF');
         }
+
+        $this->normalizePassengerTitles();
     }
  
     private function _emptyPassenger(string $type, bool $isPrimary = false): array
@@ -347,7 +360,11 @@ class FlightBooking extends Component
         ];
  
         foreach ($this->passengers as $i => $_) {
-            $rules["passengers.{$i}.title"]                  = 'required|in:Mr,Mrs,Ms,Miss,Dr,Master';
+            $allowedTitles = in_array($this->passengers[$i]['type'] ?? '', ['CHD', 'INF'], true)
+                ? 'Master,Miss'
+                : 'Mr,Mrs,Ms,Miss,Dr,Master';
+
+            $rules["passengers.{$i}.title"]                  = 'required|in:' . $allowedTitles;
             $rules["passengers.{$i}.first_name"]             = 'required|string|min:2|max:100';
             $rules["passengers.{$i}.last_name"]              = 'required|string|min:2|max:100';
             $rules["passengers.{$i}.gender"]                 = 'required|in:M,F';
@@ -368,6 +385,7 @@ class FlightBooking extends Component
         return [
             'contactEmailConfirm.same'                 => 'Email addresses do not match.',
             'passengers.*.title.required'              => 'Please select a title.',
+            'passengers.*.title.in'                    => 'Child and infant passenger titles must be Master or Miss.',
             'passengers.*.first_name.required'         => 'First name is required.',
             'passengers.*.last_name.required'          => 'Last name is required.',
             'passengers.*.gender.required'             => 'Please select a gender.',
@@ -380,10 +398,23 @@ class FlightBooking extends Component
  
     public function proceed(): void
     {
+        $this->normalizePassengerTitles();
         $this->validate();
         $this->validatePassengerAges();
         $this->step = 2;
         $this->dispatch('scrollTop');
+    }
+
+    private function normalizePassengerTitles(): void
+    {
+        foreach ($this->passengers as $i => $passenger) {
+            if (
+                in_array($passenger['type'] ?? '', ['CHD', 'INF'], true)
+                && ! in_array($passenger['title'] ?? '', ['', 'Master', 'Miss'], true)
+            ) {
+                $this->passengers[$i]['title'] = '';
+            }
+        }
     }
 
     private function validatePassengerAges(): void

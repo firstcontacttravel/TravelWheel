@@ -1,7 +1,9 @@
 {{-- resources/views/emails/booking-confirmed.blade.php --}}
 {{-- Email-safe: tables + inline styles only --}}
 @php
-    $firstPax    = collect($booking->passengers_snapshot ?? [])->first();
+    $passengers  = \App\Support\FlightDisplay::passengers($booking->passengers_snapshot ?? []);
+    $cabinLabel  = \App\Support\FlightDisplay::cabin($booking->flight_snapshot ?? [], $booking);
+    $firstPax    = collect($passengers)->first();
     $firstName   = $firstPax['first_name'] ?? 'Traveller';
 
     // Build e-ticket number map from live tripDetails (ItemRPH → eTicketNumber)
@@ -98,13 +100,13 @@
         <table class="detail">
             <tr><td>Route</td><td>{{ $booking->route }}</td></tr>
             <tr><td>Airline</td><td>{{ $booking->airline }}</td></tr>
-            <tr><td>Cabin</td><td>{{ $booking->cabin }}</td></tr>
+            <tr><td>Cabin</td><td>{{ $cabinLabel }}</td></tr>
             <tr><td>Fare Type</td><td>{{ $booking->fare_type }}</td></tr>
             <tr><td>Payment Method</td><td>{{ ucfirst(str_replace('_', ' ', $booking->payment_method ?? '')) }}</td></tr>
         </table>
 
         {{-- Passengers --}}
-        @if(!empty($booking->passengers_snapshot))
+        @if(!empty($passengers))
         <div class="section-title">Passengers</div>
         <table class="pax-table">
             <thead>
@@ -118,7 +120,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($booking->passengers_snapshot as $i => $pax)
+                @foreach($passengers as $i => $pax)
                 <tr>
                     <td>{{ $i + 1 }}</td>
                     <td><strong>{{ $pax['title'] ?? '' }} {{ strtoupper($pax['first_name'] ?? '') }} {{ strtoupper($pax['last_name'] ?? '') }}</strong></td>

@@ -75,12 +75,13 @@
             $lastSeg  = !empty($segs) ? $segs[count($segs)-1] : [];
             $currency = $flightInfo['currency'] ?? 'NGN';
             $sym      = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
+            $cabinLabel = \App\Support\FlightDisplay::cabin($flightInfo ?? []);
         @endphp
         <table>
             <tr><td>Route</td><td>{{ ($firstSeg['from']??'') }} → {{ ($lastSeg['to']??'') }}</td></tr>
             <tr><td>Travel Date</td><td>{{ $firstSeg['departDate'] ?? '—' }}</td></tr>
             <tr><td>Airline</td><td>{{ $flightInfo['airline'] ?? '—' }}</td></tr>
-            <tr><td>Cabin</td><td>{{ $flightInfo['cabin'] ?? 'Economy' }}</td></tr>
+            <tr><td>Cabin</td><td>{{ $cabinLabel }}</td></tr>
             <tr><td>Fare Type</td><td><span class="badge badge-blue">{{ $flightInfo['fareType'] ?? '—' }}</span></td></tr>
             <tr><td>Refundable</td><td><span class="badge {{ ($flightInfo['isRefundable']??false) ? 'badge-green' : 'badge-amber' }}">{{ ($flightInfo['isRefundable']??false) ? 'Yes' : 'No' }}</span></td></tr>
             <tr><td>Ticket Cost</td><td><strong>{{ $sym }}{{ number_format((float)($flightInfo['price']??0), 2) }}</strong></td></tr>

@@ -1228,6 +1228,9 @@
                                         $hasPpData  = !empty($pax['passport_no']);
                                         $isComplete = !empty($pax['first_name']) && !empty($pax['last_name']) && !empty($pax['dob']);
                                         $filledCount= (int)!empty($pax['first_name']) + (int)!empty($pax['last_name']) + (int)!empty($pax['dob']) + (int)!empty($pax['nationality']);
+                                        $titleOptions = in_array($pax['type'], ['CHD', 'INF'], true)
+                                            ? ['Master', 'Miss']
+                                            : ['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Master'];
                                     @endphp
 
                                     <div class="bk-pax-card" wire:key="pax-{{ $i }}-{{ $pax['type'] }}"
@@ -1258,7 +1261,7 @@
                                                     <label class="bk-label">Title <span class="bk-req">*</span></label>
                                                     <select class="bk-select" wire:model="passengers.{{ $i }}.title">
                                                         <option value="">–</option>
-                                                        @foreach(['Mr','Mrs','Ms','Miss','Dr','Master'] as $t)
+                                                        @foreach($titleOptions as $t)
                                                             <option value="{{ $t }}">{{ $t }}</option>
                                                         @endforeach
                                                     </select>

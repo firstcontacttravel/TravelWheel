@@ -1,6 +1,8 @@
 @php
-    $firstPax = collect($booking->passengers_snapshot ?? [])->first();
+    $passengers = \App\Support\FlightDisplay::passengers($booking->passengers_snapshot ?? []);
+    $firstPax = collect($passengers)->first();
     $firstName = $firstPax['first_name'] ?? 'Traveller';
+    $cabinLabel = \App\Support\FlightDisplay::cabin($booking->flight_snapshot ?? [], $booking);
     $currency = $booking->payment_currency ?: ($booking->currency ?? 'NGN');
     $sym = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency . ' ' };
     $expectedAmount = (float) ($booking->payment_amount ?? $booking->total_price ?? 0);
@@ -39,11 +41,32 @@
                 <tr><td style="padding:9px 0;border-bottom:1px solid #e2e8f0;color:#64748b;">Gateway</td><td align="right" style="padding:9px 0;border-bottom:1px solid #e2e8f0;font-weight:700;">{{ ucfirst($booking->payment_gateway ?? 'SeerBit') }}</td></tr>
                 <tr><td style="padding:9px 0;border-bottom:1px solid #e2e8f0;color:#64748b;">Payment Date</td><td align="right" style="padding:9px 0;border-bottom:1px solid #e2e8f0;font-weight:700;">{{ optional($booking->payment_verified_at)->format('d M Y, H:i') }}</td></tr>
                 <tr><td style="padding:9px 0;border-bottom:1px solid #e2e8f0;color:#64748b;">Route</td><td align="right" style="padding:9px 0;border-bottom:1px solid #e2e8f0;font-weight:700;">{{ $booking->route }}</td></tr>
+                <tr><td style="padding:9px 0;border-bottom:1px solid #e2e8f0;color:#64748b;">Cabin</td><td align="right" style="padding:9px 0;border-bottom:1px solid #e2e8f0;font-weight:700;">{{ $cabinLabel }}</td></tr>
                 <tr><td style="padding:9px 0;border-bottom:1px solid #e2e8f0;color:#64748b;">Ticket and Extras</td><td align="right" style="padding:9px 0;border-bottom:1px solid #e2e8f0;font-weight:700;">{{ $sym }}{{ number_format($expectedAmount, 2) }}</td></tr>
                 @if($chargedAmount > $expectedAmount)
                 <tr><td style="padding:9px 0;border-bottom:1px solid #e2e8f0;color:#64748b;">Gateway Charges</td><td align="right" style="padding:9px 0;border-bottom:1px solid #e2e8f0;font-weight:700;">{{ $sym }}{{ number_format($chargedAmount - $expectedAmount, 2) }}</td></tr>
                 @endif
             </table>
+
+            @if(!empty($passengers))
+            <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:24px 0 10px;">Passengers</div>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;border:1px solid #e2e8f0;">
+                <tr>
+                    <th align="left" style="background:#f8fafc;padding:8px 10px;border-bottom:1px solid #e2e8f0;color:#94a3b8;font-size:11px;">#</th>
+                    <th align="left" style="background:#f8fafc;padding:8px 10px;border-bottom:1px solid #e2e8f0;color:#94a3b8;font-size:11px;">Name</th>
+                    <th align="left" style="background:#f8fafc;padding:8px 10px;border-bottom:1px solid #e2e8f0;color:#94a3b8;font-size:11px;">Type</th>
+                    <th align="left" style="background:#f8fafc;padding:8px 10px;border-bottom:1px solid #e2e8f0;color:#94a3b8;font-size:11px;">Passport</th>
+                </tr>
+                @foreach($passengers as $i => $pax)
+                <tr>
+                    <td style="padding:9px 10px;border-bottom:1px solid #f1f5f9;">{{ $i + 1 }}</td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #f1f5f9;font-weight:700;">{{ $pax['title'] ?? '' }} {{ strtoupper($pax['first_name'] ?? '') }} {{ strtoupper($pax['last_name'] ?? '') }}</td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #f1f5f9;">{{ match($pax['type'] ?? 'ADT') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Pax' } }}</td>
+                    <td style="padding:9px 10px;border-bottom:1px solid #f1f5f9;font-family:'Courier New',monospace;">{{ $pax['passport_no'] ?? '-' }}</td>
+                </tr>
+                @endforeach
+            </table>
+            @endif
 
             @if(!empty($baggageItems) || !empty($mealItems))
             <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:24px 0 10px;">Extra Services Included</div>

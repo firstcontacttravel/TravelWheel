@@ -7,6 +7,7 @@
     $sym      = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
     $fmt      = fn($v) => $sym . number_format((float)$v, 2);
     $total    = ($flight['price'] ?? 0) + ($extrasTotal ?? 0);
+    $cabinLabel = \App\Support\FlightDisplay::cabin($flight ?? []);
     $segments = $flight['segments'] ?? [];
     $multiLegs = $flight['multiLegs'] ?? [];
     $isMulti = count($multiLegs) > 0;
@@ -125,7 +126,7 @@
                                 @endforeach
                             </div>
                             <div class="gw-route-sub">
-                                {{ $flight['airline'] ?? '' }} · {{ count($routeLines) }} legs · {{ $flight['cabin'] ?? 'Economy' }}
+                                {{ $flight['airline'] ?? '' }} · {{ count($routeLines) }} legs · {{ $cabinLabel }}
                             </div>
                         @else
                         <div class="gw-route">
@@ -136,7 +137,7 @@
                         <div class="gw-route-sub">
                             {{ $flight['airline'] ?? '' }}
                             @if(!empty($flight['departDateLabel'])) · {{ $flight['departDateLabel'] }} @endif
-                            · {{ $flight['cabin'] ?? 'Economy' }}
+                            · {{ $cabinLabel }}
                         </div>
                         @endif
                     </div>
@@ -203,7 +204,7 @@
                 </div>
                 <div class="gw-rail-row">
                     <span class="gw-rail-lbl">Cabin</span>
-                    <span class="gw-rail-val" style="font-family:var(--font);">{{ $flight['cabin'] ?? 'Economy' }}</span>
+                    <span class="gw-rail-val" style="font-family:var(--font);">{{ $cabinLabel }}</span>
                 </div>
                 @if(!empty($contact['email']))
                 <div class="gw-rail-row">

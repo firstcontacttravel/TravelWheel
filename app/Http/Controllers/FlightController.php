@@ -11,6 +11,8 @@ class FlightController extends Controller
 {
     public function search(Request $request)
     {
+        $this->forgetCheckoutSession();
+
         //dd($request->all());
         // ── Normalise trip type ───────────────────────────────────────────────
         $request->merge(['trip' => strtolower($request->trip)]);
@@ -477,5 +479,35 @@ class FlightController extends Controller
             'F'     => 'First',
             default => 'Economy',
         };
+    }
+
+    private function forgetCheckoutSession(): void
+    {
+        session()->forget([
+            'bookingFlight',
+            'bookingContact',
+            'bookingPassengers',
+            'bookingSearchParams',
+            'bookingSessionId',
+            'bookingUniqueId',
+            'bookingRef',
+            'bookingStatus',
+            'bookingConfirmation',
+            'bookingTktTimeLimit',
+            'flightBookingDbId',
+            'selectedExtras',
+            'extraBaggage',
+            'extraMeal',
+            'extraServices',
+            'fareRules',
+            'paymentMethod',
+            'seerbitPaymentReference',
+            'seerbitPaymentFlow',
+            'ticketOrderResult',
+            'ticketSuccess',
+            'travelFlexPlan',
+            'travelFlexApplicant',
+            'travelFlexDocPaths',
+        ]);
     }
 }

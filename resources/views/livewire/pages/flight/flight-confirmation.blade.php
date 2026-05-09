@@ -34,6 +34,8 @@
         if (empty($passengers) && $dbBooking) {
             $passengers = $dbBooking->passengers_snapshot ?? [];
         }
+        $passengers = \App\Support\FlightDisplay::passengers($passengers);
+        $cabinLabel = \App\Support\FlightDisplay::cabin($mf, $dbBooking);
         $total         = (float)($mf['price'] ?? 0);
         $uniqueId      = $uniqueId ?? session('bookingUniqueId', $dbBooking?->unique_id ?? '');    // API e-ticket / hold ref
         $bookingRef    = $bookingRef ?? session('bookingRef', $dbBooking?->booking_ref ?? ''); // OUR ref
@@ -212,7 +214,7 @@
                     <div class="pc-icon" style="background:var(--blue-lt);color:var(--blue);">✈️</div>
                     <div>
                         <div class="pc-title">Flight Itinerary</div>
-                        <div class="pc-sub">{{ $tripLabel }} · {{ $mf['cabin'] ?? 'Economy' }} · {{ $mf['airline'] ?? '' }}</div>
+                        <div class="pc-sub">{{ $tripLabel }} · {{ $cabinLabel }} · {{ $mf['airline'] ?? '' }}</div>
                     </div>
                 </div>
 

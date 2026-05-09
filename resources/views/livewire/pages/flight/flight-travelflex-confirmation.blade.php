@@ -24,6 +24,8 @@
     $breakdown  = $bookingFlight['fareBreakdown'] ?? $mf['fareBreakdown'] ?? [];
     $contact    = session('bookingContact', []);
     $passengers = session('bookingPassengers', []);
+    $passengers = \App\Support\FlightDisplay::passengers($passengers);
+    $cabinLabel = \App\Support\FlightDisplay::cabin($mf, $dbBooking ?? null);
     $total      = (float)($mf['price'] ?? 0);
     $uniqueId   = session('bookingUniqueId', '');
     $bookingRef    = $bookingRef ?? session('bookingRef', $dbBooking?->booking_ref ?? '');
@@ -231,7 +233,7 @@
                     <div class="pc-icon" style="background:var(--blue-lt);color:var(--blue);">✈️</div>
                     <div>
                         <div class="pc-title">Flight Itinerary</div>
-                        <div class="pc-sub">{{ $tripLabel }} · {{ $mf['cabin'] ?? 'Economy' }} · {{ $mf['airline'] ?? '' }}</div>
+                        <div class="pc-sub">{{ $tripLabel }} · {{ $cabinLabel }} · {{ $mf['airline'] ?? '' }}</div>
                     </div>
                 </div>
 
@@ -524,7 +526,7 @@
                     @if($isReturn && !empty($mf['returnDateLabel']))<div class="dr"><span class="dr-lbl">Return</span><span class="dr-val">{{ $mf['returnDateLabel'] }}</span></div>@endif
                     <div class="dr"><span class="dr-lbl">Trip Type</span><span class="dr-val">{{ $tripLabel }}</span></div>
                     <div class="dr"><span class="dr-lbl">Airline</span><span class="dr-val">{{ $mf['airline'] ?? '—' }}</span></div>
-                    <div class="dr"><span class="dr-lbl">Cabin</span><span class="dr-val">{{ $mf['cabin'] ?? 'Economy' }}</span></div>
+                    <div class="dr"><span class="dr-lbl">Cabin</span><span class="dr-val">{{ $cabinLabel }}</span></div>
                     @if($uniqueId)<div class="dr"><span class="dr-lbl">Booking Ref</span><span class="dr-val mono">{{ $bookingRef }}</span></div>@endif
                     <div class="dr"><span class="dr-lbl">Ticket Status</span><span class="dr-val" style="color:{{ $isTicketed ? 'var(--green)' : 'var(--amber)' }};font-weight:700;">{{ $isTicketed ? '✓ Ticketed' : '⏳ Processing' }}</span></div>
                 </div>

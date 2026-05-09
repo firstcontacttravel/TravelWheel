@@ -64,9 +64,9 @@
                     </td>
                     <td align="right" style="vertical-align:middle;">
                         <div style="font-size:11px;color:#64748B;">
-                            {{ $booking->flight_data['tripLabel'] ?? 'Flight' }}<br>
-                            {{ $booking->flight_data['airline'] ?? '' }}<br>
-                            {{ $booking->cabin }}
+                            {{ $tripLabel ?? 'Flight' }}<br>
+                            {{ $airline ?? '' }}<br>
+                            {{ $cabin ?? \App\Support\FlightDisplay::cabin($booking->flight_snapshot ?? [], $booking) }}
                         </div>
                     </td>
                 </tr>
@@ -133,6 +133,31 @@
         </td>
     </tr>
 
+    {{-- Passengers --}}
+    @if(!empty($passengers))
+    <tr>
+        <td style="padding:16px 28px 0;">
+            <div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Passenger Details</div>
+            <table width="100%" cellspacing="0" cellpadding="0" style="font-size:12px;color:#475569;border:1px solid #E2E8F0;border-collapse:collapse;">
+                <tr>
+                    <th align="left" style="background:#F8FAFC;padding:8px 10px;border-bottom:1px solid #E2E8F0;color:#94A3B8;font-size:10px;">#</th>
+                    <th align="left" style="background:#F8FAFC;padding:8px 10px;border-bottom:1px solid #E2E8F0;color:#94A3B8;font-size:10px;">Name</th>
+                    <th align="left" style="background:#F8FAFC;padding:8px 10px;border-bottom:1px solid #E2E8F0;color:#94A3B8;font-size:10px;">Type</th>
+                    <th align="left" style="background:#F8FAFC;padding:8px 10px;border-bottom:1px solid #E2E8F0;color:#94A3B8;font-size:10px;">Passport</th>
+                </tr>
+                @foreach($passengers as $i => $pax)
+                <tr>
+                    <td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">{{ $i + 1 }}</td>
+                    <td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-weight:700;color:#0F172A;">{{ $pax['title'] ?? '' }} {{ strtoupper($pax['first_name'] ?? '') }} {{ strtoupper($pax['last_name'] ?? '') }}</td>
+                    <td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;">{{ match($pax['type'] ?? 'ADT') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Pax' } }}</td>
+                    <td style="padding:8px 10px;border-bottom:1px solid #F1F5F9;font-family:Courier New,monospace;">{{ $pax['passport_no'] ?? '-' }}</td>
+                </tr>
+                @endforeach
+            </table>
+        </td>
+    </tr>
+    @endif
+
     {{-- Reminders --}}
     <tr>
         <td style="padding:16px 28px 0;">
@@ -171,7 +196,7 @@
     <tr>
         <td style="background:#F8FAFC;border-top:1px solid #E2E8F0;padding:14px 28px;text-align:center;">
             <div style="font-size:10px;color:#94A3B8;line-height:1.6;">
-                This email was sent by TravelWheel on behalf of {{ $booking->flight_data['airline'] ?? 'the operating airline' }}.<br>
+                This email was sent by TravelWheel on behalf of {{ $airline ?? 'the operating airline' }}.<br>
                 &copy; {{ date('Y') }} TravelWheel. All rights reserved.
             </div>
         </td>

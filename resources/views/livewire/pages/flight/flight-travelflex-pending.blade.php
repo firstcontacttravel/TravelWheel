@@ -18,6 +18,8 @@
     $breakdown = $bookingFlight['fareBreakdown'] ?? $mf['fareBreakdown'] ?? [];
     $contact   = session('bookingContact', []);
     $passengers= session('bookingPassengers', []);
+    $passengers = \App\Support\FlightDisplay::passengers($passengers);
+    $cabinLabel = \App\Support\FlightDisplay::cabin($mf, $dbBooking ?? null);
     $total     = (float)($mf['price'] ?? 0);
     $uniqueId  = session('bookingUniqueId', '');
     $tktLimit  = session('bookingTktTimeLimit', '');
@@ -146,7 +148,7 @@
             <div class="pc">
                 <div class="pc-head">
                     <div class="pc-icon" style="background:var(--blue-lt);color:var(--blue);">✈️</div>
-                    <div><div class="pc-title">Flight Itinerary</div><div class="pc-sub">{{ $tripLabel }} · {{ $mf['cabin']??'Economy' }} · {{ $mf['airline']??'' }}</div></div>
+                    <div><div class="pc-title">Flight Itinerary</div><div class="pc-sub">{{ $tripLabel }} · {{ $cabinLabel }} · {{ $mf['airline']??'' }}</div></div>
                 </div>
                 @if(!$isMulti)
                 @include('livewire.pages.flight.partials._render_leg', ['legSegs'=>$segments,'legLabel'=>'Outbound','legBadgeClass'=>'outbound','legLayovers'=>$mf['layoverDurations']??[],'legStops'=>$mf['stops']??max(0,count($segments)-1),'legDuration'=>$mf['totalTimeLabel']??'','legDate'=>$mf['departDateLabel']??'','breakdown'=>$breakdown,'equipMap'=>$equipMap,'tripDetails'=>[]])

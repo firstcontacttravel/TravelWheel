@@ -83,7 +83,7 @@ class ETicketPdfService
     {
         // ── Session / booking fields ──────────────────────────────────────
         $mf          = $booking->flight_snapshot ?? [];
-        $passengers  = $booking->passengers_snapshot ?? [];   // cast to array in model
+        $passengers  = \App\Support\FlightDisplay::passengers($booking->passengers_snapshot ?? []);
         $contact     = [
             'email' => $booking->contact_email,
             'phone' => $booking->contact_phone,
@@ -131,7 +131,7 @@ class ETicketPdfService
             'uniqueId'         => $booking->unique_id ?? '',
             'tripLabel'        => $tripLabel,
             'airline'          => $mf['airline'] ?? '',
-            'cabin'            => $mf['cabin']   ?? 'Economy',
+            'cabin'            => \App\Support\FlightDisplay::cabin($mf, $booking),
             'isTicketed'       => $isTicketed,
             'bookingStatus'    => $bookingStatus,
             'ticketStatus'     => $ticketStatus,
