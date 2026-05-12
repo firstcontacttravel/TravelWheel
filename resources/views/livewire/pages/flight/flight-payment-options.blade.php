@@ -161,7 +161,7 @@
                 </div>
             @endif
                     {{-- ── Option 1: Direct Bank Transfer ── --}}
-            <div class="po-option" :class="{ active: activeOption === 'bank' }" @click="activeOption = 'bank'">
+            <!-- <div class="po-option" :class="{ active: activeOption === 'bank' }" @click="activeOption = 'bank'">
                 <div class="po-option-head">
                     <div class="po-option-radio"><div class="po-option-radio-dot"></div></div>
                     <div class="po-option-icon bank">🏦</div>
@@ -169,7 +169,6 @@
                         <div class="po-option-title">Direct Bank Transfer</div>
                         <div class="po-option-sub">Transfer to our account and confirm payment</div>
                     </div>
-                    <!-- <span class="po-option-badge manual">Manual</span> -->
                 </div>
                 <div class="po-option-body">
                     <div class="po-notice warn">
@@ -204,7 +203,7 @@
                         </button>
                     </form>
                 </div>
-            </div>
+            </div> -->
 
             {{-- ── Option 2: Payment Gateway ── --}}
             <div class="po-option" :class="{ active: activeOption === 'gateway' }" @click="activeOption = 'gateway'">
@@ -215,7 +214,6 @@
                         <div class="po-option-title">Pay Online</div>
                         <div class="po-option-sub">Card, bank transfer or USSD — instant confirmation</div>
                     </div>
-                    <!-- <span class="po-option-badge instant">Instant</span> -->
                 </div>
                 <div class="po-option-body">
                     <div class="po-notice info">
@@ -234,7 +232,7 @@
             </div>
 
             {{-- ── Option 3: Travel Flex ── --}}
-            <div class="po-option" :class="{ active: activeOption === 'flex' }" @click="activeOption = 'flex'">
+            <!-- <div class="po-option" :class="{ active: activeOption === 'flex' }" @click="activeOption = 'flex'">
                 <div class="po-option-head">
                     <div class="po-option-radio"><div class="po-option-radio-dot"></div></div>
                     <div class="po-option-icon flex">📆</div>
@@ -275,7 +273,7 @@
                     </div>
                     @endif
                 </div>
-            </div>
+            </div> -->
 
         </div>
 
