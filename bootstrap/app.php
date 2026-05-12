@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
-            'payments/seerbit/webhook',
+            // 'payments/seerbit/webhook', // COMMENTED OUT - Seerbit integration disabled
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -6,7 +6,7 @@ use App\Mail\BookingPendingMail;
 use App\Mail\ETicketMail;
 use App\Mail\PaymentReceiptMail;
 use App\Models\FlightBooking;
-use App\Services\SeerbitPaymentService;
+// use App\Services\SeerbitPaymentService; // COMMENTED OUT - Simulating payments for now
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -659,6 +659,8 @@ class FlightBookingController extends Controller
         return $this->_startSeerbitPayment('held_ticket_full');
     }
 
+    // COMMENTED OUT - Seerbit integration disabled for simulated payments
+    /*
     public function seerbitCallback(Request $request, SeerbitPaymentService $seerbit)
     {
         $reference = $request->input('paymentReference')
@@ -729,7 +731,10 @@ class FlightBookingController extends Controller
             default => redirect()->route('air.flight-s')->withErrors(['error' => 'Unknown payment flow.']),
         };
     }
+    */
 
+    // COMMENTED OUT - Seerbit integration disabled for simulated payments
+    /*
     public function seerbitWebhook(Request $request, SeerbitPaymentService $seerbit)
     {
         $reference = $request->input('paymentReference')
@@ -753,6 +758,7 @@ class FlightBookingController extends Controller
             'status' => 'received',
         ]);
     }
+    */
 
    
  
@@ -1039,52 +1045,50 @@ class FlightBookingController extends Controller
             $currency = $booking->currency ?: 'NGN';
             $reference = $this->_generatePaymentReference();
 
+            // SIMULATED PAYMENT - Mark as paid immediately
             $booking->update([
                 'payment_reference' => $reference,
-                'payment_gateway' => 'seerbit',
+                'payment_gateway' => 'simulated',
                 'payment_flow' => $flow,
                 'payment_amount' => $amount,
                 'payment_currency' => $currency,
                 'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
-                'payment_status' => 'pending',
+                'payment_status' => 'paid', // SIMULATED - Mark as paid
+                'payment_verified_at' => now(), // SIMULATED - Mark as verified
+                'payment_charged_amount' => $amount,
             ]);
 
             session([
                 'flightBookingDbId' => $booking->id,
                 'bookingRef' => $booking->booking_ref,
                 'seerbitPaymentReference' => $reference,
+                'paymentReference' => $reference,
                 'seerbitPaymentFlow' => $flow,
             ]);
 
-            $contact = session('bookingContact', []);
-            $passengers = session('bookingPassengers', []);
-            $lead = $passengers[0] ?? [];
-            $fullName = trim(($lead['first_name'] ?? '') . ' ' . ($lead['last_name'] ?? '')) ?: ($contact['email'] ?? 'Travelwheel Customer');
-
-            $seerbit = app(SeerbitPaymentService::class);
-            $checkout = $seerbit->initializePayment([
-                'amount' => number_format($amount, 2, '.', ''),
-                'currency' => $currency,
-                'paymentReference' => $reference,
-                'email' => $contact['email'] ?? $booking->contact_email,
-                'fullName' => $fullName,
-                'mobileNumber' => $contact['phone'] ?? $booking->contact_phone,
-                'callbackUrl' => route('payments.seerbit.callback', ['paymentReference' => $reference]),
-                'productDescription' => $this->_paymentDescription($flow, $booking),
+            Log::info('SIMULATED Payment processed', [
+                'booking_id' => $booking->id,
+                'reference' => $reference,
+                'amount' => $amount,
+                'flow' => $flow,
             ]);
 
-            $booking->update(['payment_gateway_response' => $checkout['raw']]);
-
-            return redirect()->away($checkout['redirect_link']);
+            // SIMULATED - Proceed directly to completion
+            return match ($flow) {
+                'webfare_full'           => $this->_completeWebfarePayment($booking, request()),
+                'held_ticket_full'       => $this->_completeHeldTicketPayment($booking),
+                'travelflex_down_payment' => $this->_completeTravelFlexPayment($booking, request()),
+                default => redirect()->route('air.flight-s')->withErrors(['error' => 'Unknown payment flow.']),
+            };
         } catch (\Throwable $e) {
-            Log::error('Unable to start SeerBit payment', [
+            Log::error('Unable to process simulated payment', [
                 'flow' => $flow,
                 'error' => $e->getMessage(),
             ]);
 
             return $this->_redirectAfterSeerbitFailure(
                 isset($booking) ? $booking : null,
-                $e->getMessage() ?: 'Unable to start payment. Please try again.'
+                $e->getMessage() ?: 'Unable to process payment. Please try again.'
             );
         }
     }
