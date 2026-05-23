@@ -12,7 +12,7 @@
 /.vscode
 /.zed
 /auth.json
-/public/build
+/node_modules
 /public/hot
 /public/storage
 /public/travelflex_docs
