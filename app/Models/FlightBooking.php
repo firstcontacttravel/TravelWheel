@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FlightBooking extends Model
 {
@@ -115,5 +116,25 @@ class FlightBooking extends Model
     public function totalPassengers(): int
     {
         return $this->adult_count + $this->child_count + $this->infant_count;
+    }
+
+    public function paymentVerificationRecords(): HasMany
+    {
+        return $this->hasMany(PaymentVerificationRecord::class);
+    }
+
+    public function ticketingRecords(): HasMany
+    {
+        return $this->hasMany(TicketingRecord::class);
+    }
+
+    public function travelFlexApplications(): HasMany
+    {
+        return $this->hasMany(TravelFlexApplication::class);
+    }
+
+    public function postTicketingRequests(): HasMany
+    {
+        return $this->hasMany(PostTicketingRequest::class);
     }
 }

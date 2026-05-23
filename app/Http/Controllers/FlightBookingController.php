@@ -6,7 +6,9 @@ use App\Mail\BookingPendingMail;
 use App\Mail\ETicketMail;
 use App\Mail\PaymentReceiptMail;
 use App\Models\FlightBooking;
-// use App\Services\SeerbitPaymentService; // COMMENTED OUT - Simulating payments for now
+use App\Models\TravelFlexApplication;
+use App\Services\SeerbitPaymentService;
+use App\Services\TravelFlexApplicationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -659,8 +661,6 @@ class FlightBookingController extends Controller
         return $this->_startSeerbitPayment('held_ticket_full');
     }
 
-    // COMMENTED OUT - Seerbit integration disabled for simulated payments
-    /*
     public function seerbitCallback(Request $request, SeerbitPaymentService $seerbit)
     {
         $reference = $request->input('paymentReference')
@@ -731,10 +731,7 @@ class FlightBookingController extends Controller
             default => redirect()->route('air.flight-s')->withErrors(['error' => 'Unknown payment flow.']),
         };
     }
-    */
 
-    // COMMENTED OUT - Seerbit integration disabled for simulated payments
-    /*
     public function seerbitWebhook(Request $request, SeerbitPaymentService $seerbit)
     {
         $reference = $request->input('paymentReference')
@@ -758,7 +755,6 @@ class FlightBookingController extends Controller
             'status' => 'received',
         ]);
     }
-    */
 
    
  
@@ -801,6 +797,7 @@ class FlightBookingController extends Controller
                 'bank_transfer_notified_at' => now(),
                 'extra_services_snapshot'   => session('selectedExtras', []),
             ]);
+            $this->_syncTravelFlexApplicationBooking($dbBooking);
             // Send pending email
             $this->_sendPendingEmail($dbBooking, 'bank_transfer');
         } else {
@@ -826,6 +823,7 @@ class FlightBookingController extends Controller
             ]);
  
             session(['flightBookingDbId' => $dbBooking->id, 'bookingRef' => $dbBooking->booking_ref]);
+            $this->_syncTravelFlexApplicationBooking($dbBooking);
             $this->_sendPendingEmail($dbBooking, 'bank_transfer');
         }
  
@@ -1045,50 +1043,52 @@ class FlightBookingController extends Controller
             $currency = $booking->currency ?: 'NGN';
             $reference = $this->_generatePaymentReference();
 
-            // SIMULATED PAYMENT - Mark as paid immediately
             $booking->update([
                 'payment_reference' => $reference,
-                'payment_gateway' => 'simulated',
+                'payment_gateway' => 'seerbit',
                 'payment_flow' => $flow,
                 'payment_amount' => $amount,
                 'payment_currency' => $currency,
                 'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
-                'payment_status' => 'paid', // SIMULATED - Mark as paid
-                'payment_verified_at' => now(), // SIMULATED - Mark as verified
-                'payment_charged_amount' => $amount,
+                'payment_status' => 'pending',
             ]);
 
             session([
                 'flightBookingDbId' => $booking->id,
                 'bookingRef' => $booking->booking_ref,
                 'seerbitPaymentReference' => $reference,
-                'paymentReference' => $reference,
                 'seerbitPaymentFlow' => $flow,
             ]);
 
-            Log::info('SIMULATED Payment processed', [
-                'booking_id' => $booking->id,
-                'reference' => $reference,
-                'amount' => $amount,
-                'flow' => $flow,
+            $contact = session('bookingContact', []);
+            $passengers = session('bookingPassengers', []);
+            $lead = $passengers[0] ?? [];
+            $fullName = trim(($lead['first_name'] ?? '') . ' ' . ($lead['last_name'] ?? '')) ?: ($contact['email'] ?? 'Travelwheel Customer');
+
+            $seerbit = app(SeerbitPaymentService::class);
+            $checkout = $seerbit->initializePayment([
+                'amount' => number_format($amount, 2, '.', ''),
+                'currency' => $currency,
+                'paymentReference' => $reference,
+                'email' => $contact['email'] ?? $booking->contact_email,
+                'fullName' => $fullName,
+                'mobileNumber' => $contact['phone'] ?? $booking->contact_phone,
+                'callbackUrl' => route('payments.seerbit.callback', ['paymentReference' => $reference]),
+                'productDescription' => $this->_paymentDescription($flow, $booking),
             ]);
 
-            // SIMULATED - Proceed directly to completion
-            return match ($flow) {
-                'webfare_full'           => $this->_completeWebfarePayment($booking, request()),
-                'held_ticket_full'       => $this->_completeHeldTicketPayment($booking),
-                'travelflex_down_payment' => $this->_completeTravelFlexPayment($booking, request()),
-                default => redirect()->route('air.flight-s')->withErrors(['error' => 'Unknown payment flow.']),
-            };
+            $booking->update(['payment_gateway_response' => $checkout['raw']]);
+
+            return redirect()->away($checkout['redirect_link']);
         } catch (\Throwable $e) {
-            Log::error('Unable to process simulated payment', [
+            Log::error('Unable to start SeerBit payment', [
                 'flow' => $flow,
                 'error' => $e->getMessage(),
             ]);
 
             return $this->_redirectAfterSeerbitFailure(
                 isset($booking) ? $booking : null,
-                $e->getMessage() ?: 'Unable to process payment. Please try again.'
+                $e->getMessage() ?: 'Unable to start payment. Please try again.'
             );
         }
     }
@@ -1123,6 +1123,10 @@ class FlightBookingController extends Controller
                 'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
                 'extra_services_snapshot' => session('selectedExtras', $booking->extra_services_snapshot ?? []),
             ]);
+        }
+
+        if ($flow === 'travelflex_down_payment') {
+            $this->_syncTravelFlexApplicationBooking($booking);
         }
 
         return $booking->fresh();
@@ -1303,7 +1307,12 @@ class FlightBookingController extends Controller
             fn($p) => $p ? storage_path('app/' . $p) : null,
             $docPaths
         );
-        $this->_sendTravelFlexApplicationEmails($applicant, $tfPlan, $uploadPaths, session('bookingUniqueId', $booking->unique_id ?? ''));
+            $this->_sendTravelFlexApplicationEmails($applicant, $tfPlan, $uploadPaths, session('bookingUniqueId', $booking->unique_id ?? ''));
+            $this->_syncTravelFlexApplicationBooking($booking->fresh(), [
+                'provider_status' => 'sent',
+                'provider_email_sent_at' => now(),
+                'provider_email_error' => null,
+            ]);
 
         session(['paymentMethod' => 'flex_gateway']);
 
@@ -1958,6 +1967,7 @@ class FlightBookingController extends Controller
             'ticketOrderResult',
             'ticketSuccess',
             'travelFlexPlan',
+            'travelFlexApplicationId',
             'travelFlexApplicant',
             'travelFlexDocPaths',
         ]);
@@ -1990,6 +2000,7 @@ class FlightBookingController extends Controller
             'seerbitPaymentReference',
             'seerbitPaymentFlow',
             'travelFlexPlan',
+            'travelFlexApplicationId',
             'travelFlexApplicant',
             'travelFlexDocPaths',
         ]);
@@ -2251,6 +2262,7 @@ class FlightBookingController extends Controller
         ];
  
         session(['travelFlexApplicant' => $applicant, 'travelFlexDocPaths' => $storagePaths]);
+        $travelFlexApplication = $this->_persistTravelFlexApplication($applicant, $tfPlan, $storagePaths);
  
         // ── Now branch on payment method ──────────────────────────────────────
         $payMethod = $request->input('pay_method');
@@ -2258,6 +2270,11 @@ class FlightBookingController extends Controller
         if ($payMethod === 'bank_transfer') {
             // Send application emails
             $this->_sendTravelFlexApplicationEmails($applicant, $tfPlan, $uploadPaths);
+            $travelFlexApplication->update([
+                'provider_status' => 'sent',
+                'provider_email_sent_at' => now(),
+                'provider_email_error' => null,
+            ]);
             return redirect()->route('flights.travelflex.bank-transfer-form');
         }
  
@@ -2287,6 +2304,68 @@ class FlightBookingController extends Controller
         }
  
         return $this->_startSeerbitPayment('travelflex_down_payment');
+    }
+
+    private function _persistTravelFlexApplication(array $applicant, array $tfPlan, array $documentPaths): TravelFlexApplication
+    {
+        $booking = ($dbId = session('flightBookingDbId')) ? FlightBooking::find($dbId) : null;
+        $bvn = (string) ($applicant['bvn'] ?? '');
+
+        $application = TravelFlexApplication::updateOrCreate(
+            ['id' => session('travelFlexApplicationId')],
+            [
+                'flight_booking_id' => $booking?->id,
+                'booking_ref' => $booking?->booking_ref ?? session('bookingRef'),
+                'unique_id' => $booking?->unique_id ?? session('bookingUniqueId'),
+                'applicant_details' => [
+                    'full_name' => $applicant['full_name'] ?? null,
+                    'email' => $applicant['email'] ?? null,
+                    'home_address' => $applicant['home_address'] ?? null,
+                ],
+                'bvn_metadata' => [
+                    'last_four' => $bvn !== '' ? substr($bvn, -4) : null,
+                    'hash' => $bvn !== '' ? hash('sha256', $bvn . config('app.key')) : null,
+                    'captured_at' => now()->toIso8601String(),
+                ],
+                'employment_details' => [
+                    'employer_name' => $applicant['employer_name'] ?? null,
+                    'employer_address' => $applicant['employer_address'] ?? null,
+                    'occupation' => $applicant['occupation'] ?? null,
+                    'job_description' => $applicant['job_description'] ?? null,
+                    'staff_number' => $applicant['staff_number'] ?? null,
+                ],
+                'document_paths' => $documentPaths,
+                'repayment_plan' => $tfPlan,
+                'down_payment' => $tfPlan['down_payment'] ?? null,
+                'down_percent' => $tfPlan['down_percent'] ?? null,
+                'grand_total' => $tfPlan['grand_total'] ?? null,
+                'total_interest' => $tfPlan['total_interest'] ?? null,
+                'payment_method' => $tfPlan['payment_method'] ?? null,
+                'payment_status' => $booking?->payment_status ?? 'pending',
+                'application_status' => 'submitted',
+            ],
+        );
+
+        session(['travelFlexApplicationId' => $application->id]);
+
+        return $application;
+    }
+
+    private function _syncTravelFlexApplicationBooking(FlightBooking $booking, array $overrides = []): void
+    {
+        $applicationId = session('travelFlexApplicationId');
+
+        if (! $applicationId) {
+            return;
+        }
+
+        TravelFlexApplication::whereKey($applicationId)->update(array_merge([
+            'flight_booking_id' => $booking->id,
+            'booking_ref' => $booking->booking_ref,
+            'unique_id' => $booking->unique_id,
+            'payment_status' => $booking->payment_status,
+            'payment_method' => $booking->payment_method,
+        ], $overrides));
     }
  
     // ── Private: send TravelFlex application emails ───────────────────────────

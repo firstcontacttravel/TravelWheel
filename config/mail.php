@@ -114,6 +114,10 @@ return [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
+
+    'travelflex_provider' => env('MAIL_TRAVELFLEX_PROVIDER', 'loans@travelwheel.com'),
+    'travelwheel_address' => env('MAIL_TRAVELWHEEL_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+    'support_address' => env('MAIL_SUPPORT_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
     
 
 ];

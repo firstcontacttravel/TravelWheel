@@ -5,6 +5,7 @@ use App\Livewire\Pages\FlightPage;
 use App\Livewire\Pages\FlightIndex;
 use App\Http\Controllers\FlightSearchController;
 use App\Http\Controllers\FlightBookingController;
+use App\Http\Controllers\AdminReportExportController;
 use App\Livewire\Pages\FlightBooking;
 use App\Http\Controllers\FlightController;
 
@@ -36,6 +37,26 @@ Route::get('/air/visa', function() { /* ... */ })->name('air.visa');
 Route::get('/air/cargo', function() { /* ... */ })->name('air.cargo');
 Route::get('/air/support', function() { /* ... */ })->name('air.support');
 
+Route::get('/admin/travelflex-applications/{application}/documents/{key}', function (\App\Models\TravelFlexApplication $application, string $key) {
+    $user = auth()->user();
+    $adminEmails = collect(explode(',', (string) env('ADMIN_EMAILS', '')))
+        ->map(fn (string $email): string => strtolower(trim($email)))
+        ->filter();
+
+    abort_unless($user && ($user->is_admin || $adminEmails->contains(strtolower($user->email))), 403);
+
+    $documents = $application->document_paths ?? [];
+    $path = is_array($documents) ? ($documents[$key] ?? null) : null;
+
+    abort_unless($path && \Illuminate\Support\Facades\Storage::disk('local')->exists($path), 404);
+
+    return \Illuminate\Support\Facades\Storage::disk('local')->download($path);
+})->middleware('auth')->name('admin.travelflex.documents.download');
+
+Route::get('/admin/reports/export/{report}', AdminReportExportController::class)
+    ->middleware('auth')
+    ->name('admin.reports.export');
+
 // Flight routes
  
 Route::post('/flights/select', [FlightBookingController::class, 'select'])
@@ -65,8 +86,8 @@ Route::post('/flights/book', [FlightBookingController::class, 'book'])
     // Final confirmation (WebFare confirmed OR Non-LCC ticketed)
     Route::get('/flights/confirmation',  [FlightBookingController::class, 'confirmation'])->name('flights.confirmation');
     // COMMENTED OUT - Seerbit integration disabled for simulated payments
-    // Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerbitCallback'])->name('payments.seerbit.callback');
-    // Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->name('payments.seerbit.webhook');
+    Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerbitCallback'])->name('payments.seerbit.callback');
+    Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->name('payments.seerbit.webhook');
     Route::get( '/flights/travelflex',                       [FlightBookingController::class, 'travelFlex'])->name('flights.travelflex');
     Route::post('/flights/travelflex/application',           [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application');
     Route::get( '/flights/travelflex/application',           [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application.get');
