@@ -761,6 +761,23 @@
     box-shadow: 0 0 0 3px rgba(0, 168, 90, 0.16);
 }
 
+/* Fix for sign-in button cutoff on login page */
+.fi-btn,
+button.fi-btn,
+.fi-form-container .fi-btn {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fi-form .fi-btn {
+    min-height: 2.5rem;
+}
+
 .fi-dropdown-panel {
     border-radius: 8px;
     border-color: rgba(13, 24, 131, 0.1);
