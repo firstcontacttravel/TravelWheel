@@ -9,11 +9,13 @@ use App\Models\PaymentVerificationRecord;
 use App\Models\PostTicketingRequest;
 use App\Models\TicketingRecord;
 use App\Services\AdminPostTicketingService;
+use App\Services\AdminReplacementFlightSearchService;
 use App\Services\AdminTicketingService;
 use App\Services\SeerbitPaymentService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -21,6 +23,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -825,37 +828,64 @@ class FlightBookingsTable
 
     public static function cancelBookingAction(): Action
     {
-        return self::postTicketingAction('cancel', 'Cancel booking', 'heroicon-o-x-circle', 'danger');
+        return Action::make('cancelBooking')
+            ->label('Cancel booking')
+            ->icon('heroicon-o-x-circle')
+            ->color('danger')
+            ->visible(fn (FlightBooking $record): bool => self::canRunCancelBooking($record))
+            ->requiresConfirmation()
+            ->modalHeading(fn (FlightBooking $record): string => 'Cancel ' . ($record->booking_ref ?: 'booking'))
+            ->modalDescription('Cancel this provider booking using the booking UniqueID. For already ticketed bookings, use Void or Refund instead.')
+            ->modalIcon('heroicon-o-x-circle')
+            ->modalIconColor('danger')
+            ->modalSubmitActionLabel('Cancel booking')
+            ->modalWidth('xl')
+            ->form(fn (FlightBooking $record): array => [
+                Placeholder::make('booking_context')
+                    ->hiddenLabel()
+                    ->content(fn () => self::actionContext($record, 'Booking cancellation')),
+                Placeholder::make('provider_status')
+                    ->hiddenLabel()
+                    ->content(fn () => self::cancelProviderStatusContext($record)),
+                Textarea::make('admin_note')
+                    ->label('Admin note')
+                    ->helperText('Record why this booking is being cancelled. This note is stored internally and is not sent to Flightslogic.')
+                    ->rows(3)
+                    ->maxLength(2000),
+            ])
+            ->action(function (FlightBooking $record, array $data): void {
+                self::runPostTicketingOperation($record, 'cancel', [], $data['admin_note'] ?? null);
+            });
     }
 
     public static function voidQuoteAction(): Action
     {
-        return self::postTicketingAction('void_quote', 'Get void quote', 'heroicon-o-document-magnifying-glass', 'warning', needsPaxDetails: true);
+        return self::postTicketingAction('void_quote', 'Get void quote', 'heroicon-o-document-magnifying-glass', 'warning', needsSelectablePaxDetails: true);
     }
 
     public static function voidTicketAction(): Action
     {
-        return self::postTicketingAction('void', 'Void ticket', 'heroicon-o-no-symbol', 'danger', needsPaxDetails: true, requiresQuoteType: 'void_quote');
+        return self::postTicketingAction('void', 'Void ticket', 'heroicon-o-no-symbol', 'danger', needsSelectablePaxDetails: true, requiresQuoteType: 'void_quote');
     }
 
     public static function refundQuoteAction(): Action
     {
-        return self::postTicketingAction('refund_quote', 'Get refund quote', 'heroicon-o-document-currency-dollar', 'warning', needsPaxDetails: true);
+        return self::postTicketingAction('refund_quote', 'Get refund quote', 'heroicon-o-document-currency-dollar', 'warning', needsSelectablePaxDetails: true);
     }
 
     public static function refundTicketAction(): Action
     {
-        return self::postTicketingAction('refund', 'Process refund', 'heroicon-o-receipt-refund', 'danger', needsPaxDetails: true, requiresQuoteType: 'refund_quote');
+        return self::postTicketingAction('refund', 'Process refund', 'heroicon-o-receipt-refund', 'danger', needsSelectablePaxDetails: true, requiresQuoteType: 'refund_quote');
     }
 
     public static function reissueQuoteAction(): Action
     {
-        return self::postTicketingAction('reissue_quote', 'Get reissue quote', 'heroicon-o-document-plus', 'warning', needsPaxDetails: true, needsPreferences: true);
+        return self::postTicketingAction('reissue_quote', 'Get reissue quote', 'heroicon-o-document-plus', 'warning', needsPaxDetails: true, needsReissueSegments: true);
     }
 
     public static function reissueTicketAction(): Action
     {
-        return self::postTicketingAction('reissue', 'Process reissue', 'heroicon-o-arrow-path', 'danger', needsPaxDetails: true, needsPreferences: true, requiresQuoteType: 'reissue_quote');
+        return self::postTicketingAction('reissue', 'Process reissue', 'heroicon-o-arrow-path', 'danger', requiresQuoteType: 'reissue_quote', needsPreferenceOption: true);
     }
 
     public static function searchPtrStatusAction(): Action
@@ -898,7 +928,9 @@ class FlightBookingsTable
         string $icon,
         string $color,
         bool $needsPaxDetails = false,
-        bool $needsPreferences = false,
+        bool $needsSelectablePaxDetails = false,
+        bool $needsReissueSegments = false,
+        bool $needsPreferenceOption = false,
         ?string $requiresQuoteType = null,
     ): Action {
         return Action::make('postTicketing' . str($operationType)->studly())
@@ -913,7 +945,7 @@ class FlightBookingsTable
             ->modalIconColor($color)
             ->modalSubmitActionLabel($label)
             ->modalWidth('xl')
-            ->form(function (FlightBooking $record) use ($needsPaxDetails, $needsPreferences, $requiresQuoteType): array {
+            ->form(function (FlightBooking $record) use ($operationType, $needsPaxDetails, $needsSelectablePaxDetails, $needsReissueSegments, $needsPreferenceOption, $requiresQuoteType): array {
                 $schema = [
                     Placeholder::make('booking_context')
                         ->hiddenLabel()
@@ -929,6 +961,17 @@ class FlightBookingsTable
                             ->latest()
                             ->pluck('ptr_unique_id', 'ptr_unique_id')
                             ->all())
+                        ->live()
+                        ->required();
+                }
+
+                if ($needsPreferenceOption) {
+                    $schema[] = TextInput::make('preference_option')
+                        ->label('Preference option')
+                        ->helperText('Flightslogic docs show 1 as the option value. Change only if provider support gives a different option ID.')
+                        ->numeric()
+                        ->minValue(1)
+                        ->default(1)
                         ->required();
                 }
 
@@ -941,12 +984,73 @@ class FlightBookingsTable
                         ->rows(8);
                 }
 
-                if ($needsPreferences) {
-                    $schema[] = Textarea::make('requested_preferences_json')
-                        ->label('Reissue preferences')
-                        ->helperText('Add the revised travel preferences when handling a reissue request.')
-                        ->default('[]')
-                        ->rows(6);
+                if ($needsSelectablePaxDetails) {
+                    $schema[] = CheckboxList::make('pax_selection')
+                        ->label($operationType === 'refund' || $operationType === 'refund_quote' ? 'Passengers to refund' : 'Passengers to void')
+                        ->helperText(($operationType === 'refund' || $operationType === 'refund_quote')
+                            ? 'Select the passenger tickets to refund. E-ticket numbers are required by Flightslogic.'
+                            : 'Select the passenger tickets to void. E-ticket numbers are required by Flightslogic.')
+                        ->options(fn (Get $get): array => self::postTicketingPaxOptions($record, $get('ptr_unique_id')))
+                        ->default(fn (): array => array_keys(self::postTicketingPaxOptions($record)))
+                        ->bulkToggleable()
+                        ->columns(1)
+                        ->required();
+                }
+
+                if ($needsReissueSegments) {
+                    $schema[] = Select::make('replacement_from')
+                        ->label('Replacement from')
+                        ->helperText('Search by city, airport name, country, or IATA code. Defaults to the current first segment when available.')
+                        ->default(fn () => self::defaultReissueAirport($record, 'from'))
+                        ->getSearchResultsUsing(fn (?string $search): array => app(AdminReplacementFlightSearchService::class)->airportSearchOptions($search))
+                        ->getOptionLabelUsing(fn (?string $value): ?string => app(AdminReplacementFlightSearchService::class)->airportLabel($value))
+                        ->searchable()
+                        ->preload(false)
+                        ->required()
+                        ->live();
+
+                    $schema[] = Select::make('replacement_to')
+                        ->label('Replacement to')
+                        ->helperText('Search by city, airport name, country, or IATA code. Defaults to the current last segment when available.')
+                        ->default(fn () => self::defaultReissueAirport($record, 'to'))
+                        ->getSearchResultsUsing(fn (?string $search): array => app(AdminReplacementFlightSearchService::class)->airportSearchOptions($search))
+                        ->getOptionLabelUsing(fn (?string $value): ?string => app(AdminReplacementFlightSearchService::class)->airportLabel($value))
+                        ->searchable()
+                        ->preload(false)
+                        ->required()
+                        ->live();
+
+                    $schema[] = Select::make('replacement_cabin')
+                        ->label('Cabin')
+                        ->options([
+                            'Y' => 'Economy (Y)',
+                            'S' => 'Premium Economy (S)',
+                            'C' => 'Business (C)',
+                            'F' => 'First (F)',
+                        ])
+                        ->default(fn () => self::defaultReissueCabin($record))
+                        ->required()
+                        ->live();
+
+                    $schema[] = DatePicker::make('replacement_departure_date')
+                        ->label('New departure date')
+                        ->native(false)
+                        ->required()
+                        ->live();
+
+                    $schema[] = Select::make('replacement_flight_option')
+                        ->label('Replacement flight')
+                        ->helperText('Options are loaded from the availability API after route, date, and cabin are filled. Selecting one auto-builds OriginDestinationInfo for the reissue quote.')
+                        ->options(fn (Get $get): array => app(AdminReplacementFlightSearchService::class)->options($record, [
+                            'from' => $get('replacement_from'),
+                            'to' => $get('replacement_to'),
+                            'departure_date' => $get('replacement_departure_date'),
+                            'cabin' => $get('replacement_cabin'),
+                        ]))
+                        ->searchable()
+                        ->preload(false)
+                        ->required()
+                        ->columnSpanFull();
                 }
 
                 $schema[] = Textarea::make('remark')
@@ -957,11 +1061,19 @@ class FlightBookingsTable
 
                 return $schema;
             })
-            ->action(function (FlightBooking $record, array $data) use ($operationType, $needsPaxDetails, $needsPreferences): void {
+            ->action(function (FlightBooking $record, array $data) use ($operationType, $needsPaxDetails, $needsSelectablePaxDetails, $needsReissueSegments, $needsPreferenceOption): void {
                 $extraPayload = [];
 
                 if (isset($data['ptr_unique_id'])) {
-                    $extraPayload['ptrUniqueID'] = $data['ptr_unique_id'];
+                    if (in_array($operationType, ['void', 'refund'], true)) {
+                        $extraPayload['_selectedQuotePtrUniqueID'] = $data['ptr_unique_id'];
+                    } else {
+                        $extraPayload['ptrUniqueID'] = $data['ptr_unique_id'];
+                    }
+                }
+
+                if ($needsPreferenceOption) {
+                    $extraPayload['PreferenceOption'] = (string) $data['preference_option'];
                 }
 
                 if ($needsPaxDetails) {
@@ -973,13 +1085,41 @@ class FlightBookingsTable
                     $extraPayload['paxDetails'] = self::normalizePostTicketingPaxDetails($decoded);
                 }
 
-                if ($needsPreferences && filled($data['requested_preferences_json'] ?? null)) {
-                    $decoded = json_decode($data['requested_preferences_json'], true);
-                    if (json_last_error() !== JSON_ERROR_NONE) {
-                        Notification::make()->title('Invalid reissue preferences')->body('Review the formatting and try again.')->danger()->send();
+                if ($needsSelectablePaxDetails) {
+                    $selectedPassengers = self::selectedPostTicketingPaxDetails(
+                        $record,
+                        $data['pax_selection'] ?? [],
+                        $data['ptr_unique_id'] ?? null,
+                    );
+
+                    if ($selectedPassengers === []) {
+                        Notification::make()->title('No passengers selected')->body('Select at least one passenger ticket before submitting this request.')->danger()->send();
                         return;
                     }
-                    $extraPayload['RequestedPreferences'] = $decoded;
+
+                    $missingTickets = collect($selectedPassengers)
+                        ->filter(fn (array $passenger): bool => blank($passenger['eTicket'] ?? null))
+                        ->isNotEmpty();
+
+                    if ($missingTickets) {
+                        Notification::make()->title('Missing e-ticket number')->body('This request requires an e-ticket for every selected passenger. Run Trip Details first or update the passenger ticket details.')->danger()->send();
+                        return;
+                    }
+
+                    $extraPayload['paxDetails'] = $selectedPassengers;
+                }
+
+                if ($needsReissueSegments) {
+                    $replacementSegments = app(AdminReplacementFlightSearchService::class)
+                        ->decodeOption($data['replacement_flight_option'] ?? null);
+
+                    if ($replacementSegments === []) {
+                        Notification::make()->title('Invalid replacement flight')->body('Search again and select a replacement flight before requesting a quote.')->danger()->send();
+                        return;
+                    }
+
+                    $extraPayload['OriginDestinationInfo'] = self::apiReissueOriginDestinationInfo($replacementSegments);
+                    $extraPayload['_displayReplacementSegments'] = $replacementSegments;
                 }
 
                 if (filled($data['remark'] ?? null)) {
@@ -1018,7 +1158,34 @@ class FlightBookingsTable
         ]);
 
         if (($result['ok'] ?? false) && $operationType === 'cancel') {
+            $previousStatus = $record->booking_status;
             $record->update(['booking_status' => 'cancelled']);
+
+            self::recordTicketing($record->fresh(), [
+                'action' => 'booking_cancelled',
+                'previous_booking_status' => $previousStatus,
+                'new_booking_status' => 'cancelled',
+                'unique_id' => $record->unique_id,
+                'message' => $result['message'] ?? 'Booking cancelled.',
+                'request_payload' => $result['request'] ?? [],
+                'response_payload' => $result['response'] ?? [],
+            ]);
+        }
+
+        if (($result['ok'] ?? false) && $operationType === 'reissue' && self::isCompletedPostTicketingStatus($result['status'] ?? null)) {
+            self::finalizeSuccessfulReissue($record->fresh(), $ptr, $result);
+        }
+
+        if (($result['ok'] ?? false) && $operationType === 'void' && self::isCompletedPostTicketingStatus($result['status'] ?? null)) {
+            self::finalizeSuccessfulVoid($record->fresh(), $ptr, $result);
+        }
+
+        if (($result['ok'] ?? false) && $operationType === 'refund' && self::isCompletedPostTicketingStatus($result['status'] ?? null)) {
+            self::finalizeSuccessfulRefund($record->fresh(), $ptr, $result);
+        }
+
+        if (($result['ok'] ?? false) && $operationType === 'ptr_status') {
+            self::syncOriginalPtrStatus($record, $ptr, $result);
         }
 
         Notification::make()
@@ -1028,9 +1195,436 @@ class FlightBookingsTable
             ->send();
     }
 
+    private static function finalizeSuccessfulReissue(FlightBooking $record, PostTicketingRequest $ptr, array $result): void
+    {
+        $previousStatus = $record->booking_status;
+        $tripResult = null;
+
+        try {
+            $tripResult = app(AdminTicketingService::class)->tripDetails($record);
+        } catch (Throwable $exception) {
+            self::recordTicketing($record, [
+                'action' => 'reissue_trip_details_exception',
+                'previous_booking_status' => $previousStatus,
+                'new_booking_status' => $record->booking_status,
+                'unique_id' => $record->unique_id,
+                'message' => $exception->getMessage(),
+                'request_payload' => $result['request'] ?? [],
+                'response_payload' => $result['response'] ?? [],
+            ]);
+
+            return;
+        }
+
+        $ticketResponse = $record->ticket_api_response ?: [];
+        $ticketResponse['latest_reissue'] = $result['response'] ?? [];
+        $ticketResponse['latest_reissue_trip_details'] = $tripResult['response'] ?? [];
+        $updatedFlightSnapshot = self::reissuedFlightSnapshot($record, $ptr);
+
+        $bookingUpdates = [
+            'booking_status' => 'ticketed',
+            'ticket_ordered' => true,
+            'ticket_ordered_at' => $record->ticket_ordered_at ?: now(),
+            'ticket_api_response' => $ticketResponse,
+        ];
+
+        if ($updatedFlightSnapshot !== []) {
+            $bookingUpdates['flight_snapshot'] = $updatedFlightSnapshot;
+            $bookingUpdates['route'] = self::routeFromSnapshot($updatedFlightSnapshot) ?: $record->route;
+            $bookingUpdates['airline'] = $updatedFlightSnapshot['airline'] ?? $record->airline;
+            $bookingUpdates['cabin'] = $updatedFlightSnapshot['cabin'] ?? $record->cabin;
+        }
+
+        $record->update($bookingUpdates);
+
+        self::recordTicketing($record->fresh(), [
+            'action' => ($tripResult['ok'] ?? false) ? 'reissue_completed' : 'reissue_completed_trip_details_failed',
+            'previous_booking_status' => $previousStatus,
+            'new_booking_status' => 'ticketed',
+            'ticket_status' => $tripResult['ticket_status'] ?? null,
+            'airline_pnr' => $tripResult['airline_pnr'] ?? null,
+            'unique_id' => $record->unique_id,
+            'message' => trim(($result['message'] ?? 'Reissue completed.') . ' PTR: ' . ($ptr->ptr_unique_id ?: '-')),
+            'request_payload' => $result['request'] ?? [],
+            'response_payload' => [
+                'reissue' => $result['response'] ?? [],
+                'trip_details' => $tripResult['response'] ?? [],
+            ],
+        ]);
+
+        if (! ($tripResult['ok'] ?? false) || blank($record->contact_email) || empty($tripResult['trip_details'] ?? [])) {
+            return;
+        }
+
+        try {
+            app(AdminTicketingService::class)->sendETicket($record->fresh(), $tripResult['trip_details']);
+
+            self::recordTicketing($record->fresh(), [
+                'action' => 'reissue_eticket_sent',
+                'previous_booking_status' => 'ticketed',
+                'new_booking_status' => 'ticketed',
+                'ticket_status' => $tripResult['ticket_status'] ?? null,
+                'airline_pnr' => $tripResult['airline_pnr'] ?? null,
+                'unique_id' => $record->unique_id,
+                'message' => 'Updated e-ticket sent to ' . $record->contact_email,
+                'request_payload' => $tripResult['request'] ?? [],
+                'response_payload' => $tripResult['response'] ?? [],
+            ]);
+        } catch (Throwable $exception) {
+            self::recordTicketing($record->fresh(), [
+                'action' => 'reissue_eticket_failed',
+                'previous_booking_status' => 'ticketed',
+                'new_booking_status' => 'ticketed',
+                'ticket_status' => $tripResult['ticket_status'] ?? null,
+                'airline_pnr' => $tripResult['airline_pnr'] ?? null,
+                'unique_id' => $record->unique_id,
+                'message' => $exception->getMessage(),
+                'request_payload' => $tripResult['request'] ?? [],
+                'response_payload' => $tripResult['response'] ?? [],
+            ]);
+        }
+    }
+
+    private static function finalizeSuccessfulVoid(FlightBooking $record, PostTicketingRequest $ptr, array $result): void
+    {
+        $previousStatus = $record->booking_status;
+        $selectedPassengers = self::normalizePostTicketingPaxDetails($ptr->request_payload['paxDetails'] ?? []);
+        $allPassengers = self::postTicketingPaxDetails($record);
+        $isFullVoid = $selectedPassengers !== []
+            && count($allPassengers) > 0
+            && count($selectedPassengers) >= count($allPassengers);
+        $newStatus = $isFullVoid ? 'cancelled' : $record->booking_status;
+
+        if ($isFullVoid && $record->booking_status !== 'cancelled') {
+            $record->update(['booking_status' => 'cancelled']);
+        }
+
+        self::recordTicketing($record->fresh(), [
+            'action' => $isFullVoid ? 'void_completed' : 'void_partial_completed',
+            'previous_booking_status' => $previousStatus,
+            'new_booking_status' => $newStatus,
+            'unique_id' => $record->unique_id,
+            'message' => trim(($result['message'] ?? 'Void completed.') . ' PTR: ' . ($ptr->ptr_unique_id ?: '-')),
+            'request_payload' => $result['request'] ?? [],
+            'response_payload' => $result['response'] ?? [],
+        ]);
+    }
+
+    private static function finalizeSuccessfulRefund(FlightBooking $record, PostTicketingRequest $ptr, array $result): void
+    {
+        $previousStatus = $record->booking_status;
+        $selectedPassengers = self::normalizePostTicketingPaxDetails($ptr->request_payload['paxDetails'] ?? []);
+        $allPassengers = self::postTicketingPaxDetails($record);
+        $isFullRefund = $selectedPassengers !== []
+            && count($allPassengers) > 0
+            && count($selectedPassengers) >= count($allPassengers);
+        $newStatus = $isFullRefund ? 'cancelled' : $record->booking_status;
+
+        if ($isFullRefund && $record->booking_status !== 'cancelled') {
+            $record->update(['booking_status' => 'cancelled']);
+        }
+
+        self::recordTicketing($record->fresh(), [
+            'action' => $isFullRefund ? 'refund_completed' : 'refund_partial_completed',
+            'previous_booking_status' => $previousStatus,
+            'new_booking_status' => $newStatus,
+            'unique_id' => $record->unique_id,
+            'message' => trim(($result['message'] ?? 'Refund completed.') . ' PTR: ' . ($ptr->ptr_unique_id ?: '-')),
+            'request_payload' => $result['request'] ?? [],
+            'response_payload' => $result['response'] ?? [],
+        ]);
+    }
+
+    private static function syncOriginalPtrStatus(FlightBooking $record, PostTicketingRequest $statusCheck, array $result): void
+    {
+        if (blank($statusCheck->ptr_unique_id)) {
+            return;
+        }
+
+        $original = $record->postTicketingRequests()
+            ->where('id', '!=', $statusCheck->id)
+            ->where('operation_type', '!=', 'ptr_status')
+            ->where('ptr_unique_id', $statusCheck->ptr_unique_id)
+            ->latest()
+            ->first();
+
+        if (! $original) {
+            return;
+        }
+
+        $original->update([
+            'status' => $result['status'] ?? $original->status,
+            'error_message' => ($result['ok'] ?? false) ? null : ($result['message'] ?? $original->error_message),
+        ]);
+
+        if ($original->operation_type === 'reissue'
+            && ($result['ok'] ?? false)
+            && self::isCompletedPostTicketingStatus($result['status'] ?? null)) {
+            if (! self::hasFinalizedReissue($record, $statusCheck->ptr_unique_id)) {
+                self::finalizeSuccessfulReissue($record->fresh(), $original->fresh(), $result);
+            } elseif (! self::hasSentSnapshotRefreshEticket($record, $statusCheck->ptr_unique_id)) {
+                self::refreshReissueSnapshotAndResendEticket($record->fresh(), $original->fresh(), $result);
+            }
+        }
+
+        if ($original->operation_type === 'void'
+            && ($result['ok'] ?? false)
+            && self::isCompletedPostTicketingStatus($result['status'] ?? null)
+            && ! self::hasFinalizedVoid($record, $statusCheck->ptr_unique_id)) {
+            self::finalizeSuccessfulVoid($record->fresh(), $original->fresh(), $result);
+        }
+
+        if ($original->operation_type === 'refund'
+            && ($result['ok'] ?? false)
+            && self::isCompletedPostTicketingStatus($result['status'] ?? null)
+            && ! self::hasFinalizedRefund($record, $statusCheck->ptr_unique_id)) {
+            self::finalizeSuccessfulRefund($record->fresh(), $original->fresh(), $result);
+        }
+    }
+
+    private static function isCompletedPostTicketingStatus(?string $status): bool
+    {
+        if (blank($status)) {
+            return true;
+        }
+
+        return in_array(str((string) $status)->lower()->replace([' ', '-'], '_')->toString(), [
+            'completed',
+            'complete',
+            'success',
+            'successful',
+            'ticketed',
+            'done',
+        ], true);
+    }
+
+    private static function hasFinalizedReissue(FlightBooking $record, string $ptrUniqueId): bool
+    {
+        return $record->ticketingRecords()
+            ->whereIn('action', ['reissue_completed', 'reissue_completed_trip_details_failed'])
+            ->where('message', 'like', '%' . $ptrUniqueId . '%')
+            ->exists();
+    }
+
+    private static function hasSentSnapshotRefreshEticket(FlightBooking $record, string $ptrUniqueId): bool
+    {
+        return $record->ticketingRecords()
+            ->where('action', 'reissue_snapshot_eticket_sent')
+            ->where('message', 'like', '%' . $ptrUniqueId . '%')
+            ->exists();
+    }
+
+    private static function hasFinalizedVoid(FlightBooking $record, string $ptrUniqueId): bool
+    {
+        return $record->ticketingRecords()
+            ->whereIn('action', ['void_completed', 'void_partial_completed'])
+            ->where('message', 'like', '%' . $ptrUniqueId . '%')
+            ->exists();
+    }
+
+    private static function hasFinalizedRefund(FlightBooking $record, string $ptrUniqueId): bool
+    {
+        return $record->ticketingRecords()
+            ->whereIn('action', ['refund_completed', 'refund_partial_completed'])
+            ->where('message', 'like', '%' . $ptrUniqueId . '%')
+            ->exists();
+    }
+
+    private static function refreshReissueSnapshotAndResendEticket(FlightBooking $record, PostTicketingRequest $ptr, array $result): void
+    {
+        $updatedFlightSnapshot = self::reissuedFlightSnapshot($record, $ptr);
+
+        if ($updatedFlightSnapshot !== []) {
+            $record->update([
+                'flight_snapshot' => $updatedFlightSnapshot,
+                'route' => self::routeFromSnapshot($updatedFlightSnapshot) ?: $record->route,
+                'airline' => $updatedFlightSnapshot['airline'] ?? $record->airline,
+                'cabin' => $updatedFlightSnapshot['cabin'] ?? $record->cabin,
+            ]);
+        }
+
+        try {
+            $tripResult = app(AdminTicketingService::class)->tripDetails($record->fresh());
+
+            if (($tripResult['ok'] ?? false) && filled($record->contact_email) && ! empty($tripResult['trip_details'] ?? [])) {
+                app(AdminTicketingService::class)->sendETicket($record->fresh(), $tripResult['trip_details']);
+            }
+
+            self::recordTicketing($record->fresh(), [
+                'action' => 'reissue_snapshot_eticket_sent',
+                'previous_booking_status' => 'ticketed',
+                'new_booking_status' => 'ticketed',
+                'ticket_status' => $tripResult['ticket_status'] ?? null,
+                'airline_pnr' => $tripResult['airline_pnr'] ?? null,
+                'unique_id' => $record->unique_id,
+                'message' => 'Updated reissue e-ticket refreshed and sent. PTR: ' . ($ptr->ptr_unique_id ?: '-'),
+                'request_payload' => $tripResult['request'] ?? [],
+                'response_payload' => [
+                    'ptr_status' => $result['response'] ?? [],
+                    'trip_details' => $tripResult['response'] ?? [],
+                ],
+            ]);
+        } catch (Throwable $exception) {
+            self::recordTicketing($record->fresh(), [
+                'action' => 'reissue_snapshot_eticket_failed',
+                'previous_booking_status' => 'ticketed',
+                'new_booking_status' => 'ticketed',
+                'unique_id' => $record->unique_id,
+                'message' => $exception->getMessage(),
+                'response_payload' => $result['response'] ?? [],
+            ]);
+        }
+    }
+
+    private static function apiReissueOriginDestinationInfo(array $segments): array
+    {
+        return collect($segments)
+            ->filter(fn ($segment): bool => is_array($segment))
+            ->map(fn (array $segment): array => [
+                'airportOriginCode' => strtoupper(trim((string) ($segment['airportOriginCode'] ?? ''))),
+                'airportDestinationCode' => strtoupper(trim((string) ($segment['airportDestinationCode'] ?? ''))),
+                'cabinPreference' => strtoupper(trim((string) ($segment['cabinPreference'] ?? 'Y'))),
+                'departureDate' => (string) ($segment['departureDate'] ?? ''),
+                'airlineCode' => strtoupper(trim((string) ($segment['airlineCode'] ?? ''))),
+                'flightNumber' => trim((string) ($segment['flightNumber'] ?? '')),
+            ])
+            ->values()
+            ->all();
+    }
+
+    private static function reissuedFlightSnapshot(FlightBooking $record, PostTicketingRequest $ptr): array
+    {
+        $quoteRequest = self::matchingReissueQuoteRequest($record, $ptr);
+        $segments = $quoteRequest?->request_payload['_displayReplacementSegments']
+            ?? $quoteRequest?->request_payload['OriginDestinationInfo']
+            ?? [];
+
+        if (! is_array($segments) || $segments === []) {
+            return [];
+        }
+
+        $mappedSegments = collect($segments)
+            ->filter(fn ($segment): bool => is_array($segment))
+            ->map(function (array $segment): array {
+                $departureDate = (string) ($segment['departureDate'] ?? '');
+                $departDt = $segment['departDT'] ?? $departureDate;
+                $arriveDt = $segment['arriveDT'] ?? null;
+                $airlineCode = strtoupper((string) ($segment['airlineCode'] ?? ''));
+                $flightNumber = (string) ($segment['flightNumber'] ?? '');
+
+                return [
+                    'from' => strtoupper((string) ($segment['airportOriginCode'] ?? '')),
+                    'to' => strtoupper((string) ($segment['airportDestinationCode'] ?? '')),
+                    'departTime' => $segment['departTime'] ?? (filled($departDt) && strlen($departDt) > 10 ? \Carbon\Carbon::parse($departDt)->format('H:i') : ''),
+                    'arriveTime' => $segment['arriveTime'] ?? (filled($arriveDt) ? \Carbon\Carbon::parse($arriveDt)->format('H:i') : ''),
+                    'departDate' => filled($departDt) ? \Carbon\Carbon::parse($departDt)->format('D, d M Y') : $departureDate,
+                    'arriveDate' => filled($arriveDt) ? \Carbon\Carbon::parse($arriveDt)->format('D, d M Y') : '',
+                    'departDT' => $departDt,
+                    'arriveDT' => $arriveDt,
+                    'duration' => (int) ($segment['duration'] ?? 0),
+                    'flightNo' => trim($airlineCode . $flightNumber),
+                    'flightNumber' => $flightNumber,
+                    'airline' => $segment['airline'] ?? $airlineCode,
+                    'airlineCode' => $airlineCode,
+                    'cabin' => $segment['cabin'] ?? self::cabinLabel($segment['cabinPreference'] ?? 'Y'),
+                    'cabinCode' => strtoupper((string) ($segment['cabinPreference'] ?? 'Y')),
+                    'equipment' => $segment['equipment'] ?? '',
+                    'eticket' => true,
+                ];
+            })
+            ->values()
+            ->all();
+
+        if ($mappedSegments === []) {
+            return [];
+        }
+
+        $first = $mappedSegments[0];
+        $last = $mappedSegments[array_key_last($mappedSegments)];
+        $existing = $record->flight_snapshot ?? [];
+
+        return array_merge($existing, [
+            'airline' => $first['airline'] ?? ($existing['airline'] ?? ''),
+            'airlineCode' => $first['airlineCode'] ?? ($existing['airlineCode'] ?? ''),
+            'cabin' => $first['cabin'] ?? ($existing['cabin'] ?? ''),
+            'cabinCode' => $first['cabinCode'] ?? ($existing['cabinCode'] ?? 'Y'),
+            'segments' => $mappedSegments,
+            'returnSegments' => [],
+            'multiLegs' => [],
+            'tripType' => 'oneway',
+            'directionInd' => 'OneWay',
+            'departDT' => $first['departDT'] ?? null,
+            'arriveDT' => $last['arriveDT'] ?? null,
+            'departTime' => $first['departTime'] ?? '',
+            'arriveTime' => $last['arriveTime'] ?? '',
+            'departDateLabel' => filled($first['departDT'] ?? null) ? \Carbon\Carbon::parse($first['departDT'])->format('D, d M') : '',
+            'stops' => max(0, count($mappedSegments) - 1),
+        ]);
+    }
+
+    private static function matchingReissueQuoteRequest(FlightBooking $record, PostTicketingRequest $ptr): ?PostTicketingRequest
+    {
+        $quotePtr = $ptr->request_payload['ptrUniqueID']
+            ?? $ptr->ptr_unique_id
+            ?? null;
+
+        $query = $record->postTicketingRequests()
+            ->where('operation_type', 'reissue_quote');
+
+        if (filled($quotePtr)) {
+            $match = (clone $query)->where('ptr_unique_id', $quotePtr)->latest()->first();
+
+            if ($match) {
+                return $match;
+            }
+        }
+
+        return $query->latest()->first();
+    }
+
+    private static function routeFromSnapshot(array $snapshot): ?string
+    {
+        $segments = $snapshot['segments'] ?? [];
+
+        if (! is_array($segments) || $segments === []) {
+            return null;
+        }
+
+        $first = $segments[0];
+        $last = $segments[array_key_last($segments)];
+
+        return trim(($first['from'] ?? '') . ' -> ' . ($last['to'] ?? ''));
+    }
+
+    private static function cabinLabel(string $code): string
+    {
+        return match (strtoupper($code)) {
+            'F' => 'First',
+            'C' => 'Business',
+            'S' => 'Premium Economy',
+            default => 'Economy',
+        };
+    }
+
     private static function postTicketingPaxDetails(FlightBooking $record): array
     {
-        return self::normalizePostTicketingPaxDetails($record->passengers_snapshot ?? []);
+        $passengers = self::normalizePostTicketingPaxDetails($record->passengers_snapshot ?? []);
+
+        if ($passengers === [] || collect($passengers)->every(fn (array $passenger): bool => filled($passenger['eTicket'] ?? null))) {
+            return $passengers;
+        }
+
+        try {
+            $tripResult = app(AdminTicketingService::class)->tripDetails($record);
+        } catch (Throwable) {
+            return $passengers;
+        }
+
+        if (! ($tripResult['ok'] ?? false)) {
+            return $passengers;
+        }
+
+        return self::mergePostTicketingTickets($passengers, $tripResult['trip_details'] ?? []);
     }
 
     private static function normalizePostTicketingPaxDetails(array $passengers): array
@@ -1056,6 +1650,127 @@ class FlightBookingsTable
             ->all();
     }
 
+    private static function mergePostTicketingTickets(array $passengers, array $tripDetails): array
+    {
+        $customerInfos = collect(data_get($tripDetails, 'ItineraryInfo.CustomerInfos', []))
+            ->filter(fn ($customer): bool => is_array($customer))
+            ->map(fn (array $customer): array => $customer['CustomerInfo'] ?? $customer)
+            ->values();
+
+        if ($customerInfos->isEmpty()) {
+            return $passengers;
+        }
+
+        $ticketNumbers = $customerInfos
+            ->map(fn (array $customer): ?string => self::firstFilled($customer, [
+                'eTicketNumber',
+                'ETicketNumber',
+                'eTicket',
+                'ETicket',
+                'TicketNumber',
+                'ticketNumber',
+            ]))
+            ->filter()
+            ->values();
+
+        return collect($passengers)
+            ->map(function (array $passenger, int $index) use ($customerInfos, $ticketNumbers): array {
+                if (filled($passenger['eTicket'] ?? null)) {
+                    return $passenger;
+                }
+
+                $matchedCustomer = $customerInfos->first(function (array $customer) use ($passenger): bool {
+                    $firstName = strtolower((string) self::firstFilled($customer, ['firstName', 'FirstName', 'PassengerFirstName', 'GivenName']));
+                    $lastName = strtolower((string) self::firstFilled($customer, ['lastName', 'LastName', 'PassengerLastName', 'Surname']));
+
+                    return filled($firstName)
+                        && filled($lastName)
+                        && $firstName === strtolower((string) ($passenger['firstName'] ?? ''))
+                        && $lastName === strtolower((string) ($passenger['lastName'] ?? ''));
+                });
+
+                $passenger['eTicket'] = $matchedCustomer
+                    ? self::firstFilled($matchedCustomer, ['eTicketNumber', 'ETicketNumber', 'eTicket', 'ETicket', 'TicketNumber', 'ticketNumber'])
+                    : $ticketNumbers->get($index);
+
+                return $passenger;
+            })
+            ->values()
+            ->all();
+    }
+
+    private static function postTicketingPaxOptions(FlightBooking $record, ?string $quotePtrUniqueId = null): array
+    {
+        return collect(self::postTicketingPaxSource($record, $quotePtrUniqueId))
+            ->mapWithKeys(function (array $passenger, int $index): array {
+                $name = trim(($passenger['title'] ?? '') . ' ' . ($passenger['firstName'] ?? '') . ' ' . ($passenger['lastName'] ?? ''));
+                $ticket = filled($passenger['eTicket'] ?? null) ? $passenger['eTicket'] : 'No e-ticket';
+                $type = $passenger['type'] ?? 'PAX';
+
+                return [(string) $index => trim($type . ' - ' . ($name ?: 'Passenger') . ' - ' . $ticket)];
+            })
+            ->all();
+    }
+
+    private static function selectedPostTicketingPaxDetails(FlightBooking $record, array $selectedIndexes, ?string $quotePtrUniqueId = null): array
+    {
+        $passengers = self::postTicketingPaxSource($record, $quotePtrUniqueId);
+        $selected = collect($selectedIndexes)
+            ->map(fn (mixed $index): int => (int) $index)
+            ->unique()
+            ->values();
+
+        return $selected
+            ->map(fn (int $index): ?array => $passengers[$index] ?? null)
+            ->filter(fn ($passenger): bool => is_array($passenger))
+            ->values()
+            ->all();
+    }
+
+    private static function postTicketingPaxSource(FlightBooking $record, ?string $quotePtrUniqueId = null): array
+    {
+        if (filled($quotePtrUniqueId)) {
+            $quote = $record->postTicketingRequests()
+                ->where('ptr_unique_id', $quotePtrUniqueId)
+                ->latest()
+                ->first();
+
+            $quotePassengers = self::normalizePostTicketingPaxDetails($quote?->request_payload['paxDetails'] ?? []);
+
+            if ($quotePassengers !== []) {
+                return $quotePassengers;
+            }
+        }
+
+        return self::postTicketingPaxDetails($record);
+    }
+
+    private static function defaultReissueAirport(FlightBooking $record, string $direction): ?string
+    {
+        $segments = $record->flight_snapshot['segments'] ?? [];
+
+        if (! is_array($segments) || $segments === []) {
+            return null;
+        }
+
+        if ($direction === 'from') {
+            return strtoupper((string) ($segments[0]['from'] ?? ''));
+        }
+
+        $last = $segments[array_key_last($segments)] ?? [];
+
+        return strtoupper((string) ($last['to'] ?? ''));
+    }
+
+    private static function defaultReissueCabin(FlightBooking $record): string
+    {
+        return strtoupper((string) (
+            $record->flight_snapshot['segments'][0]['cabinCode']
+            ?? $record->flight_snapshot['cabinCode']
+            ?? 'Y'
+        ));
+    }
+
     private static function firstFilled(array $payload, array $keys, mixed $default = null): mixed
     {
         foreach ($keys as $key) {
@@ -1065,6 +1780,59 @@ class FlightBookingsTable
         }
 
         return $default;
+    }
+
+    private static function canRunCancelBooking(FlightBooking $record): bool
+    {
+        return filled($record->unique_id)
+            && $record->booking_status !== 'cancelled'
+            && $record->booking_status !== 'ticketed'
+            && ! $record->ticket_ordered
+            && ! self::hasActivePostTicketingRequest($record, 'cancel');
+    }
+
+    private static function cancelProviderStatusContext(FlightBooking $record): HtmlString
+    {
+        try {
+            $tripResult = app(AdminTicketingService::class)->tripDetails($record);
+        } catch (Throwable $exception) {
+            return new HtmlString(
+                '<div class="rounded-lg border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-200">' .
+                    e('Trip Details check failed: ' . $exception->getMessage()) .
+                '</div>'
+            );
+        }
+
+        $tripDetails = $tripResult['trip_details'] ?? [];
+        $items = [
+            'Provider booking status' => data_get($tripDetails, 'BookingStatus'),
+            'Provider ticket status' => data_get($tripDetails, 'TicketStatus'),
+            'Airline PNR' => $tripResult['airline_pnr'] ?? null,
+            'UniqueID' => $record->unique_id,
+        ];
+
+        $warning = 'Cancellation cannot be reversed. If this booking has already been ticketed, use Void or Refund instead.';
+
+        return new HtmlString(
+            '<div class="rounded-lg border border-warning-200 bg-warning-50 p-3 dark:border-warning-500/30 dark:bg-warning-500/10">' .
+                '<div class="mb-3 text-sm font-semibold text-gray-950 dark:text-white">' . e($warning) . '</div>' .
+                self::definitionGridForAction($items) .
+            '</div>'
+        );
+    }
+
+    private static function definitionGridForAction(array $items): string
+    {
+        $html = '<dl class="grid gap-3 sm:grid-cols-2">';
+
+        foreach ($items as $label => $value) {
+            $html .= '<div>';
+            $html .= '<dt class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e((string) $label) . '</dt>';
+            $html .= '<dd class="mt-1 break-words text-sm font-semibold text-gray-950 dark:text-white">' . e(filled($value) ? (string) $value : '-') . '</dd>';
+            $html .= '</div>';
+        }
+
+        return $html . '</dl>';
     }
 
     private static function canRunPostTicketing(FlightBooking $record, string $operationType, ?string $requiresQuoteType = null): bool

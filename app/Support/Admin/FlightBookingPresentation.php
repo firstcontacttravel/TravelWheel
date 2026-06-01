@@ -349,6 +349,9 @@ class FlightBookingPresentation
         $html = '<div class="space-y-3">';
 
         foreach ($records as $record) {
+            $requestPayload = self::normalize($record->request_payload ?? []);
+            $responsePayload = self::normalize($record->response_payload ?? []);
+
             $html .= '<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
             $html .= '<div class="mb-3 flex flex-wrap items-start justify-between gap-3">';
             $html .= '<div>';
@@ -357,26 +360,314 @@ class FlightBookingPresentation
             $html .= '</div>';
             $html .= self::badge($record->status ?: '-');
             $html .= '</div>';
-            $html .= self::definitionGrid([
+            $summary = [
                 'Admin' => $record->admin?->name ?: 'System',
                 'UniqueID' => $record->unique_id,
                 'ptrUniqueID' => $record->ptr_unique_id,
+                'Result' => self::postTicketingResponseValue($responsePayload, ['Success']) ?? ($record->status ?: '-'),
+                'Processing time' => self::postTicketingResponseValue($responsePayload, ['ProcessingTime']),
+                'Message' => self::postTicketingResponseValue($responsePayload, ['Message']),
                 'Error' => $record->error_message,
                 'Note' => $record->admin_note,
-            ]);
+            ];
 
-            $payload = $record->response_payload ?? [];
-            if (is_array($payload) && $payload !== []) {
-                $html .= '<details class="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">';
-                $html .= '<summary class="cursor-pointer text-sm font-semibold text-gray-950 dark:text-white">Response payload</summary>';
-                $html .= '<div class="mt-3">' . self::tree($payload) . '</div>';
-                $html .= '</details>';
+            $preferenceOption = self::postTicketingResponseValue($responsePayload, ['PreferenceOption', 'OptionID', 'OptionId', 'Option']);
+
+            if (filled($preferenceOption)) {
+                $summary['Preference option'] = $preferenceOption;
+            } elseif ($record->operation_type === 'reissue_quote') {
+                $summary['Process option'] = 'Use 1 unless provider support gives a different option ID.';
+            }
+
+            $html .= self::definitionGrid($summary);
+
+            if (is_array($requestPayload) && $requestPayload !== []) {
+                $html .= self::postTicketingRequestPanel($requestPayload);
+            }
+
+            if (is_array($responsePayload) && $responsePayload !== []) {
+                $html .= self::postTicketingResponsePanel($responsePayload, (string) $record->operation_type);
             }
 
             $html .= '</div>';
         }
 
         return new HtmlString($html . '</div>');
+    }
+
+    private static function postTicketingRequestPanel(array $payload): string
+    {
+        $items = [
+            'Selected quote PTR' => $payload['ptrUniqueID'] ?? ($payload['_selectedQuotePtrUniqueID'] ?? null),
+            'Preference option' => $payload['PreferenceOption'] ?? null,
+            'Remark' => $payload['remark'] ?? null,
+        ];
+
+        $html = '<div class="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">';
+        $html .= '<div class="mb-3 text-sm font-semibold text-gray-950 dark:text-white">Request details</div>';
+        $html .= self::definitionGrid($items);
+
+        $passengers = $payload['paxDetails'] ?? [];
+        if (is_array($passengers) && $passengers !== []) {
+            $html .= '<div class="mt-4">';
+            $html .= '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Passengers</div>';
+            $html .= self::tableFromItems(collect($passengers)->map(fn ($passenger): array => is_array($passenger) ? [
+                'Type' => $passenger['type'] ?? '-',
+                'Name' => trim(($passenger['title'] ?? '') . ' ' . ($passenger['firstName'] ?? '') . ' ' . ($passenger['lastName'] ?? '')),
+                'E-ticket' => $passenger['eTicket'] ?? '-',
+            ] : [])->all());
+            $html .= '</div>';
+        }
+
+        $segments = $payload['OriginDestinationInfo'] ?? [];
+        if (is_array($segments) && $segments !== []) {
+            $html .= '<div class="mt-4">';
+            $html .= '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Replacement flight</div>';
+            $html .= self::tableFromItems(collect($segments)->map(fn ($segment): array => is_array($segment) ? [
+                'From' => $segment['airportOriginCode'] ?? '-',
+                'To' => $segment['airportDestinationCode'] ?? '-',
+                'Date' => $segment['departureDate'] ?? '-',
+                'Cabin' => $segment['cabinPreference'] ?? '-',
+                'Flight' => trim(($segment['airlineCode'] ?? '') . ' ' . ($segment['flightNumber'] ?? '')),
+            ] : [])->all());
+            $html .= '</div>';
+        }
+
+        return $html . '</div>';
+    }
+
+    private static function postTicketingResponsePanel(array $payload, string $operationType): string
+    {
+        $rows = self::postTicketingResponseRows($payload, $operationType);
+
+        if ($rows === []) {
+            return '';
+        }
+
+        $html = '<div class="mt-4 rounded-lg border border-gray-100 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">';
+        $html .= '<div class="mb-3 text-sm font-semibold text-gray-950 dark:text-white">Provider response</div>';
+        $html .= self::definitionGrid($rows);
+        $html .= self::postTicketingVoidTables($payload);
+        $html .= self::postTicketingRefundTables($payload);
+        $html .= self::postTicketingPtrStatusTables($payload);
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    private static function postTicketingVoidTables(array $payload): string
+    {
+        $voidRows = [];
+
+        foreach (['VoidQuotes', 'VoidDetails'] as $key) {
+            foreach (self::findNamedArrays($payload, $key) as $items) {
+                foreach ($items as $item) {
+                    if (! is_array($item)) {
+                        continue;
+                    }
+
+                    $voidRows[] = [
+                        'Type' => $item['PassengerType'] ?? $item['type'] ?? '-',
+                        'Name' => trim(($item['Title'] ?? $item['title'] ?? '') . ' ' . ($item['FirstName'] ?? $item['firstName'] ?? '') . ' ' . ($item['LastName'] ?? $item['lastName'] ?? '')),
+                        'E-ticket' => $item['ETicket'] ?? $item['eTicket'] ?? '-',
+                        'Admin charge' => self::moneyNode($item['AdminCharges'] ?? null),
+                        'GST' => self::moneyNode($item['GSTCharge'] ?? $item['GSTCharges'] ?? null),
+                        'Voiding fee' => self::moneyNode($item['TotalVoidingFee'] ?? null),
+                        'Refund' => self::moneyNode($item['TotalRefundAmount'] ?? null),
+                    ];
+                }
+            }
+        }
+
+        if ($voidRows === []) {
+            return '';
+        }
+
+        return '<div class="mt-4">' .
+            '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Void fees and refund</div>' .
+            self::tableFromItems($voidRows) .
+            '</div>';
+    }
+
+    private static function postTicketingRefundTables(array $payload): string
+    {
+        $refundRows = [];
+
+        foreach (self::findNamedArrays($payload, 'PaxDetails') as $items) {
+            foreach ($items as $item) {
+                if (! is_array($item) || ! is_array($item['QuotedFares'] ?? null)) {
+                    continue;
+                }
+
+                $fares = $item['QuotedFares'];
+                $refundRows[] = [
+                    'Type' => $item['PassengerType'] ?? $item['type'] ?? '-',
+                    'Name' => trim(($item['Title'] ?? $item['title'] ?? '') . ' ' . ($item['FirstName'] ?? $item['firstName'] ?? '') . ' ' . ($item['LastName'] ?? $item['lastName'] ?? '')),
+                    'E-ticket' => $item['ETicket'] ?? $item['eTicket'] ?? '-',
+                    'Total fare' => self::moneyNode($fares['TotalFare'] ?? null),
+                    'Unused fare' => self::moneyNode($fares['UnusedFare'] ?? null),
+                    'Cancel charge' => self::moneyNode($fares['CancellationCharge'] ?? null),
+                    'Refund charges' => self::moneyNode($fares['TotalRefundCharges'] ?? null),
+                    'Refund amount' => self::moneyNode($fares['TotalRefundAmount'] ?? null),
+                ];
+            }
+        }
+
+        if ($refundRows === []) {
+            return '';
+        }
+
+        return '<div class="mt-4">' .
+            '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Refund quote amounts</div>' .
+            self::tableFromItems($refundRows) .
+            '</div>';
+    }
+
+    private static function postTicketingPtrStatusTables(array $payload): string
+    {
+        $details = [];
+
+        foreach (self::findNamedArrays($payload, 'PtrDetails') as $items) {
+            foreach ($items as $item) {
+                if (is_array($item)) {
+                    $details[] = $item;
+                }
+            }
+        }
+
+        if ($details === []) {
+            return '';
+        }
+
+        $html = '<div class="mt-4">';
+        $html .= '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">PTR details</div>';
+        $html .= self::tableFromItems(collect($details)->map(fn (array $detail): array => [
+            'Type' => $detail['PtrType'] ?? '-',
+            'Status' => $detail['PtrStatus'] ?? '-',
+            'Resolution' => $detail['Resolution'] ?? '-',
+            'UniqueID' => $detail['UniqueID'] ?? '-',
+            'PTR' => $detail['PtrUniqueID'] ?? '-',
+            'Passengers' => is_array($detail['PaxDetails'] ?? null) ? count($detail['PaxDetails']) : '-',
+        ])->all());
+
+        foreach ($details as $detail) {
+            $passengers = $detail['PaxDetails'] ?? [];
+
+            if (! is_array($passengers) || $passengers === []) {
+                continue;
+            }
+
+            $html .= '<div class="mt-3">';
+            $html .= '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">PTR passengers</div>';
+            $html .= self::tableFromItems(collect($passengers)->map(fn ($passenger): array => is_array($passenger) ? [
+                'Type' => $passenger['PassengerType'] ?? $passenger['type'] ?? '-',
+                'Name' => trim(($passenger['Title'] ?? $passenger['title'] ?? '') . ' ' . ($passenger['FirstName'] ?? $passenger['firstName'] ?? '') . ' ' . ($passenger['LastName'] ?? $passenger['lastName'] ?? '')),
+                'E-ticket' => $passenger['ETicket'] ?? $passenger['eTicket'] ?? '-',
+            ] : [])->all());
+            $html .= '</div>';
+        }
+
+        return $html . '</div>';
+    }
+
+    private static function postTicketingResponseRows(array $payload, string $operationType): array
+    {
+        $flat = self::flatten($payload);
+        $rows = [];
+
+        $preferredKeys = [
+            'Success',
+            'UniqueID',
+            'ptrUniqueID',
+            'PtrUniqueID',
+            'Status',
+            'PtrStatus',
+            'RequestStatus',
+            'BookingStatus',
+            'TicketStatus',
+            'ProcessingTime',
+            'Message',
+            'ErrorMessage',
+            'ErrorCode',
+        ];
+
+        foreach ($preferredKeys as $preferredKey) {
+            foreach ($flat as $path => $value) {
+                if ((string) str($path)->afterLast('.') !== $preferredKey || blank($value)) {
+                    continue;
+                }
+
+                $rows[self::responseLabel($preferredKey)] = self::scalar($value);
+                break;
+            }
+        }
+
+        if ($operationType === 'ptr_status') {
+            foreach ($flat as $path => $value) {
+                if (blank($value) || is_array($value)) {
+                    continue;
+                }
+
+                $label = self::responseLabel((string) str($path)->afterLast('.'));
+
+                if (! array_key_exists($label, $rows)) {
+                    $rows[$label] = self::scalar($value);
+                }
+            }
+        }
+
+        foreach ($flat as $path => $value) {
+            if (blank($value) || is_array($value)) {
+                continue;
+            }
+
+            $last = (string) str($path)->afterLast('.');
+
+            if (in_array($last, ['user_password'], true)) {
+                continue;
+            }
+
+            $label = self::responseLabel($last);
+
+            if (! array_key_exists($label, $rows) && count($rows) < 18) {
+                $rows[$label] = self::scalar($value);
+            }
+        }
+
+        return $rows;
+    }
+
+    private static function responseLabel(string $key): string
+    {
+        return match ($key) {
+            'UniqueID' => 'UniqueID',
+            'ptrUniqueID', 'PtrUniqueID' => 'ptrUniqueID',
+            'PtrStatus' => 'PTR status',
+            'RequestStatus' => 'Request status',
+            'BookingStatus' => 'Booking status',
+            'TicketStatus' => 'Ticket status',
+            'ProcessingTime' => 'Processing time',
+            'ErrorMessage' => 'Error message',
+            'ErrorCode' => 'Error code',
+            default => str($key)->replace(['_', '-'], ' ')->headline()->toString(),
+        };
+    }
+
+    private static function postTicketingResponseValue(mixed $payload, array $keys): ?string
+    {
+        if (! is_array($payload) || $payload === []) {
+            return null;
+        }
+
+        foreach (self::flatten($payload) as $key => $value) {
+            $last = (string) str($key)->afterLast('.');
+
+            if (in_array($last, $keys, true) && filled($value)) {
+                return self::scalar($value);
+            }
+        }
+
+        return null;
     }
 
     public static function latestTripDetails(?object $record): HtmlString
@@ -449,6 +740,23 @@ class FlightBookingPresentation
         }
 
         return $flat;
+    }
+
+    private static function findNamedArrays(array $payload, string $name): array
+    {
+        $matches = [];
+
+        foreach ($payload as $key => $value) {
+            if ((string) $key === $name && is_array($value)) {
+                $matches[] = self::isAssoc($value) ? [$value] : $value;
+            }
+
+            if (is_array($value)) {
+                $matches = array_merge($matches, self::findNamedArrays($value, $name));
+            }
+        }
+
+        return $matches;
     }
 
     private static function tree(mixed $value): string
@@ -638,6 +946,15 @@ class FlightBookingPresentation
         }
 
         return trim((string) ($currency ?: '') . ' ' . number_format((float) $amount, 2));
+    }
+
+    private static function moneyNode(mixed $value): string
+    {
+        if (! is_array($value)) {
+            return self::scalar($value);
+        }
+
+        return self::money($value['Amount'] ?? $value['amount'] ?? null, $value['CurrencyCode'] ?? $value['currency'] ?? null);
     }
 
     private static function yesNo(mixed $value): string

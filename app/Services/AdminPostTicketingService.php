@@ -41,6 +41,9 @@ class AdminPostTicketingService
         }
 
         $payload = array_merge($this->basePayload($booking), $extraPayload);
+        $apiPayload = collect($payload)
+            ->reject(fn ($value, string $key): bool => str_starts_with($key, '_'))
+            ->all();
         $endpoint = self::ENDPOINTS[$operationType] ?? null;
 
         if (! $endpoint) {
@@ -55,7 +58,7 @@ class AdminPostTicketingService
         }
 
         $response = Http::timeout(60)
-            ->post('https://travelnext.works/api/aeroVE5/' . $endpoint, $payload);
+            ->post('https://travelnext.works/api/aeroVE5/' . $endpoint, $apiPayload);
 
         $data = $response->json() ?: [];
         $ok = ! $response->failed() && $this->extractSuccess($data);
@@ -63,8 +66,8 @@ class AdminPostTicketingService
 
         return [
             'ok' => $ok,
-            'status' => $ok ? $this->normalizeStatus($this->extractFirst($data, ['Status', 'PtrStatus']) ?: 'submitted') : 'failed',
-            'message' => $ok ? 'Post-ticketing request completed.' : $this->extractErrorMessage($data, 'Post-ticketing request failed.'),
+            'status' => $ok ? $this->normalizeStatus($this->extractFirst($data, ['Status', 'PtrStatus']) ?: ($operationType === 'cancel' ? 'completed' : 'submitted')) : 'failed',
+            'message' => $ok ? ($operationType === 'cancel' ? 'Booking cancelled.' : 'Post-ticketing request completed.') : $this->extractErrorMessage($data, 'Post-ticketing request failed.'),
             'ptr_unique_id' => $ptrUniqueId === null ? null : (string) $ptrUniqueId,
             'request' => $this->redactPayload($payload),
             'response' => $data,
