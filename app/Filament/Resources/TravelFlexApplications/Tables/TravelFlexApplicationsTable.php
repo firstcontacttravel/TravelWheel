@@ -87,7 +87,7 @@ class TravelFlexApplicationsTable
                 TextColumn::make('created_at')
                     ->label('Submitted')
                     ->since()
-                    ->description(fn (TravelFlexApplication $record): string => optional($record->created_at)->format('d M Y, H:i') ?: '-')
+                    ->description(fn (TravelFlexApplication $record): string => self::watDateTime($record->created_at))
                     ->sortable(),
             ])
             ->filters([
@@ -312,5 +312,20 @@ class TravelFlexApplicationsTable
 
                 Notification::make()->title('Provider email sent')->success()->send();
             });
+    }
+
+    private static function watDateTime(mixed $value, string $format = 'd M Y, H:i'): string
+    {
+        if (blank($value)) {
+            return '-';
+        }
+
+        try {
+            $formatted = \Carbon\Carbon::parse($value)->timezone('Africa/Lagos')->format($format);
+
+            return $formatted;
+        } catch (Throwable) {
+            return (string) $value;
+        }
     }
 }

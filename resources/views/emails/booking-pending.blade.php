@@ -17,7 +17,7 @@
     if ($tktLimit) {
         try {
             $td       = \Carbon\Carbon::parse($tktLimit);
-            $tktFmt   = $td->format('D, d M Y \a\t H:i T');
+            $tktFmt   = $td->timezone('Africa/Lagos')->format('D, d M Y \a\t H:i');
             $tktHours = max(0, (int) now()->diffInHours($td, false));
         } catch (\Throwable) {}
     }

@@ -34,10 +34,10 @@ class TravelFlexPresentation
         $html .= self::statusPill('Payment', $application->payment_status);
         $html .= '</div></div>';
         $html .= '<div class="tw-booking-timeline">';
-        $html .= self::timelineItem('Submitted', optional($application->created_at)->format('d M Y, H:i'), true);
-        $html .= self::timelineItem('Reviewed', optional($application->reviewed_at)->format('d M Y, H:i') ?: $status, filled($application->reviewed_at));
-        $html .= self::timelineItem('Decision', optional($application->approved_at ?: $application->rejected_at)->format('d M Y, H:i') ?: $status, in_array($application->application_status, ['approved', 'rejected'], true));
-        $html .= self::timelineItem('Provider', optional($application->provider_email_sent_at)->format('d M Y, H:i') ?: $provider, $application->provider_status === 'sent');
+        $html .= self::timelineItem('Submitted', self::watDateTime($application->created_at), true);
+        $html .= self::timelineItem('Reviewed', filled($application->reviewed_at) ? self::watDateTime($application->reviewed_at) : $status, filled($application->reviewed_at));
+        $html .= self::timelineItem('Decision', filled($application->approved_at ?: $application->rejected_at) ? self::watDateTime($application->approved_at ?: $application->rejected_at) : $status, in_array($application->application_status, ['approved', 'rejected'], true));
+        $html .= self::timelineItem('Provider', filled($application->provider_email_sent_at) ? self::watDateTime($application->provider_email_sent_at) : $provider, $application->provider_status === 'sent');
         $html .= self::timelineItem('Payment', $payment, $application->payment_status === 'paid');
         $html .= '</div></div>';
 
@@ -169,6 +169,21 @@ class TravelFlexPresentation
             '<div><div class="tw-timeline-label">' . e($label) . '</div>' .
             '<div class="tw-timeline-value">' . e($value ?: '-') . '</div></div>' .
             '</div>';
+    }
+
+    private static function watDateTime(mixed $value, string $format = 'd M Y, H:i'): string
+    {
+        if (blank($value)) {
+            return '-';
+        }
+
+        try {
+            $formatted = \Carbon\Carbon::parse($value)->timezone('Africa/Lagos')->format($format);
+
+            return $formatted;
+        } catch (\Throwable) {
+            return (string) $value;
+        }
     }
 
     private static function label(?string $value): string

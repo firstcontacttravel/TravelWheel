@@ -152,7 +152,7 @@ class FlightBookingsTable
                 TextColumn::make('created_at')
                     ->label('Created')
                     ->since()
-                    ->description(fn (FlightBooking $record): string => optional($record->created_at)->format('d M Y, H:i') ?: '-')
+                    ->description(fn (FlightBooking $record): string => self::watDateTime($record->created_at))
                     ->sortable(),
             ])
             ->filters([
@@ -906,7 +906,7 @@ class FlightBookingsTable
                     ->content(fn () => self::actionContext($record, 'PTR status check')),
                 Select::make('ptr_unique_id')
                     ->label('PTR reference')
-                    ->options($record->postTicketingRequests()->whereNotNull('ptr_unique_id')->latest()->pluck('ptr_unique_id', 'ptr_unique_id')->all())
+                    ->options(fn () => self::ptrStatusOptions($record))
                     ->required(),
                 Textarea::make('admin_note')
                     ->label('Admin note')
@@ -1040,7 +1040,7 @@ class FlightBookingsTable
 
                     $schema[] = Select::make('replacement_flight_option')
                         ->label('Replacement flight')
-                        ->helperText('Options are loaded from the availability API after route, date, and cabin are filled. Selecting one auto-builds OriginDestinationInfo for the reissue quote.')
+                        ->helperText('Options are loaded from the availability API. Select a flight, then review the full itinerary below before requesting the quote.')
                         ->options(fn (Get $get): array => app(AdminReplacementFlightSearchService::class)->options($record, [
                             'from' => $get('replacement_from'),
                             'to' => $get('replacement_to'),
@@ -1049,7 +1049,14 @@ class FlightBookingsTable
                         ]))
                         ->searchable()
                         ->preload(false)
+                        ->live()
                         ->required()
+                        ->columnSpanFull();
+
+                    $schema[] = Placeholder::make('replacement_flight_preview')
+                        ->label('Selected flight details')
+                        ->content(fn (Get $get): HtmlString => self::replacementFlightPreview($get('replacement_flight_option')))
+                        ->visible(fn (Get $get): bool => filled($get('replacement_flight_option')))
                         ->columnSpanFull();
                 }
 
@@ -1341,25 +1348,44 @@ class FlightBookingsTable
             return;
         }
 
-        $original = $record->postTicketingRequests()
+        $ptrDetail = self::firstPtrDetail($result['response'] ?? []);
+        $operationType = self::operationTypeFromPtrType($ptrDetail['PtrType'] ?? null);
+        $status = self::normalizePostTicketingStatus($ptrDetail['PtrStatus'] ?? ($result['status'] ?? null));
+        $responsePayload = $result['response'] ?? [];
+
+        $query = $record->postTicketingRequests()
             ->where('id', '!=', $statusCheck->id)
             ->where('operation_type', '!=', 'ptr_status')
-            ->where('ptr_unique_id', $statusCheck->ptr_unique_id)
-            ->latest()
-            ->first();
+            ->where('ptr_unique_id', $statusCheck->ptr_unique_id);
+
+        if ($operationType) {
+            $query->where('operation_type', $operationType);
+        }
+
+        $original = $query->latest()->first();
+
+        if (! $original && $operationType) {
+            $original = $record->postTicketingRequests()
+                ->where('id', '!=', $statusCheck->id)
+                ->where('operation_type', $operationType)
+                ->whereNotNull('ptr_unique_id')
+                ->latest()
+                ->first();
+        }
 
         if (! $original) {
             return;
         }
 
         $original->update([
-            'status' => $result['status'] ?? $original->status,
+            'status' => $status ?: ($result['status'] ?? $original->status),
             'error_message' => ($result['ok'] ?? false) ? null : ($result['message'] ?? $original->error_message),
+            'response_payload' => $responsePayload ?: $original->response_payload,
         ]);
 
         if ($original->operation_type === 'reissue'
             && ($result['ok'] ?? false)
-            && self::isCompletedPostTicketingStatus($result['status'] ?? null)) {
+            && self::isCompletedPostTicketingStatus($status ?? ($result['status'] ?? null))) {
             if (! self::hasFinalizedReissue($record, $statusCheck->ptr_unique_id)) {
                 self::finalizeSuccessfulReissue($record->fresh(), $original->fresh(), $result);
             } elseif (! self::hasSentSnapshotRefreshEticket($record, $statusCheck->ptr_unique_id)) {
@@ -1369,17 +1395,79 @@ class FlightBookingsTable
 
         if ($original->operation_type === 'void'
             && ($result['ok'] ?? false)
-            && self::isCompletedPostTicketingStatus($result['status'] ?? null)
+            && self::isCompletedPostTicketingStatus($status ?? ($result['status'] ?? null))
             && ! self::hasFinalizedVoid($record, $statusCheck->ptr_unique_id)) {
             self::finalizeSuccessfulVoid($record->fresh(), $original->fresh(), $result);
         }
 
         if ($original->operation_type === 'refund'
             && ($result['ok'] ?? false)
-            && self::isCompletedPostTicketingStatus($result['status'] ?? null)
+            && self::isCompletedPostTicketingStatus($status ?? ($result['status'] ?? null))
             && ! self::hasFinalizedRefund($record, $statusCheck->ptr_unique_id)) {
             self::finalizeSuccessfulRefund($record->fresh(), $original->fresh(), $result);
         }
+    }
+
+    private static function ptrStatusOptions(FlightBooking $record): array
+    {
+        return $record->postTicketingRequests()
+            ->whereNotNull('ptr_unique_id')
+            ->where('operation_type', '!=', 'ptr_status')
+            ->latest()
+            ->get()
+            ->unique('ptr_unique_id')
+            ->mapWithKeys(function (PostTicketingRequest $request): array {
+                $label = collect([
+                    $request->ptr_unique_id,
+                    str((string) $request->operation_type)->replace('_', ' ')->headline()->toString(),
+                    self::label($request->status),
+                    self::watDateTime($request->created_at),
+                ])->filter()->implode(' - ');
+
+                return [$request->ptr_unique_id => $label];
+            })
+            ->all();
+    }
+
+    private static function firstPtrDetail(array $payload): array
+    {
+        $details = data_get($payload, 'PtrResponse.PtrResult.PtrDetails', []);
+
+        if (is_array($details) && isset($details[0]) && is_array($details[0])) {
+            return $details[0];
+        }
+
+        if (is_array($details) && self::isAssocArray($details)) {
+            return $details;
+        }
+
+        return [];
+    }
+
+    private static function operationTypeFromPtrType(?string $ptrType): ?string
+    {
+        return match (strtolower(str_replace([' ', '-', '_'], '', (string) $ptrType))) {
+            'void' => 'void',
+            'refundquote' => 'refund_quote',
+            'refund' => 'refund',
+            'reissuequote' => 'reissue_quote',
+            'reissue' => 'reissue',
+            default => null,
+        };
+    }
+
+    private static function normalizePostTicketingStatus(mixed $status): ?string
+    {
+        if (blank($status)) {
+            return null;
+        }
+
+        return str((string) $status)->lower()->replace([' ', '-'], '_')->toString();
+    }
+
+    private static function isAssocArray(array $array): bool
+    {
+        return array_keys($array) !== range(0, count($array) - 1);
     }
 
     private static function isCompletedPostTicketingStatus(?string $status): bool
@@ -1515,10 +1603,10 @@ class FlightBookingsTable
                 return [
                     'from' => strtoupper((string) ($segment['airportOriginCode'] ?? '')),
                     'to' => strtoupper((string) ($segment['airportDestinationCode'] ?? '')),
-                    'departTime' => $segment['departTime'] ?? (filled($departDt) && strlen($departDt) > 10 ? \Carbon\Carbon::parse($departDt)->format('H:i') : ''),
-                    'arriveTime' => $segment['arriveTime'] ?? (filled($arriveDt) ? \Carbon\Carbon::parse($arriveDt)->format('H:i') : ''),
-                    'departDate' => filled($departDt) ? \Carbon\Carbon::parse($departDt)->format('D, d M Y') : $departureDate,
-                    'arriveDate' => filled($arriveDt) ? \Carbon\Carbon::parse($arriveDt)->format('D, d M Y') : '',
+                    'departTime' => $segment['departTime'] ?? (filled($departDt) && strlen($departDt) > 10 ? self::watDateTime($departDt, 'H:i') : ''),
+                    'arriveTime' => $segment['arriveTime'] ?? (filled($arriveDt) ? self::watDateTime($arriveDt, 'H:i') : ''),
+                    'departDate' => filled($departDt) ? self::watDateTime($departDt, 'D, d M Y') : $departureDate,
+                    'arriveDate' => filled($arriveDt) ? self::watDateTime($arriveDt, 'D, d M Y') : '',
                     'departDT' => $departDt,
                     'arriveDT' => $arriveDt,
                     'duration' => (int) ($segment['duration'] ?? 0),
@@ -1557,7 +1645,7 @@ class FlightBookingsTable
             'arriveDT' => $last['arriveDT'] ?? null,
             'departTime' => $first['departTime'] ?? '',
             'arriveTime' => $last['arriveTime'] ?? '',
-            'departDateLabel' => filled($first['departDT'] ?? null) ? \Carbon\Carbon::parse($first['departDT'])->format('D, d M') : '',
+            'departDateLabel' => filled($first['departDT'] ?? null) ? self::watDateTime($first['departDT'], 'D, d M') : '',
             'stops' => max(0, count($mappedSegments) - 1),
         ]);
     }
@@ -1769,6 +1857,111 @@ class FlightBookingsTable
             ?? $record->flight_snapshot['cabinCode']
             ?? 'Y'
         ));
+    }
+
+    private static function replacementFlightPreview(?string $encodedOption): HtmlString
+    {
+        $segments = app(AdminReplacementFlightSearchService::class)->decodeOption($encodedOption);
+
+        if ($segments === []) {
+            return new HtmlString('<div class="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-white/10 dark:text-gray-400">Select a replacement flight to review the full itinerary.</div>');
+        }
+
+        $summary = $segments[0]['optionSummary'] ?? [];
+        $first = $segments[0];
+        $last = $segments[array_key_last($segments)];
+        $stops = (int) ($summary['stops'] ?? max(0, count($segments) - 1));
+        $duration = (int) ($summary['duration'] ?? collect($segments)->sum(fn (array $segment): int => (int) ($segment['duration'] ?? 0)));
+        $fare = filled($summary['totalFare'] ?? null)
+            ? trim((string) ($summary['currency'] ?? '') . ' ' . number_format((float) $summary['totalFare'], 2))
+            : '-';
+
+        $html = '<div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">';
+        $html .= '<div class="border-b border-gray-100 bg-gray-50 p-4 dark:border-white/10 dark:bg-white/5">';
+        $html .= '<div class="flex flex-wrap items-start justify-between gap-4">';
+        $html .= '<div>';
+        $html .= '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Selected replacement itinerary</div>';
+        $html .= '<div class="mt-1 text-lg font-semibold text-gray-950 dark:text-white">' . e(($first['airportOriginCode'] ?? '-') . ' -> ' . ($last['airportDestinationCode'] ?? '-')) . '</div>';
+        $html .= '<div class="mt-1 text-sm text-gray-600 dark:text-gray-300">' . e(self::formatDateTime($first['departDT'] ?? null) . ' to ' . self::formatDateTime($last['arriveDT'] ?? null)) . '</div>';
+        $html .= '</div>';
+        $html .= '<div class="grid grid-cols-2 gap-3 text-right sm:grid-cols-4">';
+        $html .= self::previewMetric('Flights', $summary['flightNumbers'] ?? collect($segments)->map(fn (array $segment): string => trim(($segment['airlineCode'] ?? '') . ($segment['flightNumber'] ?? '')))->filter()->implode(' / '));
+        $html .= self::previewMetric('Stops', $stops === 0 ? 'Nonstop' : $stops . ' stop' . ($stops === 1 ? '' : 's'));
+        $html .= self::previewMetric('Duration', self::durationLabel($duration));
+        $html .= self::previewMetric('Fare', $fare);
+        $html .= '</div>';
+        $html .= '</div>';
+        $html .= '</div>';
+
+        $html .= '<div class="divide-y divide-gray-100 dark:divide-white/10">';
+
+        foreach ($segments as $index => $segment) {
+            $html .= '<div class="p-4">';
+            $html .= '<div class="flex flex-wrap items-start justify-between gap-4">';
+            $html .= '<div class="min-w-0">';
+            $html .= '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Segment ' . e((string) ($index + 1)) . '</div>';
+            $html .= '<div class="mt-1 text-base font-semibold text-gray-950 dark:text-white">' . e(($segment['airportOriginCode'] ?? '-') . ' -> ' . ($segment['airportDestinationCode'] ?? '-')) . '</div>';
+            $html .= '<div class="mt-1 text-sm text-gray-600 dark:text-gray-300">' . e(trim(($segment['airline'] ?? $segment['airlineCode'] ?? '-') . ' ' . ($segment['airlineCode'] ?? '') . ' ' . ($segment['flightNumber'] ?? ''))) . '</div>';
+            $html .= '</div>';
+            $html .= '<div class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">';
+            $html .= self::previewMetric('Depart', self::formatDateTime($segment['departDT'] ?? null));
+            $html .= self::previewMetric('Arrive', self::formatDateTime($segment['arriveDT'] ?? null));
+            $html .= self::previewMetric('Cabin', trim(($segment['cabin'] ?? '-') . ' (' . ($segment['cabinPreference'] ?? '-') . ')'));
+            $html .= self::previewMetric('Aircraft', $segment['equipment'] ?? '-');
+            $html .= '</div>';
+            $html .= '</div>';
+            $html .= '</div>';
+        }
+
+        return new HtmlString($html . '</div></div>');
+    }
+
+    private static function previewMetric(string $label, mixed $value): string
+    {
+        return '<div><div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e($label) . '</div><div class="mt-1 break-words font-semibold text-gray-950 dark:text-white">' . e(filled($value) ? (string) $value : '-') . '</div></div>';
+    }
+
+    private static function formatDateTime(?string $value): string
+    {
+        return self::watDateTime($value, 'D, d M Y H:i');
+    }
+
+    private static function durationLabel(int $minutes): string
+    {
+        if ($minutes <= 0) {
+            return '-';
+        }
+
+        $hours = intdiv($minutes, 60);
+        $remainingMinutes = $minutes % 60;
+
+        return trim(($hours > 0 ? $hours . 'h ' : '') . ($remainingMinutes > 0 ? $remainingMinutes . 'm' : ''));
+    }
+
+    private static function watDateTime(mixed $value, string $format = 'd M Y, H:i'): string
+    {
+        if (blank($value)) {
+            return '-';
+        }
+
+        try {
+            $formatted = \Carbon\Carbon::parse(self::normalizeProviderDateTimeValue((string) $value))->timezone('Africa/Lagos')->format($format);
+
+            return $formatted;
+        } catch (Throwable) {
+            return (string) $value;
+        }
+    }
+
+    private static function normalizeProviderDateTimeValue(string $value): string
+    {
+        $value = trim($value);
+
+        if (preg_match('/^(\d{4}-\d{2}-\d{2}[T\s]\d{2}):(\d{2})(\d{2})$/', $value, $matches)) {
+            return $matches[1] . ':' . $matches[2] . ':' . $matches[3];
+        }
+
+        return $value;
     }
 
     private static function firstFilled(array $payload, array $keys, mixed $default = null): mixed

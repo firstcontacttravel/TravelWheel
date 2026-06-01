@@ -4,7 +4,7 @@
 
 **Booking Reference:** {{ $data['uniqueId'] }}
 **Status:** {{ $data['bookingStatus'] }} (Ticketing: {{ $data['ticketStatus'] }})
-**Timestamp:** {{ $data['timestamp']->format('Y-m-d H:i:s') }}
+**Timestamp:** {{ $data['timestamp']->timezone('Africa/Lagos')->format('Y-m-d H:i:s') }}
 
 ## Flight Details
 - **Route:** {{ $data['origin'] }} -> {{ $data['destination'] }}

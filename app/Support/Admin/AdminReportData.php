@@ -167,7 +167,7 @@ class AdminReportData
             ->orderByDesc('created_at')
             ->get()
             ->map(fn (FlightBooking $booking): array => [
-                $booking->created_at?->toDateTimeString(),
+                self::watDateTime($booking->created_at),
                 $booking->booking_ref,
                 $booking->unique_id,
                 $booking->route,
@@ -190,8 +190,8 @@ class AdminReportData
     private static function bankTransferExport(?string $from, ?string $to): array
     {
         $rows = self::bankTransferRows($from, $to)->map(fn (FlightBooking $booking): array => [
-            $booking->created_at?->toDateTimeString(),
-            $booking->bank_transfer_notified_at?->toDateTimeString(),
+            self::watDateTime($booking->created_at),
+            self::watDateTime($booking->bank_transfer_notified_at),
             $booking->booking_ref,
             $booking->unique_id,
             $booking->contact_email,
@@ -215,7 +215,7 @@ class AdminReportData
             $latest = $booking->ticketingRecords->first();
 
             return [
-                $booking->created_at?->toDateTimeString(),
+                self::watDateTime($booking->created_at),
                 $booking->booking_ref,
                 $booking->unique_id,
                 $booking->route,
@@ -238,7 +238,7 @@ class AdminReportData
     private static function postTicketingExport(?string $from, ?string $to): array
     {
         $rows = self::postTicketingRows($from, $to)->map(fn (PostTicketingRequest $request): array => [
-            $request->created_at?->toDateTimeString(),
+            self::watDateTime($request->created_at),
             $request->booking?->booking_ref,
             $request->unique_id,
             $request->ptr_unique_id,
@@ -258,7 +258,7 @@ class AdminReportData
     private static function travelFlexExport(?string $from, ?string $to): array
     {
         $rows = self::travelFlexRows($from, $to)->map(fn (TravelFlexApplication $application): array => [
-            $application->created_at?->toDateTimeString(),
+            self::watDateTime($application->created_at),
             $application->booking_ref,
             $application->unique_id,
             data_get($application->applicant_details, 'full_name'),
@@ -276,5 +276,18 @@ class AdminReportData
             'Created At', 'Booking Ref', 'UniqueID', 'Applicant', 'Email', 'Payment Method',
             'Payment Status', 'Application Status', 'Provider Status', 'Down Payment', 'Grand Total', 'Interest',
         ], $rows];
+    }
+
+    private static function watDateTime(mixed $value, string $format = 'Y-m-d H:i:s'): string
+    {
+        if (blank($value)) {
+            return '';
+        }
+
+        try {
+            return \Carbon\Carbon::parse($value)->timezone('Africa/Lagos')->format($format);
+        } catch (\Throwable) {
+            return (string) $value;
+        }
     }
 }

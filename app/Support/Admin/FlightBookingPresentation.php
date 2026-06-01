@@ -42,9 +42,9 @@ class FlightBookingPresentation
         $html .= '</div>';
 
         $html .= '<div class="tw-booking-timeline">';
-        $html .= self::timelineItem('Created', optional($record->created_at)->format('d M Y, H:i'), true);
-        $html .= self::timelineItem('Payment', $record->payment_verified_at ? $record->payment_verified_at->format('d M Y, H:i') : self::label($record->payment_status), $record->payment_status === 'paid');
-        $html .= self::timelineItem('Ticket', $record->ticket_ordered_at ? $record->ticket_ordered_at->format('d M Y, H:i') : self::label($record->booking_status), (bool) $record->ticket_ordered);
+        $html .= self::timelineItem('Created', self::watDateTime($record->created_at), true);
+        $html .= self::timelineItem('Payment', $record->payment_verified_at ? self::watDateTime($record->payment_verified_at) : self::label($record->payment_status), $record->payment_status === 'paid');
+        $html .= self::timelineItem('Ticket', $record->ticket_ordered_at ? self::watDateTime($record->ticket_ordered_at) : self::label($record->booking_status), (bool) $record->ticket_ordered);
         $html .= self::timelineItem('Depart', $departure ?: '-', filled($departure));
         $html .= self::timelineItem('Arrive', $arrival ?: '-', filled($arrival));
         $html .= '</div>';
@@ -262,7 +262,7 @@ class FlightBookingPresentation
         $html .= '<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
         $html .= self::definitionGrid([
             'Action' => str((string) $record->action)->headline(),
-            'When' => optional($record->created_at)->format('d M Y, H:i'),
+            'When' => self::watDateTime($record->created_at),
             'Status' => $record->ticket_status ?: $record->new_payment_status ?: $record->new_booking_status,
             'Airline PNR' => $record->airline_pnr,
             'Message' => $record->message ?: $record->verification_note,
@@ -290,7 +290,7 @@ class FlightBookingPresentation
             $html .= '<div class="mb-3 flex flex-wrap items-start justify-between gap-3">';
             $html .= '<div>';
             $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">' . e(str((string) $record->action)->headline()) . '</div>';
-            $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e(optional($record->created_at)->format('d M Y, H:i') ?: '-') . '</div>';
+            $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e(self::watDateTime($record->created_at)) . '</div>';
             $html .= '</div>';
             $html .= self::badge($record->new_payment_status ?: '-');
             $html .= '</div>';
@@ -321,7 +321,7 @@ class FlightBookingPresentation
             $html .= '<div class="mb-3 flex flex-wrap items-start justify-between gap-3">';
             $html .= '<div>';
             $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">' . e(str((string) $record->action)->headline()) . '</div>';
-            $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e(optional($record->created_at)->format('d M Y, H:i') ?: '-') . '</div>';
+            $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e(self::watDateTime($record->created_at)) . '</div>';
             $html .= '</div>';
             $html .= self::badge($record->ticket_status ?: $record->new_booking_status ?: '-');
             $html .= '</div>';
@@ -356,7 +356,7 @@ class FlightBookingPresentation
             $html .= '<div class="mb-3 flex flex-wrap items-start justify-between gap-3">';
             $html .= '<div>';
             $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">' . e(str((string) $record->operation_type)->headline()) . '</div>';
-            $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e(optional($record->created_at)->format('d M Y, H:i') ?: '-') . '</div>';
+            $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e(self::watDateTime($record->created_at)) . '</div>';
             $html .= '</div>';
             $html .= self::badge($record->status ?: '-');
             $html .= '</div>';
@@ -449,6 +449,7 @@ class FlightBookingPresentation
         $html .= self::definitionGrid($rows);
         $html .= self::postTicketingVoidTables($payload);
         $html .= self::postTicketingRefundTables($payload);
+        $html .= self::postTicketingReissueQuoteTables($payload);
         $html .= self::postTicketingPtrStatusTables($payload);
         $html .= '</div>';
 
@@ -507,6 +508,9 @@ class FlightBookingPresentation
                     'Total fare' => self::moneyNode($fares['TotalFare'] ?? null),
                     'Unused fare' => self::moneyNode($fares['UnusedFare'] ?? null),
                     'Cancel charge' => self::moneyNode($fares['CancellationCharge'] ?? null),
+                    'No-show' => self::moneyNode($fares['NoShowCharge'] ?? null),
+                    'Tax' => self::moneyNode($fares['Tax'] ?? null),
+                    'GST' => self::moneyNode($fares['GSTCharge'] ?? null),
                     'Refund charges' => self::moneyNode($fares['TotalRefundCharges'] ?? null),
                     'Refund amount' => self::moneyNode($fares['TotalRefundAmount'] ?? null),
                 ];
@@ -521,6 +525,73 @@ class FlightBookingPresentation
             '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Refund quote amounts</div>' .
             self::tableFromItems($refundRows) .
             '</div>';
+    }
+
+    private static function postTicketingReissueQuoteTables(array $payload): string
+    {
+        $html = '';
+        $segmentRows = [];
+        $fareRows = [];
+
+        foreach (self::findNamedArrays($payload, 'RequestedPreferences') as $preferences) {
+            foreach ($preferences as $preference) {
+                if (! is_array($preference)) {
+                    continue;
+                }
+
+                $option = $preference['PreferenceOption'] ?? '-';
+
+                foreach (($preference['QuotedSegments'] ?? []) as $segment) {
+                    if (! is_array($segment)) {
+                        continue;
+                    }
+
+                    $segmentRows[] = [
+                        'Option' => $option,
+                        'From' => $segment['DepartureAirportLocationCode'] ?? '-',
+                        'To' => $segment['ArrivalAirportLocationCode'] ?? '-',
+                        'Depart' => self::watDateTime($segment['DepartureDateTime'] ?? null, 'D, d M Y H:i'),
+                        'Arrive' => self::watDateTime($segment['ArrivalDateTime'] ?? null, 'D, d M Y H:i'),
+                        'Airline' => $segment['AirlineCode'] ?? '-',
+                        'Flight' => $segment['FlightNumber'] ?? '-',
+                        'Class' => $segment['BookingClass'] ?? '-',
+                    ];
+                }
+
+                foreach (($preference['QuotedFares'] ?? []) as $fare) {
+                    if (! is_array($fare)) {
+                        continue;
+                    }
+
+                    $fareRows[] = [
+                        'Option' => $option,
+                        'Passenger' => data_get($fare, 'PassengerTypeQuantity.Quantity') ?? '-',
+                        'Base diff' => self::moneyNode($fare['BaseFareDifference'] ?? null),
+                        'Tax diff' => self::moneyNode($fare['TaxDifference'] ?? null),
+                        'Penalty' => self::moneyNode($fare['Penalty'] ?? null),
+                        'No-show' => self::moneyNode($fare['NoShowPenalty'] ?? null),
+                        'GST' => self::moneyNode($fare['GST'] ?? null),
+                        'Total diff' => self::moneyNode($fare['TotalFareDifference'] ?? null),
+                    ];
+                }
+            }
+        }
+
+        if ($segmentRows !== []) {
+            $html .= '<div class="mt-4">' .
+                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue quote segments</div>' .
+                self::tableFromItems($segmentRows) .
+                '</div>';
+        }
+
+        if ($fareRows !== []) {
+            $html .= '<div class="mt-4">' .
+                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue quote fare differences</div>' .
+                self::tableFromItems($fareRows) .
+                '</div>';
+        }
+
+        return $html;
     }
 
     private static function postTicketingPtrStatusTables(array $payload): string
@@ -597,7 +668,7 @@ class FlightBookingPresentation
                     continue;
                 }
 
-                $rows[self::responseLabel($preferredKey)] = self::scalar($value);
+                $rows[self::responseLabel($preferredKey)] = self::providerResponseScalar($value, $preferredKey);
                 break;
             }
         }
@@ -611,7 +682,7 @@ class FlightBookingPresentation
                 $label = self::responseLabel((string) str($path)->afterLast('.'));
 
                 if (! array_key_exists($label, $rows)) {
-                    $rows[$label] = self::scalar($value);
+                    $rows[$label] = self::providerResponseScalar($value, (string) str($path)->afterLast('.'));
                 }
             }
         }
@@ -630,7 +701,7 @@ class FlightBookingPresentation
             $label = self::responseLabel($last);
 
             if (! array_key_exists($label, $rows) && count($rows) < 18) {
-                $rows[$label] = self::scalar($value);
+                $rows[$label] = self::providerResponseScalar($value, $last);
             }
         }
 
@@ -839,7 +910,7 @@ class FlightBookingPresentation
             ->filter(fn ($row): bool => is_array($row))
             ->flatMap(fn (array $row): array => array_keys($row))
             ->unique()
-            ->take(8)
+            ->take(12)
             ->values()
             ->all();
 
@@ -955,6 +1026,71 @@ class FlightBookingPresentation
         }
 
         return self::money($value['Amount'] ?? $value['amount'] ?? null, $value['CurrencyCode'] ?? $value['currency'] ?? null);
+    }
+
+    private static function watDateTime(mixed $value, string $format = 'd M Y, H:i'): string
+    {
+        if (blank($value)) {
+            return '-';
+        }
+
+        try {
+            $value = self::normalizeProviderDateTimeValue((string) $value);
+            $formatted = \Carbon\Carbon::parse($value)->timezone('Africa/Lagos')->format($format);
+
+            return $formatted;
+        } catch (\Throwable) {
+            return (string) $value;
+        }
+    }
+
+    private static function providerResponseScalar(mixed $value, string $key): string
+    {
+        if (! is_scalar($value) || ! self::looksLikeProviderDateTime($value, $key)) {
+            return self::scalar($value);
+        }
+
+        return self::watDateTime($value, 'D, d M Y H:i');
+    }
+
+    private static function looksLikeProviderDateTime(mixed $value, string $key): bool
+    {
+        $key = strtolower($key);
+
+        if (in_array($key, ['processingtime', 'journeyduration', 'duration'], true)) {
+            return false;
+        }
+
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return false;
+        }
+
+        $keySuggestsTime = str_contains($key, 'datetime')
+            || str_contains($key, 'departure')
+            || str_contains($key, 'arrival')
+            || str_contains($key, 'depart')
+            || str_contains($key, 'arrive')
+            || str_contains($key, 'window')
+            || str_contains($key, 'deadline')
+            || str_contains($key, 'timelimit')
+            || str_contains($key, 'time_limit');
+
+        $valueHasTime = (bool) preg_match('/^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}/', $value);
+
+        return $keySuggestsTime && $valueHasTime;
+    }
+
+    private static function normalizeProviderDateTimeValue(string $value): string
+    {
+        $value = trim($value);
+
+        if (preg_match('/^(\d{4}-\d{2}-\d{2}[T\s]\d{2}):(\d{2})(\d{2})$/', $value, $matches)) {
+            return $matches[1] . ':' . $matches[2] . ':' . $matches[3];
+        }
+
+        return $value;
     }
 
     private static function yesNo(mixed $value): string

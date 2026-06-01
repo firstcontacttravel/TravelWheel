@@ -137,6 +137,7 @@ class AdminReplacementFlightSearchService
                 continue;
             }
 
+            $segments = $this->withSummary($fareItinerary, $segments, $index);
             $value = base64_encode(json_encode($segments, JSON_UNESCAPED_SLASHES));
             $options[$value] = $this->label($fareItinerary, $segments, $index);
         }
@@ -260,6 +261,34 @@ class AdminReplacementFlightSearchService
             $currency,
             filled($totalFare) ? number_format((float) $totalFare, 2) : '-',
         ));
+    }
+
+    private function withSummary(array $fareItinerary, array $segments, int $index): array
+    {
+        $first = $segments[0];
+        $last = $segments[array_key_last($segments)];
+        $totalFare = data_get($fareItinerary, 'AirItineraryFareInfo.ItinTotalFares.TotalFare.Amount');
+        $currency = data_get($fareItinerary, 'AirItineraryFareInfo.ItinTotalFares.TotalFare.CurrencyCode');
+        $stops = max(0, count($segments) - 1);
+        $duration = collect($segments)->sum(fn (array $segment): int => (int) ($segment['duration'] ?? 0));
+        $flightNumbers = collect($segments)
+            ->map(fn (array $segment): string => trim(($segment['airlineCode'] ?? '') . ($segment['flightNumber'] ?? '')))
+            ->filter()
+            ->implode(' / ');
+
+        $segments[0]['optionSummary'] = [
+            'option' => $index + 1,
+            'route' => trim(($first['airportOriginCode'] ?? '') . ' -> ' . ($last['airportDestinationCode'] ?? '')),
+            'stops' => $stops,
+            'duration' => $duration,
+            'flightNumbers' => $flightNumbers,
+            'totalFare' => filled($totalFare) ? (float) $totalFare : null,
+            'currency' => $currency,
+            'departure' => $first['departDT'] ?? null,
+            'arrival' => $last['arriveDT'] ?? null,
+        ];
+
+        return $segments;
     }
 
     private function mapCabin(string $code): string

@@ -32,7 +32,7 @@
     $schedule      = $tfPlan['schedule']               ?? [];
     $remainingBal  = $total - $downPayment;
     $tktFmt = ''; $tktHours = 0;
-    if ($tktLimit) { try { $td=\Carbon\Carbon::parse($tktLimit); $tktFmt=$td->format('D, d M Y \a\t H:i'); $tktHours=max(0,(int)now()->diffInHours($td,false)); } catch (\Throwable $e) {} }
+    if ($tktLimit) { try { $td=\Carbon\Carbon::parse($tktLimit); $tktFmt=$td->timezone('Africa/Lagos')->format('D, d M Y \a\t H:i'); $tktHours=max(0,(int)now()->diffInHours($td,false)); } catch (\Throwable $e) {} }
     $equipMap = ['73H'=>'Boeing 737-800','738'=>'Boeing 737-800','320'=>'Airbus A320','321'=>'Airbus A321','789'=>'Boeing 787-9','332'=>'Airbus A330-200'];
     $routeLines = [];
     if ($isMulti) {

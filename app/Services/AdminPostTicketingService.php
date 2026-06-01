@@ -63,11 +63,15 @@ class AdminPostTicketingService
         $data = $response->json() ?: [];
         $ok = ! $response->failed() && $this->extractSuccess($data);
         $ptrUniqueId = $this->extractFirst($data, ['ptrUniqueID', 'PtrUniqueID']);
+        $errorMessage = $this->extractErrorMessage($data, 'Post-ticketing request failed.');
+        $status = $ok
+            ? $this->normalizeStatus($this->extractFirst($data, ['Status', 'PtrStatus']) ?: ($operationType === 'cancel' ? 'completed' : 'submitted'))
+            : ($operationType === 'ptr_status' && str_contains(strtolower($errorMessage), 'inprocess') ? 'in_process' : 'failed');
 
         return [
             'ok' => $ok,
-            'status' => $ok ? $this->normalizeStatus($this->extractFirst($data, ['Status', 'PtrStatus']) ?: ($operationType === 'cancel' ? 'completed' : 'submitted')) : 'failed',
-            'message' => $ok ? ($operationType === 'cancel' ? 'Booking cancelled.' : 'Post-ticketing request completed.') : $this->extractErrorMessage($data, 'Post-ticketing request failed.'),
+            'status' => $status,
+            'message' => $ok ? ($operationType === 'cancel' ? 'Booking cancelled.' : 'Post-ticketing request completed.') : $errorMessage,
             'ptr_unique_id' => $ptrUniqueId === null ? null : (string) $ptrUniqueId,
             'request' => $this->redactPayload($payload),
             'response' => $data,

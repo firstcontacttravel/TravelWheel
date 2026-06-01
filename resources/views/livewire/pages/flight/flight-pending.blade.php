@@ -37,7 +37,7 @@
     $tktLimit  = session('bookingTktTimeLimit', optional($dbBooking?->tkt_time_limit)->toIso8601String() ?? '');
     $tktFmt = ''; $tktHours = 0;
     if ($tktLimit) {
-        try { $td = \Carbon\Carbon::parse($tktLimit); $tktFmt = $td->format('D, d M Y \a\t H:i'); $tktHours = max(0,(int)now()->diffInHours($td,false)); } catch (\Throwable $e) {}
+        try { $td = \Carbon\Carbon::parse($tktLimit); $tktFmt = $td->timezone('Africa/Lagos')->format('D, d M Y \a\t H:i'); $tktHours = max(0,(int)now()->diffInHours($td,false)); } catch (\Throwable $e) {}
     }
     
     // ── Extra Services (from DB snapshot) ──────────────────────────────────

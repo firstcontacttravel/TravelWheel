@@ -30,7 +30,7 @@
                 <td style="width:30%;">
                     <div class="iata">{{ $seg['from'] ?? '—' }}</div>
                     <div class="city-name">{{ $seg['fromCity'] ?? ($seg['fromAirport'] ?? '') }}</div>
-                    <div class="dep-arr-time">{{ $seg['departTime'] ?? (!empty($seg['departDT']) ? \Carbon\Carbon::parse($seg['departDT'])->format('H:i') : '—') }}</div>
+                    <div class="dep-arr-time">{{ !empty($seg['departDT']) ? \Carbon\Carbon::parse($seg['departDT'])->timezone('Africa/Lagos')->format('H:i') : ($seg['departTime'] ?? '—') }}</div>
                 </td>
 
                 <td class="arrow-col">
@@ -43,7 +43,7 @@
                 <td style="width:30%;text-align:right;">
                     <div class="iata">{{ $seg['to'] ?? '—' }}</div>
                     <div class="city-name">{{ $seg['toCity'] ?? ($seg['toAirport'] ?? '') }}</div>
-                    <div class="dep-arr-time">{{ $seg['arriveTime'] ?? (!empty($seg['arriveDT']) ? \Carbon\Carbon::parse($seg['arriveDT'])->format('H:i') : '—') }}</div>
+                    <div class="dep-arr-time">{{ !empty($seg['arriveDT']) ? \Carbon\Carbon::parse($seg['arriveDT'])->timezone('Africa/Lagos')->format('H:i') : ($seg['arriveTime'] ?? '—') }}</div>
                 </td>
             </tr>
         </table>

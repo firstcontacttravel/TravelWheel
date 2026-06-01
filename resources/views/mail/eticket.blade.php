@@ -321,7 +321,7 @@
                     </span>
                     <div class="issued">
                         Booking Ref: <strong>{{ $bookingRef }}</strong>
-                        &nbsp;·&nbsp; Issued: <strong>{{ now()->format('d M Y, H:i') }}</strong>
+                        &nbsp;·&nbsp; Issued: <strong>{{ now()->timezone('Africa/Lagos')->format('d M Y, H:i') }}</strong>
                     </div>
                 </td>
             </tr>
@@ -589,7 +589,7 @@
                     This is your official e-ticket. Present it at the airport check-in counter with a valid photo ID or passport.
                 </td>
                 <td class="footer-right">
-                    TravelWheel &nbsp;·&nbsp; <strong>{{ $bookingRef }}</strong> &nbsp;·&nbsp; Generated {{ now()->format('d M Y H:i') }}
+                    TravelWheel &nbsp;·&nbsp; <strong>{{ $bookingRef }}</strong> &nbsp;·&nbsp; Generated {{ now()->timezone('Africa/Lagos')->format('d M Y H:i') }}
                 </td>
             </tr>
         </table>
