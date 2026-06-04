@@ -1120,7 +1120,6 @@ class FlightBookingsTable
                         ->label('Passenger ticket details')
                         ->helperText('Confirm the passenger names and e-ticket numbers before submitting this request.')
                         ->default(json_encode(self::postTicketingPaxDetails($record), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))
-                        ->disabled($operationType === 'reissue_quote')
                         ->required()
                         ->rows(8);
                 }
