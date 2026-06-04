@@ -38,6 +38,19 @@ class AdminPostTicketingService
                 $extraPayload['paxDetails'],
                 $tripDetails['trip_details'] ?? [],
             );
+
+            $passengerError = $this->validatePaxDetails($extraPayload['paxDetails']);
+
+            if ($passengerError !== null) {
+                return [
+                    'ok' => false,
+                    'status' => 'failed',
+                    'message' => $passengerError,
+                    'request' => $this->redactPayload(array_merge($this->basePayload($booking), $extraPayload)),
+                    'response' => [],
+                    'preflight_trip_details' => $tripDetails['response'] ?? [],
+                ];
+            }
         }
 
         $payload = array_merge($this->basePayload($booking), $extraPayload);
@@ -107,27 +120,92 @@ class AdminPostTicketingService
             $passengers = [$passengers];
         }
 
-        $ticketNumbers = collect(data_get($tripDetails, 'ItineraryInfo.CustomerInfos', []))
-            ->filter(fn ($customer): bool => is_array($customer))
-            ->map(fn (array $customer): array => $customer['CustomerInfo'] ?? $customer)
-            ->pluck('eTicketNumber')
+        $customerInfos = $this->tripDetailsCustomerInfos($tripDetails);
+        $ticketNumbers = $customerInfos
+            ->map(fn (array $customer): mixed => $this->ticketNumber($customer))
             ->filter()
             ->values();
 
         return collect($passengers)
             ->filter(fn ($passenger): bool => is_array($passenger))
-            ->map(function (array $passenger, int $index) use ($ticketNumbers): array {
-                return [
+            ->map(function (array $passenger, int $index) use ($customerInfos, $ticketNumbers): array {
+                $normalized = [
                     'type' => $this->firstFilled($passenger, ['type', 'PassengerType', 'passengerType'], 'ADT'),
                     'title' => $this->firstFilled($passenger, ['title', 'Title', 'PassengerTitle']),
                     'firstName' => $this->firstFilled($passenger, ['firstName', 'first_name', 'FirstName', 'PassengerFirstName']),
                     'lastName' => $this->firstFilled($passenger, ['lastName', 'last_name', 'LastName', 'PassengerLastName']),
-                    'eTicket' => $this->firstFilled($passenger, ['eTicket', 'eticket', 'eTicketNumber', 'ETicket', 'TicketNumber'])
-                        ?: $ticketNumbers->get($index),
+                    'eTicket' => $this->firstFilled($passenger, ['eTicket', 'eticket', 'eTicketNumber', 'ETicket', 'TicketNumber']),
+                ];
+
+                $matchedCustomer = $customerInfos->first(fn (array $customer): bool => $this->samePassenger($normalized, $customer));
+                $currentTicket = $matchedCustomer ? $this->ticketNumber($matchedCustomer) : $ticketNumbers->get($index);
+
+                return [
+                    ...$normalized,
+                    'eTicket' => $currentTicket ?: $normalized['eTicket'],
                 ];
             })
             ->values()
             ->all();
+    }
+
+    private function tripDetailsCustomerInfos(array $tripDetails): \Illuminate\Support\Collection
+    {
+        return collect(data_get($tripDetails, 'ItineraryInfo.CustomerInfos', []))
+            ->filter(fn ($customer): bool => is_array($customer))
+            ->map(fn (array $customer): array => $customer['CustomerInfo'] ?? $customer)
+            ->values();
+    }
+
+    private function ticketNumber(array $customer): mixed
+    {
+        return $this->firstFilled($customer, [
+            'eTicketNumber',
+            'ETicketNumber',
+            'eTicket',
+            'ETicket',
+            'TicketNumber',
+            'ticketNumber',
+        ]);
+    }
+
+    private function samePassenger(array $passenger, array $customer): bool
+    {
+        $firstName = strtolower((string) $this->firstFilled($customer, ['firstName', 'FirstName', 'PassengerFirstName', 'GivenName']));
+        $lastName = strtolower((string) $this->firstFilled($customer, ['lastName', 'LastName', 'PassengerLastName', 'Surname']));
+        $type = strtolower((string) $this->firstFilled($customer, ['type', 'PassengerType', 'passengerType']));
+
+        return filled($firstName)
+            && filled($lastName)
+            && $firstName === strtolower((string) ($passenger['firstName'] ?? ''))
+            && $lastName === strtolower((string) ($passenger['lastName'] ?? ''))
+            && (blank($type) || $type === strtolower((string) ($passenger['type'] ?? '')));
+    }
+
+    private function validatePaxDetails(array $passengers): ?string
+    {
+        if ($passengers === []) {
+            return 'Invalid passenger details: at least one passenger with a valid e-ticket is required.';
+        }
+
+        foreach ($passengers as $index => $passenger) {
+            $missing = collect([
+                'type' => $passenger['type'] ?? null,
+                'title' => $passenger['title'] ?? null,
+                'first name' => $passenger['firstName'] ?? null,
+                'last name' => $passenger['lastName'] ?? null,
+                'e-ticket' => $passenger['eTicket'] ?? null,
+            ])
+                ->filter(fn (mixed $value): bool => blank($value))
+                ->keys()
+                ->implode(', ');
+
+            if (filled($missing)) {
+                return 'Invalid passenger details: passenger ' . ($index + 1) . ' is missing ' . $missing . '.';
+            }
+        }
+
+        return null;
     }
 
     private function firstFilled(array $payload, array $keys, mixed $default = null): mixed

@@ -24,6 +24,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -76,9 +77,10 @@ class FlightBookingsTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('route')
                     ->label('Journey')
+                    ->state(fn (FlightBooking $record): HtmlString => self::journeyColumn($record))
+                    ->html()
                     ->searchable()
                     ->placeholder('-')
-                    ->description(fn (FlightBooking $record): string => trim(collect([$record->trip_type, $record->cabin])->filter()->implode(' | ')) ?: '-')
                     ->toggleable(),
                 TextColumn::make('airline')
                     ->searchable()
@@ -310,6 +312,146 @@ class FlightBookingsTable
             $record->child_count > 0 ? $record->child_count . ' child' . ($record->child_count === 1 ? '' : 'ren') : null,
             $record->infant_count > 0 ? $record->infant_count . ' infant' . ($record->infant_count === 1 ? '' : 's') : null,
         ])->filter()->implode(' | ');
+    }
+
+    private static function journeyColumn(FlightBooking $record): HtmlString
+    {
+        $groups = self::journeyGroups($record);
+
+        if ($groups === []) {
+            return new HtmlString('<span class="text-gray-500">' . e($record->route ?: '-') . '</span>');
+        }
+
+        $hasMultiLegs = collect($record->flight_snapshot['multiLegs'] ?? [])
+            ->contains(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== []);
+        $tripLabel = count($groups) > 1
+            ? ($hasMultiLegs ? 'Multi-city' : 'Round trip')
+            : self::label($record->trip_type ?: 'one_way');
+
+        $html = '<div class="tw-journey-cell">';
+        $html .= '<div class="tw-journey-kind">' . e($tripLabel) . '</div>';
+
+        foreach ($groups as $group) {
+            $segments = $group['segments'];
+            $first = $segments[0] ?? [];
+            $last = $segments[array_key_last($segments)] ?? [];
+            $origin = (string) self::segmentValue($first, ['from', 'airportOriginCode'], '');
+            $destination = (string) self::segmentValue($last, ['to', 'airportDestinationCode'], '');
+            $date = self::journeySegmentDate($first);
+            $flightLines = collect($segments)
+                ->map(function (array $segment): string {
+                    $airline = trim((string) self::segmentValue($segment, ['airline', 'airlineCode', 'MarketingAirlineCode'], ''));
+                    $flight = trim((string) self::segmentValue($segment, ['flightNo', 'flightNumber', 'FlightNumber'], ''));
+                    $cabin = trim((string) self::segmentValue($segment, ['cabin', 'cabinCode', 'CabinClassCode'], ''));
+                    $cabin = strlen($cabin) === 1 ? self::cabinLabel($cabin) : $cabin;
+                    $flightLabel = $flight;
+
+                    if (filled($airline) && filled($flight) && ! str_starts_with(strtoupper($flight), strtoupper($airline))) {
+                        $flightLabel = trim($airline . ' ' . $flight);
+                    }
+
+                    $time = trim(collect([
+                        self::journeySegmentTime($segment, ['departTime', 'DepartureDateTime', 'departDT']),
+                        self::journeySegmentTime($segment, ['arriveTime', 'ArrivalDateTime', 'arriveDT']),
+                    ])->filter()->implode('-'));
+
+                    $html = '';
+
+                    if (filled($time)) {
+                        $html .= '<span class="tw-journey-time">' . e($time) . '</span>';
+                    }
+
+                    if (filled($flightLabel)) {
+                        $html .= '<span>' . e($flightLabel) . '</span>';
+                    }
+
+                    if (filled($cabin)) {
+                        $html .= '<span class="tw-journey-cabin">' . e($cabin) . '</span>';
+                    }
+
+                    return $html;
+                })
+                ->filter()
+                ->map(fn (string $line): string => '<div class="tw-journey-flight">' . $line . '</div>')
+                ->implode('');
+
+            $html .= '<div class="tw-journey-leg">';
+            $html .= '<div class="tw-journey-dot"></div>';
+            $html .= '<div class="tw-journey-leg-main">';
+            $html .= '<div class="tw-journey-leg-top">';
+            $html .= '<div class="tw-journey-route">';
+            $html .= '<span>' . e($origin ?: '-') . '</span>';
+            $html .= '<span class="tw-journey-arrow">-></span>';
+            $html .= '<span>' . e($destination ?: '-') . '</span>';
+            $html .= '</div>';
+            $html .= '<span class="tw-journey-label">' . e($group['label']) . '</span>';
+            $html .= '</div>';
+            $html .= '<div class="tw-journey-date">' . e($date ?: '-') . '</div>';
+            $html .= '<div class="tw-journey-flights">' . ($flightLines ?: '<div class="tw-journey-flight">-</div>') . '</div>';
+            $html .= '</div>';
+            $html .= '</div>';
+        }
+
+        $html .= '</div>';
+
+        return new HtmlString($html);
+    }
+
+    private static function journeyGroups(FlightBooking $record): array
+    {
+        $snapshot = $record->flight_snapshot ?? [];
+        $multiLegs = collect($snapshot['multiLegs'] ?? [])
+            ->filter(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== [])
+            ->values();
+
+        if ($multiLegs->isNotEmpty()) {
+            return $multiLegs
+                ->map(fn (array $leg, int $index): array => [
+                    'label' => $leg['label'] ?? 'Leg ' . ($index + 1),
+                    'segments' => array_values($leg['segments'] ?? []),
+                ])
+                ->all();
+        }
+
+        $groups = [];
+        $outbound = is_array($snapshot['segments'] ?? null) ? array_values($snapshot['segments']) : [];
+        $return = is_array($snapshot['returnSegments'] ?? null) ? array_values($snapshot['returnSegments']) : [];
+
+        if ($outbound !== []) {
+            $groups[] = ['label' => $return !== [] ? 'Outbound' : 'Flight', 'segments' => $outbound];
+        }
+
+        if ($return !== []) {
+            $groups[] = ['label' => 'Return', 'segments' => $return];
+        }
+
+        return $groups;
+    }
+
+    private static function journeySegmentDate(array $segment): string
+    {
+        $value = self::segmentValue($segment, ['departDT', 'DepartureDateTime', 'departureDate', 'departDate'], null);
+
+        if (blank($value)) {
+            return '';
+        }
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $value)
+            ? self::watDateTime($value, 'D, d M Y')
+            : (string) $value;
+    }
+
+    private static function journeySegmentTime(array $segment, array $keys): string
+    {
+        $value = self::segmentValue($segment, $keys, null);
+
+        if (blank($value)) {
+            return '';
+        }
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $value)
+            ? self::watDateTime($value, 'H:i')
+            : (string) $value;
     }
 
     private static function label(?string $value): string
@@ -675,6 +817,8 @@ class FlightBookingsTable
                     return;
                 }
 
+                $tripDetails = self::tripDetailsWithLatestReissueTickets($record->fresh(), $result['trip_details'] ?? []);
+
                 self::recordTicketing($record, [
                     'action' => $result['ok'] ? 'trip_details_fetched' : 'trip_details_failed',
                     'previous_booking_status' => $record->booking_status,
@@ -684,7 +828,7 @@ class FlightBookingsTable
                     'unique_id' => $record->unique_id,
                     'message' => $result['message'] ?? null,
                     'request_payload' => $result['request'] ?? [],
-                    'response_payload' => $result['response'] ?? [],
+                    'response_payload' => self::responseWithTripDetails($result['response'] ?? [], $tripDetails),
                 ]);
 
                 Notification::make()
@@ -711,10 +855,11 @@ class FlightBookingsTable
             ->action(function (FlightBooking $record): void {
                 try {
                     $tripResult = app(AdminTicketingService::class)->tripDetails($record);
-                    $tripDetails = $tripResult['trip_details'] ?? [];
+                    $tripDetails = self::tripDetailsWithLatestReissueTickets($record->fresh(), $tripResult['trip_details'] ?? []);
 
                     if (($tripResult['ok'] ?? false) && $tripDetails !== []) {
-                        app(AdminTicketingService::class)->sendETicket($record, $tripDetails);
+                        self::mergeLatestReissueTicketsIntoBooking($record->fresh());
+                        app(AdminTicketingService::class)->sendETicket($record->fresh(), $tripDetails);
                     } else {
                         throw new \RuntimeException($tripResult['message'] ?? 'Trip details are required before sending e-ticket.');
                     }
@@ -745,7 +890,7 @@ class FlightBookingsTable
                     'unique_id' => $record->unique_id,
                     'message' => 'E-ticket resent to ' . $record->contact_email,
                     'request_payload' => $tripResult['request'] ?? [],
-                    'response_payload' => $tripResult['response'] ?? [],
+                    'response_payload' => self::responseWithTripDetails($tripResult['response'] ?? [], $tripDetails ?? []),
                 ]);
 
                 Notification::make()
@@ -955,12 +1100,7 @@ class FlightBookingsTable
                 if ($requiresQuoteType) {
                     $schema[] = Select::make('ptr_unique_id')
                         ->label('Quote PTR reference')
-                        ->options($record->postTicketingRequests()
-                            ->where('operation_type', $requiresQuoteType)
-                            ->whereNotNull('ptr_unique_id')
-                            ->latest()
-                            ->pluck('ptr_unique_id', 'ptr_unique_id')
-                            ->all())
+                        ->options(fn (): array => self::availablePostTicketingQuoteOptions($record, $requiresQuoteType))
                         ->live()
                         ->required();
                 }
@@ -998,10 +1138,30 @@ class FlightBookingsTable
                 }
 
                 if ($needsReissueSegments) {
+                    $schema[] = Select::make('replacement_scope')
+                        ->label('Affected flight')
+                        ->helperText('Choose the exact outbound, return, or multi-city leg the customer wants to change. The unchanged legs will still be sent with the reissue quote.')
+                        ->options(fn (): array => self::reissueScopeOptions($record))
+                        ->default(fn (): string => self::defaultReissueScope($record))
+                        ->afterStateUpdated(function (Set $set, ?string $state) use ($record): void {
+                            $set('replacement_from', self::defaultReissueAirport($record, 'from', $state));
+                            $set('replacement_to', self::defaultReissueAirport($record, 'to', $state));
+                            $set('replacement_departure_date', self::defaultReissueDate($record, $state));
+                            $set('replacement_flight_option', null);
+                        })
+                        ->live()
+                        ->required()
+                        ->columnSpanFull();
+
+                    $schema[] = Placeholder::make('replacement_scope_context')
+                        ->label('Current itinerary part')
+                        ->content(fn (Get $get): HtmlString => self::reissueScopeContext($record, $get('replacement_scope')))
+                        ->columnSpanFull();
+
                     $schema[] = Select::make('replacement_from')
                         ->label('Replacement from')
-                        ->helperText('Search by city, airport name, country, or IATA code. Defaults to the current first segment when available.')
-                        ->default(fn () => self::defaultReissueAirport($record, 'from'))
+                        ->helperText('Search by city, airport name, country, or IATA code. Defaults to the selected itinerary part.')
+                        ->default(fn () => self::defaultReissueAirport($record, 'from', self::defaultReissueScope($record)))
                         ->getSearchResultsUsing(fn (?string $search): array => app(AdminReplacementFlightSearchService::class)->airportSearchOptions($search))
                         ->getOptionLabelUsing(fn (?string $value): ?string => app(AdminReplacementFlightSearchService::class)->airportLabel($value))
                         ->searchable()
@@ -1011,8 +1171,8 @@ class FlightBookingsTable
 
                     $schema[] = Select::make('replacement_to')
                         ->label('Replacement to')
-                        ->helperText('Search by city, airport name, country, or IATA code. Defaults to the current last segment when available.')
-                        ->default(fn () => self::defaultReissueAirport($record, 'to'))
+                        ->helperText('Search by city, airport name, country, or IATA code. Defaults to the selected itinerary part.')
+                        ->default(fn () => self::defaultReissueAirport($record, 'to', self::defaultReissueScope($record)))
                         ->getSearchResultsUsing(fn (?string $search): array => app(AdminReplacementFlightSearchService::class)->airportSearchOptions($search))
                         ->getOptionLabelUsing(fn (?string $value): ?string => app(AdminReplacementFlightSearchService::class)->airportLabel($value))
                         ->searchable()
@@ -1035,6 +1195,7 @@ class FlightBookingsTable
                     $schema[] = DatePicker::make('replacement_departure_date')
                         ->label('New departure date')
                         ->native(false)
+                        ->default(fn () => self::defaultReissueDate($record, self::defaultReissueScope($record)))
                         ->required()
                         ->live();
 
@@ -1046,6 +1207,7 @@ class FlightBookingsTable
                             'to' => $get('replacement_to'),
                             'departure_date' => $get('replacement_departure_date'),
                             'cabin' => $get('replacement_cabin'),
+                            'scope' => $get('replacement_scope'),
                         ]))
                         ->searchable()
                         ->preload(false)
@@ -1072,6 +1234,15 @@ class FlightBookingsTable
                 $extraPayload = [];
 
                 if (isset($data['ptr_unique_id'])) {
+                    if (! self::isOpenPostTicketingQuote($record, $operationType, (string) $data['ptr_unique_id'])) {
+                        Notification::make()
+                            ->title('Quote already used')
+                            ->body('Select a new quote before processing this post-ticketing action.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
                     if (in_array($operationType, ['void', 'refund'], true)) {
                         $extraPayload['_selectedQuotePtrUniqueID'] = $data['ptr_unique_id'];
                     } else {
@@ -1090,6 +1261,13 @@ class FlightBookingsTable
                         return;
                     }
                     $extraPayload['paxDetails'] = self::normalizePostTicketingPaxDetails($decoded);
+
+                    $passengerError = self::postTicketingPassengerValidationMessage($extraPayload['paxDetails']);
+
+                    if ($passengerError !== null) {
+                        Notification::make()->title('Invalid passenger ticket details')->body($passengerError)->danger()->send();
+                        return;
+                    }
                 }
 
                 if ($needsSelectablePaxDetails) {
@@ -1113,10 +1291,18 @@ class FlightBookingsTable
                         return;
                     }
 
+                    $passengerError = self::postTicketingPassengerValidationMessage($selectedPassengers);
+
+                    if ($passengerError !== null) {
+                        Notification::make()->title('Invalid passenger ticket details')->body($passengerError)->danger()->send();
+                        return;
+                    }
+
                     $extraPayload['paxDetails'] = $selectedPassengers;
                 }
 
                 if ($needsReissueSegments) {
+                    $replacementScope = (string) ($data['replacement_scope'] ?? self::defaultReissueScope($record));
                     $replacementSegments = app(AdminReplacementFlightSearchService::class)
                         ->decodeOption($data['replacement_flight_option'] ?? null);
 
@@ -1125,8 +1311,18 @@ class FlightBookingsTable
                         return;
                     }
 
-                    $extraPayload['OriginDestinationInfo'] = self::apiReissueOriginDestinationInfo($replacementSegments);
+                    $proposedItinerary = self::buildProposedReissueItinerary($record, $replacementScope, $replacementSegments);
+
+                    if (self::flattenReissueItineraryGroups($proposedItinerary) === []) {
+                        Notification::make()->title('Invalid itinerary')->body('The selected booking does not have enough itinerary details for a reissue quote.')->danger()->send();
+                        return;
+                    }
+
+                    $extraPayload['_reissueScope'] = $replacementScope;
+                    $extraPayload['_reissueScopeLabel'] = self::reissueScopeLabel($record, $replacementScope);
+                    $extraPayload['_reissueItineraryStructure'] = $proposedItinerary;
                     $extraPayload['_displayReplacementSegments'] = $replacementSegments;
+                    $extraPayload['OriginDestinationInfo'] = self::apiReissueOriginDestinationInfo(self::flattenReissueItineraryGroups($proposedItinerary));
                 }
 
                 if (filled($data['remark'] ?? null)) {
@@ -1223,9 +1419,11 @@ class FlightBookingsTable
             return;
         }
 
+        $patchedTripDetails = self::tripDetailsWithLatestReissueTickets($record->fresh(), $tripResult['trip_details'] ?? []);
+
         $ticketResponse = $record->ticket_api_response ?: [];
         $ticketResponse['latest_reissue'] = $result['response'] ?? [];
-        $ticketResponse['latest_reissue_trip_details'] = $tripResult['response'] ?? [];
+        $ticketResponse['latest_reissue_trip_details'] = self::responseWithTripDetails($tripResult['response'] ?? [], $patchedTripDetails);
         $updatedFlightSnapshot = self::reissuedFlightSnapshot($record, $ptr);
 
         $bookingUpdates = [
@@ -1255,16 +1453,18 @@ class FlightBookingsTable
             'request_payload' => $result['request'] ?? [],
             'response_payload' => [
                 'reissue' => $result['response'] ?? [],
-                'trip_details' => $tripResult['response'] ?? [],
+                'trip_details' => self::responseWithTripDetails($tripResult['response'] ?? [], $patchedTripDetails),
             ],
         ]);
 
-        if (! ($tripResult['ok'] ?? false) || blank($record->contact_email) || empty($tripResult['trip_details'] ?? [])) {
+        self::mergeLatestReissueTicketsIntoBooking($record->fresh());
+
+        if (! ($tripResult['ok'] ?? false) || blank($record->contact_email) || empty($patchedTripDetails)) {
             return;
         }
 
         try {
-            app(AdminTicketingService::class)->sendETicket($record->fresh(), $tripResult['trip_details']);
+            app(AdminTicketingService::class)->sendETicket($record->fresh(), $patchedTripDetails);
 
             self::recordTicketing($record->fresh(), [
                 'action' => 'reissue_eticket_sent',
@@ -1275,7 +1475,7 @@ class FlightBookingsTable
                 'unique_id' => $record->unique_id,
                 'message' => 'Updated e-ticket sent to ' . $record->contact_email,
                 'request_payload' => $tripResult['request'] ?? [],
-                'response_payload' => $tripResult['response'] ?? [],
+                'response_payload' => self::responseWithTripDetails($tripResult['response'] ?? [], $patchedTripDetails),
             ]);
         } catch (Throwable $exception) {
             self::recordTicketing($record->fresh(), [
@@ -1386,6 +1586,8 @@ class FlightBookingsTable
         if ($original->operation_type === 'reissue'
             && ($result['ok'] ?? false)
             && self::isCompletedPostTicketingStatus($status ?? ($result['status'] ?? null))) {
+            self::mergePtrStatusPassengerTicketsIntoBooking($record->fresh(), $ptrDetail);
+
             if (! self::hasFinalizedReissue($record, $statusCheck->ptr_unique_id)) {
                 self::finalizeSuccessfulReissue($record->fresh(), $original->fresh(), $result);
             } elseif (! self::hasSentSnapshotRefreshEticket($record, $statusCheck->ptr_unique_id)) {
@@ -1406,6 +1608,199 @@ class FlightBookingsTable
             && ! self::hasFinalizedRefund($record, $statusCheck->ptr_unique_id)) {
             self::finalizeSuccessfulRefund($record->fresh(), $original->fresh(), $result);
         }
+    }
+
+    private static function mergePtrStatusPassengerTicketsIntoBooking(FlightBooking $record, array $ptrDetail): void
+    {
+        $ptrPassengers = self::normalizePostTicketingPaxDetails($ptrDetail['PaxDetails'] ?? []);
+
+        if ($ptrPassengers === []) {
+            return;
+        }
+
+        $rawPassengers = $record->passengers_snapshot ?? [];
+
+        if (! is_array($rawPassengers) || $rawPassengers === []) {
+            $record->update(['passengers_snapshot' => $ptrPassengers]);
+            return;
+        }
+
+        if (array_keys($rawPassengers) !== range(0, count($rawPassengers) - 1)) {
+            $rawPassengers = [$rawPassengers];
+        }
+
+        $updatedPassengers = collect($rawPassengers)
+            ->filter(fn ($passenger): bool => is_array($passenger))
+            ->map(function (array $passenger, int $index) use ($ptrPassengers): array {
+                $normalized = self::normalizePostTicketingPaxDetails([$passenger])[0] ?? [];
+                $matched = collect($ptrPassengers)->first(function (array $ptrPassenger) use ($normalized): bool {
+                    return strtolower((string) ($ptrPassenger['firstName'] ?? '')) === strtolower((string) ($normalized['firstName'] ?? ''))
+                        && strtolower((string) ($ptrPassenger['lastName'] ?? '')) === strtolower((string) ($normalized['lastName'] ?? ''))
+                        && strtolower((string) ($ptrPassenger['type'] ?? '')) === strtolower((string) ($normalized['type'] ?? ''));
+                }) ?? ($ptrPassengers[$index] ?? null);
+
+                if (is_array($matched) && filled($matched['eTicket'] ?? null)) {
+                    $passenger['eTicket'] = $matched['eTicket'];
+                    $passenger['eticket'] = $matched['eTicket'];
+                    $passenger['eTicketNumber'] = $matched['eTicket'];
+                }
+
+                return $passenger;
+            })
+            ->values()
+            ->all();
+
+        $record->update(['passengers_snapshot' => $updatedPassengers]);
+    }
+
+    private static function mergeLatestReissueTicketsIntoBooking(FlightBooking $record): void
+    {
+        $tickets = self::latestReissuePassengerTickets($record);
+
+        if ($tickets !== []) {
+            self::mergePtrStatusPassengerTicketsIntoBooking($record, ['PaxDetails' => $tickets]);
+        }
+    }
+
+    private static function tripDetailsWithLatestReissueTickets(FlightBooking $record, array $tripDetails): array
+    {
+        $tickets = self::latestReissuePassengerTickets($record);
+
+        if ($tickets === [] || $tripDetails === []) {
+            return $tripDetails;
+        }
+
+        $customerInfos = data_get($tripDetails, 'ItineraryInfo.CustomerInfos', []);
+
+        if (! is_array($customerInfos) || $customerInfos === []) {
+            data_set($tripDetails, 'ItineraryInfo.CustomerInfos', collect($tickets)
+                ->map(fn (array $passenger): array => ['CustomerInfo' => self::tripDetailsCustomerInfoWithTicket([], $passenger)])
+                ->all());
+
+            return $tripDetails;
+        }
+
+        $patched = collect($customerInfos)
+            ->map(function (array $customer, int $index) use ($tickets): array {
+                $wrapped = isset($customer['CustomerInfo']) && is_array($customer['CustomerInfo']);
+                $info = $wrapped ? $customer['CustomerInfo'] : $customer;
+                $matched = self::matchingPassengerTicket($info, $tickets, $index);
+
+                if ($matched === null) {
+                    return $customer;
+                }
+
+                $info = self::tripDetailsCustomerInfoWithTicket($info, $matched);
+
+                if ($wrapped) {
+                    $customer['CustomerInfo'] = $info;
+
+                    return $customer;
+                }
+
+                return $info;
+            })
+            ->values()
+            ->all();
+
+        data_set($tripDetails, 'ItineraryInfo.CustomerInfos', $patched);
+
+        return $tripDetails;
+    }
+
+    private static function responseWithTripDetails(array $response, array $tripDetails): array
+    {
+        if ($response !== [] && $tripDetails !== []) {
+            data_set($response, 'TripDetailsResponse.TripDetailsResult.TravelItinerary', $tripDetails);
+        }
+
+        return $response;
+    }
+
+    private static function latestReissuePassengerTickets(FlightBooking $record): array
+    {
+        return $record->postTicketingRequests()
+            ->where('operation_type', 'reissue')
+            ->latest()
+            ->get()
+            ->map(function (PostTicketingRequest $request): array {
+                $paxDetails = self::findPaxDetails($request->response_payload ?? []);
+
+                return self::normalizePostTicketingPaxDetails(is_array($paxDetails) ? $paxDetails : []);
+            })
+            ->first(fn (array $passengers): bool => collect($passengers)->contains(fn (array $passenger): bool => filled($passenger['eTicket'] ?? null))) ?? [];
+    }
+
+    private static function findPaxDetails(array $payload): array
+    {
+        foreach ([
+            'PtrResponse.PtrResult.PtrDetails.PaxDetails',
+            'PtrResponse.PtrResult.PtrDetails.0.PaxDetails',
+            'ReIssueResponse.ReIssueResult.PtrDetails.PaxDetails',
+            'ReIssueResponse.ReIssueResult.PtrDetails.0.PaxDetails',
+            'ReIssueResponse.ReIssueResult.PaxDetails',
+            'PaxDetails',
+            'ptr_status.PtrResponse.PtrResult.PtrDetails.PaxDetails',
+            'ptr_status.PtrResponse.PtrResult.PtrDetails.0.PaxDetails',
+        ] as $path) {
+            $value = data_get($payload, $path);
+
+            if (is_array($value) && $value !== []) {
+                return $value;
+            }
+        }
+
+        return self::findFirstArrayKey($payload, 'PaxDetails') ?? [];
+    }
+
+    private static function findFirstArrayKey(array $payload, string $key): ?array
+    {
+        foreach ($payload as $payloadKey => $value) {
+            if ($payloadKey === $key && is_array($value)) {
+                return $value;
+            }
+
+            if (is_array($value)) {
+                $found = self::findFirstArrayKey($value, $key);
+
+                if ($found !== null) {
+                    return $found;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static function matchingPassengerTicket(array $customerInfo, array $tickets, int $index): ?array
+    {
+        $matched = collect($tickets)->first(function (array $ticket) use ($customerInfo): bool {
+            $customerFirst = strtolower((string) self::firstFilled($customerInfo, ['firstName', 'FirstName', 'PassengerFirstName', 'GivenName']));
+            $customerLast = strtolower((string) self::firstFilled($customerInfo, ['lastName', 'LastName', 'PassengerLastName', 'Surname']));
+
+            return filled($customerFirst)
+                && filled($customerLast)
+                && $customerFirst === strtolower((string) ($ticket['firstName'] ?? ''))
+                && $customerLast === strtolower((string) ($ticket['lastName'] ?? ''));
+        });
+
+        return $matched ?: ($tickets[$index] ?? null);
+    }
+
+    private static function tripDetailsCustomerInfoWithTicket(array $customerInfo, array $ticket): array
+    {
+        $ticketNumber = $ticket['eTicket'] ?? null;
+
+        if (blank($ticketNumber)) {
+            return $customerInfo;
+        }
+
+        $customerInfo['eTicketNumber'] = $ticketNumber;
+        $customerInfo['ETicketNumber'] = $ticketNumber;
+        $customerInfo['eTicket'] = $ticketNumber;
+        $customerInfo['ETicket'] = $ticketNumber;
+
+        return $customerInfo;
     }
 
     private static function ptrStatusOptions(FlightBooking $record): array
@@ -1533,9 +1928,12 @@ class FlightBookingsTable
 
         try {
             $tripResult = app(AdminTicketingService::class)->tripDetails($record->fresh());
+            $patchedTripDetails = self::tripDetailsWithLatestReissueTickets($record->fresh(), $tripResult['trip_details'] ?? []);
 
-            if (($tripResult['ok'] ?? false) && filled($record->contact_email) && ! empty($tripResult['trip_details'] ?? [])) {
-                app(AdminTicketingService::class)->sendETicket($record->fresh(), $tripResult['trip_details']);
+            self::mergeLatestReissueTicketsIntoBooking($record->fresh());
+
+            if (($tripResult['ok'] ?? false) && filled($record->contact_email) && ! empty($patchedTripDetails)) {
+                app(AdminTicketingService::class)->sendETicket($record->fresh(), $patchedTripDetails);
             }
 
             self::recordTicketing($record->fresh(), [
@@ -1549,7 +1947,7 @@ class FlightBookingsTable
                 'request_payload' => $tripResult['request'] ?? [],
                 'response_payload' => [
                     'ptr_status' => $result['response'] ?? [],
-                    'trip_details' => $tripResult['response'] ?? [],
+                    'trip_details' => self::responseWithTripDetails($tripResult['response'] ?? [], $patchedTripDetails),
                 ],
             ]);
         } catch (Throwable $exception) {
@@ -1568,41 +1966,345 @@ class FlightBookingsTable
     {
         return collect($segments)
             ->filter(fn ($segment): bool => is_array($segment))
-            ->map(fn (array $segment): array => [
-                'airportOriginCode' => strtoupper(trim((string) ($segment['airportOriginCode'] ?? ''))),
-                'airportDestinationCode' => strtoupper(trim((string) ($segment['airportDestinationCode'] ?? ''))),
-                'cabinPreference' => strtoupper(trim((string) ($segment['cabinPreference'] ?? 'Y'))),
-                'departureDate' => (string) ($segment['departureDate'] ?? ''),
-                'airlineCode' => strtoupper(trim((string) ($segment['airlineCode'] ?? ''))),
-                'flightNumber' => trim((string) ($segment['flightNumber'] ?? '')),
-            ])
+            ->map(function (array $segment): array {
+                $departDt = self::segmentValue($segment, ['departureDate', 'departDT', 'DepartureDateTime', 'departDate']);
+                $departureDate = '';
+
+                if (filled($departDt)) {
+                    try {
+                        $departureDate = \Carbon\Carbon::parse(self::normalizeProviderDateTimeValue((string) $departDt))->toDateString();
+                    } catch (Throwable) {
+                        $departureDate = (string) $departDt;
+                    }
+                }
+
+                $flightNumber = trim((string) self::segmentValue($segment, ['flightNumber', 'FlightNumber'], ''));
+
+                if ($flightNumber === '' && filled($segment['flightNo'] ?? null)) {
+                    $flightNumber = preg_replace('/^[A-Z]{2}\s*/', '', trim((string) $segment['flightNo'])) ?: '';
+                }
+
+                return [
+                    'airportOriginCode' => strtoupper(trim((string) self::segmentValue($segment, ['airportOriginCode', 'from', 'DepartureAirportLocationCode'], ''))),
+                    'airportDestinationCode' => strtoupper(trim((string) self::segmentValue($segment, ['airportDestinationCode', 'to', 'ArrivalAirportLocationCode'], ''))),
+                    'cabinPreference' => strtoupper(trim((string) self::segmentValue($segment, ['cabinPreference', 'cabinCode', 'CabinClassCode'], 'Y'))),
+                    'departureDate' => $departureDate,
+                    'airlineCode' => strtoupper(trim((string) self::segmentValue($segment, ['airlineCode', 'MarketingAirlineCode'], ''))),
+                    'flightNumber' => $flightNumber,
+                ];
+            })
+            ->filter(fn (array $segment): bool => filled($segment['airportOriginCode'])
+                && filled($segment['airportDestinationCode'])
+                && filled($segment['departureDate'])
+                && filled($segment['airlineCode'])
+                && filled($segment['flightNumber']))
             ->values()
             ->all();
+    }
+
+    private static function reissueScopeOptions(FlightBooking $record): array
+    {
+        $snapshot = $record->flight_snapshot ?? [];
+        $multiLegs = $snapshot['multiLegs'] ?? [];
+
+        if (is_array($multiLegs) && $multiLegs !== []) {
+            return collect($multiLegs)
+                ->filter(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== [])
+                ->mapWithKeys(fn (array $leg, int $index): array => [
+                    'multi:' . $index => self::reissueScopeLabel($record, 'multi:' . $index),
+                ])
+                ->all();
+        }
+
+        $options = [];
+        $segments = $snapshot['segments'] ?? [];
+        $returnSegments = $snapshot['returnSegments'] ?? [];
+
+        if (is_array($segments) && $segments !== []) {
+            $options['outbound'] = self::reissueScopeLabel($record, 'outbound');
+        }
+
+        if (is_array($returnSegments) && $returnSegments !== []) {
+            $options['return'] = self::reissueScopeLabel($record, 'return');
+        }
+
+        return $options !== [] ? $options : ['outbound' => 'Outbound flight'];
+    }
+
+    private static function defaultReissueScope(FlightBooking $record): string
+    {
+        return array_key_first(self::reissueScopeOptions($record)) ?: 'outbound';
+    }
+
+    private static function reissueScopeLabel(FlightBooking $record, ?string $scope): string
+    {
+        $segments = self::reissueScopeSegments($record, $scope);
+        $first = $segments[0] ?? [];
+        $last = $segments === [] ? [] : $segments[array_key_last($segments)];
+        $route = trim((string) self::segmentValue($first, ['from', 'airportOriginCode'], '') . ' -> ' . (string) self::segmentValue($last, ['to', 'airportDestinationCode'], ''));
+        $date = self::dateFromSegment($first);
+
+        $prefix = match (true) {
+            str_starts_with((string) $scope, 'multi:') => 'Multi-city leg ' . (((int) substr((string) $scope, 6)) + 1),
+            $scope === 'return' => 'Return flight',
+            default => 'Outbound flight',
+        };
+
+        return trim($prefix . (filled($route) && $route !== '->' ? ': ' . $route : '') . (filled($date) ? ' - ' . $date : ''));
+    }
+
+    private static function reissueScopeContext(FlightBooking $record, ?string $scope): HtmlString
+    {
+        $segments = self::reissueScopeSegments($record, $scope);
+
+        if ($segments === []) {
+            return new HtmlString('<div class="rounded-lg border border-dashed border-gray-300 p-3 text-sm text-gray-500 dark:border-white/10 dark:text-gray-400">No itinerary segments were found for this selection.</div>');
+        }
+
+        $html = '<div class="rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-gray-900">';
+        $html .= '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e(self::reissueScopeLabel($record, $scope)) . '</div>';
+        $html .= '<div class="overflow-x-auto"><table class="min-w-full text-left text-sm"><thead><tr class="text-xs uppercase text-gray-500 dark:text-gray-400">';
+
+        foreach (['From', 'To', 'Depart', 'Airline', 'Flight', 'Cabin'] as $heading) {
+            $html .= '<th class="border-b border-gray-100 px-3 py-2 font-medium dark:border-white/10">' . e($heading) . '</th>';
+        }
+
+        $html .= '</tr></thead><tbody>';
+
+        foreach ($segments as $segment) {
+            $html .= '<tr class="text-gray-950 dark:text-white">';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e((string) self::segmentValue($segment, ['from', 'airportOriginCode'], '-')) . '</td>';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e((string) self::segmentValue($segment, ['to', 'airportDestinationCode'], '-')) . '</td>';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e(self::watDateTime(self::segmentValue($segment, ['departDT', 'departureDate', 'departDate'], null), 'D, d M Y H:i')) . '</td>';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e((string) self::segmentValue($segment, ['airline', 'airlineCode'], '-')) . '</td>';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e((string) self::segmentValue($segment, ['flightNo', 'flightNumber'], '-')) . '</td>';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e((string) self::segmentValue($segment, ['cabin', 'cabinCode'], '-')) . '</td>';
+            $html .= '</tr>';
+        }
+
+        return new HtmlString($html . '</tbody></table></div></div>');
+    }
+
+    private static function reissueScopeSegments(FlightBooking $record, ?string $scope): array
+    {
+        $snapshot = $record->flight_snapshot ?? [];
+
+        if (str_starts_with((string) $scope, 'multi:')) {
+            $index = (int) substr((string) $scope, 6);
+            $segments = $snapshot['multiLegs'][$index]['segments'] ?? [];
+
+            return is_array($segments) ? array_values($segments) : [];
+        }
+
+        $segments = $scope === 'return'
+            ? ($snapshot['returnSegments'] ?? [])
+            : ($snapshot['segments'] ?? []);
+
+        return is_array($segments) ? array_values($segments) : [];
+    }
+
+    private static function defaultReissueDate(FlightBooking $record, ?string $scope): ?string
+    {
+        $segment = self::reissueScopeSegments($record, $scope)[0] ?? [];
+
+        return self::dateFromSegment(is_array($segment) ? $segment : []);
+    }
+
+    private static function dateFromSegment(array $segment): ?string
+    {
+        $value = self::segmentValue($segment, ['departureDate', 'departDT', 'departDate', 'DepartureDateTime'], null);
+
+        if (blank($value)) {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse(self::normalizeProviderDateTimeValue((string) $value))->toDateString();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private static function buildProposedReissueItinerary(FlightBooking $record, string $scope, array $replacementSegments): array
+    {
+        $snapshot = $record->flight_snapshot ?? [];
+        $multiLegs = is_array($snapshot['multiLegs'] ?? null) ? array_values($snapshot['multiLegs']) : [];
+        $returnSegments = is_array($snapshot['returnSegments'] ?? null) ? array_values($snapshot['returnSegments']) : [];
+        $segments = is_array($snapshot['segments'] ?? null) ? array_values($snapshot['segments']) : [];
+        $tripType = self::snapshotTripType($snapshot);
+
+        if (str_starts_with($scope, 'multi:')) {
+            $index = (int) substr($scope, 6);
+            $multiLegs[$index] = array_merge(is_array($multiLegs[$index] ?? null) ? $multiLegs[$index] : [], [
+                'label' => 'Leg ' . ($index + 1),
+                'segments' => array_values($replacementSegments),
+            ]);
+            $tripType = 'multicity';
+        } elseif ($scope === 'return') {
+            $returnSegments = array_values($replacementSegments);
+            $tripType = 'return';
+        } else {
+            $segments = array_values($replacementSegments);
+        }
+
+        return [
+            'tripType' => $tripType,
+            'directionInd' => $tripType === 'multicity' ? 'Circle' : ($tripType === 'return' ? 'Return' : 'OneWay'),
+            'segments' => $segments,
+            'returnSegments' => $returnSegments,
+            'multiLegs' => $multiLegs,
+        ];
+    }
+
+    private static function snapshotTripType(array $snapshot): string
+    {
+        if (is_array($snapshot['multiLegs'] ?? null) && ($snapshot['multiLegs'] ?? []) !== []) {
+            return 'multicity';
+        }
+
+        if (is_array($snapshot['returnSegments'] ?? null) && ($snapshot['returnSegments'] ?? []) !== []) {
+            return 'return';
+        }
+
+        $tripType = strtolower((string) ($snapshot['tripType'] ?? $snapshot['directionInd'] ?? 'oneway'));
+
+        return str_contains($tripType, 'circle') || str_contains($tripType, 'multi')
+            ? 'multicity'
+            : (str_contains($tripType, 'return') ? 'return' : 'oneway');
+    }
+
+    private static function flattenReissueItineraryGroups(array $structure): array
+    {
+        $multiLegs = $structure['multiLegs'] ?? [];
+
+        if (is_array($multiLegs) && $multiLegs !== []) {
+            return collect($multiLegs)
+                ->filter(fn ($leg): bool => is_array($leg))
+                ->flatMap(fn (array $leg): array => is_array($leg['segments'] ?? null) ? $leg['segments'] : [])
+                ->filter(fn ($segment): bool => is_array($segment))
+                ->values()
+                ->all();
+        }
+
+        return collect(array_merge(
+            is_array($structure['segments'] ?? null) ? $structure['segments'] : [],
+            is_array($structure['returnSegments'] ?? null) ? $structure['returnSegments'] : [],
+        ))
+            ->filter(fn ($segment): bool => is_array($segment))
+            ->values()
+            ->all();
+    }
+
+    private static function segmentValue(array $segment, array $keys, mixed $default = null): mixed
+    {
+        foreach ($keys as $key) {
+            if (filled($segment[$key] ?? null)) {
+                return $segment[$key];
+            }
+        }
+
+        return $default;
     }
 
     private static function reissuedFlightSnapshot(FlightBooking $record, PostTicketingRequest $ptr): array
     {
         $quoteRequest = self::matchingReissueQuoteRequest($record, $ptr);
-        $segments = $quoteRequest?->request_payload['_displayReplacementSegments']
-            ?? $quoteRequest?->request_payload['OriginDestinationInfo']
-            ?? [];
+        $structure = $quoteRequest?->request_payload['_reissueItineraryStructure'] ?? null;
 
-        if (! is_array($segments) || $segments === []) {
+        if (! is_array($structure) || self::flattenReissueItineraryGroups($structure) === []) {
+            $segments = $quoteRequest?->request_payload['_displayReplacementSegments']
+                ?? $quoteRequest?->request_payload['OriginDestinationInfo']
+                ?? [];
+
+            if (! is_array($segments) || $segments === []) {
+                return [];
+            }
+
+            $structure = [
+                'tripType' => 'oneway',
+                'directionInd' => 'OneWay',
+                'segments' => $segments,
+                'returnSegments' => [],
+                'multiLegs' => [],
+            ];
+        }
+
+        $mappedOutbound = self::mapReissueSegmentsForSnapshot($structure['segments'] ?? []);
+        $mappedReturn = self::mapReissueSegmentsForSnapshot($structure['returnSegments'] ?? []);
+        $mappedMultiLegs = collect($structure['multiLegs'] ?? [])
+            ->filter(fn ($leg): bool => is_array($leg))
+            ->map(function (array $leg, int $index): array {
+                $segments = self::mapReissueSegmentsForSnapshot($leg['segments'] ?? []);
+                $first = $segments[0] ?? null;
+                $last = $segments === [] ? null : $segments[array_key_last($segments)];
+
+                return array_merge($leg, [
+                    'label' => $leg['label'] ?? 'Leg ' . ($index + 1),
+                    'from' => $first['from'] ?? ($leg['from'] ?? null),
+                    'to' => $last['to'] ?? ($leg['to'] ?? null),
+                    'departureDate' => $first['departDT'] ?? ($leg['departureDate'] ?? null),
+                    'segments' => $segments,
+                ]);
+            })
+            ->filter(fn (array $leg): bool => ($leg['segments'] ?? []) !== [])
+            ->values()
+            ->all();
+
+        if ($mappedOutbound === [] && $mappedReturn === [] && $mappedMultiLegs === []) {
             return [];
         }
 
-        $mappedSegments = collect($segments)
+        $displaySegments = $mappedMultiLegs !== []
+            ? ($mappedMultiLegs[0]['segments'] ?? [])
+            : $mappedOutbound;
+        $allSegments = collect($mappedMultiLegs !== []
+            ? collect($mappedMultiLegs)->flatMap(fn (array $leg): array => $leg['segments'] ?? [])->all()
+            : array_merge($mappedOutbound, $mappedReturn))->values()->all();
+        $first = $allSegments[0] ?? [];
+        $last = $allSegments === [] ? [] : $allSegments[array_key_last($allSegments)];
+        $existing = $record->flight_snapshot ?? [];
+        $tripType = (string) ($structure['tripType'] ?? ($mappedMultiLegs !== [] ? 'multicity' : ($mappedReturn !== [] ? 'return' : 'oneway')));
+        $directionInd = (string) ($structure['directionInd'] ?? ($tripType === 'multicity' ? 'Circle' : ($tripType === 'return' ? 'Return' : 'OneWay')));
+
+        return array_merge($existing, [
+            'airline' => $first['airline'] ?? ($existing['airline'] ?? ''),
+            'airlineCode' => $first['airlineCode'] ?? ($existing['airlineCode'] ?? ''),
+            'cabin' => $first['cabin'] ?? ($existing['cabin'] ?? ''),
+            'cabinCode' => $first['cabinCode'] ?? ($existing['cabinCode'] ?? 'Y'),
+            'segments' => $displaySegments,
+            'returnSegments' => $mappedReturn,
+            'multiLegs' => $mappedMultiLegs,
+            'tripType' => $tripType,
+            'directionInd' => $directionInd,
+            'departDT' => $first['departDT'] ?? null,
+            'arriveDT' => $last['arriveDT'] ?? null,
+            'departTime' => $first['departTime'] ?? '',
+            'arriveTime' => $last['arriveTime'] ?? '',
+            'departDateLabel' => filled($first['departDT'] ?? null) ? self::watDateTime($first['departDT'], 'D, d M') : '',
+            'stops' => max(0, count($displaySegments) - 1),
+        ]);
+    }
+
+    private static function mapReissueSegmentsForSnapshot(array $segments): array
+    {
+        return collect($segments)
             ->filter(fn ($segment): bool => is_array($segment))
             ->map(function (array $segment): array {
-                $departureDate = (string) ($segment['departureDate'] ?? '');
-                $departDt = $segment['departDT'] ?? $departureDate;
-                $arriveDt = $segment['arriveDT'] ?? null;
-                $airlineCode = strtoupper((string) ($segment['airlineCode'] ?? ''));
-                $flightNumber = (string) ($segment['flightNumber'] ?? '');
+                $departureDate = (string) self::segmentValue($segment, ['departureDate', 'departDT', 'DepartureDateTime', 'departDate'], '');
+                $departDt = (string) self::segmentValue($segment, ['departDT', 'DepartureDateTime', 'departureDate', 'departDate'], $departureDate);
+                $arriveDt = self::segmentValue($segment, ['arriveDT', 'ArrivalDateTime'], null);
+                $airlineCode = strtoupper((string) self::segmentValue($segment, ['airlineCode', 'MarketingAirlineCode'], ''));
+                $flightNumber = (string) self::segmentValue($segment, ['flightNumber', 'FlightNumber'], '');
+
+                if ($flightNumber === '' && filled($segment['flightNo'] ?? null)) {
+                    $flightNumber = preg_replace('/^[A-Z]{2}\s*/', '', trim((string) $segment['flightNo'])) ?: '';
+                }
+
+                $cabinCode = strtoupper((string) self::segmentValue($segment, ['cabinPreference', 'cabinCode', 'CabinClassCode'], 'Y'));
 
                 return [
-                    'from' => strtoupper((string) ($segment['airportOriginCode'] ?? '')),
-                    'to' => strtoupper((string) ($segment['airportDestinationCode'] ?? '')),
+                    'from' => strtoupper((string) self::segmentValue($segment, ['airportOriginCode', 'from', 'DepartureAirportLocationCode'], '')),
+                    'to' => strtoupper((string) self::segmentValue($segment, ['airportDestinationCode', 'to', 'ArrivalAirportLocationCode'], '')),
                     'departTime' => $segment['departTime'] ?? (filled($departDt) && strlen($departDt) > 10 ? self::watDateTime($departDt, 'H:i') : ''),
                     'arriveTime' => $segment['arriveTime'] ?? (filled($arriveDt) ? self::watDateTime($arriveDt, 'H:i') : ''),
                     'departDate' => filled($departDt) ? self::watDateTime($departDt, 'D, d M Y') : $departureDate,
@@ -1614,40 +2316,15 @@ class FlightBookingsTable
                     'flightNumber' => $flightNumber,
                     'airline' => $segment['airline'] ?? $airlineCode,
                     'airlineCode' => $airlineCode,
-                    'cabin' => $segment['cabin'] ?? self::cabinLabel($segment['cabinPreference'] ?? 'Y'),
-                    'cabinCode' => strtoupper((string) ($segment['cabinPreference'] ?? 'Y')),
+                    'cabin' => $segment['cabin'] ?? self::cabinLabel($cabinCode),
+                    'cabinCode' => $cabinCode,
                     'equipment' => $segment['equipment'] ?? '',
                     'eticket' => true,
                 ];
             })
+            ->filter(fn (array $segment): bool => filled($segment['from'] ?? null) && filled($segment['to'] ?? null))
             ->values()
             ->all();
-
-        if ($mappedSegments === []) {
-            return [];
-        }
-
-        $first = $mappedSegments[0];
-        $last = $mappedSegments[array_key_last($mappedSegments)];
-        $existing = $record->flight_snapshot ?? [];
-
-        return array_merge($existing, [
-            'airline' => $first['airline'] ?? ($existing['airline'] ?? ''),
-            'airlineCode' => $first['airlineCode'] ?? ($existing['airlineCode'] ?? ''),
-            'cabin' => $first['cabin'] ?? ($existing['cabin'] ?? ''),
-            'cabinCode' => $first['cabinCode'] ?? ($existing['cabinCode'] ?? 'Y'),
-            'segments' => $mappedSegments,
-            'returnSegments' => [],
-            'multiLegs' => [],
-            'tripType' => 'oneway',
-            'directionInd' => 'OneWay',
-            'departDT' => $first['departDT'] ?? null,
-            'arriveDT' => $last['arriveDT'] ?? null,
-            'departTime' => $first['departTime'] ?? '',
-            'arriveTime' => $last['arriveTime'] ?? '',
-            'departDateLabel' => filled($first['departDT'] ?? null) ? self::watDateTime($first['departDT'], 'D, d M') : '',
-            'stops' => max(0, count($mappedSegments) - 1),
-        ]);
     }
 
     private static function matchingReissueQuoteRequest(FlightBooking $record, PostTicketingRequest $ptr): ?PostTicketingRequest
@@ -1672,6 +2349,22 @@ class FlightBookingsTable
 
     private static function routeFromSnapshot(array $snapshot): ?string
     {
+        $multiLegs = $snapshot['multiLegs'] ?? [];
+
+        if (is_array($multiLegs) && $multiLegs !== []) {
+            $firstLeg = collect($multiLegs)->first(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== []);
+            $lastLeg = collect($multiLegs)->reverse()->first(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== []);
+            $firstSegments = is_array($firstLeg) ? ($firstLeg['segments'] ?? []) : [];
+            $lastSegments = is_array($lastLeg) ? ($lastLeg['segments'] ?? []) : [];
+
+            if ($firstSegments !== [] && $lastSegments !== []) {
+                $first = $firstSegments[0];
+                $last = $lastSegments[array_key_last($lastSegments)];
+
+                return trim(($first['from'] ?? '') . ' -> ' . ($last['to'] ?? ''));
+            }
+        }
+
         $segments = $snapshot['segments'] ?? [];
 
         if (! is_array($segments) || $segments === []) {
@@ -1698,10 +2391,6 @@ class FlightBookingsTable
     {
         $passengers = self::normalizePostTicketingPaxDetails($record->passengers_snapshot ?? []);
 
-        if ($passengers === [] || collect($passengers)->every(fn (array $passenger): bool => filled($passenger['eTicket'] ?? null))) {
-            return $passengers;
-        }
-
         try {
             $tripResult = app(AdminTicketingService::class)->tripDetails($record);
         } catch (Throwable) {
@@ -1710,6 +2399,10 @@ class FlightBookingsTable
 
         if (! ($tripResult['ok'] ?? false)) {
             return $passengers;
+        }
+
+        if ($passengers === []) {
+            $passengers = self::normalizePostTicketingPaxDetails(self::tripDetailsCustomerInfos($tripResult['trip_details'] ?? [])->all());
         }
 
         return self::mergePostTicketingTickets($passengers, $tripResult['trip_details'] ?? []);
@@ -1738,12 +2431,36 @@ class FlightBookingsTable
             ->all();
     }
 
+    private static function postTicketingPassengerValidationMessage(array $passengers): ?string
+    {
+        if ($passengers === []) {
+            return 'At least one passenger with a valid e-ticket is required.';
+        }
+
+        foreach ($passengers as $index => $passenger) {
+            $label = 'Passenger ' . ($index + 1);
+            $missing = collect([
+                'type' => $passenger['type'] ?? null,
+                'title' => $passenger['title'] ?? null,
+                'first name' => $passenger['firstName'] ?? null,
+                'last name' => $passenger['lastName'] ?? null,
+                'e-ticket' => $passenger['eTicket'] ?? null,
+            ])
+                ->filter(fn (mixed $value): bool => blank($value))
+                ->keys()
+                ->implode(', ');
+
+            if (filled($missing)) {
+                return $label . ' is missing ' . $missing . '. Fetch Trip Details, check PTR Status after reissue, or update the passenger ticket details before requesting a quote.';
+            }
+        }
+
+        return null;
+    }
+
     private static function mergePostTicketingTickets(array $passengers, array $tripDetails): array
     {
-        $customerInfos = collect(data_get($tripDetails, 'ItineraryInfo.CustomerInfos', []))
-            ->filter(fn ($customer): bool => is_array($customer))
-            ->map(fn (array $customer): array => $customer['CustomerInfo'] ?? $customer)
-            ->values();
+        $customerInfos = self::tripDetailsCustomerInfos($tripDetails);
 
         if ($customerInfos->isEmpty()) {
             return $passengers;
@@ -1763,10 +2480,6 @@ class FlightBookingsTable
 
         return collect($passengers)
             ->map(function (array $passenger, int $index) use ($customerInfos, $ticketNumbers): array {
-                if (filled($passenger['eTicket'] ?? null)) {
-                    return $passenger;
-                }
-
                 $matchedCustomer = $customerInfos->first(function (array $customer) use ($passenger): bool {
                     $firstName = strtolower((string) self::firstFilled($customer, ['firstName', 'FirstName', 'PassengerFirstName', 'GivenName']));
                     $lastName = strtolower((string) self::firstFilled($customer, ['lastName', 'LastName', 'PassengerLastName', 'Surname']));
@@ -1777,14 +2490,26 @@ class FlightBookingsTable
                         && $lastName === strtolower((string) ($passenger['lastName'] ?? ''));
                 });
 
-                $passenger['eTicket'] = $matchedCustomer
+                $newTicket = $matchedCustomer
                     ? self::firstFilled($matchedCustomer, ['eTicketNumber', 'ETicketNumber', 'eTicket', 'ETicket', 'TicketNumber', 'ticketNumber'])
                     : $ticketNumbers->get($index);
+
+                if (filled($newTicket)) {
+                    $passenger['eTicket'] = $newTicket;
+                }
 
                 return $passenger;
             })
             ->values()
             ->all();
+    }
+
+    private static function tripDetailsCustomerInfos(array $tripDetails): \Illuminate\Support\Collection
+    {
+        return collect(data_get($tripDetails, 'ItineraryInfo.CustomerInfos', []))
+            ->filter(fn ($customer): bool => is_array($customer))
+            ->map(fn (array $customer): array => $customer['CustomerInfo'] ?? $customer)
+            ->values();
     }
 
     private static function postTicketingPaxOptions(FlightBooking $record, ?string $quotePtrUniqueId = null): array
@@ -1833,21 +2558,21 @@ class FlightBookingsTable
         return self::postTicketingPaxDetails($record);
     }
 
-    private static function defaultReissueAirport(FlightBooking $record, string $direction): ?string
+    private static function defaultReissueAirport(FlightBooking $record, string $direction, ?string $scope = null): ?string
     {
-        $segments = $record->flight_snapshot['segments'] ?? [];
+        $segments = self::reissueScopeSegments($record, $scope ?: self::defaultReissueScope($record));
 
-        if (! is_array($segments) || $segments === []) {
+        if ($segments === []) {
             return null;
         }
 
         if ($direction === 'from') {
-            return strtoupper((string) ($segments[0]['from'] ?? ''));
+            return strtoupper((string) self::segmentValue($segments[0], ['from', 'airportOriginCode'], ''));
         }
 
         $last = $segments[array_key_last($segments)] ?? [];
 
-        return strtoupper((string) ($last['to'] ?? ''));
+        return strtoupper((string) self::segmentValue($last, ['to', 'airportDestinationCode'], ''));
     }
 
     private static function defaultReissueCabin(FlightBooking $record): string
@@ -2039,13 +2764,84 @@ class FlightBookingsTable
         }
 
         if ($requiresQuoteType) {
-            return $record->postTicketingRequests()
-                ->where('operation_type', $requiresQuoteType)
-                ->whereNotNull('ptr_unique_id')
-                ->exists();
+            return self::availablePostTicketingQuoteOptions($record, $requiresQuoteType) !== [];
         }
 
         return true;
+    }
+
+    private static function availablePostTicketingQuoteOptions(FlightBooking $record, string $quoteOperationType): array
+    {
+        $finalOperationType = self::finalOperationForQuote($quoteOperationType);
+
+        if ($finalOperationType === null) {
+            return [];
+        }
+
+        $consumedQuotePtrs = self::consumedPostTicketingQuotePtrs($record, $finalOperationType);
+
+        return $record->postTicketingRequests()
+            ->where('operation_type', $quoteOperationType)
+            ->whereNotNull('ptr_unique_id')
+            ->latest()
+            ->get()
+            ->reject(fn (PostTicketingRequest $quote): bool => in_array((string) $quote->ptr_unique_id, $consumedQuotePtrs, true))
+            ->mapWithKeys(fn (PostTicketingRequest $quote): array => [
+                (string) $quote->ptr_unique_id => trim(collect([
+                    (string) $quote->ptr_unique_id,
+                    str((string) $quote->status)->replace('_', ' ')->headline()->toString(),
+                    $quote->created_at?->timezone('Africa/Lagos')->format('d M Y, H:i'),
+                ])->filter()->implode(' / ')),
+            ])
+            ->all();
+    }
+
+    private static function isOpenPostTicketingQuote(FlightBooking $record, string $finalOperationType, string $ptrUniqueId): bool
+    {
+        $quoteOperationType = match ($finalOperationType) {
+            'void' => 'void_quote',
+            'refund' => 'refund_quote',
+            'reissue' => 'reissue_quote',
+            default => null,
+        };
+
+        if ($quoteOperationType === null) {
+            return true;
+        }
+
+        return array_key_exists($ptrUniqueId, self::availablePostTicketingQuoteOptions($record, $quoteOperationType));
+    }
+
+    private static function finalOperationForQuote(string $quoteOperationType): ?string
+    {
+        return match ($quoteOperationType) {
+            'void_quote' => 'void',
+            'refund_quote' => 'refund',
+            'reissue_quote' => 'reissue',
+            default => null,
+        };
+    }
+
+    private static function consumedPostTicketingQuotePtrs(FlightBooking $record, string $finalOperationType): array
+    {
+        return $record->postTicketingRequests()
+            ->where('operation_type', $finalOperationType)
+            ->where('status', '!=', 'failed')
+            ->latest()
+            ->get()
+            ->map(function (PostTicketingRequest $request) use ($finalOperationType): ?string {
+                $payload = $request->request_payload ?? [];
+
+                $ptrUniqueId = $finalOperationType === 'reissue'
+                    ? ($payload['ptrUniqueID'] ?? null)
+                    : ($payload['_selectedQuotePtrUniqueID'] ?? $payload['ptrUniqueID'] ?? null);
+
+                return filled($ptrUniqueId) ? (string) $ptrUniqueId : null;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private static function postTicketingDescription(string $operationType, FlightBooking $record): string

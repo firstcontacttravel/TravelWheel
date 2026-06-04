@@ -106,11 +106,27 @@ class ETicketPdfService
             data_get($tripDetails, 'ItineraryInfo.CustomerInfos', [])
         )->map(fn($c) => $c['CustomerInfo'] ?? $c);
 
-        // Enrich passenger records with eticket numbers
+        // Enrich passenger records with e-ticket numbers. Prefer live Trip Details,
+        // but keep the booking snapshot value when the provider omits it.
         $passengers = collect($passengers)->map(function ($pax, $i) use ($customerInfos) {
             $info = $customerInfos->get($i, []);
+
             return array_merge($pax, [
-                'eticket' => $info['eTicketNumber'] ?? null,
+                'eticket' => $this->firstFilled($info, [
+                    'eTicketNumber',
+                    'ETicketNumber',
+                    'eTicket',
+                    'ETicket',
+                    'TicketNumber',
+                    'ticketNumber',
+                ]) ?: $this->firstFilled($pax, [
+                    'eticket',
+                    'eTicket',
+                    'eTicketNumber',
+                    'ETicket',
+                    'TicketNumber',
+                    'ticketNumber',
+                ]),
             ]);
         })->all();
 
@@ -157,5 +173,18 @@ class ETicketPdfService
             'currencySymbol'   => $sym,
             'paymentMethod'    => $booking->payment_method ?? 'gateway',
         ];
+    }
+
+    private function firstFilled(array $data, array $keys): ?string
+    {
+        foreach ($keys as $key) {
+            $value = data_get($data, $key);
+
+            if ($value !== null && trim((string) $value) !== '') {
+                return (string) $value;
+            }
+        }
+
+        return null;
     }
 }

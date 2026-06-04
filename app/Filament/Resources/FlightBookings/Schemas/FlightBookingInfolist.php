@@ -27,18 +27,9 @@ class FlightBookingInfolist
                         Section::make('Itinerary')
                             ->description('Booked journey, fare, and selected flight.')
                             ->schema([
-                                TextEntry::make('route')->placeholder('-'),
-                                TextEntry::make('airline')->placeholder('-'),
-                                TextEntry::make('trip_type')->label('Trip type')->placeholder('-')->formatStateUsing(fn (?string $state): string => filled($state) ? str($state)->headline()->toString() : '-'),
-                                TextEntry::make('fare_type')->label('Fare')->badge()->placeholder('-'),
-                                TextEntry::make('cabin')->placeholder('-'),
-                                TextEntry::make('total_price')
-                                    ->label('Total')
-                                    ->formatStateUsing(fn ($record): string => trim(($record->currency ?? 'NGN') . ' ' . number_format((float) $record->total_price, 2))),
                                 Html::make(fn ($record) => FlightBookingPresentation::flight($record->flight_snapshot))
                                     ->columnSpanFull(),
                             ])
-                            ->columns(3)
                             ->columnSpan([
                                 'default' => 1,
                                 'xl' => 8,
@@ -48,23 +39,10 @@ class FlightBookingInfolist
                             ->schema([
                                 Section::make('Status')
                                     ->schema([
-                                        TextEntry::make('booking_status')
-                                            ->label('Booking')
-                                            ->badge()
-                                            ->color(fn (?string $state): string => match ($state) {
-                                                'ticketed', 'confirmed' => 'success',
-                                                'failed', 'cancelled', 'ticketing_failed' => 'danger',
-                                                'on_hold' => 'warning',
-                                                default => 'gray',
-                                            })
-                                            ->formatStateUsing(fn (?string $state): string => filled($state) ? str($state)->replace('_', ' ')->headline()->toString() : '-'),
-                                        TextEntry::make('tkt_time_limit')->label('Ticket deadline')->dateTime()->placeholder('-'),
-                                        IconEntry::make('ticket_ordered')->label('Ticket ordered')->boolean(),
-                                        TextEntry::make('ticket_ordered_at')->label('Ordered at')->dateTime()->placeholder('-'),
-                                        IconEntry::make('confirmation_email_sent')->label('Confirmation sent')->boolean(),
-                                        IconEntry::make('pending_email_sent')->label('Pending email sent')->boolean(),
+                                        Html::make(fn ($record) => FlightBookingPresentation::ticketStatusCard($record))
+                                            ->columnSpanFull(),
                                     ])
-                                    ->columns(2),
+                                    ->columns(1),
 
                                 Section::make('Payment')
                                     ->schema([
