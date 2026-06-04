@@ -1120,6 +1120,7 @@ class FlightBookingsTable
                         ->label('Passenger ticket details')
                         ->helperText('Confirm the passenger names and e-ticket numbers before submitting this request.')
                         ->default(json_encode(self::postTicketingPaxDetails($record), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))
+                        ->disabled($operationType === 'reissue_quote')
                         ->required()
                         ->rows(8);
                 }
@@ -1140,7 +1141,7 @@ class FlightBookingsTable
                 if ($needsReissueSegments) {
                     $schema[] = Select::make('replacement_scope')
                         ->label('Affected flight')
-                        ->helperText('Choose the exact outbound, return, or multi-city leg the customer wants to change. The unchanged legs will still be sent with the reissue quote.')
+                        ->helperText('Choose one journey part, or rebuild the entire itinerary when the customer wants a full flight-plan change.')
                         ->options(fn (): array => self::reissueScopeOptions($record))
                         ->default(fn (): string => self::defaultReissueScope($record))
                         ->afterStateUpdated(function (Set $set, ?string $state) use ($record): void {
@@ -1148,6 +1149,11 @@ class FlightBookingsTable
                             $set('replacement_to', self::defaultReissueAirport($record, 'to', $state));
                             $set('replacement_departure_date', self::defaultReissueDate($record, $state));
                             $set('replacement_flight_option', null);
+
+                            foreach (self::reissueWholeItineraryScopes($record) as $scope => $label) {
+                                $key = self::reissueScopeFieldKey($scope);
+                                $set('replacement_entire_' . $key . '_flight_option', null);
+                            }
                         })
                         ->live()
                         ->required()
@@ -1156,6 +1162,7 @@ class FlightBookingsTable
                     $schema[] = Placeholder::make('replacement_scope_context')
                         ->label('Current itinerary part')
                         ->content(fn (Get $get): HtmlString => self::reissueScopeContext($record, $get('replacement_scope')))
+                        ->visible(fn (Get $get): bool => $get('replacement_scope') !== 'entire')
                         ->columnSpanFull();
 
                     $schema[] = Select::make('replacement_from')
@@ -1166,8 +1173,9 @@ class FlightBookingsTable
                         ->getOptionLabelUsing(fn (?string $value): ?string => app(AdminReplacementFlightSearchService::class)->airportLabel($value))
                         ->searchable()
                         ->preload(false)
-                        ->required()
-                        ->live();
+                        ->required(fn (Get $get): bool => $get('replacement_scope') !== 'entire')
+                        ->live()
+                        ->visible(fn (Get $get): bool => $get('replacement_scope') !== 'entire');
 
                     $schema[] = Select::make('replacement_to')
                         ->label('Replacement to')
@@ -1177,8 +1185,9 @@ class FlightBookingsTable
                         ->getOptionLabelUsing(fn (?string $value): ?string => app(AdminReplacementFlightSearchService::class)->airportLabel($value))
                         ->searchable()
                         ->preload(false)
-                        ->required()
-                        ->live();
+                        ->required(fn (Get $get): bool => $get('replacement_scope') !== 'entire')
+                        ->live()
+                        ->visible(fn (Get $get): bool => $get('replacement_scope') !== 'entire');
 
                     $schema[] = Select::make('replacement_cabin')
                         ->label('Cabin')
@@ -1189,15 +1198,19 @@ class FlightBookingsTable
                             'F' => 'First (F)',
                         ])
                         ->default(fn () => self::defaultReissueCabin($record))
-                        ->required()
-                        ->live();
+                        ->required(fn (Get $get): bool => $get('replacement_scope') !== 'entire')
+                        ->live()
+                        ->visible(fn (Get $get): bool => $get('replacement_scope') !== 'entire');
 
                     $schema[] = DatePicker::make('replacement_departure_date')
                         ->label('New departure date')
                         ->native(false)
                         ->default(fn () => self::defaultReissueDate($record, self::defaultReissueScope($record)))
-                        ->required()
-                        ->live();
+                        ->minDate(fn (Get $get): ?string => self::reissueDateBoundary($record, (string) $get('replacement_scope'), 'min'))
+                        ->maxDate(fn (Get $get): ?string => self::reissueDateBoundary($record, (string) $get('replacement_scope'), 'max'))
+                        ->required(fn (Get $get): bool => $get('replacement_scope') !== 'entire')
+                        ->live()
+                        ->visible(fn (Get $get): bool => $get('replacement_scope') !== 'entire');
 
                     $schema[] = Select::make('replacement_flight_option')
                         ->label('Replacement flight')
@@ -1212,14 +1225,104 @@ class FlightBookingsTable
                         ->searchable()
                         ->preload(false)
                         ->live()
-                        ->required()
+                        ->required(fn (Get $get): bool => $get('replacement_scope') !== 'entire')
+                        ->visible(fn (Get $get): bool => $get('replacement_scope') !== 'entire')
                         ->columnSpanFull();
 
                     $schema[] = Placeholder::make('replacement_flight_preview')
                         ->label('Selected flight details')
                         ->content(fn (Get $get): HtmlString => self::replacementFlightPreview($get('replacement_flight_option')))
-                        ->visible(fn (Get $get): bool => filled($get('replacement_flight_option')))
+                        ->visible(fn (Get $get): bool => $get('replacement_scope') !== 'entire' && filled($get('replacement_flight_option')))
                         ->columnSpanFull();
+
+                    $schema[] = Placeholder::make('replacement_entire_context')
+                        ->label('Current itinerary')
+                        ->content(fn (): HtmlString => self::reissueEntireScopeContext($record))
+                        ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire')
+                        ->columnSpanFull();
+
+                    foreach (self::reissueWholeItineraryScopes($record) as $scope => $scopeLabel) {
+                        $key = self::reissueScopeFieldKey($scope);
+
+                        $schema[] = Placeholder::make('replacement_entire_' . $key . '_heading')
+                            ->hiddenLabel()
+                            ->content(fn (): HtmlString => new HtmlString('<div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white">' . e($scopeLabel) . '</div>'))
+                            ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire')
+                            ->columnSpanFull();
+
+                        $schema[] = Select::make('replacement_entire_' . $key . '_from')
+                            ->label('From')
+                            ->default(fn () => self::defaultReissueAirport($record, 'from', $scope))
+                            ->getSearchResultsUsing(fn (?string $search): array => app(AdminReplacementFlightSearchService::class)->airportSearchOptions($search))
+                            ->getOptionLabelUsing(fn (?string $value): ?string => app(AdminReplacementFlightSearchService::class)->airportLabel($value))
+                            ->searchable()
+                            ->preload(false)
+                            ->required(fn (Get $get): bool => $get('replacement_scope') === 'entire')
+                            ->afterStateUpdated(function (Set $set, ?string $state) use ($record, $scope): void {
+                                self::syncRoundTripEntireReissueRoute($record, $set, $scope, 'from', $state);
+                            })
+                            ->live()
+                            ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire');
+
+                        $schema[] = Select::make('replacement_entire_' . $key . '_to')
+                            ->label('To')
+                            ->default(fn () => self::defaultReissueAirport($record, 'to', $scope))
+                            ->getSearchResultsUsing(fn (?string $search): array => app(AdminReplacementFlightSearchService::class)->airportSearchOptions($search))
+                            ->getOptionLabelUsing(fn (?string $value): ?string => app(AdminReplacementFlightSearchService::class)->airportLabel($value))
+                            ->searchable()
+                            ->preload(false)
+                            ->required(fn (Get $get): bool => $get('replacement_scope') === 'entire')
+                            ->afterStateUpdated(function (Set $set, ?string $state) use ($record, $scope): void {
+                                self::syncRoundTripEntireReissueRoute($record, $set, $scope, 'to', $state);
+                            })
+                            ->live()
+                            ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire');
+
+                        $schema[] = Select::make('replacement_entire_' . $key . '_cabin')
+                            ->label('Cabin')
+                            ->options([
+                                'Y' => 'Economy (Y)',
+                                'S' => 'Premium Economy (S)',
+                                'C' => 'Business (C)',
+                                'F' => 'First (F)',
+                            ])
+                            ->default(fn () => self::defaultReissueCabin($record))
+                            ->required(fn (Get $get): bool => $get('replacement_scope') === 'entire')
+                            ->live()
+                            ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire');
+
+                        $schema[] = DatePicker::make('replacement_entire_' . $key . '_departure_date')
+                            ->label('New departure date')
+                            ->native(false)
+                            ->default(fn () => self::defaultReissueDate($record, $scope))
+                            ->minDate(fn (Get $get): ?string => self::reissueDateBoundary($record, $scope, 'min', $get))
+                            ->required(fn (Get $get): bool => $get('replacement_scope') === 'entire')
+                            ->live()
+                            ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire');
+
+                        $schema[] = Select::make('replacement_entire_' . $key . '_flight_option')
+                            ->label('Replacement flight')
+                            ->helperText('Select the replacement for this itinerary part.')
+                            ->options(fn (Get $get): array => app(AdminReplacementFlightSearchService::class)->options($record, [
+                                'from' => $get('replacement_entire_' . $key . '_from'),
+                                'to' => $get('replacement_entire_' . $key . '_to'),
+                                'departure_date' => $get('replacement_entire_' . $key . '_departure_date'),
+                                'cabin' => $get('replacement_entire_' . $key . '_cabin'),
+                                'scope' => $scope,
+                            ]))
+                            ->searchable()
+                            ->preload(false)
+                            ->live()
+                            ->required(fn (Get $get): bool => $get('replacement_scope') === 'entire')
+                            ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire')
+                            ->columnSpanFull();
+
+                        $schema[] = Placeholder::make('replacement_entire_' . $key . '_preview')
+                            ->label('Selected flight details')
+                            ->content(fn (Get $get): HtmlString => self::replacementFlightPreview($get('replacement_entire_' . $key . '_flight_option')))
+                            ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire' && filled($get('replacement_entire_' . $key . '_flight_option')))
+                            ->columnSpanFull();
+                    }
                 }
 
                 $schema[] = Textarea::make('remark')
@@ -1303,25 +1406,46 @@ class FlightBookingsTable
 
                 if ($needsReissueSegments) {
                     $replacementScope = (string) ($data['replacement_scope'] ?? self::defaultReissueScope($record));
-                    $replacementSegments = app(AdminReplacementFlightSearchService::class)
-                        ->decodeOption($data['replacement_flight_option'] ?? null);
 
-                    if ($replacementSegments === []) {
-                        Notification::make()->title('Invalid replacement flight')->body('Search again and select a replacement flight before requesting a quote.')->danger()->send();
-                        return;
+                    if ($replacementScope === 'entire') {
+                        $replacementMap = self::decodeEntireReissueReplacementMap($record, $data);
+
+                        if (count($replacementMap) !== count(self::reissueWholeItineraryScopes($record))) {
+                            Notification::make()->title('Incomplete replacement itinerary')->body('Select a replacement flight for every outbound, return, or multi-city part before requesting the quote.')->danger()->send();
+                            return;
+                        }
+
+                        $proposedItinerary = self::buildEntireReissueItinerary($record, $replacementMap);
+                        $displayReplacementSegments = collect($replacementMap)->flatMap(fn (array $segments): array => $segments)->values()->all();
+                    } else {
+                        $replacementSegments = app(AdminReplacementFlightSearchService::class)
+                            ->decodeOption($data['replacement_flight_option'] ?? null);
+
+                        if ($replacementSegments === []) {
+                            Notification::make()->title('Invalid replacement flight')->body('Search again and select a replacement flight before requesting a quote.')->danger()->send();
+                            return;
+                        }
+
+                        $proposedItinerary = self::buildProposedReissueItinerary($record, $replacementScope, $replacementSegments);
+                        $displayReplacementSegments = $replacementSegments;
                     }
-
-                    $proposedItinerary = self::buildProposedReissueItinerary($record, $replacementScope, $replacementSegments);
 
                     if (self::flattenReissueItineraryGroups($proposedItinerary) === []) {
                         Notification::make()->title('Invalid itinerary')->body('The selected booking does not have enough itinerary details for a reissue quote.')->danger()->send();
                         return;
                     }
 
+                    $dateError = self::reissueItineraryDateValidationMessage($proposedItinerary);
+
+                    if ($dateError !== null) {
+                        Notification::make()->title('Invalid reissue dates')->body($dateError)->danger()->send();
+                        return;
+                    }
+
                     $extraPayload['_reissueScope'] = $replacementScope;
                     $extraPayload['_reissueScopeLabel'] = self::reissueScopeLabel($record, $replacementScope);
                     $extraPayload['_reissueItineraryStructure'] = $proposedItinerary;
-                    $extraPayload['_displayReplacementSegments'] = $replacementSegments;
+                    $extraPayload['_displayReplacementSegments'] = $displayReplacementSegments;
                     $extraPayload['OriginDestinationInfo'] = self::apiReissueOriginDestinationInfo(self::flattenReissueItineraryGroups($proposedItinerary));
                 }
 
@@ -2004,16 +2128,21 @@ class FlightBookingsTable
 
     private static function reissueScopeOptions(FlightBooking $record): array
     {
+        $wholeScopes = self::reissueWholeItineraryScopes($record);
         $snapshot = $record->flight_snapshot ?? [];
         $multiLegs = $snapshot['multiLegs'] ?? [];
 
         if (is_array($multiLegs) && $multiLegs !== []) {
-            return collect($multiLegs)
+            $options = collect($multiLegs)
                 ->filter(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== [])
                 ->mapWithKeys(fn (array $leg, int $index): array => [
                     'multi:' . $index => self::reissueScopeLabel($record, 'multi:' . $index),
                 ])
                 ->all();
+
+            return count($wholeScopes) > 1
+                ? ['entire' => 'Entire itinerary: replace every multi-city leg'] + $options
+                : $options;
         }
 
         $options = [];
@@ -2028,16 +2157,27 @@ class FlightBookingsTable
             $options['return'] = self::reissueScopeLabel($record, 'return');
         }
 
+        if (count($wholeScopes) > 1) {
+            $options = ['entire' => 'Entire itinerary: replace outbound and return'] + $options;
+        }
+
         return $options !== [] ? $options : ['outbound' => 'Outbound flight'];
     }
 
     private static function defaultReissueScope(FlightBooking $record): string
     {
-        return array_key_first(self::reissueScopeOptions($record)) ?: 'outbound';
+        $options = self::reissueScopeOptions($record);
+        unset($options['entire']);
+
+        return array_key_first($options) ?: 'outbound';
     }
 
     private static function reissueScopeLabel(FlightBooking $record, ?string $scope): string
     {
+        if ($scope === 'entire') {
+            return 'Entire itinerary';
+        }
+
         $segments = self::reissueScopeSegments($record, $scope);
         $first = $segments[0] ?? [];
         $last = $segments === [] ? [] : $segments[array_key_last($segments)];
@@ -2051,6 +2191,56 @@ class FlightBookingsTable
         };
 
         return trim($prefix . (filled($route) && $route !== '->' ? ': ' . $route : '') . (filled($date) ? ' - ' . $date : ''));
+    }
+
+    private static function reissueWholeItineraryScopes(FlightBooking $record): array
+    {
+        $snapshot = $record->flight_snapshot ?? [];
+        $multiLegs = $snapshot['multiLegs'] ?? [];
+
+        if (is_array($multiLegs) && $multiLegs !== []) {
+            return collect($multiLegs)
+                ->filter(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== [])
+                ->mapWithKeys(fn (array $leg, int $index): array => [
+                    'multi:' . $index => self::reissueScopeLabel($record, 'multi:' . $index),
+                ])
+                ->all();
+        }
+
+        $scopes = [];
+
+        if (is_array($snapshot['segments'] ?? null) && ($snapshot['segments'] ?? []) !== []) {
+            $scopes['outbound'] = self::reissueScopeLabel($record, 'outbound');
+        }
+
+        if (is_array($snapshot['returnSegments'] ?? null) && ($snapshot['returnSegments'] ?? []) !== []) {
+            $scopes['return'] = self::reissueScopeLabel($record, 'return');
+        }
+
+        return $scopes !== [] ? $scopes : ['outbound' => 'Outbound flight'];
+    }
+
+    private static function reissueScopeFieldKey(string $scope): string
+    {
+        return str($scope)->replace([':', '-'], '_')->snake()->toString();
+    }
+
+    private static function syncRoundTripEntireReissueRoute(FlightBooking $record, Set $set, string $scope, string $direction, ?string $value): void
+    {
+        $scopes = array_keys(self::reissueWholeItineraryScopes($record));
+
+        if ($scopes !== ['outbound', 'return'] || ! in_array($scope, ['outbound', 'return'], true) || ! in_array($direction, ['from', 'to'], true)) {
+            return;
+        }
+
+        $targetScope = $scope === 'outbound' ? 'return' : 'outbound';
+        $targetDirection = $direction === 'from' ? 'to' : 'from';
+        $sourceKey = self::reissueScopeFieldKey($scope);
+        $targetKey = self::reissueScopeFieldKey($targetScope);
+
+        $set('replacement_entire_' . $sourceKey . '_flight_option', null);
+        $set('replacement_entire_' . $targetKey . '_' . $targetDirection, $value);
+        $set('replacement_entire_' . $targetKey . '_flight_option', null);
     }
 
     private static function reissueScopeContext(FlightBooking $record, ?string $scope): HtmlString
@@ -2083,6 +2273,38 @@ class FlightBookingsTable
         }
 
         return new HtmlString($html . '</tbody></table></div></div>');
+    }
+
+    private static function reissueEntireScopeContext(FlightBooking $record): HtmlString
+    {
+        $html = '<div class="grid gap-3">';
+
+        foreach (self::reissueWholeItineraryScopes($record) as $scope => $label) {
+            $segments = self::reissueScopeSegments($record, $scope);
+
+            if ($segments === []) {
+                continue;
+            }
+
+            $first = $segments[0];
+            $last = $segments[array_key_last($segments)];
+            $flights = collect($segments)
+                ->map(fn (array $segment): string => trim((string) self::segmentValue($segment, ['flightNo', 'flightNumber'], '')))
+                ->filter()
+                ->implode(' / ');
+
+            $html .= '<div class="rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-gray-900">';
+            $html .= '<div class="flex flex-wrap items-start justify-between gap-3">';
+            $html .= '<div>';
+            $html .= '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e($label) . '</div>';
+            $html .= '<div class="mt-1 text-base font-semibold text-gray-950 dark:text-white">' . e((string) self::segmentValue($first, ['from', 'airportOriginCode'], '-') . ' -> ' . (string) self::segmentValue($last, ['to', 'airportDestinationCode'], '-')) . '</div>';
+            $html .= '</div>';
+            $html .= '<div class="text-right text-sm text-gray-600 dark:text-gray-300">' . e(self::watDateTime(self::segmentValue($first, ['departDT', 'departureDate', 'departDate'], null), 'D, d M Y H:i')) . '<br>' . e($flights ?: '-') . '</div>';
+            $html .= '</div>';
+            $html .= '</div>';
+        }
+
+        return new HtmlString($html . '</div>');
     }
 
     private static function reissueScopeSegments(FlightBooking $record, ?string $scope): array
@@ -2125,6 +2347,165 @@ class FlightBookingsTable
         }
     }
 
+    private static function reissueDateBoundary(FlightBooking $record, string $scope, string $boundary, ?Get $get = null): ?string
+    {
+        if ($scope === 'entire') {
+            return null;
+        }
+
+        $scopes = array_keys(self::reissueWholeItineraryScopes($record));
+        $index = array_search($scope, $scopes, true);
+
+        if ($index === false) {
+            return $boundary === 'min' ? now('Africa/Lagos')->toDateString() : null;
+        }
+
+        $targetScope = $boundary === 'min'
+            ? ($scopes[$index - 1] ?? null)
+            : ($scopes[$index + 1] ?? null);
+
+        $date = filled($targetScope)
+            ? self::reissueDateForBoundaryScope($record, (string) $targetScope, $get)
+            : null;
+
+        if ($boundary === 'min') {
+            return self::laterDate(now('Africa/Lagos')->toDateString(), $date);
+        }
+
+        return $date;
+    }
+
+    private static function reissueDateForBoundaryScope(FlightBooking $record, string $scope, ?Get $get = null): ?string
+    {
+        if ($get !== null) {
+            $key = self::reissueScopeFieldKey($scope);
+            $value = $get('replacement_entire_' . $key . '_departure_date');
+
+            if (filled($value)) {
+                return self::parseDateString($value);
+            }
+        }
+
+        return self::defaultReissueDate($record, $scope);
+    }
+
+    private static function laterDate(?string $first, ?string $second): ?string
+    {
+        $firstDate = self::parseDateString($first);
+        $secondDate = self::parseDateString($second);
+
+        if ($firstDate === null) {
+            return $secondDate;
+        }
+
+        if ($secondDate === null) {
+            return $firstDate;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($firstDate)->greaterThan(\Carbon\Carbon::parse($secondDate)) ? $firstDate : $secondDate;
+        } catch (Throwable) {
+            return $firstDate;
+        }
+    }
+
+    private static function parseDateString(mixed $value): ?string
+    {
+        if (blank($value)) {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse(self::normalizeProviderDateTimeValue((string) $value))->toDateString();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private static function reissueItineraryDateValidationMessage(array $structure): ?string
+    {
+        $previousGroup = null;
+        $previousDeparture = null;
+
+        foreach (self::orderedReissueItineraryGroups($structure) as $group) {
+            $label = $group['label'];
+            $segments = $group['segments'];
+            $groupDeparture = self::segmentDepartureCarbon($segments[0] ?? []);
+
+            if ($groupDeparture === null) {
+                return $label . ' is missing a valid departure date.';
+            }
+
+            if ($previousDeparture !== null && $groupDeparture->lt($previousDeparture)) {
+                return $label . ' cannot depart before ' . $previousGroup . '.';
+            }
+
+            $previousSegmentDeparture = null;
+
+            foreach ($segments as $index => $segment) {
+                $segmentDeparture = self::segmentDepartureCarbon($segment);
+
+                if ($segmentDeparture === null) {
+                    return $label . ' segment ' . ($index + 1) . ' is missing a valid departure date.';
+                }
+
+                if ($previousSegmentDeparture !== null && $segmentDeparture->lt($previousSegmentDeparture)) {
+                    return $label . ' has flight segments out of order.';
+                }
+
+                $previousSegmentDeparture = $segmentDeparture;
+            }
+
+            $previousGroup = $label;
+            $previousDeparture = $groupDeparture;
+        }
+
+        return null;
+    }
+
+    private static function orderedReissueItineraryGroups(array $structure): array
+    {
+        $multiLegs = $structure['multiLegs'] ?? [];
+
+        if (is_array($multiLegs) && $multiLegs !== []) {
+            return collect($multiLegs)
+                ->filter(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== [])
+                ->map(fn (array $leg, int $index): array => [
+                    'label' => $leg['label'] ?? 'Leg ' . ($index + 1),
+                    'segments' => array_values($leg['segments']),
+                ])
+                ->values()
+                ->all();
+        }
+
+        $groups = [];
+
+        if (is_array($structure['segments'] ?? null) && ($structure['segments'] ?? []) !== []) {
+            $groups[] = ['label' => 'Outbound flight', 'segments' => array_values($structure['segments'])];
+        }
+
+        if (is_array($structure['returnSegments'] ?? null) && ($structure['returnSegments'] ?? []) !== []) {
+            $groups[] = ['label' => 'Return flight', 'segments' => array_values($structure['returnSegments'])];
+        }
+
+        return $groups;
+    }
+
+    private static function segmentDepartureCarbon(array $segment): ?\Carbon\Carbon
+    {
+        $value = self::segmentValue($segment, ['departDT', 'DepartureDateTime', 'departureDate', 'departDate'], null);
+
+        if (blank($value)) {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse(self::normalizeProviderDateTimeValue((string) $value));
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
     private static function buildProposedReissueItinerary(FlightBooking $record, string $scope, array $replacementSegments): array
     {
         $snapshot = $record->flight_snapshot ?? [];
@@ -2153,6 +2534,60 @@ class FlightBookingsTable
             'segments' => $segments,
             'returnSegments' => $returnSegments,
             'multiLegs' => $multiLegs,
+        ];
+    }
+
+    private static function decodeEntireReissueReplacementMap(FlightBooking $record, array $data): array
+    {
+        $search = app(AdminReplacementFlightSearchService::class);
+        $map = [];
+
+        foreach (self::reissueWholeItineraryScopes($record) as $scope => $label) {
+            $key = self::reissueScopeFieldKey($scope);
+            $segments = $search->decodeOption($data['replacement_entire_' . $key . '_flight_option'] ?? null);
+
+            if ($segments === []) {
+                continue;
+            }
+
+            $map[$scope] = $segments;
+        }
+
+        return $map;
+    }
+
+    private static function buildEntireReissueItinerary(FlightBooking $record, array $replacementMap): array
+    {
+        $snapshot = $record->flight_snapshot ?? [];
+        $multiLegs = is_array($snapshot['multiLegs'] ?? null) ? array_values($snapshot['multiLegs']) : [];
+
+        if ($multiLegs !== []) {
+            foreach ($multiLegs as $index => $leg) {
+                $scope = 'multi:' . $index;
+                $multiLegs[$index] = array_merge(is_array($leg) ? $leg : [], [
+                    'label' => 'Leg ' . ($index + 1),
+                    'segments' => array_values($replacementMap[$scope] ?? []),
+                ]);
+            }
+
+            return [
+                'tripType' => 'multicity',
+                'directionInd' => 'Circle',
+                'segments' => [],
+                'returnSegments' => [],
+                'multiLegs' => $multiLegs,
+            ];
+        }
+
+        $returnSegments = is_array($snapshot['returnSegments'] ?? null) ? array_values($snapshot['returnSegments']) : [];
+        $hasReturn = $returnSegments !== [] || isset($replacementMap['return']);
+
+        return [
+            'tripType' => $hasReturn ? 'return' : 'oneway',
+            'directionInd' => $hasReturn ? 'Return' : 'OneWay',
+            'segments' => array_values($replacementMap['outbound'] ?? []),
+            'returnSegments' => array_values($replacementMap['return'] ?? []),
+            'multiLegs' => [],
         ];
     }
 
