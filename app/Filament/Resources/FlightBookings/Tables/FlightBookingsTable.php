@@ -1118,8 +1118,10 @@ class FlightBookingsTable
                 if ($needsPaxDetails) {
                     $schema[] = Textarea::make('pax_details_json')
                         ->label('Passenger ticket details')
-                        ->helperText('Confirm the passenger names and e-ticket numbers before submitting this request.')
+                        ->helperText('Locked from the booking and latest Trip Details so the passenger identity is not changed by mistake.')
                         ->default(json_encode(self::postTicketingPaxDetails($record), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES))
+                        ->disabled()
+                        ->dehydrated()
                         ->required()
                         ->rows(8);
                 }
@@ -1213,14 +1215,18 @@ class FlightBookingsTable
 
                     $schema[] = Select::make('replacement_flight_option')
                         ->label('Replacement flight')
-                        ->helperText('Options are loaded from the availability API. Select a flight, then review the full itinerary below before requesting the quote.')
+                        ->helperText(fn (): string => filled(self::replacementFlightAirlineCode($record))
+                            ? 'Options are loaded from availability and limited to the original booking airline (' . self::replacementFlightAirlineCode($record) . '). Select a flight, then review the itinerary below.'
+                            : 'Options are loaded from the availability API. Select a flight, then review the full itinerary below before requesting the quote.')
                         ->options(fn (Get $get): array => app(AdminReplacementFlightSearchService::class)->options($record, [
                             'from' => $get('replacement_from'),
                             'to' => $get('replacement_to'),
                             'departure_date' => $get('replacement_departure_date'),
                             'cabin' => $get('replacement_cabin'),
                             'scope' => $get('replacement_scope'),
+                            'airline_code' => self::replacementFlightAirlineCode($record),
                         ]))
+                        ->allowHtml()
                         ->searchable()
                         ->preload(false)
                         ->live()
@@ -1301,14 +1307,18 @@ class FlightBookingsTable
 
                         $schema[] = Select::make('replacement_entire_' . $key . '_flight_option')
                             ->label('Replacement flight')
-                            ->helperText('Select the replacement for this itinerary part.')
+                            ->helperText(fn (): string => filled(self::replacementFlightAirlineCode($record))
+                                ? 'Limited to the original booking airline (' . self::replacementFlightAirlineCode($record) . '). Select the replacement for this itinerary part.'
+                                : 'Select the replacement for this itinerary part.')
                             ->options(fn (Get $get): array => app(AdminReplacementFlightSearchService::class)->options($record, [
                                 'from' => $get('replacement_entire_' . $key . '_from'),
                                 'to' => $get('replacement_entire_' . $key . '_to'),
                                 'departure_date' => $get('replacement_entire_' . $key . '_departure_date'),
                                 'cabin' => $get('replacement_entire_' . $key . '_cabin'),
                                 'scope' => $scope,
+                                'airline_code' => self::replacementFlightAirlineCode($record),
                             ]))
+                            ->allowHtml()
                             ->searchable()
                             ->preload(false)
                             ->live()
@@ -3016,6 +3026,28 @@ class FlightBookingsTable
             ?? $record->flight_snapshot['cabinCode']
             ?? 'Y'
         ));
+    }
+
+    private static function replacementFlightAirlineCode(FlightBooking $record): ?string
+    {
+        $snapshot = $record->flight_snapshot ?? [];
+        $segments = self::flattenReissueItineraryGroups([
+            'segments' => is_array($snapshot['segments'] ?? null) ? $snapshot['segments'] : [],
+            'returnSegments' => is_array($snapshot['returnSegments'] ?? null) ? $snapshot['returnSegments'] : [],
+            'multiLegs' => is_array($snapshot['multiLegs'] ?? null) ? $snapshot['multiLegs'] : [],
+        ]);
+
+        $code = collect($segments)
+            ->map(fn (array $segment): string => strtoupper(trim((string) self::segmentValue($segment, ['airlineCode', 'MarketingAirlineCode'], ''))))
+            ->first(fn (string $value): bool => preg_match('/^[A-Z0-9]{2}$/', $value) === 1);
+
+        if (filled($code)) {
+            return $code;
+        }
+
+        $snapshotCode = strtoupper(trim((string) ($snapshot['airlineCode'] ?? '')));
+
+        return preg_match('/^[A-Z0-9]{2}$/', $snapshotCode) === 1 ? $snapshotCode : null;
     }
 
     private static function replacementFlightPreview(?string $encodedOption): HtmlString

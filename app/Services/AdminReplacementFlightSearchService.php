@@ -16,6 +16,8 @@ class AdminReplacementFlightSearchService
         $to = strtoupper(trim((string) ($criteria['to'] ?? '')));
         $date = (string) ($criteria['departure_date'] ?? '');
         $cabin = strtoupper(trim((string) ($criteria['cabin'] ?? 'Y')));
+        $airlineCode = strtoupper(trim((string) ($criteria['airline_code'] ?? '')));
+        $airlineCode = preg_match('/^[A-Z0-9]{2}$/', $airlineCode) === 1 ? $airlineCode : '';
 
         if (! preg_match('/^[A-Z]{3}$/', $from) || ! preg_match('/^[A-Z]{3}$/', $to) || blank($date)) {
             return [];
@@ -30,9 +32,10 @@ class AdminReplacementFlightSearchService
             $booking->child_count,
             $booking->infant_count,
             $booking->currency,
+            $airlineCode,
         ]));
 
-        return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($booking, $from, $to, $date, $cabin): array {
+        return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($booking, $from, $to, $date, $cabin, $airlineCode): array {
             $payload = [
                 'user_id' => config('services.travelnext.user_id'),
                 'user_password' => config('services.travelnext.password'),
@@ -58,7 +61,7 @@ class AdminReplacementFlightSearchService
                 return [];
             }
 
-            return $this->mapOptions($response->json() ?: [], $cabin);
+            return $this->mapOptions($response->json() ?: [], $cabin, $airlineCode);
         });
     }
 
@@ -118,7 +121,7 @@ class AdminReplacementFlightSearchService
         ));
     }
 
-    private function mapOptions(array $response, string $fallbackCabin): array
+    private function mapOptions(array $response, string $fallbackCabin, string $airlineCode = ''): array
     {
         $itineraries = data_get($response, 'AirSearchResponse.AirSearchResult.FareItineraries', []);
 
@@ -134,6 +137,10 @@ class AdminReplacementFlightSearchService
             $segments = is_array($odo) ? $this->mapSegments($odo, $fallbackCabin) : [];
 
             if ($segments === []) {
+                continue;
+            }
+
+            if ($airlineCode !== '' && ! $this->matchesAirline($segments, $airlineCode)) {
                 continue;
             }
 
@@ -249,18 +256,27 @@ class AdminReplacementFlightSearchService
         $totalFare = data_get($fareItinerary, 'AirItineraryFareInfo.ItinTotalFares.TotalFare.Amount');
         $currency = data_get($fareItinerary, 'AirItineraryFareInfo.ItinTotalFares.TotalFare.CurrencyCode');
         $stops = max(0, count($segments) - 1);
+        $duration = collect($segments)->sum(fn (array $segment): int => (int) ($segment['duration'] ?? 0));
+        $airlines = collect($segments)
+            ->map(fn (array $segment): string => trim((string) ($segment['airline'] ?? $segment['airlineCode'] ?? '')))
+            ->filter()
+            ->unique()
+            ->implode(' / ');
+        $cabins = collect($segments)
+            ->map(fn (array $segment): string => trim((string) ($segment['cabin'] ?? $segment['cabinPreference'] ?? '')))
+            ->filter()
+            ->unique()
+            ->implode(' / ');
+        $fare = trim((string) $currency . ' ' . (filled($totalFare) ? number_format((float) $totalFare, 2) : '-'));
 
-        return trim(sprintf(
-            '%s | %s-%s | %s | %s stop%s | %s %s',
-            $flightNumbers ?: 'Option ' . ($index + 1),
-            $first['airportOriginCode'],
-            $last['airportDestinationCode'],
-            $first['departureDate'],
-            $stops,
-            $stops === 1 ? '' : 's',
-            $currency,
-            filled($totalFare) ? number_format((float) $totalFare, 2) : '-',
-        ));
+        return '<div class="space-y-1 py-1">'
+            . '<div class="flex items-start justify-between gap-3">'
+            . '<span class="font-semibold text-gray-950 dark:text-white">' . e($flightNumbers ?: 'Option ' . ($index + 1)) . '</span>'
+            . '<span class="text-xs font-semibold text-primary-600 dark:text-primary-400">' . e($fare) . '</span>'
+            . '</div>'
+            . '<div class="text-xs text-gray-600 dark:text-gray-300">' . e(($first['airportOriginCode'] ?? '-') . ' -> ' . ($last['airportDestinationCode'] ?? '-') . ' | ' . $this->formatDateTime($first['departDT'] ?? null) . ' - ' . $this->formatDateTime($last['arriveDT'] ?? null)) . '</div>'
+            . '<div class="text-xs text-gray-500 dark:text-gray-400">' . e(($stops === 0 ? 'Nonstop' : $stops . ' stop' . ($stops === 1 ? '' : 's')) . ' | ' . $this->durationLabel($duration) . ' | ' . ($airlines ?: '-') . ' | ' . ($cabins ?: '-')) . '</div>'
+            . '</div>';
     }
 
     private function withSummary(array $fareItinerary, array $segments, int $index): array
@@ -289,6 +305,37 @@ class AdminReplacementFlightSearchService
         ];
 
         return $segments;
+    }
+
+    private function matchesAirline(array $segments, string $airlineCode): bool
+    {
+        return collect($segments)
+            ->every(fn (array $segment): bool => strtoupper((string) ($segment['airlineCode'] ?? '')) === $airlineCode);
+    }
+
+    private function formatDateTime(?string $value): string
+    {
+        if (blank($value)) {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($value)->timezone('Africa/Lagos')->format('d M H:i');
+        } catch (\Throwable) {
+            return (string) $value;
+        }
+    }
+
+    private function durationLabel(int $minutes): string
+    {
+        if ($minutes <= 0) {
+            return '-';
+        }
+
+        $hours = intdiv($minutes, 60);
+        $remainingMinutes = $minutes % 60;
+
+        return trim(($hours > 0 ? $hours . 'h ' : '') . ($remainingMinutes > 0 ? $remainingMinutes . 'm' : ''));
     }
 
     private function mapCabin(string $code): string
