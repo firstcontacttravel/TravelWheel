@@ -37,6 +37,7 @@
         $passengers = \App\Support\FlightDisplay::passengers($passengers);
         $cabinLabel = \App\Support\FlightDisplay::cabin($mf, $dbBooking);
         $total         = (float)($mf['price'] ?? 0);
+        $serviceCharge = (float)($mf['markupAmount'] ?? $dbBooking?->markup_amount ?? 0);
         $uniqueId      = $uniqueId ?? session('bookingUniqueId', $dbBooking?->unique_id ?? '');    // API e-ticket / hold ref
         $bookingRef    = $bookingRef ?? session('bookingRef', $dbBooking?->booking_ref ?? ''); // OUR ref
         $paymentMethod = $paymentMethod ?? session('paymentMethod', $dbBooking?->payment_method ?? 'gateway');
@@ -469,6 +470,15 @@
                 </div>
 
                 {{-- ── Extra Services (if any) ── --}}
+                @if($serviceCharge > 0)
+                <div style="padding:12px 16px;border-top:1px solid var(--gray-100);">
+                    <div class="fare-row">
+                        <span class="fare-lbl" style="font-weight:700;color:var(--gray-700);">Service charge</span>
+                        <span class="fare-val" style="font-weight:800;">{{ $fmt($serviceCharge) }}</span>
+                    </div>
+                </div>
+                @endif
+
                 @if(!empty($baggageItems) || !empty($mealItems))
                 <div style="padding:12px 16px;border-top:1px solid var(--gray-100);background:var(--gray-50);">
                     <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:8px;">Extra Services</div>

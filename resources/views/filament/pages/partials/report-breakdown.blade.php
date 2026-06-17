@@ -13,6 +13,7 @@
                     <th>Name</th>
                     <th>Bookings</th>
                     <th>Paid Revenue</th>
+                    <th>Service Charge</th>
                 </tr>
             </thead>
             <tbody>
@@ -21,10 +22,11 @@
                         <td><strong>{{ $row->label }}</strong></td>
                         <td>{{ number_format((int) $row->bookings) }}</td>
                         <td>NGN {{ number_format((float) $row->revenue, 2) }}</td>
+                        <td>NGN {{ number_format((float) ($row->service_charges ?? 0), 2) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="3" class="tw-report-empty">No records in this range.</td>
+                        <td colspan="4" class="tw-report-empty">No records in this range.</td>
                     </tr>
                 @endforelse
             </tbody>

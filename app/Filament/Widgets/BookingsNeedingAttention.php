@@ -62,7 +62,10 @@ class BookingsNeedingAttention extends TableWidget
                     }),
                 TextColumn::make('total_price')
                     ->label('Amount')
-                    ->formatStateUsing(fn (FlightBooking $record): string => trim(($record->currency ?? 'NGN') . ' ' . number_format((float) $record->total_price, 2))),
+                    ->formatStateUsing(fn (FlightBooking $record): string => self::money($record->total_price, $record->currency))
+                    ->description(fn (FlightBooking $record): string => (float) $record->markup_amount > 0
+                        ? 'Service charge: ' . self::money($record->markup_amount, $record->currency)
+                        : 'No service charge'),
                 TextColumn::make('created_at')
                     ->label('Created')
                     ->since()
@@ -89,5 +92,10 @@ class BookingsNeedingAttention extends TableWidget
         }
 
         return 'Review';
+    }
+
+    private static function money(mixed $amount, ?string $currency): string
+    {
+        return trim(($currency ?: 'NGN') . ' ' . number_format((float) $amount, 2));
     }
 }

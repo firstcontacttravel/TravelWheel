@@ -31,6 +31,7 @@ class BookingRevenueTrend extends ChartWidget
             ->selectRaw('DATE(created_at) as booking_date')
             ->selectRaw('COUNT(*) as bookings')
             ->selectRaw("SUM(CASE WHEN payment_status = 'paid' THEN COALESCE(payment_charged_amount, payment_amount, total_price, 0) ELSE 0 END) as revenue")
+            ->selectRaw("SUM(CASE WHEN payment_status = 'paid' THEN COALESCE(markup_amount, 0) ELSE 0 END) as service_charges")
             ->whereDate('created_at', '>=', $start)
             ->groupBy('booking_date')
             ->orderBy('booking_date')
@@ -39,6 +40,7 @@ class BookingRevenueTrend extends ChartWidget
 
         $labels = [];
         $revenue = [];
+        $serviceCharges = [];
         $bookings = [];
 
         for ($day = 0; $day < 14; $day++) {
@@ -48,6 +50,7 @@ class BookingRevenueTrend extends ChartWidget
 
             $labels[] = $date->format('M j');
             $revenue[] = round((float) ($row->revenue ?? 0), 2);
+            $serviceCharges[] = round((float) ($row->service_charges ?? 0), 2);
             $bookings[] = (int) ($row->bookings ?? 0);
         }
 
@@ -57,6 +60,12 @@ class BookingRevenueTrend extends ChartWidget
                     'label' => 'Paid revenue',
                     'data' => $revenue,
                     'backgroundColor' => '#0d1883',
+                    'borderRadius' => 6,
+                ],
+                [
+                    'label' => 'Service charges',
+                    'data' => $serviceCharges,
+                    'backgroundColor' => '#f59e0b',
                     'borderRadius' => 6,
                 ],
                 [

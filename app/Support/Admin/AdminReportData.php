@@ -40,6 +40,9 @@ class AdminReportData
             'paid_revenue' => (float) (clone $bookings)
                 ->where('payment_status', 'paid')
                 ->sum(DB::raw('COALESCE(payment_charged_amount, payment_amount, total_price, 0)')),
+            'paid_service_charges' => (float) (clone $bookings)
+                ->where('payment_status', 'paid')
+                ->sum('markup_amount'),
             'ticketed' => (clone $bookings)->where('booking_status', 'ticketed')->count(),
             'awaiting_bank_transfer' => (clone $bookings)->where('payment_status', 'awaiting_bank_transfer')->count(),
             'ticketing_failures' => (clone $bookings)
@@ -63,6 +66,7 @@ class AdminReportData
             ->selectRaw("COALESCE(NULLIF({$field}, ''), 'Unspecified') as label")
             ->selectRaw('COUNT(*) as bookings')
             ->selectRaw("SUM(CASE WHEN payment_status = 'paid' THEN COALESCE(payment_charged_amount, payment_amount, total_price, 0) ELSE 0 END) as revenue")
+            ->selectRaw("SUM(CASE WHEN payment_status = 'paid' THEN COALESCE(markup_amount, 0) ELSE 0 END) as service_charges")
             ->groupBy('label')
             ->orderByDesc('revenue')
             ->orderByDesc('bookings')
@@ -86,6 +90,9 @@ class AdminReportData
                 'bank_transfer_reference',
                 'bank_transfer_notified_at',
                 'currency',
+                'supplier_price',
+                'markup_amount',
+                'markup_category',
                 'total_price',
                 'payment_amount',
                 'payment_charged_amount',
@@ -109,6 +116,9 @@ class AdminReportData
                 'booking_status',
                 'ticket_ordered',
                 'currency',
+                'supplier_price',
+                'markup_amount',
+                'markup_category',
                 'total_price',
             ]);
     }
@@ -177,13 +187,17 @@ class AdminReportData
                 $booking->payment_status,
                 $booking->booking_status,
                 $booking->currency,
+                $booking->supplier_price,
+                $booking->markup_amount,
+                $booking->markup_category,
                 $booking->total_price,
                 $booking->payment_charged_amount ?: $booking->payment_amount,
             ]);
 
         return [[
             'Created At', 'Booking Ref', 'UniqueID', 'Route', 'Airline', 'Fare Type',
-            'Payment Method', 'Payment Status', 'Booking Status', 'Currency', 'Total Price', 'Paid Amount',
+            'Payment Method', 'Payment Status', 'Booking Status', 'Currency', 'Supplier Fare',
+            'Service Charge', 'Markup Category', 'Total Price', 'Paid Amount',
         ], $rows];
     }
 
@@ -200,12 +214,16 @@ class AdminReportData
             $booking->payment_status,
             $booking->bank_transfer_reference,
             $booking->currency,
+            $booking->supplier_price,
+            $booking->markup_amount,
+            $booking->markup_category,
             $booking->payment_charged_amount ?: ($booking->payment_amount ?: $booking->total_price),
         ]);
 
         return [[
             'Created At', 'Transfer Notified At', 'Booking Ref', 'UniqueID', 'Email', 'Phone',
-            'Payment Method', 'Payment Status', 'Transfer Reference', 'Currency', 'Amount',
+            'Payment Method', 'Payment Status', 'Transfer Reference', 'Currency', 'Supplier Fare',
+            'Service Charge', 'Markup Category', 'Amount',
         ], $rows];
     }
 
@@ -223,6 +241,9 @@ class AdminReportData
                 $booking->payment_status,
                 $booking->booking_status,
                 $booking->currency,
+                $booking->supplier_price,
+                $booking->markup_amount,
+                $booking->markup_category,
                 $booking->total_price,
                 $latest?->action,
                 $latest?->message,
@@ -231,7 +252,8 @@ class AdminReportData
 
         return [[
             'Created At', 'Booking Ref', 'UniqueID', 'Route', 'Airline', 'Payment Status',
-            'Booking Status', 'Currency', 'Total Price', 'Latest Ticketing Action', 'Latest Message',
+            'Booking Status', 'Currency', 'Supplier Fare', 'Service Charge', 'Markup Category',
+            'Total Price', 'Latest Ticketing Action', 'Latest Message',
         ], $rows];
     }
 

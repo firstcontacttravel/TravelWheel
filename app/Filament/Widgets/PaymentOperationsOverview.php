@@ -29,6 +29,11 @@ class PaymentOperationsOverview extends StatsOverviewWidget
             ->where('created_at', '>=', now()->subDays(30))
             ->sum(\Illuminate\Support\Facades\DB::raw('COALESCE(payment_charged_amount, payment_amount, total_price, 0)'));
 
+        $serviceCharges = (float) FlightBooking::query()
+            ->where('payment_status', 'paid')
+            ->where('created_at', '>=', now()->subDays(30))
+            ->sum('markup_amount');
+
         return [
             Stat::make('Today bookings', number_format($todayBookings))
                 ->description('New bookings created today')
@@ -40,6 +45,11 @@ class PaymentOperationsOverview extends StatsOverviewWidget
                 ->description('Last 30 days')
                 ->descriptionIcon(Heroicon::OutlinedBanknotes)
                 ->color('success'),
+
+            Stat::make('Service charges', 'NGN ' . number_format($serviceCharges, 2))
+                ->description('Markup collected in last 30 days')
+                ->descriptionIcon(Heroicon::OutlinedReceiptPercent)
+                ->color('info'),
 
             Stat::make('Awaiting bank transfer', FlightBooking::query()
                 ->where('payment_status', 'awaiting_bank_transfer')

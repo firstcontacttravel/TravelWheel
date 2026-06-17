@@ -9,6 +9,7 @@ use App\Models\FlightBooking;
 use App\Models\TravelFlexApplication;
 use App\Services\SeerbitPaymentService;
 use App\Services\TravelFlexApplicationService;
+use App\Support\FlightMarkup;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -347,6 +348,8 @@ class FlightBookingController extends Controller
             'arrivalSlot'            => $arrHour  < 12 ? 'morning' : ($arrHour  < 18 ? 'afternoon' : 'evening'),
             'fareBreakdown'          => $breakdown,
         ];
+
+        $mappedFlight = FlightMarkup::apply($mappedFlight);
         //dd($revalidateData); 
         $payload1 = [
             'session_id'       => $validated['session_id'],
@@ -1732,6 +1735,17 @@ class FlightBookingController extends Controller
             'airline'              => $mappedFlight['airline']    ?? '',
             'cabin'                => \App\Support\FlightDisplay::cabin($mappedFlight),
             'currency'             => $mappedFlight['currency']   ?? 'NGN',
+            'supplier_price'        => $mappedFlight['supplierPrice'] ?? ($mappedFlight['price'] ?? 0),
+            'markup_amount'         => $mappedFlight['markupAmount'] ?? 0,
+            'markup_category'       => $mappedFlight['markupCategory'] ?? null,
+            'markup_details'        => [
+                'category' => $mappedFlight['markupCategory'] ?? null,
+                'cabin' => $mappedFlight['markupCabin'] ?? null,
+                'supplier_price' => $mappedFlight['supplierPrice'] ?? ($mappedFlight['price'] ?? 0),
+                'markup_amount' => $mappedFlight['markupAmount'] ?? 0,
+                'customer_price' => $mappedFlight['price'] ?? 0,
+                'currency' => $mappedFlight['currency'] ?? 'NGN',
+            ],
             'total_price'          => ((float) ($mappedFlight['price'] ?? 0)) + $this->_selectedExtrasTotal($overrides['extra_services_snapshot'] ?? session('selectedExtras', [])),
             'contact_email'        => $contact['email']  ?? '',
             'contact_phone'        => $contact['phone']  ?? '',

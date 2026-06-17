@@ -4,6 +4,7 @@
         $cards = [
             ['label' => 'Bookings', 'value' => number_format($summary['bookings']), 'tone' => 'blue', 'note' => 'Total records in range'],
             ['label' => 'Paid Revenue', 'value' => 'NGN ' . number_format($summary['paid_revenue'], 2), 'tone' => 'green', 'note' => 'Verified paid value'],
+            ['label' => 'Service Charges', 'value' => 'NGN ' . number_format($summary['paid_service_charges'] ?? 0, 2), 'tone' => 'amber', 'note' => 'Markup collected'],
             ['label' => 'Ticketed', 'value' => number_format($summary['ticketed']), 'tone' => 'green', 'note' => 'Issued tickets'],
             ['label' => 'Awaiting Transfer', 'value' => number_format($summary['awaiting_bank_transfer']), 'tone' => 'amber', 'note' => 'Needs reconciliation'],
             ['label' => 'Ticketing Failures', 'value' => number_format($summary['ticketing_failures']), 'tone' => 'red', 'note' => 'Paid but failed'],
@@ -96,6 +97,7 @@
                                 <th>Reference</th>
                                 <th>Status</th>
                                 <th>Amount</th>
+                                <th>Service Charge</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -105,9 +107,10 @@
                                     <td>{{ $booking->bank_transfer_reference ?: '-' }}</td>
                                     <td><span class="{{ $statusClass($booking->payment_status) }}">{{ str($booking->payment_status)->replace('_', ' ')->headline() }}</span></td>
                                     <td>{{ $booking->currency }} {{ number_format((float) ($booking->payment_charged_amount ?: ($booking->payment_amount ?: $booking->total_price)), 2) }}</td>
+                                    <td>{{ $booking->currency }} {{ number_format((float) $booking->markup_amount, 2) }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="tw-report-empty">No bank transfer records in this range.</td></tr>
+                                <tr><td colspan="5" class="tw-report-empty">No bank transfer records in this range.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -129,6 +132,7 @@
                                 <th>Booking</th>
                                 <th>Route</th>
                                 <th>Status</th>
+                                <th>Service Charge</th>
                                 <th>Latest Message</th>
                             </tr>
                         </thead>
@@ -138,10 +142,11 @@
                                     <td><strong>{{ $booking->booking_ref }}</strong><span>{{ $booking->unique_id ?: '-' }}</span></td>
                                     <td>{{ $booking->route ?: '-' }}</td>
                                     <td><span class="{{ $statusClass($booking->booking_status) }}">{{ str($booking->booking_status)->replace('_', ' ')->headline() }}</span></td>
+                                    <td>{{ $booking->currency }} {{ number_format((float) $booking->markup_amount, 2) }}</td>
                                     <td>{{ $booking->ticketingRecords->first()?->message ?: '-' }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="tw-report-empty">No ticketing failures in this range.</td></tr>
+                                <tr><td colspan="5" class="tw-report-empty">No ticketing failures in this range.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

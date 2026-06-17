@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\FlightMarkup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
@@ -407,7 +408,7 @@ class FlightController extends Controller
                     ];
                 })->values()->toArray();
 
-                return [
+                $mappedFlight = [
                     'id'                     => $index,
                     'fareSourceCode'         => $fareInfo['FareSourceCode'],
                     'airline'                => $firstSeg['airline'] ?? '',
@@ -452,6 +453,8 @@ class FlightController extends Controller
                     'arrivalSlot'            => $arrHour  < 12 ? 'morning' : ($arrHour  < 18 ? 'afternoon' : 'evening'),
                     'fareBreakdown'          => $breakdown,
                 ];
+
+                return FlightMarkup::apply($mappedFlight);
             }
         )->values()->toArray();
         //dd($flights[0]);

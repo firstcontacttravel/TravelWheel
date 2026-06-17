@@ -65,6 +65,28 @@ class FlightBookingInfolist
                                     ])
                                     ->columns(2),
 
+                                Section::make('Pricing')
+                                    ->schema([
+                                        TextEntry::make('supplier_price')
+                                            ->label('Supplier fare')
+                                            ->state(fn ($record): string => self::money($record->supplier_price, $record->currency))
+                                            ->placeholder('-'),
+                                        TextEntry::make('markup_amount')
+                                            ->label('Service charge')
+                                            ->state(fn ($record): string => self::money($record->markup_amount, $record->currency))
+                                            ->placeholder('-'),
+                                        TextEntry::make('markup_category')
+                                            ->label('Service charge category')
+                                            ->badge()
+                                            ->placeholder('-')
+                                            ->formatStateUsing(fn (?string $state): string => filled($state) ? str($state)->replace('_', ' ')->headline()->toString() : '-'),
+                                        TextEntry::make('total_price')
+                                            ->label('Customer total')
+                                            ->state(fn ($record): string => self::money($record->total_price, $record->currency))
+                                            ->placeholder('-'),
+                                    ])
+                                    ->columns(2),
+
                                 Section::make('Customer')
                                     ->schema([
                                         TextEntry::make('booking_ref')->label('Booking ref')->copyable()->placeholder('-'),
@@ -144,5 +166,10 @@ class FlightBookingInfolist
                     ]),
 
             ]);
+    }
+
+    private static function money(mixed $amount, ?string $currency): string
+    {
+        return trim(($currency ?: 'NGN') . ' ' . number_format((float) $amount, 2));
     }
 }

@@ -47,6 +47,9 @@ class FlightBookingPresentation
 
         $html .= '<div class="tw-booking-hero-facts">';
         $html .= self::heroFact('Total', self::money($record->total_price, $record->currency));
+        if ((float) ($record->markup_amount ?? 0) > 0) {
+            $html .= self::heroFact('Service charge', self::money($record->markup_amount, $record->currency));
+        }
         $html .= self::heroFact('Airline', $record->airline ?: 'Unknown airline');
         $html .= self::heroFact('Passengers', $passengers . ' passenger' . ($passengers === 1 ? '' : 's'));
         $html .= self::heroFact('Legs', $legsCount . ' leg' . ($legsCount === 1 ? '' : 's'));
@@ -160,6 +163,10 @@ class FlightBookingPresentation
         $html .= self::miniFact('Fare', self::value($flight, 'fareType', '-'));
         $html .= self::miniFact('Cabin', self::cabinText($flight));
         $html .= self::miniFact('Total', self::money(self::value($flight, 'price'), self::value($flight, 'currency')));
+        if ((float) self::value($flight, 'markupAmount', 0) > 0) {
+            $html .= self::miniFact('Supplier fare', self::money(self::value($flight, 'supplierPrice'), self::value($flight, 'currency')));
+            $html .= self::miniFact('Service charge', self::money(self::value($flight, 'markupAmount'), self::value($flight, 'currency')));
+        }
         $html .= self::miniFact('Refund', self::yesNo(self::value($flight, 'isRefundable')));
         $html .= '</div></div>';
 

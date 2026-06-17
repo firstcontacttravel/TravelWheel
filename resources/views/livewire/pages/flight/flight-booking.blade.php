@@ -377,6 +377,7 @@
     $totalPrice = (float)($mappedFlight['price'] ?? ($itinTotals['TotalFare']['Amount'] ?? 0));
     $totalBase  = (float)($mappedFlight['baseFare'] ?? ($itinTotals['BaseFare']['Amount'] ?? 0));
     $totalTax   = (float)($mappedFlight['totalTax'] ?? ($itinTotals['TotalTax']['Amount'] ?? 0));
+    $markupAmount = (float)($mappedFlight['markupAmount'] ?? 0);
     $discount   = 0;
 
     $taxLabels = [
@@ -1727,6 +1728,15 @@
                         @endforeach
                     
                         {{-- ── EXTRAS LINE — only shows when something selected ── --}}
+                        @if($markupAmount > 0)
+                        <div style="padding:10px 0;margin-bottom:10px;border-bottom:1px solid var(--gray-100);">
+                            <div class="bk-fare-row">
+                                <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">Service charge</span>
+                                <span class="bk-fare-val" style="font-weight:800;">{{ $fmt($markupAmount) }}</span>
+                            </div>
+                        </div>
+                        @endif
+
                         @if($extrasTotal > 0)
                         <div style="padding:10px 0;border-bottom:1px solid var(--gray-100);">
                             <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;

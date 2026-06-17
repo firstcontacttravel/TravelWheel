@@ -93,9 +93,20 @@ class FlightBookingsTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('total_price')
                     ->label('Total')
-                    ->formatStateUsing(fn ($record): string => trim(($record->currency ?? 'NGN') . ' ' . number_format((float) $record->total_price, 2)))
-                    ->description(fn (FlightBooking $record): string => self::passengerSummary($record))
+                    ->formatStateUsing(fn (FlightBooking $record): string => self::money($record->total_price, $record->currency))
+                    ->description(fn (FlightBooking $record): string => self::pricingSummary($record))
                     ->sortable(),
+                TextColumn::make('markup_amount')
+                    ->label('Service charge')
+                    ->formatStateUsing(fn (FlightBooking $record): string => self::money($record->markup_amount, $record->currency))
+                    ->description(fn (FlightBooking $record): string => filled($record->markup_category) ? self::label($record->markup_category) : 'No markup category')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('supplier_price')
+                    ->label('Supplier fare')
+                    ->formatStateUsing(fn (FlightBooking $record): string => self::money($record->supplier_price, $record->currency))
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('booking_status')
                     ->label('Booking')
                     ->badge()
@@ -314,6 +325,15 @@ class FlightBookingsTable
         ])->filter()->implode(' | ');
     }
 
+    private static function pricingSummary(FlightBooking $record): string
+    {
+        return collect([
+            self::passengerSummary($record),
+            (float) $record->markup_amount > 0 ? 'Service charge: ' . self::money($record->markup_amount, $record->currency) : null,
+            (float) $record->supplier_price > 0 ? 'Supplier: ' . self::money($record->supplier_price, $record->currency) : null,
+        ])->filter()->implode(' | ');
+    }
+
     private static function journeyColumn(FlightBooking $record): HtmlString
     {
         $groups = self::journeyGroups($record);
@@ -461,7 +481,8 @@ class FlightBookingsTable
 
     private static function actionContext(FlightBooking $record, string $title): HtmlString
     {
-        $amount = trim(($record->currency ?? 'NGN') . ' ' . number_format((float) $record->total_price, 2));
+        $amount = self::money($record->total_price, $record->currency);
+        $serviceCharge = self::money($record->markup_amount, $record->currency);
         $customer = $record->contact_email ?: ($record->contact_phone ?: '-');
 
         return new HtmlString(
@@ -474,11 +495,17 @@ class FlightBookingsTable
                 '<dl>' .
                     '<div><dt>Customer</dt><dd>' . e($customer) . '</dd></div>' .
                     '<div><dt>Amount</dt><dd>' . e($amount) . '</dd></div>' .
+                    '<div><dt>Service charge</dt><dd>' . e($serviceCharge) . '</dd></div>' .
                     '<div><dt>Payment</dt><dd>' . e(self::label($record->payment_status)) . '</dd></div>' .
                     '<div><dt>Booking</dt><dd>' . e(self::label($record->booking_status)) . '</dd></div>' .
                 '</dl>' .
             '</div>',
         );
+    }
+
+    private static function money(mixed $amount, ?string $currency): string
+    {
+        return trim(($currency ?: 'NGN') . ' ' . number_format((float) $amount, 2));
     }
 
     public static function markBankTransferPaidAction(): Action
