@@ -1,99 +1,132 @@
 <style>
-    .fw-card-outer{width:100%;min-height:360px;display:flex;align-items:center;justify-content:center;padding:150px 30px;background:url('{{ asset('assets/image/slide.jpg') }}') center center/cover no-repeat;position:relative;box-sizing:border-box}
-    .fw-card-outer::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,25,70,.65) 0%,rgba(0,0,0,.4) 100%);pointer-events:none}
-    .fw-card{position:relative;z-index:2;width:100%;max-width:1180px;margin:0 auto;background:#fff;border-radius:18px;padding:30px 32px 26px;box-shadow:0 20px 70px rgba(0,0,0,.22),0 4px 18px rgba(0,0,0,.1);box-sizing:border-box}
-    .fw-tabs{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap}
-    .fw-tab{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:500;cursor:pointer;color:#6b7280;background:#f3f4f6;border:1.5px solid transparent;transition:all .2s;user-select:none;line-height:1;margin:0}
-    .fw-tab:hover{background:#e5e7eb;color:#374151}
-    .fw-tab.fw-active{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;font-weight:600}
-    .fw-row{display:flex;align-items:flex-end;gap:10px;flex-wrap:nowrap}
+    .tw-landing-hero{width:100%;min-height:870px;display:flex;align-items:flex-start;justify-content:center;padding:105px 24px 140px;background:url('{{ asset('assets/figma/landing/asset-03.jpeg') }}') center center/cover no-repeat;position:relative;box-sizing:border-box;overflow:visible}
+    .tw-landing-hero::before{content:'';display:block!important;position:absolute;inset:0;background:linear-gradient(96deg,rgba(48,49,145,.92) 0%,rgba(48,49,145,.84) 34%,rgba(0,153,51,.72) 100%),rgba(0,0,0,.2);pointer-events:none}
+    .tw-hero-inner{position:relative;z-index:2;width:100%;max-width:1306px;text-align:center}
+    .tw-hero-title{margin:0;color:#fff!important;font-family:'Open Sans',var(--font-primary),Arial,sans-serif;font-size:64px;font-weight:800;line-height:1.18}
+    .tw-hero-subtitle{margin:6px 0 28px;color:#009933!important;font-family:'Open Sans',var(--font-primary),Arial,sans-serif;font-size:32px;font-weight:700;line-height:1.35}
+    .tw-product-tabs{display:inline-flex;align-items:center;justify-content:center;gap:16px;margin:0 auto 24px;padding:16px 28px;background:rgba(21,22,76,.79);border:1px solid rgba(255,255,255,.8);border-radius:11px}
+    .tw-product-tab{width:88px;height:66px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:12px;background:rgba(255,255,255,.21);color:#fff!important;text-decoration:none;font-size:14px;font-weight:700}
+    .tw-product-tab img{width:26px;height:26px;object-fit:contain;filter:brightness(0) invert(1)}
+    .tw-product-tab span{color:#fff!important}
+    .fw-card-outer{width:100%;position:relative;box-sizing:border-box}
+    .fw-card-outer:not(.tw-landing-hero)::before{display:none}
+    .fw-card{position:relative;z-index:2;width:100%;max-width:1306px;margin:0 auto;background:linear-gradient(180deg,#fff 0%,#fbfbff 100%);border:1px solid rgba(255,255,255,.78);border-radius:17px;padding:28px 38px 29px;box-shadow:0 20px 31.4px rgba(0,0,0,.25);box-sizing:border-box;text-align:left}
+    .fw-tabs{display:flex;gap:17px;margin-bottom:17px;flex-wrap:wrap;border-bottom:1px solid #d9d9d9;padding-bottom:17px}
+    .fw-tab{display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border-radius:30px;font-size:12px;font-weight:700;cursor:pointer;color:#2f2f35;background:#ecebef;border:1px solid transparent;transition:background .2s,color .2s,border-color .2s,box-shadow .2s,transform .2s;user-select:none;line-height:1;margin:0}
+    .fw-tab:hover{background:#eef0ff;color:#303191;transform:translateY(-1px)}
+    .fw-tab.fw-active{background:#dbdcff;color:#303191;border-color:rgba(48,49,145,.16);font-weight:700;box-shadow:0 8px 18px rgba(48,49,145,.12)}
+    .fw-row{display:flex;align-items:flex-end;gap:14px;flex-wrap:nowrap}
     .fw-field{display:flex;flex-direction:column;min-width:0;flex:1}
-    .fw-field-2x{flex:2!important}.fw-field-15x{flex:1.5!important}.fw-field-12x{flex:1.2!important}
-    .fw-label{display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#9ca3af;margin-bottom:7px;white-space:nowrap}
+    .fw-field-2x{flex:1.72!important}.fw-field-15x{flex:1.16!important}.fw-field-12x{flex:1.16!important}
+    .fw-label{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0;color:#111;margin-bottom:8px;white-space:nowrap}
     .fw-input-wrap{position:relative}
-    .fw-input{width:100%;height:48px;padding:0 14px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;color:#111827;background:#f9fafb;outline:none;box-sizing:border-box;transition:border-color .2s,box-shadow .2s,background .2s;-webkit-appearance:none;appearance:none;font-family:inherit;display:flex;align-items:center}
-    .fw-input:focus{border-color:#3b82f6;background:#fff;box-shadow:0 0 0 3px rgba(59,130,246,.14)}
-    .fw-input::placeholder{color:#d1d5db}
-    .fw-select{cursor:pointer;padding-right:34px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+    .fw-input{width:100%;height:51px;padding:0 11px;border:1px solid #d9d9d9;border-radius:6px;font-size:15px;color:#111;background:#f9f9f9;outline:none;box-sizing:border-box;transition:border-color .2s,box-shadow .2s,background .2s;-webkit-appearance:none;appearance:none;font-family:'Open Sans',var(--font-primary),Arial,sans-serif;display:flex;align-items:center;text-align:left;justify-content:flex-start}
+    .fw-input:focus{border-color:#303191;background:#fff;box-shadow:0 0 0 3px rgba(48,49,145,.12),0 8px 20px rgba(48,49,145,.08)}
+    .fw-input::placeholder{color:#a6a6a6}
+    .fw-select{cursor:pointer;padding-right:28px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
     .fw-error{font-size:11px;color:#ef4444;margin-top:4px}
-    .fw-swap{width:40px;height:40px;min-width:40px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;color:#6b7280;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:4px;flex-shrink:0;transition:all .25s;padding:0}
-    .fw-swap:hover{background:#eff6ff;border-color:#93c5fd;color:#1d4ed8;transform:rotate(180deg)}
-    .fw-ac-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border:1.5px solid #e5e7eb;border-radius:12px;box-shadow:0 16px 48px rgba(0,0,0,.14);z-index:99999;overflow:hidden;max-height:260px;overflow-y:auto}
+    .fw-swap{width:33px;height:33px;min-width:33px;border-radius:50%;border:1px solid #dbdcff;background:#fff;color:#303191;display:flex;align-items:center;justify-content:center;cursor:pointer;margin-bottom:9px;flex-shrink:0;transition:all .25s;padding:0}
+    .fw-swap:hover{background:#dbdcff;border-color:#303191;color:#303191;transform:rotate(180deg)}
+    .fw-ac-dropdown{display:none;position:absolute;top:calc(100% + 9px);left:0;right:auto;width:clamp(286px,100%,360px);max-height:302px;background:#fff;border:1px solid rgba(48,49,145,.1);border-radius:14px;box-shadow:0 18px 42px rgba(23,23,74,.18);z-index:99999;overflow:hidden;overflow-y:auto;padding:8px;box-sizing:border-box}
     .fw-ac-dropdown.fw-open{display:block}
-    .fw-ac-item{display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer;border-bottom:1px solid #f3f4f6;transition:background .12s}
-    .fw-ac-item:last-child{border-bottom:none}
-    .fw-ac-item:hover,.fw-ac-item.fw-hi{background:#eff6ff}
-    .fw-ac-iata{font-size:13px;font-weight:700;color:#1d4ed8;min-width:36px;font-family:'Courier New',monospace}
-    .fw-ac-info{display:flex;flex-direction:column;overflow:hidden}
-    .fw-ac-name{font-size:13px;font-weight:500;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .fw-ac-city{font-size:11px;color:#9ca3af}
-    .fw-ac-empty{padding:14px;font-size:13px;color:#9ca3af;text-align:center}
+    .fw-ac-item{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:11px;padding:10px;border-radius:10px;margin:0 0 4px;cursor:pointer;border:1px solid transparent;transition:background .15s,border-color .15s,box-shadow .15s,transform .15s}
+    .fw-ac-item:last-child{margin-bottom:0}
+    .fw-ac-item:hover,.fw-ac-item.fw-hi{background:#f7f7fb;border-color:rgba(48,49,145,.12);box-shadow:0 8px 18px rgba(48,49,145,.06);transform:translateY(-1px)}
+    .fw-ac-iata{display:flex;align-items:center;justify-content:center;width:52px;height:42px;border-radius:10px;background:#f1f2ff;color:#303191;font-size:16px;font-weight:800;line-height:1;font-family:'Open Sans',var(--font-primary),Arial,sans-serif;letter-spacing:.02em}
+    .fw-ac-info{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+    .fw-ac-name{font-size:13px;font-weight:700;color:#111;line-height:17px;white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+    .fw-ac-city{font-size:11px;color:#666;line-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .fw-ac-empty{padding:18px 14px;font-size:13px;color:#6b7280;text-align:center;background:#f9fafb;border-radius:10px}
     .fw-pax-trigger{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
-    .fw-pax-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:265px;background:#fff;border:1.5px solid #e5e7eb;border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,.14);z-index:99998;overflow:hidden}
+    .fw-pax-dropdown{display:none;position:absolute;top:calc(100% + 7px);left:0;width:183px;height:157px;min-width:183px;background:#fff;border:0;border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.15);z-index:99998;overflow:hidden;padding:13px;box-sizing:border-box}
     .fw-pax-dropdown.fw-open{display:block}
-    .fw-pax-row{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #f3f4f6}
+    .fw-pax-row{display:flex;align-items:center;justify-content:space-between;padding:0 0 9px;border-bottom:0}
     .fw-pax-row:last-of-type{border-bottom:none}
-    .fw-pax-lbl{font-size:13px;font-weight:600;color:#111827}
-    .fw-pax-sub{font-size:11px;color:#9ca3af;margin-top:2px}
-    .fw-pax-ctr{display:flex;align-items:center;gap:10px}
-    .fw-pax-btn{width:30px;height:30px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;font-size:18px;line-height:1;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0;font-family:inherit}
-    .fw-pax-btn:hover{background:#eff6ff;border-color:#3b82f6;color:#1d4ed8}
+    .fw-pax-lbl{font-size:14px;font-weight:700;color:#111827;line-height:15px}
+    .fw-pax-sub{font-size:10px;color:#7d7d7d;margin-top:1px;line-height:11px}
+    .fw-pax-ctr{display:flex;align-items:center;gap:8px}
+    .fw-pax-btn{width:18px;height:18px;border-radius:50%;border:1px solid #d9d9d9;background:#fff;font-size:14px;line-height:1;color:#303191;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0;font-family:inherit}
+    .fw-pax-btn:hover{background:#dbdcff;border-color:#303191;color:#303191}
     .fw-pax-btn:disabled{opacity:.45;cursor:not-allowed;background:#f9fafb;color:#9ca3af;border-color:#e5e7eb}
     .fw-pax-btn:disabled:hover{background:#f9fafb;color:#9ca3af;border-color:#e5e7eb}
-    .fw-pax-num{font-size:14px;font-weight:700;color:#111827;min-width:20px;text-align:center}
+    .fw-pax-num{font-size:14px;font-weight:700;color:#111827;min-width:12px;text-align:center}
     .fw-pax-limit{margin:10px 16px 0;padding:9px 10px;border-radius:8px;background:#fef2f2;color:#b91c1c;font-size:11.5px;font-weight:600;line-height:1.35}
-    .fw-pax-done{display:block;width:calc(100% - 32px);margin:10px 16px;padding:9px;background:#1d4ed8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;font-family:inherit}
-    .fw-pax-done:hover{background:#1e40af}
+    .fw-pax-done{display:none}
+    .fw-pax-done:hover{background:#252675}
     .fw-multi-legs{display:flex;flex-direction:column;gap:12px}
     .fw-leg{display:flex;align-items:flex-end;gap:10px;padding:16px 18px;background:#f9fafb;border-radius:12px;border:1.5px solid #f0f0f0;flex-wrap:nowrap}
-    .fw-leg-badge{width:26px;height:26px;background:#1d4ed8;color:#fff;font-size:12px;font-weight:700;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:5px}
+    .fw-leg-badge{width:26px;height:26px;background:#303191;color:#fff;font-size:12px;font-weight:700;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:12px}
     .fw-remove-btn{width:34px;height:34px;border-radius:50%;border:1.5px solid #fca5a5;background:#fff;color:#ef4444;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-bottom:5px;padding:0;transition:background .15s}
     .fw-remove-btn:hover{background:#fef2f2}
-    .fw-add-leg-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border:1.5px dashed #93c5fd;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
-    .fw-add-leg-btn:hover{background:#dbeafe;border-color:#3b82f6}
-    .fw-search-row{display:flex;align-items:center;justify-content:flex-end;margin-top:22px;gap:14px}
-    .fw-search-btn{display:inline-flex;align-items:center;gap:9px;padding:0 34px;height:52px;background:linear-gradient(135deg,#1d4ed8 0%,#2563eb 100%);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 4px 22px rgba(29,78,216,.38);transition:all .2s;letter-spacing:.01em;font-family:inherit;white-space:nowrap}
-    .fw-search-btn:hover{background:linear-gradient(135deg,#1e40af 0%,#1d4ed8 100%);box-shadow:0 6px 30px rgba(29,78,216,.48);transform:translateY(-1px)}
+    .fw-add-leg-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border:1.5px dashed #303191;border-radius:10px;background:#dbdcff;color:#303191;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit}
+    .fw-add-leg-btn:hover{background:#cfd1ff;border-color:#303191}
+    .fw-search-row{display:flex;align-items:center;justify-content:flex-end;margin-top:23px;gap:14px}
+    .fw-search-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:12px;width:231px;padding:0;height:75px;background:#303191;color:#fff!important;border:1px solid #303191;border-radius:12px;font-size:23px;font-weight:800;cursor:pointer;box-shadow:0 12px 24px rgba(48,49,145,.22);transition:background .18s,border-color .18s,transform .18s,box-shadow .18s;letter-spacing:0;font-family:'Open Sans',var(--font-primary),Arial,sans-serif;white-space:nowrap;overflow:hidden}
+    .fw-search-btn svg{position:relative;z-index:1;width:28px!important;height:26px!important;color:#fff!important;stroke:#fff!important;fill:none}
+    .fw-search-btn svg *{color:#fff!important;stroke:#fff!important}
+    .fw-search-btn:hover{background:#252675;border-color:#252675;box-shadow:0 16px 30px rgba(48,49,145,.28);transform:translateY(-1px)}
     .fw-search-btn:active{transform:translateY(0)}
 
-    /* ── Calendar ── */
-    .fw-cal{display:none;position:absolute;top:calc(100% + 6px);left:0;background:#fff;border:1.5px solid #e5e7eb;border-radius:14px;box-shadow:0 16px 48px rgba(0,0,0,.15);z-index:99997;width:300px;padding:16px;box-sizing:border-box;font-family:inherit}
+    /* Calendar */
+    .fw-cal{display:none;position:absolute;top:calc(100% + 7px);left:0;background:#fff;border:0;border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.15);z-index:99997;width:220px;height:220px;padding:13px 14px;box-sizing:border-box;font-family:'Open Sans',var(--font-primary),Arial,sans-serif}
     .fw-cal.fw-open{display:block}
-    .fw-cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-    .fw-cal-title{font-size:14px;font-weight:700;color:#111827}
-    .fw-cal-nav{width:28px;height:28px;border-radius:50%;border:1.5px solid #e5e7eb;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#6b7280;padding:0;font-size:16px;line-height:1;transition:all .15s}
+    .fw-cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .fw-cal-title{font-size:14px;font-weight:700;color:#303191}
+    .fw-cal-nav{width:20px;height:20px;border-radius:50%;border:0;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#303191;padding:0;font-size:16px;line-height:1;transition:all .15s}
     .fw-cal-nav:hover{background:#eff6ff;border-color:#3b82f6;color:#1d4ed8}
     .fw-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-    .fw-cal-dow{font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;text-align:center;padding:4px 0}
-    .fw-cal-day{height:34px;border-radius:8px;border:none;background:none;font-size:13px;color:#111827;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;font-family:inherit;width:100%;padding:0}
-    .fw-cal-day:hover:not(.fw-disabled):not(.fw-empty){background:#eff6ff;color:#1d4ed8}
-    .fw-cal-day.fw-today{font-weight:700;color:#1d4ed8}
-    /* Range styles — order matters: range-start/end override in-range */
-    .fw-cal-day.fw-in-range{background:#dbeafe !important;color:#1e40af;border-radius:0}
-    .fw-cal-day.fw-range-start{background:#1d4ed8 !important;color:#fff !important;font-weight:700;border-radius:8px 0 0 8px !important}
-    .fw-cal-day.fw-range-end{background:#1d4ed8 !important;color:#fff !important;font-weight:700;border-radius:0 8px 8px 0 !important}
+    .fw-cal-dow{font-size:10px;font-weight:700;text-transform:none;color:#303191;text-align:center;padding:2px 0}
+    .fw-cal-day{height:22px;border-radius:50%;border:none;background:none;font-size:12px;color:#111827;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;font-family:inherit;width:100%;padding:0}
+    .fw-cal-day:hover:not(.fw-disabled):not(.fw-empty){background:#dbdcff;color:#303191}
+    .fw-cal-day.fw-today{font-weight:700;color:#303191}
+    /* Range styles: range-start/end override in-range */
+    .fw-cal-day.fw-in-range{background:#dbdcff !important;color:#303191;border-radius:0}
+    .fw-cal-day.fw-range-start{background:#009933 !important;color:#fff !important;font-weight:700;border-radius:8px 0 0 8px !important}
+    .fw-cal-day.fw-range-end{background:#009933 !important;color:#fff !important;font-weight:700;border-radius:0 8px 8px 0 !important}
     /* When start == end (same day selected on both calendars) show full circle */
     .fw-cal-day.fw-range-start.fw-range-end{border-radius:8px !important}
-    .fw-cal-day.fw-selected{background:#1d4ed8 !important;color:#fff !important;font-weight:700;border-radius:8px}
+    .fw-cal-day.fw-selected{background:#009933 !important;color:#fff !important;font-weight:700;border-radius:8px;box-shadow:0 5px 12px rgba(0,153,51,.25)}
     .fw-cal-day.fw-disabled{color:#d1d5db !important;cursor:not-allowed;background:none !important}
     .fw-cal-day.fw-empty{visibility:hidden;pointer-events:none}
+    .fw-cabin-field{position:relative}
+    .fw-cabin-dropdown{display:none;position:absolute;top:calc(100% + 7px);left:0;width:158px;height:117px;background:#fff;border:0;border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.15);z-index:99997;padding:12px 14px;box-sizing:border-box}
+    .fw-cabin-dropdown.fw-open{display:block}
+    .fw-cabin-option{display:block;width:100%;border:0;background:transparent;text-align:left;color:#111!important;font-size:14px;font-weight:500;line-height:17px;padding:0 0 7px;cursor:pointer;font-family:'Open Sans',var(--font-primary),Arial,sans-serif}
+    .fw-cabin-option:last-child{padding-bottom:0}
+    .fw-cabin-option:hover{color:#303191!important}
+    .fw-panel-transition{transform-origin:top center}
 
     /* Responsive */
-    @media(max-width:960px){.fw-card{padding:24px 20px 20px}.fw-row{flex-wrap:wrap;gap:8px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 calc(50% - 8px)!important;min-width:calc(50% - 8px)}.fw-swap{display:none!important}}
-    @media(max-width:580px){.fw-card-outer{padding:20px 14px}.fw-card{padding:20px 16px;border-radius:14px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 100%!important;min-width:100%}.fw-leg{flex-wrap:wrap}.fw-search-btn{width:100%;justify-content:center}.fw-search-row{margin-top:14px}.fw-tab{padding:7px 13px;font-size:12px}}
-    .upper-space{margin-top:30px;}
-    @media(max-width:650px){.upper-space{margin-top:0px;}}
+    @media(max-width:1100px){.tw-hero-title{font-size:44px}.tw-hero-subtitle{font-size:24px}.tw-product-tabs{display:grid;grid-template-columns:repeat(4,88px)}.fw-card{padding:24px 20px 20px}.fw-row{flex-wrap:wrap;gap:10px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 calc(50% - 10px)!important;min-width:calc(50% - 10px)}.fw-swap{display:none!important}.fw-ac-dropdown{width:min(360px,calc(100vw - 48px))}}
+    @media(max-width:640px){.tw-landing-hero{min-height:auto;padding:70px 14px 58px}.tw-hero-title{font-size:32px;white-space:normal}.tw-hero-subtitle{font-size:18px;margin-bottom:20px}.tw-product-tabs{width:100%;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px}.tw-product-tab{width:100%}.fw-card{padding:20px 16px;border-radius:14px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 100%!important;min-width:100%}.fw-leg{flex-wrap:wrap}.fw-search-btn{width:100%;justify-content:center;height:58px;font-size:18px}.fw-search-row{margin-top:14px}.fw-tab{padding:8px 11px;font-size:12px}}
+    main.navbarmain.upper-space{margin-top:113px!important}
+    @media(max-width:650px){main.navbarmain.upper-space{margin-top:105px!important}}
 </style>
 
 <div
-    class="fw-card-outer"
+    class="tw-landing-hero fw-card-outer"
     x-data="flightWidget()"
     x-init="init()"
     @click.outside="closePax(); closeAllCals()"
 >
-    <div class="fw-card">
+    <div class="tw-hero-inner">
+        <h1 class="tw-hero-title">All Your Travel Needs In One Place</h1>
+        <p class="tw-hero-subtitle">Simplifying Access To Travel.</p>
 
-        {{-- ── Trip Type Tabs ── --}}
+        <div class="tw-product-tabs" aria-label="TravelWheel services">
+            <a class="tw-product-tab" href="{{ route('air.flight') }}"><img src="{{ asset('assets/Flight 70.png') }}" alt=""><span>Flights</span></a>
+            <a class="tw-product-tab" href="{{ route('air.hotel') }}"><img src="{{ asset('assets/Hotel 70.png') }}" alt=""><span>Hotels</span></a>
+            <a class="tw-product-tab" href="{{ route('air.lounge') }}"><img src="{{ asset('assets/Lounge 70.png') }}" alt=""><span>Lounge</span></a>
+            <a class="tw-product-tab" href="{{ route('air.protocol') }}"><img src="{{ asset('assets/Protocol 70.png') }}" alt=""><span>Protocol</span></a>
+            <a class="tw-product-tab" href="{{ route('air.insurance') }}"><img src="{{ asset('assets/Insurance 70.png') }}" alt=""><span>Insurance</span></a>
+            <a class="tw-product-tab" href="{{ route('air.visa') }}"><img src="{{ asset('assets/Visa 70.png') }}" alt=""><span>Visa</span></a>
+            <a class="tw-product-tab" href="{{ route('air.cargo') }}"><img src="{{ asset('assets/Air Cargo 70.png') }}" alt=""><span>Cargo</span></a>
+            <a class="tw-product-tab" href="{{ route('air.support') }}"><img src="{{ asset('assets/Support 70.png') }}" alt=""><span>Support</span></a>
+        </div>
+
+        <div class="fw-card">
+
+        {{-- Trip Type Tabs --}}
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px;flex-wrap:wrap;">
             <div class="fw-tabs" style="margin-bottom:0;flex:1;min-width:0;">
                 <button type="button" class="fw-tab" :class="{ 'fw-active': trip === 'OneWay' }" @click="setTrip('OneWay')">
@@ -105,7 +138,7 @@
                     Round Trip
                 </button>
                 <button type="button" class="fw-tab" :class="{ 'fw-active': trip === 'multi' }" @click="setTrip('multi')">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.4 6h7.2M6 8.4v7.2M8.4 18h7.2M18 8.4v7.2"/></svg>
                     Multi City
                 </button>
             </div>
@@ -121,15 +154,15 @@
                     <div class="fw-pax-row">
                         <div><div class="fw-pax-lbl">Adults</div><div class="fw-pax-sub">18+ yrs</div></div>
                         <div class="fw-pax-ctr">
-                            <button type="button" class="fw-pax-btn" @click="adults = Math.max(1, adults - 1)">−</button>
+                            <button type="button" class="fw-pax-btn" @click="adults = Math.max(1, adults - 1)">-</button>
                             <span class="fw-pax-num" x-text="adults"></span>
                             <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('adults')">+</button>
                         </div>
                     </div>
                     <div class="fw-pax-row">
-                        <div><div class="fw-pax-lbl">Children</div><div class="fw-pax-sub">2–12 yrs</div></div>
+                        <div><div class="fw-pax-lbl">Children</div><div class="fw-pax-sub">2-12 yrs</div></div>
                         <div class="fw-pax-ctr">
-                            <button type="button" class="fw-pax-btn" @click="childs = Math.max(0, childs - 1)">−</button>
+                            <button type="button" class="fw-pax-btn" @click="childs = Math.max(0, childs - 1)">-</button>
                             <span class="fw-pax-num" x-text="childs"></span>
                             <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('childs')">+</button>
                         </div>
@@ -137,7 +170,7 @@
                     <div class="fw-pax-row">
                         <div><div class="fw-pax-lbl">Infants</div><div class="fw-pax-sub">Under 2</div></div>
                         <div class="fw-pax-ctr">
-                            <button type="button" class="fw-pax-btn" @click="kids = Math.max(0, kids - 1)">−</button>
+                            <button type="button" class="fw-pax-btn" @click="kids = Math.max(0, kids - 1)">-</button>
                             <span class="fw-pax-num" x-text="kids"></span>
                             <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('kids')">+</button>
                         </div>
@@ -148,13 +181,13 @@
             </div>
         </div>
 
-        {{-- ── Simple Panel: One Way + Return ── --}}
-        <div x-show="trip !== 'multi'" x-transition>
+        {{-- Simple Panel: One Way + Return --}}
+        <div class="fw-panel-transition" x-show="trip !== 'multi'" x-transition.opacity.scale.95.duration.220ms>
             <div class="fw-row">
 
                 {{-- From --}}
                 <div class="fw-field fw-field-2x" style="position:relative;">
-                    <div class="fw-label">Flying From</div>
+                    <div class="fw-label">FROM</div>
                     <div class="fw-input-wrap">
                         <input class="fw-input" type="text" placeholder="City or airport"
                             x-model="from"
@@ -185,7 +218,7 @@
 
                 {{-- To --}}
                 <div class="fw-field fw-field-2x" style="position:relative;">
-                    <div class="fw-label">Flying To</div>
+                    <div class="fw-label">TO</div>
                     <div class="fw-input-wrap">
                         <input class="fw-input" type="text" placeholder="City or airport"
                             x-model="to"
@@ -211,7 +244,7 @@
 
                 {{-- Depart date --}}
                 <div class="fw-field fw-field-15x" style="position:relative;">
-                    <div class="fw-label">Depart</div>
+                    <div class="fw-label">DEPARTURE DATE</div>
                     <div class="fw-input-wrap">
                         <input class="fw-input" type="text" placeholder="dd/mm/yyyy"
                             x-model="depart"
@@ -224,7 +257,7 @@
                                 <button type="button" class="fw-cal-nav" @click="nextMonth('depart')">&#8250;</button>
                             </div>
                             <div class="fw-cal-grid">
-                                <template x-for="d in ['Su','Mo','Tu','We','Th','Fr','Sa']">
+                                <template x-for="d in ['Mo','Tu','We','Th','Fr','Sa','Su']">
                                     <div class="fw-cal-dow" x-text="d"></div>
                                 </template>
                                 <template x-for="cell in calCells('depart')" :key="cell.key">
@@ -248,9 +281,9 @@
                     <span x-show="errors.depart" class="fw-error" x-text="errors.depart"></span>
                 </div>
 
-                {{-- Return date — only shown for Round Trip --}}
-                <div class="fw-field fw-field-15x" x-show="trip === 'Return'" style="position:relative;">
-                    <div class="fw-label">Return</div>
+                {{-- Return date - only shown for Round Trip --}}
+                <div class="fw-field fw-field-15x" x-show="trip === 'Return'" x-transition.opacity.scale.95.duration.180ms style="position:relative;">
+                    <div class="fw-label">RETURN DATE</div>
                     <div class="fw-input-wrap">
                         <input class="fw-input" type="text" placeholder="dd/mm/yyyy"
                             x-model="returning"
@@ -263,7 +296,7 @@
                                 <button type="button" class="fw-cal-nav" @click="nextMonth('returning')">&#8250;</button>
                             </div>
                             <div class="fw-cal-grid">
-                                <template x-for="d in ['Su','Mo','Tu','We','Th','Fr','Sa']">
+                                <template x-for="d in ['Mo','Tu','We','Th','Fr','Sa','Su']">
                                     <div class="fw-cal-dow" x-text="d"></div>
                                 </template>
                                 <template x-for="cell in calCells('returning')" :key="cell.key">
@@ -289,7 +322,7 @@
 
                 {{-- Passengers --}}
                 <div class="fw-field fw-field-12x" style="position:relative;">
-                    <div class="fw-label">Passengers</div>
+                    <div class="fw-label">PASSENGERS</div>
                     <div class="fw-input fw-pax-trigger" @click.stop="paxOpen = !paxOpen">
                         <span x-text="(adults + childs + kids) + ' Pax'"></span>
                         <svg style="margin-left:auto;opacity:.4;flex-shrink:0" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -298,15 +331,15 @@
                         <div class="fw-pax-row">
                             <div><div class="fw-pax-lbl">Adults</div><div class="fw-pax-sub">18+ yrs</div></div>
                             <div class="fw-pax-ctr">
-                                <button type="button" class="fw-pax-btn" @click="adults = Math.max(1, adults - 1)">−</button>
+                                <button type="button" class="fw-pax-btn" @click="adults = Math.max(1, adults - 1)">-</button>
                                 <span class="fw-pax-num" x-text="adults"></span>
                                 <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('adults')">+</button>
                             </div>
                         </div>
                         <div class="fw-pax-row">
-                            <div><div class="fw-pax-lbl">Children</div><div class="fw-pax-sub">2–12 yrs</div></div>
+                            <div><div class="fw-pax-lbl">Children</div><div class="fw-pax-sub">2-12 yrs</div></div>
                             <div class="fw-pax-ctr">
-                                <button type="button" class="fw-pax-btn" @click="childs = Math.max(0, childs - 1)">−</button>
+                                <button type="button" class="fw-pax-btn" @click="childs = Math.max(0, childs - 1)">-</button>
                                 <span class="fw-pax-num" x-text="childs"></span>
                                 <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('childs')">+</button>
                             </div>
@@ -314,7 +347,7 @@
                         <div class="fw-pax-row">
                             <div><div class="fw-pax-lbl">Infants</div><div class="fw-pax-sub">Under 2</div></div>
                             <div class="fw-pax-ctr">
-                                <button type="button" class="fw-pax-btn" @click="kids = Math.max(0, kids - 1)">−</button>
+                                <button type="button" class="fw-pax-btn" @click="kids = Math.max(0, kids - 1)">-</button>
                                 <span class="fw-pax-num" x-text="kids"></span>
                                 <button type="button" class="fw-pax-btn" :disabled="totalPassengers() >= 9" @click="addPassenger('kids')">+</button>
                             </div>
@@ -325,21 +358,22 @@
                 </div>
 
                 {{-- Cabin --}}
-                <div class="fw-field fw-field-12x">
-                    <div class="fw-label">Cabin</div>
-                    <select class="fw-input fw-select" x-model="flightType">
-                        <option value="Y">Economy</option>
-                        <option value="S">Prem. Economy</option>
-                        <option value="C">Business</option>
-                        <option value="F">First Class</option>
-                    </select>
+                <div class="fw-field fw-field-12x fw-cabin-field">
+                    <div class="fw-label">CLASS CABIN</div>
+                    <button type="button" class="fw-input fw-select" @click.stop="cabinOpen = !cabinOpen" x-text="cabinLabel(flightType)"></button>
+                    <div class="fw-cabin-dropdown" :class="{ 'fw-open': cabinOpen }" @click.stop>
+                        <button type="button" class="fw-cabin-option" @click="flightType = 'Y'; cabinOpen = false">Economy</button>
+                        <button type="button" class="fw-cabin-option" @click="flightType = 'S'; cabinOpen = false">Premium Economy</button>
+                        <button type="button" class="fw-cabin-option" @click="flightType = 'C'; cabinOpen = false">Business</button>
+                        <button type="button" class="fw-cabin-option" @click="flightType = 'F'; cabinOpen = false">First Class</button>
+                    </div>
                 </div>
 
             </div>
         </div>
 
-        {{-- ── Multi City Panel ── --}}
-        <div x-show="trip === 'multi'" x-transition>
+        {{-- Multi City Panel --}}
+        <div class="fw-panel-transition" x-show="trip === 'multi'" x-transition.opacity.scale.95.duration.220ms>
             <div class="fw-multi-legs">
                 <template x-for="(leg, index) in multiLegs" :key="index">
                     <div class="fw-leg">
@@ -405,7 +439,7 @@
                                         <button type="button" class="fw-cal-nav" @click="nextLegMonth(index)">&#8250;</button>
                                     </div>
                                     <div class="fw-cal-grid">
-                                        <template x-for="d in ['Su','Mo','Tu','We','Th','Fr','Sa']">
+                                        <template x-for="d in ['Mo','Tu','We','Th','Fr','Sa','Su']">
                                             <div class="fw-cal-dow" x-text="d"></div>
                                         </template>
                                         <template x-for="cell in legCalCells(index)" :key="cell.key">
@@ -425,16 +459,15 @@
                             </div>
                         </div>
 
-                        <div class="fw-field fw-field-12x">
+                        <div class="fw-field fw-field-12x fw-cabin-field">
                             <div class="fw-label">Cabin</div>
-                            <select class="fw-input fw-select"
-                                :value="leg.cabin"
-                                @change="multiLegs[index].cabin = $event.target.value; multiLegs = [...multiLegs]">
-                                <option value="Y">Economy</option>
-                                <option value="S">Prem. Economy</option>
-                                <option value="C">Business</option>
-                                <option value="F">First Class</option>
-                            </select>
+                            <button type="button" class="fw-input fw-select" @click.stop="toggleLegCabin(index)" x-text="cabinLabel(leg.cabin)"></button>
+                            <div class="fw-cabin-dropdown" :class="{ 'fw-open': leg.cabinOpen }" @click.stop>
+                                <button type="button" class="fw-cabin-option" @click="setLegCabin(index, 'Y')">Economy</button>
+                                <button type="button" class="fw-cabin-option" @click="setLegCabin(index, 'S')">Premium Economy</button>
+                                <button type="button" class="fw-cabin-option" @click="setLegCabin(index, 'C')">Business</button>
+                                <button type="button" class="fw-cabin-option" @click="setLegCabin(index, 'F')">First Class</button>
+                            </div>
                         </div>
 
                         <button x-show="index >= 2" type="button" class="fw-remove-btn" @click="removeLeg(index)">
@@ -448,11 +481,11 @@
             </button>
         </div>
 
-        {{-- ── Search Button ── --}}
+        {{-- Search Button --}}
         <div class="fw-search-row">
             <span x-show="errors.general || errors.passengers" class="fw-error" style="margin-right:auto;" x-text="errors.general || errors.passengers"></span>
             <button class="fw-search-btn" type="button" @click="search">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.2 4.2"/></svg>
                 Search Flights
             </button>
         </div>
@@ -472,6 +505,7 @@
             <input type="hidden" name="multi_legs"  x-bind:value="JSON.stringify(multiLegs)">
         </form>
 
+        </div>
     </div>
 </div>
 
@@ -479,8 +513,8 @@
 function flightWidget() {
     return {
 
-        // ── Core state ──
-        trip:       'OneWay',
+        // Core state
+        trip:       'Return',
         from:       '',
         to:         '',
         depart:     '',
@@ -491,12 +525,13 @@ function flightWidget() {
         flightType: 'Y',
 
         multiLegs: [
-            { from:'', to:'', depart:'', cabin:'Y', fromResults:[], toResults:[], fromFocus:false, toFocus:false, calY:new Date().getFullYear(), calM:new Date().getMonth() },
-            { from:'', to:'', depart:'', cabin:'Y', fromResults:[], toResults:[], fromFocus:false, toFocus:false, calY:new Date().getFullYear(), calM:new Date().getMonth() },
+            { from:'', to:'', depart:'', cabin:'Y', cabinOpen:false, fromResults:[], toResults:[], fromFocus:false, toFocus:false, calY:new Date().getFullYear(), calM:new Date().getMonth() },
+            { from:'', to:'', depart:'', cabin:'Y', cabinOpen:false, fromResults:[], toResults:[], fromFocus:false, toFocus:false, calY:new Date().getFullYear(), calM:new Date().getMonth() },
         ],
 
-        // ── UI state ──
+        // UI state
         paxOpen:    false,
+        cabinOpen:  false,
         openCal:    null,   // 'depart' | 'returning' | null
         openLegCal: null,   // index | null
         calState: {
@@ -504,19 +539,19 @@ function flightWidget() {
             returning: { y: new Date().getFullYear(), m: new Date().getMonth() },
         },
 
-        // ── Airport data ──
+        // Airport data
         airports:    [],
         fromResults: [],
         toResults:   [],
         fromFocus:   false,
         toFocus:     false,
 
-        // ── Errors ──
+        // Errors
         errors: {},
 
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         //  INIT
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         init() {
             fetch('{{ asset('assets/data/airports.json') }}')
                 .then(r => r.json())
@@ -530,14 +565,16 @@ function flightWidget() {
                 this.openCal    = null;
                 this.openLegCal = null;
                 this.paxOpen    = false;
+                this.cabinOpen  = false;
+                this.multiLegs = this.multiLegs.map(leg => ({ ...leg, cabinOpen: false }));
             });
         },
 
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         //  HELPERS
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
 
-        // Parse "dd/mm/yyyy" → midnight Date (local), or null
+        // Parse "dd/mm/yyyy" to midnight Date (local), or null
         _parseDate(str) {
             if (!str) return null;
             const p = str.split('/');
@@ -547,16 +584,16 @@ function flightWidget() {
             return isNaN(d.getTime()) ? null : d;
         },
 
-        // Format a Date → "dd/mm/yyyy"
+        // Format a Date to "dd/mm/yyyy"
         _fmtDate(date) {
             return String(date.getDate()).padStart(2,'0') + '/' +
                    String(date.getMonth() + 1).padStart(2,'0') + '/' +
                    date.getFullYear();
         },
 
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         //  TRIP TABS
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         setTrip(value) {
             this.trip    = value;
             this.openCal = null;
@@ -566,9 +603,9 @@ function flightWidget() {
             }
         },
 
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         //  AIRPORT AUTOCOMPLETE
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         airportSearch(q) {
             q = (q || '').toLowerCase().trim();
             if (q.length < 2) return [];
@@ -604,7 +641,7 @@ function flightWidget() {
             }
         },
 
-        // ── Multi-leg autocomplete ──
+        // Multi-leg autocomplete
         searchLegAirport(val, index, field) {
             const results = this.airportSearch(val);
             const leg = { ...this.multiLegs[index] };
@@ -634,11 +671,23 @@ function flightWidget() {
         },
         
 
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         //  MISC
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         swapRoutes() { [this.from, this.to] = [this.to, this.from]; },
         closePax()   { this.paxOpen = false; },
+        cabinLabel(value) {
+            return ({ Y: 'Economy', S: 'Premium Economy', C: 'Business', F: 'First Class' })[value] || 'Economy';
+        },
+        toggleLegCabin(index) {
+            this.multiLegs = this.multiLegs.map((leg, i) => ({ ...leg, cabinOpen: i === index ? !leg.cabinOpen : false }));
+            this.cabinOpen = false;
+        },
+        setLegCabin(index, value) {
+            const leg = { ...this.multiLegs[index], cabin: value, cabinOpen: false };
+            this.multiLegs[index] = leg;
+            this.multiLegs = [...this.multiLegs];
+        },
         totalPassengers() { return this.adults + this.childs + this.kids; },
         addPassenger(type) {
             if (this.totalPassengers() >= 9) {
@@ -651,7 +700,7 @@ function flightWidget() {
         },
         addLeg() {
             this.multiLegs.push({
-                from:'', to:'', depart:'', cabin:'Y',
+                from:'', to:'', depart:'', cabin:'Y', cabinOpen:false,
                 fromResults:[], toResults:[],
                 fromFocus:false, toFocus:false,
                 calY: new Date().getFullYear(), calM: new Date().getMonth(),
@@ -659,9 +708,9 @@ function flightWidget() {
         },
         removeLeg(index) { this.multiLegs.splice(index, 1); },
 
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         //  CALENDAR
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         MONTHS: ['January','February','March','April','May','June',
                  'July','August','September','October','November','December'],
 
@@ -686,7 +735,7 @@ function flightWidget() {
                 return;
             }
 
-            // ── Sync calendar view month ──────────────────────────────
+            // Sync calendar view month
             if (field === 'returning') {
                 // Always open from the depart date (or today if none set)
                 const anchor = this._parseDate(this.depart) || new Date();
@@ -714,7 +763,7 @@ function flightWidget() {
             const departDate  = this._parseDate(this.depart);
             const returnDate  = this._parseDate(this.returning);
 
-            const startDow = new Date(s.y, s.m, 1).getDay();
+            const startDow = (new Date(s.y, s.m, 1).getDay() + 6) % 7;
             const lastDay  = new Date(s.y, s.m + 1, 0).getDate();
             const cells    = [];
 
@@ -727,7 +776,7 @@ function flightWidget() {
                 const date = new Date(s.y, s.m, d);
                 date.setHours(0, 0, 0, 0);
 
-                // ── Disabled logic ────────────────────────────────────
+                // Disabled logic
                 // All past dates are always disabled
                 let disabled = date < now;
 
@@ -736,7 +785,7 @@ function flightWidget() {
                     disabled = true;
                 }
 
-                // ── Range-highlight logic ─────────────────────────────
+                // Range-highlight logic
                 // We compute these the same way for both calendars so the
                 // full range is visible when navigating either calendar.
                 const isDepart = departDate && date.getTime() === departDate.getTime();
@@ -781,7 +830,7 @@ function flightWidget() {
             if (field === 'depart') {
                 this.depart = formatted;
 
-                // ── If existing return is now before depart, clear it ──
+                // If existing return is now before depart, clear it
                 const ret = this._parseDate(this.returning);
                 if (ret && ret < picked) {
                     this.returning = '';
@@ -789,12 +838,12 @@ function flightWidget() {
 
                 if (this.trip === 'Return') {
                     if (!this.returning) {
-                        // ── Auto-fill return = depart + 1 day ────────────
+                        // Auto-fill return = depart + 1 day
                         const next = new Date(picked);
                         next.setDate(next.getDate() + 1);
                         this.returning = this._fmtDate(next);
                     }
-                    // ── Auto-open return calendar, starting from depart month ──
+                    // Auto-open return calendar, starting from depart month
                     this.calState.returning = { y: cell.y, m: cell.m };
                     this.openCal = 'returning';
                 } else {
@@ -802,13 +851,13 @@ function flightWidget() {
                 }
 
             } else {
-                // Picking return date — just save and close
+                // Picking return date: just save and close
                 this.returning = formatted;
                 this.openCal   = null;
             }
         },
 
-        // ── Multi-leg calendars ──
+        // Multi-leg calendars
         legCalTitle(index) {
             const leg = this.multiLegs[index];
             return this.MONTHS[leg.calM] + ' ' + leg.calY;
@@ -835,7 +884,7 @@ function flightWidget() {
             const prevDate = index > 0 ? this._parseDate(this.multiLegs[index - 1].depart) : null;
             const minDate  = prevDate && prevDate > now ? prevDate : now;
 
-            const startDow = new Date(leg.calY, leg.calM, 1).getDay();
+            const startDow = (new Date(leg.calY, leg.calM, 1).getDay() + 6) % 7;
             const lastDay  = new Date(leg.calY, leg.calM + 1, 0).getDate();
             const cells    = [];
 
@@ -909,9 +958,9 @@ function flightWidget() {
             this.openCal    = null;
         },
 
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         //  VALIDATION & SEARCH
-        // ────────────────────────────────────────────────────────────
+        // ------------------------------------------------------------
         validate() {
             this.errors = {};
             if (this.totalPassengers() > 9) {

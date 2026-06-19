@@ -422,6 +422,14 @@
                 </div>
                 @endif
 
+               
+                        <div style="padding:10px 0;margin-bottom:10px;border-bottom:1px solid var(--gray-100);">
+                            <div class="bk-fare-row">
+                                <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">Service charge</span>
+                                <span class="bk-fare-val" style="font-weight:800;">{{ $fmt($markupAmount) }}</span>
+                            </div>
+                        </div>
+             
             <div class="po-rail-total-row">
                     <span class="po-rail-total-lbl">Total</span>
                     <span class="po-rail-total-val">{{ $fmt($total) }}</span>

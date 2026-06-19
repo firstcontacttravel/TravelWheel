@@ -1,23 +1,39 @@
-<section class="container">
-    <div id="carouselExampleControls" class="carousel slide" data-bs-ride="carousel">
-        <div class="carousel-inner">
-            <div class="carousel-item active">
-                <img src="{{asset('assets/image/in1.jpg')}}" class="d-block w-100" alt="...">
-            </div>
-            <div class="carousel-item">
-                <img src="{{asset('assets/image/In1.jpg')}}" class="d-block w-100" alt="...">
-            </div>
-            <div class="carousel-item">
-                <img src="{{asset('assets/image/In1.jpg')}}" class="d-block w-100" alt="...">
-            </div>
+<style>
+    .tw-trust-strip{background:#fff;padding:30px 20px;border-bottom:1px solid #eef0f4}
+    .tw-trust-inner{max-width:1060px;margin:0 auto;display:grid;grid-template-columns:repeat(4,auto);justify-content:center;gap:42px}
+    .tw-trust-item{display:flex;align-items:center;gap:10px;color:#1f2937!important;font-family:'Open Sans',var(--font-primary),Arial,sans-serif;font-size:16px;font-weight:600;white-space:nowrap}
+    .tw-trust-icon{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:#f4f7f5;color:#009933;flex:0 0 24px}
+    .tw-trust-icon svg{width:16px;height:16px;display:block;stroke:currentColor}
+    .tw-visa-banner{padding:60px 20px 34px;background:#fff}
+    .tw-visa-card{max-width:1356px;height:225px;margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .tw-visa-card img{width:100%;height:100%;object-fit:contain;display:block}
+    @media(max-width:900px){.tw-trust-inner{grid-template-columns:repeat(2,auto);gap:18px 32px}.tw-visa-card{height:auto}}
+    @media(max-width:560px){.tw-trust-inner{grid-template-columns:1fr;justify-content:start}.tw-visa-banner{padding-top:36px}}
+</style>
+
+<section class="tw-trust-strip" aria-label="TravelWheel assurances">
+    <div class="tw-trust-inner">
+        <div class="tw-trust-item">
+            <span class="tw-trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+            <span>Best price guarantee</span>
         </div>
-        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Previous</span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="next">
-            <span class="carousel-control-next-icon" aria-hidden="true"></span>
-            <span class="visually-hidden">Next</span>
-        </button>
+        <div class="tw-trust-item">
+            <span class="tw-trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5c0 4.4 2.9 8.5 7 10 4.1-1.5 7-5.6 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-5"/></svg></span>
+            <span>Secure booking</span>
+        </div>
+        <div class="tw-trust-item">
+            <span class="tw-trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/><path d="M5 4 3 6"/><path d="m19 4 2 2"/></svg></span>
+            <span>Instant confirmation</span>
+        </div>
+        <div class="tw-trust-item">
+            <span class="tw-trust-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a8 8 0 0 1 16 0"/><path d="M5 13h3v5H5a2 2 0 0 1-2-2v-1a2 2 0 0 1 2-2Z"/><path d="M19 13h-3v5h3a2 2 0 0 0 2-2v-1a2 2 0 0 0-2-2Z"/><path d="M16 18c0 1.7-1.8 3-4 3"/></svg></span>
+            <span>24/7 support</span>
+        </div>
+    </div>
+</section>
+
+<section class="tw-visa-banner" aria-label="Nigeria e-Visa">
+    <div class="tw-visa-card">
+        <img src="{{ asset('assets/figma/landing/evisa-banner.png') }}" alt="Nigeria e-Visa">
     </div>
 </section>
