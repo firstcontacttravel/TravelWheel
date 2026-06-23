@@ -11,23 +11,19 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-/**
- * Sent when a booking is fully confirmed and ticketed (gateway payment).
- * Renders booking-confirmed.blade.php and attaches the e-ticket PDF.
- */
 class BookingConfirmedMail extends Mailable
 {
     use Queueable, SerializesModels;
 
     public function __construct(
         public readonly FlightBooking $booking,
-        public readonly array         $tripDetails = [],
+        public readonly array $tripDetails = [],
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '✅ Your E-Ticket is Ready — ' . $this->booking->booking_ref . ' | TravelWheel',
+            subject: 'Your E-Ticket is Ready - ' . $this->booking->booking_ref . ' | TravelWheel',
         );
     }
 
@@ -36,7 +32,7 @@ class BookingConfirmedMail extends Mailable
         return new Content(
             view: 'emails.booking-confirmed',
             with: [
-                'booking'     => $this->booking,
+                'booking' => $this->booking,
                 'tripDetails' => $this->tripDetails,
             ],
         );
@@ -44,15 +40,12 @@ class BookingConfirmedMail extends Mailable
 
     public function attachments(): array
     {
-        // Only attach PDF when we have trip data (i.e. ticket has been issued).
-        // If tripDetails is empty we still send the email, just without the PDF
-        // — the PDF will be resent once ticketing completes.
         if (empty($this->tripDetails)) {
             return [];
         }
 
         $pdfService = app(ETicketPdfService::class);
-        $pdfBytes   = $pdfService->generate($this->booking, $this->tripDetails);
+        $pdfBytes = $pdfService->generate($this->booking, $this->tripDetails);
 
         return [
             Attachment::fromData(

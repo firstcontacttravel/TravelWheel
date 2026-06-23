@@ -182,6 +182,18 @@
     .bk-pax-num-lbl { font-size: 13px; font-weight: 700; color: var(--gray-700); flex: 1; }
     .bk-pax-progress { font-size: 11px; color: var(--gray-400); font-weight: 600; }
     .bk-pax-complete { font-size: 11px; color: var(--green); font-weight: 700; }
+    .bk-primary-chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 20px;
+        margin-left: 6px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: var(--blue);
+        font-size: 10px;
+        font-weight: 850;
+    }
 
     /* Important notice in pax card */
     .bk-pax-notice { margin: 0; padding: 9px 15px; background: #fff8e6; border-bottom: 1px solid #fde68a; font-size: 11.5px; color: #92400e; display: flex; align-items: flex-start; gap: 7px; }
@@ -303,6 +315,874 @@
     .bk-review-label { color: var(--gray-500); font-weight: 500; flex-shrink: 0; }
     .bk-review-val   { color: var(--gray-900); font-weight: 700; text-align: right; }
 
+    /* Phase 1 booking redesign shell */
+    :root {
+        --navy: var(--tw-brand, #303191);
+        --blue: var(--tw-brand, #303191);
+        --blue-lt: #f1f1ff;
+        --blue-md: #d7d8ff;
+        --green: var(--tw-accent, #009933);
+        --gray-50: var(--tw-surface-soft, #f8f9fc);
+        --gray-100: #f2f4f7;
+        --gray-200: #e6e8ee;
+        --gray-300: #d0d5dd;
+        --gray-400: #98a2b3;
+        --gray-500: #667085;
+        --gray-700: #344054;
+        --gray-900: #111827;
+        --radius: 12px;
+        --shadow: 0 1px 2px rgba(16,24,40,.05);
+        --shadow-md: 0 10px 28px rgba(16,24,40,.08);
+        --font: var(--tw-font-sans, 'Open Sans', 'Plus Jakarta Sans', sans-serif);
+    }
+    body {
+        background: linear-gradient(180deg, #fff 0%, var(--gray-50) 42%, #fff 100%);
+    }
+    .bk-wrap {
+        max-width: 1216px;
+        padding: 24px 16px 72px;
+    }
+    .bk-page {
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 18px;
+    }
+    .bk-main,
+    .bk-rail {
+        min-width: 0;
+    }
+    .bk-rail {
+        top: 18px;
+    }
+    .bk-crumb {
+        gap: 7px;
+        margin-bottom: 16px;
+        font-size: 12px;
+    }
+    .bk-crumb a:hover {
+        color: #252675;
+        text-decoration: none;
+    }
+    .bk-steps {
+        padding: 12px 16px;
+        border-radius: 12px;
+        background: rgba(255,255,255,.96);
+        box-shadow: var(--shadow-md);
+    }
+    .bk-step-dot {
+        transition: background .18s ease, box-shadow .18s ease, color .18s ease;
+    }
+    .bk-step-dot.active {
+        box-shadow: 0 0 0 4px rgba(48,49,145,.12);
+    }
+    .bk-step-label {
+        font-weight: 800;
+    }
+    .bk-acc {
+        border-radius: 12px;
+        border-color: var(--gray-200);
+        box-shadow: var(--shadow);
+    }
+    .bk-acc-head {
+        padding: 15px 18px;
+    }
+    .bk-acc-head:hover {
+        background: #fbfcfe;
+    }
+    .bk-acc-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+    }
+    .bk-actions {
+        padding-top: 8px;
+    }
+    .bk-btn-ghost,
+    .bk-btn-next,
+    .bk-btn-pay {
+        border-radius: 10px;
+        letter-spacing: 0;
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .bk-btn-ghost {
+        height: 46px;
+        border: 1px solid var(--gray-200);
+        color: var(--gray-700);
+        box-shadow: 0 1px 2px rgba(16,24,40,.04);
+    }
+    .bk-btn-ghost:hover {
+        border-color: #cfd2da;
+        background: #fbfcfe;
+        transform: translateY(-1px);
+    }
+    .bk-btn-next,
+    .bk-btn-pay {
+        background: var(--blue);
+        box-shadow: 0 12px 24px rgba(48,49,145,.18);
+    }
+    .bk-btn-next:hover,
+    .bk-btn-pay:hover {
+        background: #252675;
+        transform: translateY(-1px);
+        box-shadow: 0 16px 30px rgba(48,49,145,.24);
+    }
+    .bk-cart {
+        border: 1px solid var(--gray-200);
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 12px 30px rgba(16,24,40,.08);
+        overflow: hidden;
+    }
+    .bk-cart-head {
+        padding: 16px 18px 13px;
+        background: #fff;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    .bk-cart-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--gray-900);
+        font-size: 15px;
+        font-weight: 850;
+    }
+    .bk-cart-title::before {
+        content: "";
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        background: var(--blue-lt);
+        color: var(--blue);
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 4h-2l-1 2h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 19h9v-2h-9l1.1-2h7.45a2 2 0 0 0 1.8-1.1L24 7H8.42L7 4Zm3 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm8 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z'/%3E%3C/svg%3E") center / 15px 15px no-repeat;
+        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 4h-2l-1 2h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 19h9v-2h-9l1.1-2h7.45a2 2 0 0 0 1.8-1.1L24 7H8.42L7 4Zm3 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm8 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z'/%3E%3C/svg%3E") center / 15px 15px no-repeat;
+    }
+    .bk-cart-body {
+        padding: 16px 18px 10px;
+    }
+    .bk-cart-section {
+        margin-bottom: 10px;
+    }
+    .bk-cart-section-lbl,
+    .bk-fare-title {
+        color: var(--gray-500);
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: .04em;
+    }
+    .bk-cart-flight-row {
+        gap: 10px;
+        padding: 10px 0;
+        margin: 0;
+        border-bottom: 1px solid var(--gray-100);
+    }
+    .bk-cart-plane {
+        width: 16px;
+        height: 16px;
+        color: var(--blue);
+    }
+    .bk-cart-route {
+        color: var(--gray-900);
+        font-size: 13px;
+        line-height: 1.35;
+    }
+    .bk-cart-sub {
+        color: var(--gray-500);
+        font-size: 11.5px;
+    }
+    .bk-fare-section {
+        padding: 14px 18px;
+        border-top: 1px solid var(--gray-200);
+    }
+    .bk-fare-title {
+        margin-bottom: 12px;
+    }
+    .bk-fare-row {
+        gap: 12px;
+        padding: 5px 0;
+    }
+    .bk-fare-lbl {
+        color: var(--gray-500);
+        min-width: 0;
+    }
+    .bk-fare-val {
+        color: var(--gray-900);
+        white-space: nowrap;
+    }
+    .bk-fare-total-row {
+        padding: 16px 18px;
+        border-top: 1px solid var(--gray-200);
+        background: linear-gradient(180deg, #fff 0%, #fbfcff 100%);
+    }
+    .bk-fare-total-lbl {
+        color: var(--gray-900);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+    }
+    .bk-fare-total-val {
+        color: var(--navy);
+        font-size: 24px;
+        letter-spacing: 0;
+    }
+    .bk-promo {
+        border-top: 1px solid var(--gray-200);
+        padding: 0;
+    }
+    .bk-promo > details {
+        padding: 0;
+    }
+    .bk-promo-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 46px;
+        padding: 0 18px;
+        color: var(--blue);
+        font-size: 13px;
+        font-weight: 750;
+        cursor: pointer;
+        list-style: none;
+    }
+    .bk-promo-summary::-webkit-details-marker {
+        display: none;
+    }
+    .bk-promo-summary::after {
+        content: "";
+        width: 14px;
+        height: 14px;
+        background: currentColor;
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+        transition: transform .18s ease;
+    }
+    .bk-promo details[open] .bk-promo-summary::after {
+        transform: rotate(180deg);
+    }
+    .bk-promo-row {
+        padding: 0 18px 16px;
+    }
+    .bk-promo-input {
+        height: 42px;
+        border: 1px solid var(--gray-200);
+        border-radius: 9px;
+        background: #fbfcfe;
+    }
+    .bk-promo-input:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(48,49,145,.10);
+    }
+    .bk-promo-btn {
+        height: 42px;
+        border-radius: 9px;
+        background: var(--blue);
+    }
+    .bk-promo-btn:hover {
+        background: #252675;
+    }
+    .bk-rail-trust {
+        display: grid;
+        gap: 8px;
+        padding: 14px 18px 16px;
+        border-top: 1px solid var(--gray-200);
+        background: #fbfcfe;
+    }
+    .bk-rail-trust-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--gray-600, #475467);
+        font-size: 11.5px;
+        line-height: 1.35;
+    }
+    .bk-rail-trust-icon {
+        width: 18px;
+        height: 18px;
+        flex: 0 0 18px;
+        color: var(--green);
+    }
+
+    /* Phase 2 itinerary and rules redesign */
+    .bk-main > .bk-acc:first-of-type {
+        overflow: visible;
+    }
+    .bk-main > .bk-acc:first-of-type .bk-acc-head {
+        background: #fff;
+        border-bottom-color: var(--gray-200);
+    }
+    .bk-main > .bk-acc:first-of-type .bk-acc-icon {
+        background: #f1f1ff;
+        color: var(--blue);
+    }
+    .bk-itin-leg {
+        background: #fff;
+    }
+    .bk-itin-leg + .bk-itin-leg {
+        border-top: 1px solid var(--gray-200);
+    }
+    .bk-itin-leg-head {
+        padding: 14px 18px;
+        background: #fbfcfe;
+        border-bottom: 1px solid var(--gray-100);
+        transition: background .18s ease;
+    }
+    .bk-itin-leg-head:hover {
+        background: #f7f8fc;
+    }
+    .bk-itin-leg-route {
+        gap: 9px;
+        color: var(--gray-900);
+        font-size: 15px;
+        line-height: 1.2;
+        letter-spacing: 0;
+    }
+    .bk-itin-leg-route svg {
+        color: var(--blue);
+        flex: 0 0 14px;
+    }
+    .bk-itin-leg-meta {
+        gap: 8px;
+        color: var(--gray-500);
+        font-size: 11.5px;
+        font-weight: 600;
+        flex-wrap: wrap;
+    }
+    .bk-itin-leg-badge,
+    .bk-outbound-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 20px;
+        padding: 2px 9px;
+        border-radius: 999px;
+        font-size: 10.5px;
+        font-weight: 800;
+        letter-spacing: 0;
+    }
+    .bk-outbound-badge {
+        background: #eef2ff;
+        color: var(--blue);
+    }
+    .bk-itin-leg-badge {
+        background: #fff7ed;
+        color: #d97706;
+    }
+    .bk-itin-leg-badge.direct {
+        background: #eafff0;
+        color: var(--green);
+    }
+    .bk-itin-leg-body {
+        padding: 14px 18px 18px;
+    }
+    .bk-seg-group {
+        margin-top: 0;
+        padding: 15px 16px;
+        border: 1px solid var(--gray-200);
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(16,24,40,.04);
+    }
+    .bk-seg-group + .bk-seg-group {
+        margin-top: 12px;
+    }
+    .bk-seg-airline-bar {
+        gap: 12px;
+        padding: 0 0 12px;
+        margin-bottom: 14px;
+        border-bottom: 1px solid var(--gray-100);
+    }
+    .bk-seg-airline-left {
+        min-width: 0;
+        flex-wrap: wrap;
+    }
+    .bk-seg-airline-logo {
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
+        background: #fff;
+        border: 1px solid var(--gray-200);
+    }
+    .bk-seg-airline-name {
+        color: var(--gray-900);
+        font-size: 13px;
+        font-weight: 850;
+    }
+    .bk-seg-cabin-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: var(--gray-50);
+        color: var(--gray-500);
+        font-size: 10.5px;
+        font-weight: 750;
+        white-space: nowrap;
+    }
+    .bk-seg-timeline {
+        align-items: stretch;
+    }
+    .bk-seg-spine {
+        width: 22px;
+        padding-top: 8px;
+    }
+    .bk-seg-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--blue);
+        box-shadow: 0 0 0 4px rgba(48,49,145,.10);
+    }
+    .bk-seg-dot.end {
+        background: var(--green);
+        box-shadow: 0 0 0 4px rgba(0,153,51,.10);
+    }
+    .bk-seg-line {
+        width: 1.5px;
+        background: #d8dbe3;
+        min-height: 52px;
+    }
+    .bk-seg-stop {
+        grid-template-columns: 82px minmax(0, 1fr) 128px;
+        gap: 12px;
+        padding: 2px 0 12px 12px;
+    }
+    .bk-seg-time {
+        color: #111827;
+        font-size: 17px;
+        line-height: 1.05;
+        letter-spacing: 0;
+    }
+    .bk-seg-place {
+        color: var(--gray-700);
+        font-size: 12.5px;
+        font-weight: 750;
+        line-height: 1.25;
+    }
+    .bk-seg-place-sub {
+        color: var(--gray-400);
+        font-size: 11px;
+        line-height: 1.35;
+    }
+    .bk-seg-bags {
+        align-self: start;
+        gap: 4px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: #fbfcfe;
+        border: 1px solid var(--gray-100);
+    }
+    .bk-seg-bags-lbl {
+        color: var(--gray-400);
+        font-size: 9.5px;
+        letter-spacing: .04em;
+    }
+    .bk-seg-bags-val {
+        color: var(--gray-900);
+        font-size: 11px;
+        font-weight: 850;
+    }
+    .bk-layover-strip {
+        margin: 12px 0;
+        border-color: #fed7aa;
+        border-radius: 10px;
+    }
+    .bk-bags-banner {
+        border-radius: 12px;
+        border-color: var(--gray-200);
+        box-shadow: var(--shadow);
+    }
+    .bk-bags-icon {
+        display: inline-flex;
+        width: 34px;
+        height: 34px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9px;
+        background: #f1f1ff;
+        color: var(--blue);
+        font-size: 19px;
+    }
+    .bk-bags-title {
+        font-size: 14px;
+        font-weight: 850;
+    }
+    .bk-bags-sub {
+        color: var(--gray-500);
+        font-size: 12px;
+    }
+    .bk-main > .bk-acc:nth-of-type(3) .bk-acc-head {
+        background: #fff;
+    }
+    .bk-main > .bk-acc:nth-of-type(3) .bk-acc-icon {
+        background: #fff1f2;
+        color: #dc2626;
+    }
+    .bk-main > .bk-acc:nth-of-type(3) .bk-acc-body {
+        background: #fff;
+    }
+    .bk-main > .bk-acc:nth-of-type(3) table {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .bk-main > .bk-acc:nth-of-type(3) div[style*="border:1px solid var(--gray-200)"] {
+        border-color: var(--gray-200) !important;
+        border-radius: 10px !important;
+        box-shadow: 0 1px 2px rgba(16,24,40,.04);
+    }
+
+    /* Phase 3 traveller and contact form redesign */
+    .bk-route-summary {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+    }
+    .bk-route-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 24px;
+        padding: 4px 9px;
+        border: 1px solid var(--gray-200);
+        border-radius: 999px;
+        background: #fbfcfe;
+        color: var(--gray-600, #475467);
+        font-size: 11px;
+        font-weight: 750;
+        line-height: 1;
+        white-space: nowrap;
+    }
+    .bk-route-main {
+        border-color: rgba(48,49,145,.15);
+        background: linear-gradient(180deg, #fff 0%, #f7f7ff 100%);
+        color: var(--blue);
+        font-weight: 850;
+    }
+    .bk-route-main svg {
+        width: 13px;
+        height: 13px;
+        flex: 0 0 13px;
+    }
+    .bk-route-cabin {
+        border-color: rgba(0,153,51,.18);
+        background: #f1fff5;
+        color: var(--green);
+    }
+
+    /* Phase 4 review, contact and summary refinement */
+    .bk-icon-mask,
+    .bk-inline-icon,
+    .bk-mini-icon {
+        display: inline-flex;
+        flex: 0 0 auto;
+        background: currentColor;
+        mask-position: center;
+        mask-repeat: no-repeat;
+        mask-size: contain;
+        -webkit-mask-position: center;
+        -webkit-mask-repeat: no-repeat;
+        -webkit-mask-size: contain;
+    }
+    .bk-inline-icon { width: 15px; height: 15px; }
+    .bk-mini-icon { width: 13px; height: 13px; }
+    .bk-icon-plane {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16Z'/%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16Z'/%3E%3C/svg%3E");
+    }
+    .bk-icon-bag {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M8 6V5a4 4 0 0 1 8 0v1h2.5A2.5 2.5 0 0 1 21 8.5v10A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5v-10A2.5 2.5 0 0 1 5.5 6H8Zm2 0h4V5a2 2 0 1 0-4 0v1Zm-3 4v7h2v-7H7Zm8 0v7h2v-7h-2Z'/%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M8 6V5a4 4 0 0 1 8 0v1h2.5A2.5 2.5 0 0 1 21 8.5v10A2.5 2.5 0 0 1 18.5 21h-13A2.5 2.5 0 0 1 3 18.5v-10A2.5 2.5 0 0 1 5.5 6H8Zm2 0h4V5a2 2 0 1 0-4 0v1Zm-3 4v7h2v-7H7Zm8 0v7h2v-7h-2Z'/%3E%3C/svg%3E");
+    }
+    .bk-icon-cabin {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm1 3v12h8V6H8Zm2 2h4v2h-4V8Zm0 4h4v2h-4v-2Z'/%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm1 3v12h8V6H8Zm2 2h4v2h-4V8Zm0 4h4v2h-4v-2Z'/%3E%3C/svg%3E");
+    }
+    .bk-icon-meal {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 2h2v8a3 3 0 0 1-2 2.83V22H5v-9.17A3 3 0 0 1 3 10V2h2v8h2V2Zm10 0c2.21 0 4 2.24 4 5v5h-3v10h-2V2h1Z'/%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 2h2v8a3 3 0 0 1-2 2.83V22H5v-9.17A3 3 0 0 1 3 10V2h2v8h2V2Zm10 0c2.21 0 4 2.24 4 5v5h-3v10h-2V2h1Z'/%3E%3C/svg%3E");
+    }
+    .bk-icon-users {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.31 0-6 1.79-6 4v2h12v-2c0-2.21-2.69-4-6-4Zm7.5-.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm0 1.5c-.77 0-1.5.1-2.16.28 1.6.92 2.66 2.23 2.66 3.72v1h5v-1.5c0-1.93-2.46-3.5-5.5-3.5Z'/%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.31 0-6 1.79-6 4v2h12v-2c0-2.21-2.69-4-6-4Zm7.5-.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm0 1.5c-.77 0-1.5.1-2.16.28 1.6.92 2.66 2.23 2.66 3.72v1h5v-1.5c0-1.93-2.46-3.5-5.5-3.5Z'/%3E%3C/svg%3E");
+    }
+    .bk-route-summary-card {
+        display: grid;
+        grid-template-columns: minmax(0, auto) auto;
+        gap: 7px 10px;
+        align-items: center;
+        margin-top: 7px;
+    }
+    .bk-route-pair {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--gray-900);
+        font-size: 14px;
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: 0;
+    }
+    .bk-route-arrow {
+        width: 18px;
+        height: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        color: var(--blue);
+        background: #f1f1ff;
+    }
+    .bk-route-arrow svg {
+        width: 12px;
+        height: 12px;
+    }
+    .bk-route-meta {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-wrap: wrap;
+        grid-column: 1 / -1;
+        color: var(--gray-500);
+        font-size: 11.5px;
+        font-weight: 650;
+    }
+    .bk-route-status {
+        display: inline-flex;
+        align-items: center;
+        min-height: 22px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: #ecfdf3;
+        color: var(--green);
+        font-size: 11px;
+        font-weight: 850;
+    }
+    .bk-route-status.stop {
+        background: #fff7ed;
+        color: var(--amber);
+    }
+    .bk-phone-grid {
+        grid-template-columns: 1fr;
+    }
+    .bk-phone-input {
+        font-size: 15px;
+        font-weight: 750;
+        letter-spacing: .01em;
+    }
+    .bk-cart {
+        border: 1px solid rgba(48,49,145,.12);
+        border-radius: 16px;
+        box-shadow: 0 18px 48px rgba(16,24,40,.10);
+    }
+    .bk-cart-head {
+        padding: 18px 18px 14px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+    }
+    .bk-cart-title::before {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M6 2h12a2 2 0 0 1 2 2v18l-4-2-4 2-4-2-4 2V4a2 2 0 0 1 2-2Zm2 6h8V6H8v2Zm0 4h8v-2H8v2Zm0 4h5v-2H8v2Z'/%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M6 2h12a2 2 0 0 1 2 2v18l-4-2-4 2-4-2-4 2V4a2 2 0 0 1 2-2Zm2 6h8V6H8v2Zm0 4h8v-2H8v2Zm0 4h5v-2H8v2Z'/%3E%3C/svg%3E");
+    }
+    .bk-cart-subtitle {
+        margin-top: 4px;
+        color: var(--gray-500);
+        font-size: 11.5px;
+        font-weight: 600;
+    }
+    .bk-cart-flight-row {
+        align-items: center;
+        padding: 11px 0;
+    }
+    .bk-cart-plane {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        color: var(--blue);
+        background: #f1f1ff;
+        padding: 8px;
+    }
+    .bk-cart-route {
+        font-size: 13.5px;
+        font-weight: 850;
+    }
+    .bk-fare-section {
+        background: linear-gradient(180deg, #fff 0%, #fcfcff 100%);
+    }
+    .bk-fare-total-row {
+        margin: 0 14px 14px;
+        padding: 16px;
+        border: 1px solid rgba(48,49,145,.12);
+        border-radius: 14px;
+        background: #f8f9ff;
+    }
+    .bk-fare-total-val {
+        font-size: clamp(21px, 2.4vw, 26px);
+        line-height: 1.1;
+    }
+    .bk-pax-counter {
+        border: 1px solid var(--gray-200);
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(16,24,40,.04);
+    }
+    .bk-pax-col {
+        padding: 16px;
+        border-right-color: var(--gray-200);
+    }
+    .bk-pax-col-label {
+        color: var(--gray-500);
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: .04em;
+    }
+    .bk-pax-col-sub {
+        color: var(--gray-400);
+        font-size: 11px;
+    }
+    .bk-pax-num {
+        color: var(--gray-900);
+        font-size: 21px;
+        letter-spacing: 0;
+    }
+    .bk-total-bar {
+        border: 1px solid rgba(48,49,145,.10);
+        border-radius: 10px;
+        background: linear-gradient(180deg, #f8f8ff 0%, #f1f1ff 100%);
+    }
+    .bk-pax-card {
+        border: 1px solid var(--gray-200);
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 1px 2px rgba(16,24,40,.04);
+        overflow: hidden;
+    }
+    .bk-pax-card-head {
+        padding: 13px 15px;
+        background: #fbfcfe;
+        border-bottom-color: var(--gray-200);
+        transition: background .18s ease;
+    }
+    .bk-pax-card-head:hover {
+        background: #f7f8fc;
+    }
+    .bk-pax-badge {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 850;
+    }
+    .bk-pax-num-lbl {
+        color: var(--gray-900);
+        font-size: 13px;
+        font-weight: 850;
+    }
+    .bk-pax-progress {
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: var(--gray-100);
+        color: var(--gray-500);
+        font-size: 10.5px;
+        font-weight: 800;
+    }
+    .bk-pax-complete {
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #eafff0;
+        color: var(--green);
+        font-size: 10.5px;
+        font-weight: 850;
+    }
+    .bk-pax-notice {
+        padding: 11px 15px;
+        border-bottom: 1px solid #fde68a;
+        background: #fff9eb;
+        color: #92400e;
+        font-size: 11.5px;
+        line-height: 1.45;
+    }
+    .bk-form-grid {
+        gap: 14px;
+        padding: 17px 15px 18px;
+    }
+    .bk-field {
+        gap: 6px;
+        min-width: 0;
+    }
+    .bk-label {
+        color: var(--gray-500);
+        font-size: 10.5px;
+        font-weight: 850;
+        letter-spacing: .035em;
+    }
+    .bk-input,
+    .bk-select {
+        height: 46px;
+        border: 1px solid var(--gray-200);
+        border-radius: 10px;
+        background-color: #fbfcfe;
+        color: var(--gray-900);
+        font-size: 13.5px;
+        font-weight: 600;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+        transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .bk-input::placeholder {
+        color: #a6afbf;
+        font-weight: 500;
+    }
+    .bk-input:focus,
+    .bk-select:focus {
+        border-color: var(--blue);
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(48,49,145,.10);
+    }
+    .bk-select {
+        background-color: #fbfcfe;
+        background-position: right 12px center;
+    }
+    .bk-radio-group {
+        gap: 8px;
+        height: auto;
+        min-height: 46px;
+        flex-wrap: wrap;
+    }
+    .bk-radio-opt {
+        min-height: 38px;
+        padding: 8px 12px;
+        border: 1px solid var(--gray-200);
+        border-radius: 999px;
+        background: #fff;
+        color: var(--gray-700);
+        font-size: 13px;
+        font-weight: 750;
+        transition: border-color .18s ease, background .18s ease, color .18s ease;
+    }
+    .bk-radio-opt:hover {
+        border-color: var(--blue-md);
+        background: var(--blue-lt);
+        color: var(--blue);
+    }
+    .bk-radio-opt input {
+        accent-color: var(--blue);
+    }
+    .bk-hint {
+        color: var(--gray-400);
+        font-size: 10.5px;
+        line-height: 1.35;
+    }
+    .bk-error {
+        color: var(--red);
+        font-size: 11px;
+        font-weight: 650;
+    }
+    .bk-contact-grid {
+        gap: 14px;
+    }
+    .bk-contact-grid + .bk-contact-grid {
+        padding-top: 14px;
+        border-top: 1px solid var(--gray-100);
+    }
+
     /* ── Responsive ── */
     @media (max-width: 900px) { .bk-page { grid-template-columns: 1fr; } .bk-rail { position: static; } }
     @media (max-width: 580px) {
@@ -310,6 +1190,7 @@
         .bk-form-grid { grid-template-columns: 1fr 1fr; }
         .bk-form-grid .bk-col-2, .bk-form-grid .bk-col-full { grid-column: 1 / -1; }
         .bk-contact-grid { grid-template-columns: 1fr; }
+        .bk-contact-full { grid-column: 1 / -1; }
         .bk-pp-body { grid-template-columns: 1fr; }
         .bk-pax-counter { flex-wrap: wrap; }
         .bk-pax-col { min-width: 50%; }
@@ -318,6 +1199,122 @@
         .bk-actions { flex-wrap: wrap; }
         .bk-seg-stop { grid-template-columns: 60px 1fr; }
         .bk-seg-bags { display: none; }
+    }
+    @media (max-width: 900px) {
+        .bk-page {
+            gap: 14px;
+        }
+        .bk-rail {
+            order: 2;
+        }
+        .bk-main {
+            order: 1;
+        }
+        .bk-cart {
+            box-shadow: 0 8px 22px rgba(16,24,40,.06);
+        }
+    }
+    @media (max-width: 640px) {
+        body {
+            margin-top: 0 !important;
+        }
+        section.navbarmain {
+            padding-top: 104px !important;
+        }
+        main.navbarmain.upper-space {
+            margin-top: 0 !important;
+            padding-top: 0 !important;
+        }
+        .bk-wrap {
+            padding: 8px 12px 52px;
+        }
+        .bk-crumb {
+            margin-bottom: 12px;
+        }
+        .bk-steps {
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .bk-steps::-webkit-scrollbar {
+            display: none;
+        }
+        .bk-step {
+            min-width: 116px;
+            gap: 8px;
+        }
+        .bk-step-dot {
+            width: 28px;
+            height: 28px;
+        }
+        .bk-step-label {
+            font-size: 11.5px;
+            white-space: nowrap;
+        }
+        .bk-step-sub {
+            display: none;
+        }
+        .bk-route-summary {
+            gap: 6px;
+        }
+        .bk-route-chip {
+            min-height: 23px;
+            padding: 4px 8px;
+            font-size: 10.5px;
+        }
+        .bk-connector {
+            display: none;
+        }
+        .bk-acc-head {
+            padding: 13px 14px;
+        }
+        .bk-cart-head,
+        .bk-cart-body,
+        .bk-fare-section,
+        .bk-fare-total-row,
+        .bk-rail-trust {
+            padding-left: 14px;
+            padding-right: 14px;
+        }
+        .bk-fare-total-val {
+            font-size: 21px;
+        }
+        .bk-promo-summary {
+            padding: 0 14px;
+        }
+        .bk-promo-row {
+            padding: 0 14px 14px;
+        }
+        .bk-actions {
+            gap: 10px;
+        }
+        .bk-btn-ghost,
+        .bk-btn-next,
+        .bk-btn-pay {
+            width: 100%;
+            justify-content: center;
+        }
+        .bk-form-grid,
+        .bk-contact-grid,
+        .bk-pp-body {
+            grid-template-columns: 1fr !important;
+        }
+        .bk-form-grid .bk-field,
+        .bk-form-grid .bk-col-2,
+        .bk-form-grid .bk-col-full,
+        .bk-form-grid .bk-col-half {
+            grid-column: 1 / -1 !important;
+        }
+        .bk-pax-card-head {
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+        .bk-pax-progress,
+        .bk-pax-complete {
+            margin-left: 0;
+        }
     }
 </style>
 
@@ -528,14 +1525,43 @@
 
                     {{-- ── 1. Flight Itinerary (accordion, open by default) ── --}}
                     <div class="bk-acc" x-data="{ open: true }">
+                        @php
+                            $routeStopCount = $flight['stops'] ?? max(0, count($segments) - 1);
+                            $routeDuration = $flight['totalTimeLabel'] ?? $flight['durationLabel'] ?? '';
+                            $routeDate = !empty($firstSeg['departDT'])
+                                ? \Carbon\Carbon::parse($firstSeg['departDT'])->format('D, d M')
+                                : '';
+                        @endphp
                         <div class="bk-acc-head" :class="{ open }" @click="open = !open">
                             <div class="bk-acc-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                                <span class="bk-icon-mask bk-icon-plane" style="width:17px;height:17px;"></span>
                             </div>
                             <div>
                                 <div class="bk-acc-title">Flight Itinerary</div>
-                                <div class="bk-acc-sub">
-                                    {{ $firstSeg['from'] ?? '' }} → {{ $lastSeg['to'] ?? '' }} · {{ $tripLabel }} · {{ $cabin }}
+                                <div class="bk-acc-sub bk-route-summary-card">
+                                    <div class="bk-route-pair">
+                                        <span>{{ $firstSeg['from'] ?? '' }}</span>
+                                        <span class="bk-route-arrow">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <path d="M5 12h14"/>
+                                                <path d="m13 6 6 6-6 6"/>
+                                            </svg>
+                                        </span>
+                                        <span>{{ $lastSeg['to'] ?? '' }}</span>
+                                    </div>
+                                    <span class="bk-route-chip">{{ $tripLabel }}</span>
+                                    <div class="bk-route-meta">
+                                        @if($routeDate)
+                                            <span>{{ $routeDate }}</span>
+                                        @endif
+                                        <span class="bk-route-status {{ $routeStopCount > 0 ? 'stop' : '' }}">
+                                            {{ $routeStopCount > 0 ? $routeStopCount . ' stop' . ($routeStopCount > 1 ? 's' : '') : 'Non stop' }}
+                                        </span>
+                                        @if($routeDuration)
+                                            <span>&middot; {{ $routeDuration }}</span>
+                                        @endif
+                                        <span>&middot; {{ $cabin }}</span>
+                                    </div>
                                 </div>
                             </div>
                             <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
@@ -852,8 +1878,9 @@
                                 @if(!empty($baggageOutbound) || !empty($baggageInbound))
                                 <div style="padding:14px 0 10px;border-bottom:1px solid var(--gray-100);">
                         
-                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;">
-                                        🧳 Extra Check-in Baggage
+                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+                                        <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span>
+                                        Extra Check-in Baggage
                                     </div>
                         
                                     @foreach([['outbound', $baggageOutbound], ['inbound', $baggageInbound]] as [$dir, $bagOpts])
@@ -953,8 +1980,9 @@
                                 @if(!empty($mealOutbound) || !empty($mealInbound))
                                 <div style="padding-top:14px;">
                         
-                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;">
-                                        🍽️ Meal Preferences
+                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+                                        <span class="bk-mini-icon bk-icon-meal" aria-hidden="true"></span>
+                                        Meal Preferences
                                     </div>
                         
                                     @foreach([['outbound', $mealOutbound], ['inbound', $mealInbound]] as [$dir, $mealSegs])
@@ -1005,7 +2033,7 @@
                                                     </div>
                         
                                                     @if($isChecked)
-                                                    <span style="font-size:11px;font-weight:700;color:var(--amber);white-space:nowrap;">✓ Added</span>
+                                                    <span style="font-size:11px;font-weight:700;color:var(--amber);white-space:nowrap;">Added</span>
                                                     @endif
                         
                                                     {{-- Hidden input for form submission --}}
@@ -1031,7 +2059,7 @@
                                             border:1.5px solid #a7f3d0;border-radius:10px;
                                             display:flex;align-items:center;justify-content:space-between;">
                                     <span style="font-size:12.5px;font-weight:700;color:var(--green);">
-                                        ✓ Extras selected
+                                        Extras selected
                                     </span>
                                     <span style="font-size:14px;font-weight:800;color:var(--green);font-family:var(--mono);">
                                         +{{ $esFmt(['ServiceCost' => ['CurrencyCode' => 'NGN', 'Amount' => $extrasTotal]]) }}
@@ -1046,7 +2074,7 @@
                     @else
                     {{-- Fallback banner if no extra services available --}}
                     <div class="bk-bags-banner">
-                        <div class="bk-bags-icon">🧳</div>
+                        <div class="bk-bags-icon"><span class="bk-icon-mask bk-icon-bag" style="width:18px;height:18px;" aria-hidden="true"></span></div>
                         <div class="bk-bags-text">
                             <div class="bk-bags-title">Add extra check-in bags</div>
                             <div class="bk-bags-sub">No additional baggage options available for this route</div>
@@ -1095,7 +2123,7 @@
                                                         </td>
                                                         <td style="padding:10px 14px;border-bottom:1px solid var(--gray-100);">
                                                             <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--green-lt);color:var(--green);border-radius:999px;font-size:11.5px;font-weight:700;">
-                                                                🧳 {{ $b['Baggage'] ?? '—' }}
+                                                                <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span> {{ $b['Baggage'] ?? '—' }}
                                                             </span>
                                                         </td>
                                                     </tr>
@@ -1198,7 +2226,7 @@
                                 </div>
                                 
                                 <div class="bk-total-bar">
-                                    <span class="bk-total-label">✈ Total passengers</span>
+                                    <span class="bk-total-label" style="display:inline-flex;align-items:center;gap:7px;"><span class="bk-inline-icon bk-icon-users" aria-hidden="true"></span> Total passengers</span>
                                     <span class="bk-total-val">{{ $this->getTotalPassengers() }} passenger{{ $this->getTotalPassengers() > 1 ? 's' : '' }}</span>
                                 </div>
                                 @error('passengers') <span class="bk-error">{{ $message }}</span> @enderror
@@ -1240,11 +2268,11 @@
                                         <div class="bk-pax-card-head" @click="cardOpen = !cardOpen">
                                             <span class="bk-pax-badge {{ $badgeClass }}">{{ $typeLabel }}</span>
                                             <span class="bk-pax-num-lbl">
-                                                @if($pax['is_primary']) ★ @endif
+                                                @if($pax['is_primary']) <span class="bk-primary-chip">Primary</span> @endif
                                                 Passenger {{ $i + 1 }}
                                             </span>
                                             @if($isComplete)
-                                                <span class="bk-pax-complete">✓ {{ strtoupper($pax['first_name']) }} {{ strtoupper($pax['last_name']) }}</span>
+                                                <span class="bk-pax-complete">{{ strtoupper($pax['first_name']) }} {{ strtoupper($pax['last_name']) }}</span>
                                             @else
                                                 <span class="bk-pax-progress">{{ $filledCount }}/4 added</span>
                                             @endif
@@ -1402,15 +2430,18 @@
                                         @error('contactEmailConfirm') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
                                 </div> 
-                                <div class="bk-contact-grid" style="margin-top:15px;"> 
+                                <div class="bk-contact-grid bk-phone-grid" style="margin-top:15px;">
                                     <div class="bk-field">
-                                        <label class="bk-label">Country Dialling Code <span class="bk-req">*</span></label>
-                                        <input class="bk-input" type="text" placeholder="e.g. 234"
-                                                                                wire:model.blur="contactCountryCode">
-                                        <span class="bk-hint">Country code without + e.g. 234</span>
+                                        <label class="bk-label">Mobile Number <span class="bk-req">*</span></label>
+                                        <input class="bk-input bk-phone-input" type="tel" placeholder="+234 800 000 0000"
+                                                                                wire:model.blur="contactPhoneFull">
+                                        <span class="bk-hint">Include country code. We will format it for ticketing.</span>
+                                        @error('contactPhoneFull') <span class="bk-error">{{ $message }}</span> @enderror
+                                        @error('contactPhone') <span class="bk-error">{{ $message }}</span> @enderror
+                                        @error('contactAreaCode') <span class="bk-error">{{ $message }}</span> @enderror
                                         @error('contactCountryCode') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
-                                    <div class="bk-field">
+                                    <div class="bk-field" style="display:none;">
                                         <label class="bk-label">Area Code <span class="bk-req"></span></label>
                                         <input class="bk-input" type="text" placeholder="e.g. 080"
                                                                                 wire:model.blur="contactAreaCode">
@@ -1418,7 +2449,7 @@
                                         @error('contactAreaCode') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
                                     
-                                    <div class="bk-field bk-contact-full">
+                                    <div class="bk-field bk-contact-full" style="display:none;">
                                         <label class="bk-label">Mobile No <span class="bk-req"></span></label>
                                         <input class="bk-input" type="tel" placeholder="+234 800 000 0000"
                                                                                 wire:model.blur="contactPhone">
@@ -1486,7 +2517,7 @@
                                             $natName = $this->nationalities[$pax['nationality']] ?? $pax['nationality'];
                                         @endphp
                                         <div class="bk-review-row">
-                                            <span class="bk-review-label">{{ $ptLabel }} {{ $i + 1 }}{{ $pax['is_primary'] ? ' ★' : '' }}</span>
+                                            <span class="bk-review-label">{{ $ptLabel }} {{ $i + 1 }}{{ $pax['is_primary'] ? ' · Primary' : '' }}</span>
                                             <span class="bk-review-val">
                                                 {{ $pax['title'] }} {{ strtoupper($pax['first_name']) }} {{ strtoupper($pax['last_name']) }}
                                                 <br><span style="font-size:11px;color:var(--gray-500);font-weight:500;">DOB: {{ $dobStr }} · {{ $natName }}@if(!empty($pax['passport_no'])) · Passport: {{ $pax['passport_no'] }} @endif</span>
@@ -1503,7 +2534,7 @@
                                     </div>
                                     <div class="bk-review-row">
                                         <span class="bk-review-label">Phone</span>
-                                        <span class="bk-review-val">{{ $contactPhone }}</span>
+                                        <span class="bk-review-val">{{ $contactPhoneFull ?: ('+' . $contactCountryCode . ' ' . $contactPhone) }}</span>
                                     </div>
                                 </div>
 
@@ -1523,7 +2554,7 @@
                                     @endforeach
                                     <div class="bk-review-row">
                                             <span class="bk-review-label">Refund</span>
-                                            <span class="bk-review-val" style="color:{{ $flight['isRefundable'] ? 'var(--green)' : 'var(--red)' }}">{{  $flight['isRefundable'] ? '✓ Allowed' : '✗ Not allowed' }}</span>
+                                            <span class="bk-review-val" style="color:{{ $flight['isRefundable'] ? 'var(--green)' : 'var(--red)' }}">{{  $flight['isRefundable'] ? 'Allowed' : 'Not allowed' }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1593,7 +2624,8 @@
                 {{-- My Cart --}}
                 <div class="bk-cart">
                     <div class="bk-cart-head">
-                        <div class="bk-cart-title">My Cart</div>
+                        <div class="bk-cart-title">Booking Summary</div>
+                        <div class="bk-cart-subtitle">Fare, route and extras reviewed before payment</div>
                     </div>
                     <div class="bk-cart-body">
                         <div class="bk-cart-section">
@@ -1602,7 +2634,7 @@
                             @if($isMulti && !empty($allLegs))
                                 @foreach($allLegs as $leg)
                                     <div class="bk-cart-flight-row">
-                                        <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                                        <span class="bk-cart-plane"><span class="bk-icon-mask bk-icon-plane" style="width:14px;height:14px;" aria-hidden="true"></span></span>
                                         <div>
                                             <div class="bk-cart-route">{{ $leg['route'] ?? '' }}</div>
                                             <div class="bk-cart-sub">{{ $cabin }} · {{ $leg['label'] ?? 'Multi-city' }}</div>
@@ -1612,7 +2644,7 @@
                             @else
                                 {{-- Outbound --}}
                                 <div class="bk-cart-flight-row">
-                                    <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                                    <span class="bk-cart-plane"><span class="bk-icon-mask bk-icon-plane" style="width:14px;height:14px;" aria-hidden="true"></span></span>
                                     <div>
                                         <div class="bk-cart-route">{{ ($firstSeg['from'] ?? '') }} to {{ ($lastSeg['to'] ?? '') }} ({{ strtoupper($firstSeg['from'] ?? '') }})</div>
                                         <div class="bk-cart-sub">{{ $cabin }} · {{ $tripLabel }}</div>
@@ -1622,7 +2654,7 @@
                                 {{-- Return --}}
                                 @if($isReturn && !empty($retSegs))
                                     <div class="bk-cart-flight-row">
-                                        <svg class="bk-cart-plane" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="transform:scaleX(-1);"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 17z"/></svg>
+                                        <span class="bk-cart-plane" style="transform:scaleX(-1);"><span class="bk-icon-mask bk-icon-plane" style="width:14px;height:14px;" aria-hidden="true"></span></span>
                                         <div>
                                             <div class="bk-cart-route">{{ ($retSegs[0]['from'] ?? '') }} to {{ ($retSegs[count($retSegs)-1]['to'] ?? '') }} ({{ strtoupper($retSegs[0]['from'] ?? '') }})</div>
                                             <div class="bk-cart-sub">{{ $cabin }} · Round Trip</div>
@@ -1718,10 +2750,10 @@
                             </div>
                             <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
                                 <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--green);font-weight:600;background:var(--green-lt);padding:2px 8px;border-radius:999px;">
-                                    🧳 {{ $bagStr }}
+                                    <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span> {{ $bagStr }}
                                 </span>
                                 <span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--blue);font-weight:600;background:var(--blue-lt);padding:2px 8px;border-radius:999px;">
-                                    💼 {{ $cabStr }}
+                                    <span class="bk-mini-icon bk-icon-cabin" aria-hidden="true"></span> {{ $cabStr }}
                                 </span>
                             </div>
                         </div>
@@ -1764,7 +2796,7 @@
                                     @endphp
                                     <div class="bk-fare-row" style="padding:3px 0;">
                                         <span class="bk-fare-lbl" style="font-size:11.5px;">
-                                            🧳 {{ $matchedSvc['Description'] ?? 'Baggage' }}
+                                            <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span> {{ $matchedSvc['Description'] ?? 'Baggage' }}
                                             <span style="color:var(--gray-400);font-size:10.5px;">× {{ $qty }} ({{ ucfirst($dir) }})</span>
                                         </span>
                                         <span class="bk-fare-val" style="color:var(--green);">
@@ -1796,7 +2828,7 @@
                                         @endphp
                                         <div class="bk-fare-row" style="padding:3px 0;">
                                             <span class="bk-fare-lbl" style="font-size:11.5px;">
-                                                🍽️ {{ $matchedMeal['Description'] ?? 'Meal' }}
+                                                <span class="bk-mini-icon bk-icon-meal" aria-hidden="true"></span> {{ $matchedMeal['Description'] ?? 'Meal' }}
                                                 <span style="color:var(--gray-400);font-size:10.5px;">(Seg {{ $si + 1 }}, {{ ucfirst($dir) }})</span>
                                             </span>
                                             <span class="bk-fare-val" style="color:var(--amber);">
@@ -1847,10 +2879,30 @@
 
                     {{-- Promo codes --}}
                     <div class="bk-promo">
-                        <div class="bk-promo-title">Promo Codes</div>
-                        <div class="bk-promo-row">
-                            <input class="bk-promo-input" type="text" placeholder="Enter your promocode...">
-                            <button class="bk-promo-btn" type="button">Apply</button>
+                        <details>
+                            <summary class="bk-promo-summary">Have a promo code?</summary>
+                            <div class="bk-promo-row">
+                                <input class="bk-promo-input" type="text" placeholder="Enter promo code">
+                                <button class="bk-promo-btn" type="button">Apply</button>
+                            </div>
+                        </details>
+                    </div>
+
+                    <div class="bk-rail-trust">
+                        <div class="bk-rail-trust-item">
+                            <svg class="bk-rail-trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M20 13c0 5-3.5 7.5-7.5 8.8a1.5 1.5 0 0 1-1 0C7.5 20.5 4 18 4 13V6.5a1.5 1.5 0 0 1 1-1.4l6.5-2.4a1.5 1.5 0 0 1 1 0L19 5.1a1.5 1.5 0 0 1 1 1.4V13Z"/>
+                                <path d="m9 12 2 2 4-4"/>
+                            </svg>
+                            <span>Secure checkout. Your fare is reviewed before ticketing.</span>
+                        </div>
+                        <div class="bk-rail-trust-item">
+                            <svg class="bk-rail-trust-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4v8Z"/>
+                                <path d="M8 9h8"/>
+                                <path d="M8 13h5"/>
+                            </svg>
+                            <span>Need help? TravelWheel support is available for booking questions.</span>
                         </div>
                     </div>
                 </div>

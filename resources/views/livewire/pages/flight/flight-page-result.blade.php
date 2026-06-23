@@ -1,3 +1,3 @@
-<div style="padding: 20px; margin-top: 100px;">
+<div class="tw-flight-results-page">
     @include('livewire.pages.flight.partials.flight-result')
 </div>

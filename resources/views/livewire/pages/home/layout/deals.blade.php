@@ -1,21 +1,21 @@
 <style>
-    .tw-deals{background:#fff;padding:14px 20px 48px}
-    .tw-deals-panel{max-width:1561px;margin:0 auto;background:#fff;border:1px solid #eef0f4;border-radius:22px;padding:42px 46px 40px;box-shadow:0 12px 34px rgba(17,24,39,.05)}
-    .tw-deals-title{margin:0 0 23px;color:#303191!important;font-family:'Open Sans',var(--font-primary),Arial,sans-serif;font-size:40px;font-weight:800;line-height:1}
+    .tw-deals{background:var(--tw-surface,#fff);padding:18px 20px 48px}
+    .tw-deals-panel{max-width:1561px;margin:0 auto;background:var(--tw-surface,#fff);border:1px solid var(--tw-line,#eef0f4);border-radius:var(--tw-radius-panel,22px);padding:36px 42px 38px;box-shadow:var(--tw-shadow-md,0 12px 34px rgba(17,24,39,.05))}
+    .tw-deals-title{margin:0 0 22px;color:var(--tw-brand,#303191)!important;font-family:var(--tw-font-sans,var(--font-primary));font-size:var(--tw-text-3xl);font-weight:800;line-height:var(--tw-leading-tight,1.15)}
     .tw-deal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-    .tw-deal-card{background:#fff;border:1px solid #eef0f4;border-radius:14px;overflow:hidden;min-height:369px;padding:14px 14px 20px;box-shadow:0 8px 24px rgba(17,24,39,.05);transition:transform .18s,box-shadow .18s,border-color .18s}
+    .tw-deal-card{background:var(--tw-surface,#fff);border:1px solid var(--tw-line,#eef0f4);border-radius:var(--tw-radius-lg,14px);overflow:hidden;min-height:342px;padding:14px 14px 18px;box-shadow:var(--tw-shadow-sm,0 8px 24px rgba(17,24,39,.05));transition:transform .18s,box-shadow .18s,border-color .18s}
     .tw-deal-card:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(17,24,39,.08);border-color:#e1e5ee}
     .tw-deal-image{height:210px;border-radius:10px;overflow:hidden;background:#f3f4f6}
     .tw-deal-image img{width:100%;height:100%;object-fit:cover;display:block}
-    .tw-deal-kind{margin:14px 0 3px;color:#009933!important;font-size:15px;font-weight:400;line-height:1}
-    .tw-deal-name{margin:0;color:#303191!important;font-family:'Open Sans',var(--font-primary),Arial,sans-serif;font-size:32px;font-weight:600;line-height:1.18}
-    .tw-deal-name.hotel{font-size:24px}
-    .tw-deal-meta{margin-top:4px;display:flex;align-items:baseline;gap:6px;color:#676767!important;font-size:15px}
+    .tw-deal-kind{margin:14px 0 4px;color:var(--tw-accent,#009933)!important;font-size:var(--tw-text-sm);font-weight:600;line-height:1}
+    .tw-deal-name{margin:0;color:var(--tw-brand,#303191)!important;font-family:var(--tw-font-sans,var(--font-primary));font-size:var(--tw-text-xl);font-weight:700;line-height:var(--tw-leading-snug,1.3)}
+    .tw-deal-name.hotel{font-size:var(--tw-text-lg)}
+    .tw-deal-meta{margin-top:8px;display:flex;align-items:baseline;gap:6px;color:var(--tw-muted,#676767)!important;font-size:var(--tw-text-sm)}
     .tw-deal-meta span,.tw-deal-meta strong{color:inherit}
-    .tw-deal-meta strong{color:#000!important;font-size:32px;font-weight:800;line-height:1}
+    .tw-deal-meta strong{color:var(--tw-ink,#000)!important;font-size:var(--tw-text-2xl);font-weight:800;line-height:1}
     .tw-deal-meta em{font-style:normal;color:#676767!important;margin-left:auto}
-    @media(max-width:1050px){.tw-deals-panel{padding:32px 28px}.tw-deal-grid{gap:18px}.tw-deal-name{font-size:24px}.tw-deal-meta strong{font-size:24px}}
-    @media(max-width:760px){.tw-deal-grid{grid-template-columns:1fr}.tw-deals-panel{border-radius:18px;padding:26px 18px}.tw-deals-title{font-size:32px}.tw-deal-card{min-height:auto}}
+    @media(max-width:1050px){.tw-deals-panel{padding:30px 24px}.tw-deal-grid{gap:18px}}
+    @media(max-width:760px){.tw-deal-grid{grid-template-columns:1fr}.tw-deals-panel{border-radius:18px;padding:24px 16px}.tw-deal-card{min-height:auto}}
 </style>
 
 <section class="tw-deals" aria-label="Deals">

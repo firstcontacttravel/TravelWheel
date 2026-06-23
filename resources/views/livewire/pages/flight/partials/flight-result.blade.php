@@ -3,34 +3,55 @@
     /* ── Reset & Base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-        --navy:    #0a1940;
-        --blue:    #1d4ed8;
-        --blue-lt: #eff6ff;
-        --blue-md: #bfdbfe;
-        --green:   #059669;
+        --navy:    var(--tw-brand, #303191);
+        --blue:    var(--tw-brand, #303191);
+        --blue-lt: #f1f1ff;
+        --blue-md: #d7d8ff;
+        --green:   var(--tw-accent, #009933);
         --amber:   #d97706;
         --red:     #dc2626;
-        --gray-50: #f8fafc;
-        --gray-100:#f1f5f9;
-        --gray-200:#e2e8f0;
-        --gray-400:#94a3b8;
-        --gray-500:#64748b;
-        --gray-700:#334155;
-        --gray-900:#0f172a;
-        --radius:  10px;
-        --shadow:  0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
-        --shadow-md: 0 4px 16px rgba(0,0,0,.10);
-        --font: 'Plus Jakarta Sans', sans-serif;
+        --gray-50: var(--tw-surface-soft, #f8f9fc);
+        --gray-100:var(--tw-surface-muted, #f2f4f7);
+        --gray-200:var(--tw-line, #e6e8ee);
+        --gray-400:var(--tw-subtle, #98a2b3);
+        --gray-500:var(--tw-muted, #667085);
+        --gray-700:var(--tw-text, #1f2937);
+        --gray-900:var(--tw-ink, #111827);
+        --radius:  var(--tw-radius-lg, 12px);
+        --shadow:  var(--tw-shadow-sm, 0 1px 2px rgba(16,24,40,.06));
+        --shadow-md: var(--tw-shadow-md, 0 8px 24px rgba(16,24,40,.07));
+        --font: var(--tw-font-sans, 'Open Sans', sans-serif);
         --mono: 'DM Mono', monospace;
     }
     body { font-family: var(--font); background: var(--gray-50); color: var(--gray-900); font-size: 14px; line-height: 1.5; }
+    body.sr-filter-open { overflow: hidden; }
+    [x-cloak] { display: none !important; }
 
     .sr-container { width:100%; max-width:100vw; overflow-x:hidden; box-sizing:border-box; }
+    .tw-flight-results-page,
+    .sr-results-shell {
+        width: 100%;
+        background: linear-gradient(180deg, #ffffff 0%, var(--gray-50) 58%, #ffffff 100%);
+        color: var(--gray-900);
+        font-family: var(--font);
+    }
 
     /* ── Top Search Bar ── */
-    .sr-topbar { background: var(--navy); padding: 0 24px; position: sticky; top: 0; z-index: 200; box-shadow: 0 2px 12px rgba(0,0,0,.25); }
-    .sr-topbar-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 8px; height: 60px; overflow-x: auto; scrollbar-width: none; position: relative; width: fit-content; min-width: 100%;}
+    .sr-topbar { background: transparent; padding: 22px 16px 0; position: relative; z-index: 60; box-shadow: none; }
+    .sr-topbar-inner { max-width: 960px; min-height: 76px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 17px 22px; overflow: hidden; scrollbar-width: none; position: relative; width: 100%; border: 1px solid rgba(255,255,255,.26); border-radius: 12px; background: radial-gradient(circle at 88% 16%, rgba(0,153,51,.26), transparent 30%), linear-gradient(105deg, #303191 0%, #254277 56%, #0c6b64 100%); box-shadow: 0 18px 36px rgba(48,49,145,.16); }
+    .sr-topbar-inner::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,.08), transparent 32%, rgba(255,255,255,.05)); pointer-events: none; }
     .sr-topbar-inner::-webkit-scrollbar { display: none; }
+    .sr-tb-copy { position: relative; z-index: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
+    .sr-tb-route { display: flex; align-items: center; gap: 10px; color: #fff; font-size: var(--tw-text-xl, 20px); font-weight: 800; line-height: 1.2; min-width: 0; }
+    .sr-tb-route-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sr-tb-route-arrow { color: rgba(255,255,255,.72); font-size: 18px; font-weight: 700; flex-shrink: 0; }
+    .sr-tb-pin { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; color: #10b981; flex: 0 0 18px; }
+    .sr-tb-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: rgba(255,255,255,.82); font-size: var(--tw-text-xs, 12px); font-weight: 600; }
+    .sr-tb-meta-item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+    .sr-tb-meta-item svg { width: 13px; height: 13px; flex: 0 0 13px; color: rgba(255,255,255,.86); }
+    .sr-tb-date-pill { padding: 3px 10px; border-radius: 999px; background: rgba(0,153,51,.22); color: #eafff1; }
+    .sr-topbar-inner > .sr-tb-pill,
+    .sr-topbar-inner > .sr-tb-sep { display: none; }
     .sr-tb-pill { display: flex; flex-direction: column; gap: 1px; padding: 6px 12px; border-radius: 8px; border: 1.5px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all .15s; position: relative; }
     .sr-tb-pill:hover  { background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.22); }
     .sr-tb-pill.tb-active { background: rgba(255,255,255,.15); border-color: rgba(37,99,235,.7); box-shadow: 0 0 0 2px rgba(37,99,235,.35); }
@@ -336,13 +357,14 @@
 
     /* ── Modify Button ── */
     .sr-tb-modify-btn {
-        display: flex; align-items: center; gap: 6px; padding: 0 16px; height: 36px;
-        background: rgb(255, 255, 255); color: #fff; border: 1.5px solid rgba(255,255,255,.2);
-        border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer;
-        font-family: var(--font); flex-shrink: 0; margin-left: 8px; transition: all .15s;
+        position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 0 18px; height: 42px;
+        background: var(--green); color: #fff; border: 1px solid rgba(255,255,255,.28);
+        border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer;
+        font-family: var(--font); flex-shrink: 0; margin-left: auto; transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+        box-shadow: 0 10px 22px rgba(0,153,51,.22);
     }
-    .sr-tb-modify-btn:hover { background: rgba(162, 173, 209, 0.59); border-color: rgb(255, 255, 255); }
-    .sr-tb-modify-btn.active { background: rgba(37,99,235,.5); border-color: rgba(37,99,235,.8); }
+    .sr-tb-modify-btn:hover { background: #00852d; transform: translateY(-1px); box-shadow: 0 14px 26px rgba(0,153,51,.28); }
+    .sr-tb-modify-btn.active { background: #087f32; box-shadow: 0 0 0 3px rgba(255,255,255,.16), 0 10px 22px rgba(0,153,51,.18); }
 
     /* ── Backdrop ── */
     .sr-modify-backdrop {
@@ -375,6 +397,185 @@
     .sr-modify-body .fw-card-outer { background: none !important; padding: 0 !important; min-height: unset !important; }
     .sr-modify-body .fw-card-outer::before { display: none !important; }
     .sr-modify-body .fw-card { box-shadow: 0 4px 24px rgba(0,0,0,.2); }
+    .sr-modify-inline {
+        max-width: 1394px;
+        margin: 14px auto 0;
+        padding: 0 16px;
+        position: relative;
+        z-index: 45;
+        transform-origin: top center;
+    }
+    .sr-modify-transition {
+        transition: opacity .22s ease, transform .24s ease, filter .24s ease;
+    }
+    .sr-modify-hidden {
+        opacity: 0;
+        transform: translateY(-10px) scale(.985);
+        filter: blur(2px);
+    }
+    .sr-modify-shown {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: blur(0);
+    }
+    .sr-modify-card {
+        overflow: visible;
+        border: 1px solid #e6e8ee;
+        border-radius: 12px;
+        background: rgba(255,255,255,.96);
+        box-shadow: 0 18px 34px rgba(16,24,40,.08);
+    }
+    .sr-modify-inline .sr-modify-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 46px;
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0 16px;
+        border-bottom: 1px solid #eef0f5;
+        background: #fff;
+    }
+    .sr-modify-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #111827;
+        font-size: 13px;
+        font-weight: 800;
+    }
+    .sr-modify-title-icon {
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: #f1f1ff;
+        color: #303191;
+    }
+    .sr-modify-inline .sr-modify-close {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        color: #667085;
+        box-shadow: none;
+    }
+    .sr-modify-inline .sr-modify-close:hover {
+        background: #f8f9fc;
+        color: #303191;
+    }
+    .sr-modify-inline .sr-modify-body {
+        max-width: none;
+        margin: 0;
+        padding: 14px 16px 16px;
+        background: #fff;
+        border-radius: 0 0 12px 12px;
+        overflow: visible !important;
+    }
+    .sr-modify-inline .fw-card-outer {
+        background: transparent !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+    .sr-modify-inline .fw-card-outer::before {
+        display: none !important;
+    }
+    .sr-modify-inline .fw-card {
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+    }
+    .sr-modify-inline .tw-landing-hero {
+        min-height: 0 !important;
+        display: block !important;
+        padding: 0 !important;
+        background: transparent !important;
+        overflow: visible !important;
+    }
+    .sr-modify-inline .tw-landing-hero::before,
+    .sr-modify-inline .tw-hero-title,
+    .sr-modify-inline .tw-hero-subtitle,
+    .sr-modify-inline .tw-product-tabs {
+        display: none !important;
+    }
+    .sr-modify-inline .tw-hero-inner {
+        max-width: none !important;
+        width: 100% !important;
+        text-align: left !important;
+        overflow: visible !important;
+    }
+    .sr-modify-inline .fw-card {
+        max-width: none !important;
+        padding: 0 !important;
+    }
+    .sr-modify-inline .fw-card > div:first-child {
+        margin-bottom: 14px !important;
+    }
+    .sr-modify-inline .fw-tabs {
+        padding-bottom: 0 !important;
+        border-bottom: 0 !important;
+        gap: 8px !important;
+    }
+    .sr-modify-inline .fw-tab {
+        min-height: 32px;
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    .sr-modify-inline .fw-row {
+        gap: 12px;
+    }
+    .sr-modify-inline .fw-field,
+    .sr-modify-inline .fw-field-2x,
+    .sr-modify-inline .fw-field-15x,
+    .sr-modify-inline .fw-field-12x,
+    .sr-modify-inline .fw-input-wrap,
+    .sr-modify-inline .fw-cabin-field {
+        position: relative;
+        overflow: visible !important;
+    }
+    .sr-modify-inline .fw-field:focus-within,
+    .sr-modify-inline .fw-field-2x:focus-within,
+    .sr-modify-inline .fw-field-15x:focus-within,
+    .sr-modify-inline .fw-field-12x:focus-within,
+    .sr-modify-inline .fw-cabin-field:focus-within {
+        z-index: 120;
+    }
+    .sr-modify-inline .fw-ac-dropdown,
+    .sr-modify-inline .fw-cal,
+    .sr-modify-inline .fw-pax-dropdown,
+    .sr-modify-inline .fw-cabin-dropdown {
+        z-index: 1400 !important;
+    }
+    .sr-modify-inline .fw-input {
+        height: 48px;
+        background: #fbfcfe;
+        border-color: #e1e4eb;
+        border-radius: 8px;
+        font-size: 13px;
+    }
+    .sr-modify-inline .fw-label {
+        margin-bottom: 7px;
+        color: #30364a;
+        font-size: 11px;
+        font-weight: 800;
+    }
+    .sr-modify-inline .fw-search-row {
+        margin-top: 14px;
+    }
+    .sr-modify-inline .fw-search-btn {
+        width: 196px;
+        height: 48px;
+        border-radius: 10px;
+        font-size: 14px;
+        box-shadow: 0 10px 20px rgba(48,49,145,.18);
+    }
 
     /* ── Tooltip ── */
     .sr-tooltip { position: relative; display: inline-block; cursor: pointer; }
@@ -386,25 +587,1483 @@
     }
     .sr-tooltip:hover .sr-tooltip-text { opacity: 1; }
 
+    /* Phase 2 result controls */
+    .sr-page { grid-template-columns: 270px minmax(0,1fr) 220px; }
+    .sr-sidebar { top: 18px; gap: 0; background: #fbf7f8; border: 1px solid var(--gray-200); border-radius: 12px; padding: 10px 12px; box-shadow: 0 10px 28px rgba(16,24,40,.045); }
+    .sr-panel { background: transparent; border: 0; border-radius: 0; box-shadow: none; overflow: visible; transition: none; }
+    .sr-panel + .sr-panel { border-top: 2px solid rgba(17,24,39,.48); padding-top: 14px; margin-top: 14px; }
+    .sr-panel:hover { border-color: transparent; box-shadow: none; }
+    .sr-panel-head { padding: 10px 4px 11px; border-bottom: 0; background: transparent; }
+    .sr-panel-title { font-size: 13px; font-weight: 800; }
+    .sr-panel-reset { padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; transition: background .16s ease, color .16s ease; }
+    .sr-panel-reset:hover { background: var(--blue-lt); text-decoration: none; }
+    .sr-panel-body { padding: 8px 4px 14px; gap: 6px; }
+    .sr-check-row { padding: 8px 7px; gap: 10px; border-radius: 10px; transition: background .16s ease, color .16s ease; }
+    .sr-check-row:hover { background: var(--gray-50); }
+    .sr-check-box { width: 17px; height: 17px; border-radius: 6px; }
+    .sr-check-box.checked::after { content: ''; width: 7px; height: 4px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translateY(-1px); }
+    .sr-check-name { font-size: 12.5px; font-weight: 650; line-height: 1.25; }
+    .sr-check-price { white-space: nowrap; }
+    .sr-stop-pills { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 7px; padding: 10px 4px 15px; }
+    .sr-stop-pill { min-width: 0; padding: 9px 5px; border-radius: 8px; font-weight: 800; color: var(--blue); background: #fff; border-color: #cfd2da; transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease; }
+    .sr-stop-pill:hover { transform: translateY(-1px); }
+    .sr-stop-pill.active { background: #f7f7ff; box-shadow: 0 0 0 3px rgba(48,49,145,.08); }
+    .sr-time-pills { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; padding: 10px 4px 15px; }
+    .sr-time-pill { min-width: 0; padding: 8px 9px; border-radius: 8px; text-align: center; font-weight: 800; color: var(--blue); background: #e0e0e0; border-color: transparent; transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease; }
+    .sr-time-pill:hover { transform: translateY(-1px); }
+    .sr-time-pill.active { background: #f7f7ff; box-shadow: 0 0 0 3px rgba(48,49,145,.08); }
+    .sr-main { gap: 13px; }
+    .sr-main,
+    .sr-header,
+    .sr-fare-bar,
+    .sr-matrix,
+    .sr-sort-bar,
+    .sr-card { min-width: 0; max-width: 100%; }
+    .sr-header { order: 0; border-radius: 14px; box-shadow: 0 10px 28px rgba(16,24,40,.045); padding: 15px 18px; }
+    .sr-header-title { font-size: var(--tw-text-lg, 17px); letter-spacing: 0; }
+    .sr-header-sub { font-size: var(--tw-text-sm, 13px); }
+    .sr-header-title:not(.sr-header-title-clean),
+    .sr-header-sub:not(.sr-header-sub-clean) { display: none; }
+    .sr-header-sub-clean { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .sr-header-sub-clean span { display: inline-flex; align-items: center; }
+    .sr-header-sub-clean span + span::before { content: ''; width: 4px; height: 4px; margin-right: 8px; border-radius: 999px; background: var(--gray-400); }
+    .sr-fare-bar { order: 1; border-radius: 14px; box-shadow: 0 10px 28px rgba(16,24,40,.045); background: transparent; border: none; overflow: visible; }
+    .sr-fare-bar-head { display: none; }
+    .sr-fare-options { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; border: 0; }
+    .sr-fare-option { position: relative; min-height: 60px; padding: 12px 44px 12px 14px; text-align: left; border: 1.5px solid #cfcfd7; border-radius: 8px; background: #fff; box-shadow: 0 3px 8px rgba(16,24,40,.12); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease; }
+    .sr-fare-option:nth-child(3) { order: 1; }
+    .sr-fare-option:nth-child(1) { order: 2; }
+    .sr-fare-option:nth-child(2) { order: 3; }
+    .sr-fare-option::after { content: ""; position: absolute; top: 13px; right: 16px; width: 20px; height: 20px; border-radius: 999px; background-color: currentColor; opacity: .68; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='6'/%3E%3Cpath d='M15.5 13.5 17 22l-5-3-5 3 1.5-8.5'/%3E%3C/svg%3E") center/contain no-repeat; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='6'/%3E%3Cpath d='M15.5 13.5 17 22l-5-3-5 3 1.5-8.5'/%3E%3C/svg%3E") center/contain no-repeat; }
+    .sr-fare-option:nth-child(1)::after { mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12h8'/%3E%3Cpath d='M10 8h8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-3'/%3E%3Cpath d='M8 8H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h8'/%3E%3Cpath d='m7 19 3-3-3-3'/%3E%3C/svg%3E"); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12h8'/%3E%3Cpath d='M10 8h8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-3'/%3E%3Cpath d='M8 8H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h8'/%3E%3Cpath d='m7 19 3-3-3-3'/%3E%3C/svg%3E"); }
+    .sr-fare-option:nth-child(2)::after { mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='13' r='8'/%3E%3Cpath d='M12 9v5l3 2'/%3E%3Cpath d='M9 2h6'/%3E%3C/svg%3E"); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='13' r='8'/%3E%3Cpath d='M12 9v5l3 2'/%3E%3Cpath d='M9 2h6'/%3E%3C/svg%3E"); }
+    .sr-fare-option:last-child { border-right: 1px solid var(--gray-200); }
+    .sr-fare-option:hover { background: #fff; border-color: var(--blue-md); transform: translateY(-1px); box-shadow: 0 8px 16px rgba(16,24,40,.14); }
+    .sr-fare-option.active { background: #dedcff; border-color: rgba(48,49,145,.22); box-shadow: 0 4px 10px rgba(48,49,145,.16); }
+    .sr-fare-option-label { margin-bottom: 4px; font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--blue); font-weight: 800; }
+    .sr-fare-option-price { font-size: 22px; line-height: 1.05; color: var(--gray-900); }
+    .sr-fare-option.active .sr-fare-option-price { color: var(--blue); }
+    .sr-matrix { order: 2; border-radius: 8px; box-shadow: 0 4px 10px rgba(16,24,40,.14); border-color: #d7d7de; }
+    .sr-matrix::before { content: "Lowest fares by Airlines and Stops"; display: flex; align-items: center; height: 28px; padding: 0 16px; background: var(--blue); color: #fff; font-size: 12px; font-weight: 700; }
+    .sr-matrix-scroll { width: 100%; max-width: 100%; scrollbar-color: var(--blue) transparent; }
+    .sr-matrix-scroll::-webkit-scrollbar { height: 6px; }
+    .sr-matrix-scroll::-webkit-scrollbar-thumb { background: var(--blue-md); border-radius: 999px; }
+    .sr-matrix table { min-width: 720px; }
+    .sr-matrix th, .sr-matrix td { padding: 10px 14px; font-size: 12px; border-color: #dcdde6; }
+    .sr-matrix thead th { background: #fff; color: var(--gray-500); letter-spacing: 0; text-transform: none; }
+    .sr-matrix th:first-child, .sr-matrix td:first-child { background: #fff; border-right: 1px solid var(--gray-200); }
+    .sr-matrix thead th:first-child { background: #fff; }
+    .sr-matrix-price { font-weight: 800; }
+    .sr-matrix-price:hover { text-decoration: none; color: var(--blue); }
+    .sr-matrix-price.cheapest { color: var(--green); }
+    .sr-mat-img { width: 40px; height: 28px; object-fit: contain; border-radius: 4px; background: #fff; padding: 2px; display: block; margin: 0 auto 3px; border: 0; }
+    .sr-sort-bar { order: 3; align-items: center; padding: 10px 0 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    .sr-sort-label { padding-left: 4px; font-size: 12px; font-weight: 700; }
+    .sr-sort-btn { border-width: 1px; padding: 7px 12px; background: transparent; color: var(--gray-700); font-weight: 750; transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease; }
+    .sr-sort-btn:hover { background: #fff; transform: translateY(-1px); }
+    .sr-sort-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: 0 8px 18px rgba(48,49,145,.16); }
+    .sr-result-count { padding-right: 4px; font-weight: 700; color: var(--gray-500); }
+    .sr-main > .sr-card { order: 4; }
+    .sr-load-more { order: 5; text-align: center; padding: 8px 0; }
+    .sr-empty-results { order: 4; }
+
+    /* Phase 3 flight cards */
+    .sr-card { border-radius: 8px; border-color: #d8dbe3; box-shadow: 0 4px 12px rgba(16,24,40,.12); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+    .sr-card:hover { transform: translateY(-1px); border-color: #c8cce0; box-shadow: 0 10px 22px rgba(16,24,40,.14); }
+    .sr-card-head { display: grid; grid-template-columns: 40px minmax(0,1fr) 174px 120px; align-items: center; gap: 12px; padding: 14px 18px 12px; }
+    .sr-airline-logo-wrap { width: 38px; height: 38px; border-radius: 8px; background: #f4f5f8; border: 1px solid var(--gray-100); }
+    .sr-card-airline { font-size: 15px; font-weight: 800; line-height: 1.2; }
+    .sr-card-class { margin-top: 2px; font-size: 11px; color: #8c95a8; font-weight: 700; text-transform: uppercase; letter-spacing: 0; }
+    .sr-card-price-wrap { align-self: stretch; margin-left: 0; padding-left: 18px; border-left: 1px solid #d8dbe3; display: flex; flex-direction: column; justify-content: center; text-align: right; }
+    .sr-card-price-label { font-size: 10px; color: #7a8193; font-weight: 800; letter-spacing: .02em; }
+    .sr-card-price { font-size: 22px; color: var(--gray-900); letter-spacing: 0; }
+    .sr-card-price-sub { color: var(--blue); font-size: 11px; font-weight: 750; text-decoration: none; }
+    .sr-card-head .sr-book-btn { justify-self: stretch; width: 100%; height: 40px; border-radius: 8px; background: var(--blue); box-shadow: 0 8px 18px rgba(48,49,145,.18); }
+    .sr-card-head .sr-book-btn:hover { background: var(--tw-brand-hover, #252675); box-shadow: 0 12px 24px rgba(48,49,145,.24); }
+    .sr-card-body { padding: 0 18px 0; }
+    .sr-card-body > div:first-child { margin-bottom: 8px !important; }
+    .sr-refund-badge { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+    .sr-refund-badge.yes { background: #eafff0; color: var(--green); }
+    .sr-refund-badge.no { background: #fff1f2; color: var(--red); }
+    .sr-depart-return { padding: 4px 0 10px; }
+    .sr-dr-label { margin-bottom: 8px; font-size: 10px; color: #99a1b2; font-weight: 800; text-transform: uppercase; letter-spacing: 0; }
+    .sr-segments { align-items: flex-start; }
+    .sr-seg { min-width: 86px; align-items: flex-start; }
+    .sr-seg:last-child { align-items: flex-end; text-align: right; }
+    .sr-seg-time { font-family: var(--font); font-size: 21px; font-weight: 850; letter-spacing: 0; }
+    .sr-seg-place { max-width: 126px; color: #687083; font-size: 12px; line-height: 1.25; white-space: normal; }
+    .sr-seg-line { padding: 4px 12px 0; min-width: 130px; }
+    .sr-seg-duration { color: var(--gray-700); font-size: 11px; font-weight: 800; }
+    .sr-seg-track { gap: 0; }
+    .sr-seg-dash { height: 1px; background: #cfd3dc; }
+    .sr-seg-dot { width: 7px; height: 7px; background: #9da7b9; }
+    .sr-seg-stop { margin-top: 1px; color: var(--green); font-size: 10.5px; font-weight: 800; }
+    .sr-seg-stop.hasstop { color: #d97706; }
+    .sr-card-meta-clean { display: flex; align-items: center; gap: 14px; padding: 10px 0 12px; border-top: 1px solid #eceef3; color: #6b7280; font-size: 12px; flex-wrap: wrap; }
+    .sr-card-meta-clean + div[style*="display:flex"] { display: none !important; }
+    .sr-card-meta-item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+    .sr-card-meta-item svg { width: 14px; height: 14px; color: #9aa3b4; flex: 0 0 14px; }
+    .sr-card-meta-item strong { color: var(--gray-900); font-weight: 850; }
+    .sr-card-meta-sep { width: 1px; height: 15px; background: #e5e7eb; }
+    .sr-card-footer { padding: 9px 18px 12px; justify-content: flex-end; border-top: 1px solid #eceef3; }
+    .sr-view-details { display: inline-flex; align-items: center; gap: 6px; color: var(--blue); font-size: 12px; font-weight: 800; }
+    .sr-view-details::after { content: ""; width: 14px; height: 14px; border: 1.5px solid currentColor; border-radius: 999px; background: linear-gradient(currentColor,currentColor) center/6px 1.5px no-repeat; opacity: .8; }
+    .mc-grid { border-top-color: #eceef3; }
+    .mc-leg { background: #fff; }
+
+    /* Figma result-page alignment */
+    .sr-results-shell { background: #fff; }
+    .sr-topbar { padding-top: 24px; }
+    .sr-topbar-inner {
+        max-width: 960px; min-height: 82px; border-radius: 8px; box-shadow: none; border: 0;
+        background: linear-gradient(96deg, #303191 0%, #24467a 61%, #146b6b 100%);
+    }
+    .sr-tb-route { font-size: 20px; }
+    .sr-tb-modify-btn { height: 42px; border-radius: 8px; background: var(--green); box-shadow: none; border: 0; }
+    .sr-page {
+        max-width: 1394px;
+        grid-template-columns: 270px minmax(0, 835px) 220px;
+        gap: 18px;
+        padding-top: 20px;
+        justify-content: center;
+    }
+    .sr-header { display: none; }
+    .sr-sidebar {
+        position: sticky; top: 18px; min-height: 725px; padding: 14px 16px 18px; border: 1px solid #eceef4;
+        border-radius: 8px; background: rgba(255,255,255,.92); box-shadow: none;
+    }
+    .sr-sidebar::before {
+        content: "Filters"; display: flex; align-items: center; min-height: 36px; padding: 0 4px 12px 28px;
+        border-bottom: 1px solid rgba(103,103,103,.58); color: #111827; font-size: 13px; font-weight: 700;
+        background:
+            linear-gradient(#111827,#111827) 4px 10px / 16px 2px no-repeat,
+            linear-gradient(#111827,#111827) 7px 16px / 10px 2px no-repeat,
+            linear-gradient(#111827,#111827) 10px 22px / 4px 2px no-repeat;
+    }
+    .sr-sidebar .sr-panel:first-child .sr-panel-head { padding-top: 24px; }
+    .sr-panel + .sr-panel { border-top: 1px solid rgba(103,103,103,.68); padding-top: 24px; margin-top: 22px; }
+    .sr-panel-title { color: #676767; font-size: 13px; text-transform: uppercase; }
+    .sr-panel:first-child .sr-panel-title { font-size: 0; }
+    .sr-panel:first-child .sr-panel-title::after { content: "AIRLINES"; font-size: 13px; }
+    .sr-check-row { padding: 5px 4px; border-radius: 6px; }
+    .sr-check-name, .sr-check-price { font-size: 11.5px; font-weight: 700; }
+    .sr-stop-pill { min-height: 60px; border-radius: 7px; background: #fff; box-shadow: none; }
+    .sr-time-pill { min-height: 48px; background: #d9d9d9; color: var(--blue); box-shadow: none; }
+    .sr-main { gap: 14px; }
+    .sr-fare-bar { order: 1; margin-bottom: 0; }
+    .sr-fare-options { gap: 12px; }
+    .sr-fare-option {
+        min-height: 74px; border-radius: 8px; padding: 13px 42px 12px 14px;
+        box-shadow: 0 3px 6px rgba(0,0,0,.18);
+    }
+    .sr-fare-option-label { font-size: 11px; line-height: 1.2; }
+    .sr-fare-option-price { font-family: var(--font); font-size: 22px; font-weight: 850; }
+    .sr-matrix { order: 2; border: 0; border-radius: 8px; box-shadow: 0 4px 13px rgba(0,0,0,.16); }
+    .sr-matrix::before { height: 30px; border-radius: 8px 8px 0 0; font-size: 11px; font-weight: 600; }
+    .sr-matrix th, .sr-matrix td { padding: 8px 12px; font-size: 11px; }
+    .sr-matrix thead th { font-size: 10.5px; }
+    .sr-matrix tbody td:first-child { font-size: 12px; }
+    .sr-sort-bar { order: 3; justify-content: space-between; padding-top: 0; min-height: 30px; }
+    .sr-result-pill {
+        display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 11px;
+        border-radius: 999px; background: #dbdcff; color: #303191; font-size: 11px; font-weight: 700;
+    }
+    .sr-result-pill svg { width: 13px; height: 13px; }
+    .sr-sort-select {
+        display: inline-flex; align-items: center; gap: 6px; margin-left: auto;
+        color: #111827; font-size: 11px; font-weight: 700;
+    }
+    .sr-sort-select select {
+        height: 28px; min-width: 138px; padding: 0 26px 0 9px; border: 1px solid var(--blue);
+        border-radius: 6px; background: #fff; color: #111827; font: inherit; font-size: 10.5px; outline: none;
+    }
+    .sr-sort-label, .sr-sort-btn, .sr-result-count { display: none; }
+    .sr-card { position: relative; border: 1px solid #d8d8d8; box-shadow: 0 4px 10px rgba(0,0,0,.12); }
+    .sr-card-head { grid-template-columns: 34px minmax(0,1fr); align-items: start; padding: 16px 224px 4px 24px; }
+    .sr-airline-logo-wrap { width: 30px; height: 30px; background: transparent; border: 0; }
+    .sr-card-airline { font-size: 14px; }
+    .sr-card-class { color: #676767; font-size: 11px; font-weight: 700; }
+    .sr-card-price-wrap {
+        position: absolute; top: 15px; right: 24px; width: 199px; min-height: 159px; padding-left: 18px;
+        border-left: 1px solid #d6d6d6; align-items: stretch; justify-content: center;
+    }
+    .sr-card-price-label { font-size: 10px; color: #111827; text-align: right; }
+    .sr-card-price { font-family: var(--font); font-size: 22px; font-weight: 850; text-align: right; }
+    .sr-card-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .sr-card-actions .sr-book-btn, .sr-installment-btn {
+        width: 100%; height: 35px; border-radius: 8px; font-family: var(--font); font-size: 13px; font-weight: 850; cursor: pointer;
+    }
+    .sr-card-actions .sr-book-btn { background: var(--blue); box-shadow: none; }
+    .sr-installment-btn { border: 1px dashed var(--blue); background: #fff; color: #111827; }
+    .sr-card-body { padding: 0 224px 0 24px !important; }
+    .sr-card-body > div:first-child { justify-content: center; margin-top: -4px; }
+    .sr-refund-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; padding: 3px 10px; }
+    .sr-figma-icon { width: 15px; height: 15px; object-fit: contain; display: inline-block; flex: 0 0 15px; }
+    .sr-depart-return { flex-direction: column; gap: 8px; padding-top: 20px; }
+    .sr-dr-label { display: none; }
+    .sr-seg-time { font-size: 20px; }
+    .sr-seg-place { font-size: 11px; }
+    .sr-card-meta-clean { margin-top: 8px; padding: 9px 0 0; font-size: 11px; }
+    .sr-card-footer { margin-top: -34px; padding: 0 18px 12px; border-top: 0; }
+    .sr-view-details { font-weight: 500; }
+    .sr-view-details::after {
+        border: 0;
+        width: 15px;
+        height: 15px;
+        background: url("{{ asset('images/figma-icons/flight-card-dropdown.svg') }}") center/contain no-repeat;
+    }
+    .sr-rail { top: 18px; gap: 14px; }
+
+    /* Requested result-page refinements */
+    .sr-sidebar {
+        position: sticky;
+        overflow: visible;
+        padding: 14px 16px 18px;
+        background: rgba(255,255,255,.92);
+    }
+    .sr-sidebar .sr-panel:first-child .sr-panel-head {
+        position: static;
+        padding: 25px 4px 16px;
+    }
+    .sr-sidebar .sr-panel:first-child .sr-panel-reset {
+        position: absolute;
+        top: 19px;
+        right: 18px;
+        padding: 0;
+        background: transparent;
+        color: var(--blue);
+        font-size: 11px;
+    }
+    .sr-sidebar::before {
+        min-height: 36px;
+        padding-bottom: 13px;
+    }
+    .sr-panel + .sr-panel {
+        padding-top: 28px;
+        margin-top: 24px;
+        border-top-color: rgba(103,103,103,.62);
+    }
+    .sr-panel-title {
+        letter-spacing: 0;
+        font-weight: 850;
+    }
+    .sr-panel-body {
+        padding-left: 4px;
+        padding-right: 4px;
+    }
+    .sr-check-row {
+        min-height: 32px;
+        padding: 4px;
+        border-radius: 6px;
+    }
+    .sr-check-box {
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        border-color: #8b95a7;
+    }
+    .sr-check-name {
+        max-width: 122px;
+        line-height: 1.18;
+    }
+    .sr-check-price {
+        margin-left: auto;
+        color: #30364a;
+        font-size: 10.5px;
+        font-weight: 850;
+    }
+    .sr-stop-pill {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 60px;
+        padding: 8px 4px;
+        border: 1px solid #a6a6a6;
+    }
+    .sr-time-pill {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 48px;
+        padding: 7px 6px;
+    }
+    .sr-card {
+        min-height: 227px;
+        overflow: visible;
+    }
+    .sr-card-head {
+        min-height: 50px;
+        padding: 16px 224px 4px 24px;
+    }
+    .sr-airline-logo-wrap {
+        width: 34px;
+        height: 34px;
+    }
+    .sr-card-price-wrap {
+        top: 16px;
+        right: 24px;
+        width: 199px;
+        min-height: 159px;
+        padding-left: 18px;
+    }
+    .sr-card-price-label {
+        font-size: 10px;
+        font-weight: 850;
+        line-height: 1.1;
+    }
+    .sr-card-price {
+        font-size: 20px;
+        line-height: 1.15;
+    }
+    .sr-card-actions {
+        gap: 9px;
+    }
+    .sr-card-actions .sr-book-btn,
+    .sr-installment-btn {
+        height: 35px;
+        border-radius: 8px;
+    }
+    .sr-card-body {
+        padding: 0 224px 0 24px !important;
+    }
+    .sr-card-body > div:first-child {
+        justify-content: flex-end;
+        padding-right: 31px;
+        margin: -28px 0 16px !important;
+        min-height: 18px;
+    }
+    .sr-depart-return {
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 0;
+    }
+    .sr-dr-col {
+        min-width: 0;
+    }
+    .sr-dr-col + .sr-dr-col {
+        padding-left: 0 !important;
+        margin-left: 0 !important;
+        border-left: 0;
+        border-top: 0;
+    }
+    .sr-segments {
+        align-items: flex-start;
+    }
+    .sr-seg {
+        min-width: 93px;
+    }
+    .sr-seg-line {
+        min-width: 359px;
+        padding: 2px 10px 0;
+    }
+    .sr-seg-track {
+        position: relative;
+        height: 18px;
+    }
+    .sr-seg-track .sr-seg-dot {
+        display: none;
+    }
+    .sr-seg-track .sr-seg-dash {
+        width: 100%;
+    }
+    .sr-seg-track::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 17px;
+        height: 17px;
+        transform: translate(-50%, -50%);
+        background: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center/contain no-repeat;
+    }
+    .sr-seg-time {
+        font-size: 20px;
+        line-height: 1.05;
+    }
+    .sr-seg-place {
+        max-width: 93px;
+        font-size: 12px;
+    }
+    .sr-card-meta-clean {
+        margin-top: 9px;
+        padding: 8px 0 0;
+    }
+    .sr-card-footer {
+        position: absolute;
+        right: 24px;
+        bottom: 12px;
+        margin-top: 0;
+        padding: 0;
+    }
+
+    /* Focused Figma price matrix replica */
+    .sr-matrix {
+        position: relative;
+        width: 835px;
+        max-width: 100%;
+        height: 217px;
+        border: 0;
+        border-radius: 10px;
+        background: #303191;
+        box-shadow: 0 4px 13.2px -2px rgba(0,0,0,.25);
+        overflow: hidden;
+    }
+    .sr-matrix::before {
+        content: "Lowest fares by Airlines and Stops";
+        display: flex;
+        align-items: center;
+        height: 30px;
+        padding: 0 19px;
+        border-radius: 10px 10px 0 0;
+        background: #303191;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 16px;
+    }
+    .sr-matrix::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        right: 28px;
+        width: 51px;
+        height: 20px;
+        background:
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") left center / 20px 20px no-repeat,
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") right center / 20px 20px no-repeat;
+        pointer-events: none;
+    }
+    .sr-matrix-scroll {
+        width: 100%;
+        height: 187px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        border-radius: 10px;
+        background: #fff;
+        scrollbar-color: #303191 transparent;
+    }
+    .sr-matrix table {
+        width: 835px;
+        min-width: 835px;
+        height: 187px;
+        border-collapse: collapse;
+        table-layout: fixed;
+        background: #fff;
+    }
+    .sr-matrix th,
+    .sr-matrix td {
+        height: 47px;
+        padding: 0;
+        border-right: 1px solid #b3b3b3;
+        border-bottom: 1px solid #b3b3b3;
+        background: #fff;
+        color: #000;
+        text-align: center;
+        vertical-align: middle;
+        letter-spacing: 0;
+        text-transform: none;
+        white-space: nowrap;
+    }
+    .sr-matrix thead th {
+        height: 50px;
+        background: #fff;
+    }
+    .sr-matrix tbody tr:last-child td {
+        height: 43px;
+        border-bottom: 0;
+    }
+    .sr-matrix th:first-child,
+    .sr-matrix td:first-child {
+        position: static;
+        z-index: auto;
+        width: 83px;
+        min-width: 83px;
+        max-width: 83px;
+        border-right: 1px solid #b3b3b3;
+        background: #fff;
+    }
+    .sr-matrix th:not(:first-child):not(:last-child),
+    .sr-matrix td:not(:first-child):not(:last-child) {
+        width: 120px;
+        min-width: 120px;
+        max-width: 120px;
+    }
+    .sr-matrix th:last-child,
+    .sr-matrix td:last-child {
+        width: 32px;
+        min-width: 32px;
+        max-width: 32px;
+        border-right: 0;
+    }
+    .sr-matrix-corner {
+        text-align: left !important;
+    }
+    .sr-matrix-corner span {
+        display: block;
+        margin-left: 22px;
+        color: #676767;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 10px;
+        text-align: left;
+    }
+    .sr-matrix-row-label {
+        padding-left: 19px !important;
+        color: #676767 !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+        line-height: 20px;
+        text-align: left !important;
+    }
+    .sr-matrix .airline-logo1 {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 50px;
+    }
+    .sr-mat-img {
+        display: block;
+        width: 32px;
+        height: 32px;
+        margin: 0 auto;
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+        object-fit: contain;
+    }
+    .sr-matrix .airline-name,
+    .sr-matrix .sr-next-btn {
+        display: none !important;
+    }
+    .sr-matrix-price,
+    .sr-matrix-empty {
+        display: block;
+        padding-right: 10px;
+        color: #000 !important;
+        font-family: var(--font);
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 20px;
+        text-align: right;
+        text-decoration: none;
+    }
+    .sr-matrix-price:hover {
+        color: #303191 !important;
+        text-decoration: none;
+    }
+
+    /* Focused Figma flight card replica */
+    .sr-card {
+        position: relative;
+        min-height: 227px;
+        border: 1px solid #b3b3b3;
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 4px 10px 1px rgba(0,0,0,.09);
+        overflow: visible;
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .sr-card:hover {
+        transform: translateY(-1px);
+        border-color: #aeb1bf;
+        box-shadow: 0 8px 18px rgba(0,0,0,.12);
+    }
+    .sr-card-head {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr);
+        min-height: 58px;
+        padding: 16px 224px 0 24px;
+        gap: 14px;
+        align-items: start;
+    }
+    .sr-airline-logo-wrap {
+        width: 34px;
+        height: 34px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        overflow: hidden;
+    }
+    .sr-airline-logo-wrap img {
+        width: 34px;
+        height: 34px;
+        object-fit: contain;
+    }
+    .sr-card-airline {
+        max-width: 340px;
+        color: #000;
+        font-size: 18px;
+        font-weight: 700;
+        line-height: 1.12;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .sr-card-class {
+        max-width: 206px;
+        margin-top: 0;
+        color: #676767;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-transform: none;
+    }
+    .sr-card-price-wrap {
+        position: absolute;
+        top: 15px;
+        right: 24px;
+        width: 199px;
+        min-height: 159px;
+        margin: 0;
+        padding-left: 18px;
+        border-left: 1px solid #d6d6d6;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: center;
+        text-align: right;
+    }
+    .sr-card-price-label {
+        color: #000;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 18px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+    }
+    .sr-card-price {
+        color: #000;
+        font-family: var(--font);
+        font-size: 24px;
+        font-weight: 850;
+        line-height: 1.08;
+        letter-spacing: 0;
+        white-space: nowrap;
+    }
+    .sr-card-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .sr-card-actions .sr-book-btn,
+    .sr-installment-btn {
+        width: 147px;
+        height: 35px;
+        margin-left: auto;
+        border-radius: 10px;
+        font-family: var(--font);
+        cursor: pointer;
+    }
+    .sr-card-actions .sr-book-btn {
+        background: #303191;
+        box-shadow: none;
+        color: #fff;
+        font-size: 16px;
+        font-weight: 850;
+        text-transform: uppercase;
+        transition: transform .16s ease, background .16s ease;
+    }
+    .sr-card-actions .sr-book-btn:hover {
+        background: #272878;
+        transform: translateY(-1px);
+    }
+    .sr-installment-btn {
+        border: 1px dashed #303191;
+        background: #fff;
+        color: #000;
+        font-size: 13px;
+        font-weight: 700;
+        transition: background .16s ease, border-color .16s ease, transform .16s ease;
+    }
+    .sr-installment-btn:hover {
+        background: #f7f7ff;
+        transform: translateY(-1px);
+    }
+    .sr-installment-btn:disabled,
+    .sr-installment-btn:disabled:hover {
+        border-color: #d8dbe3;
+        background: #f8f9fc;
+        color: #98a2b3;
+        cursor: not-allowed;
+        opacity: .82;
+        transform: none;
+    }
+    .sr-card-body {
+        padding: 0 247px 0 24px !important;
+    }
+    .sr-card-body > div:first-child {
+        position: absolute;
+        top: 25px;
+        left: 452px;
+        z-index: 2;
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        min-height: 0;
+    }
+    .sr-refund-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        width: 128px;
+        height: 23px;
+        padding: 0 8px;
+        border-radius: 30px;
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 16px;
+        white-space: nowrap;
+    }
+    .sr-refund-badge.no {
+        background: #ffdede;
+        color: #ff0000;
+    }
+    .sr-refund-badge.yes {
+        background: #eafff0;
+        color: #009933;
+    }
+    .sr-icon-mask {
+        display: inline-block;
+        width: 15px;
+        height: 15px;
+        flex: 0 0 15px;
+        background: currentColor;
+        mask: var(--icon-url) center / contain no-repeat;
+        -webkit-mask: var(--icon-url) center / contain no-repeat;
+    }
+    .sr-icon-refund {
+        --icon-url: url("{{ asset('images/figma-icons/flight-card-refund.svg') }}");
+        width: 14px;
+        height: 14px;
+        flex-basis: 14px;
+    }
+    .sr-icon-cabin {
+        --icon-url: url("{{ asset('images/figma-icons/flight-card-cabin-bag.svg') }}");
+    }
+    .sr-icon-luggage {
+        --icon-url: url("{{ asset('images/figma-icons/flight-card-luggage.svg') }}");
+    }
+    .sr-icon-seat {
+        --icon-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M8.75 8.125C8.40625 8.125 8.11208 8.00271 7.8675 7.75812C7.62292 7.51354 7.50042 7.21916 7.5 6.875V3.75C7.5 3.40625 7.6225 3.11208 7.8675 2.8675C8.1125 2.62291 8.40667 2.50042 8.75 2.5H10C10.3437 2.5 10.6381 2.6225 10.8831 2.8675C11.1281 3.1125 11.2504 3.40666 11.25 3.75V6.875C11.25 7.21875 11.1277 7.51312 10.8831 7.75812C10.6385 8.00312 10.3442 8.12542 10 8.125H8.75ZM5.9375 11.25C5.65625 11.25 5.40625 11.1694 5.1875 11.0081C4.96875 10.8469 4.81771 10.6306 4.73437 10.3594L3.17187 5.17187C3.15104 5.11979 3.13813 5.0625 3.13313 5C3.12813 4.9375 3.12542 4.875 3.125 4.8125V3.125C3.125 2.94792 3.185 2.79958 3.305 2.68C3.425 2.56042 3.57333 2.50042 3.75 2.5C3.92667 2.49958 4.07521 2.55958 4.19562 2.68C4.31604 2.80042 4.37583 2.94875 4.375 3.125V5L5.9375 10H10.625C10.8021 10 10.9506 10.06 11.0706 10.18C11.1906 10.3 11.2504 10.4483 11.25 10.625C11.2496 10.8017 11.1896 10.9502 11.07 11.0706C10.9504 11.191 10.8021 11.2508 10.625 11.25H5.9375ZM5.625 13.125C5.44792 13.125 5.29958 13.065 5.18 12.945C5.06042 12.825 5.00042 12.6767 5 12.5C4.99958 12.3233 5.05958 12.175 5.18 12.055C5.30042 11.935 5.44875 11.875 5.625 11.875H10.625C10.8021 11.875 10.9506 11.935 11.0706 12.055C11.1906 12.175 11.2504 12.3233 11.25 12.5C11.2496 12.6767 11.1896 12.8252 11.07 12.9456C10.9504 13.066 10.8021 13.1258 10.625 13.125H5.625Z'/%3E%3C/svg%3E");
+    }
+    .sr-figma-icon {
+        display: none;
+    }
+    .sr-depart-return {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 3px;
+    }
+    .sr-dr-col {
+        min-width: 0;
+    }
+    .sr-dr-col + .sr-dr-col {
+        padding-left: 0 !important;
+        margin-left: 0 !important;
+        border-left: 0;
+        border-top: 0;
+    }
+    .sr-segments {
+        align-items: flex-start;
+        width: 100%;
+    }
+    .sr-seg {
+        min-width: 93px;
+    }
+    .sr-seg:first-child {
+        align-items: flex-start;
+        text-align: left;
+    }
+    .sr-seg:last-child {
+        align-items: flex-end;
+        text-align: right;
+    }
+    .sr-seg-time {
+        color: #000;
+        font-family: var(--font);
+        font-size: 20px;
+        font-weight: 850;
+        line-height: 1.2;
+    }
+    .sr-seg-place {
+        max-width: 93px;
+        color: #676767;
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 1.25;
+        white-space: normal;
+    }
+    .sr-seg-line {
+        min-width: 359px;
+        padding: 2px 10px 0;
+    }
+    .sr-seg-duration,
+    .sr-seg-stop {
+        color: #000;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    .sr-seg-stop.hasstop {
+        color: #000;
+    }
+    .sr-seg-track {
+        position: relative;
+        height: 18px;
+        margin-top: 3px;
+    }
+    .sr-seg-track .sr-seg-dot {
+        display: none;
+    }
+    .sr-seg-track .sr-seg-dash {
+        width: 100%;
+        height: 1px;
+        background: #a6a6a6;
+    }
+    .sr-seg-track::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 17px;
+        height: 17px;
+        transform: translate(-50%, -50%);
+        background: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center / contain no-repeat;
+    }
+    .sr-card-meta-clean {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 0;
+        margin: 0;
+        padding: 8px 90px 0 0;
+        border-top: 1px solid #a6a6a6;
+        color: #a6a6a6;
+        font-size: 11px;
+        line-height: 15px;
+        flex-wrap: nowrap;
+    }
+    .sr-card-meta-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 0;
+        color: #a6a6a6;
+        white-space: nowrap;
+    }
+    .sr-card-meta-item span:not(.sr-icon-mask) {
+        color: #a6a6a6;
+        font-size: 11px;
+        font-weight: 400;
+    }
+    .sr-card-meta-item strong {
+        color: #000;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .sr-card-meta-seat strong {
+        font-weight: 400;
+    }
+    .sr-card-meta-sep {
+        width: 1px;
+        height: 16px;
+        margin: 0 14px;
+        background: #e5e7eb;
+        flex: 0 0 1px;
+    }
+    .sr-card-footer {
+        position: absolute;
+        right: 24px;
+        bottom: 13px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+    }
+    .sr-view-details {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: #303191;
+        font-size: 13px;
+        font-weight: 400;
+        line-height: 18px;
+        text-decoration: none;
+    }
+    .sr-view-details:hover {
+        text-decoration: none;
+        color: #252675;
+    }
+    .sr-view-details::after {
+        content: "";
+        width: 15px;
+        height: 15px;
+        border: 0;
+        border-radius: 0;
+        background: currentColor;
+        opacity: 1;
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M12.3612 7.5C12.3612 6.21072 11.8491 4.97424 10.9374 4.06258C10.0258 3.15092 8.78928 2.63875 7.5 2.63875C6.21072 2.63875 4.97424 3.15092 4.06258 4.06258C3.15092 4.97424 2.63875 6.21072 2.63875 7.5C2.63875 8.78928 3.15092 10.0258 4.06258 10.9374C4.97424 11.8491 6.21072 12.3612 7.5 12.3612C8.78928 12.3612 10.0258 11.8491 10.9374 10.9374C11.8491 10.0258 12.3612 8.78928 12.3612 7.5ZM9.0925 5.9675C9.15693 5.90307 9.23342 5.85196 9.3176 5.81709C9.40178 5.78222 9.49201 5.76428 9.58313 5.76428C9.67424 5.76428 9.76447 5.78222 9.84865 5.81709C9.93283 5.85196 10.0093 5.90307 10.0737 5.9675C10.1382 6.03193 10.1893 6.10842 10.2242 6.1926C10.259 6.27678 10.277 6.36701 10.277 6.45813C10.277 6.54924 10.259 6.63947 10.2242 6.72365C10.1893 6.80783 10.1382 6.88432 10.0737 6.94875L7.99125 9.0325C7.9268 9.09713 7.85024 9.14841 7.76594 9.18339C7.68164 9.21838 7.59127 9.23639 7.5 9.23639C7.40873 9.23639 7.31836 9.21838 7.23406 9.18339C7.14976 9.14841 7.0732 9.09713 7.00875 9.0325L4.92563 6.95L4.87812 6.89687C4.76852 6.76374 4.71244 6.59456 4.72079 6.42232C4.72915 6.25008 4.80135 6.08713 4.92333 5.96523C5.0453 5.84334 5.2083 5.77124 5.38055 5.76299C5.55279 5.75474 5.72194 5.81094 5.855 5.92062L5.9075 5.96812L7.5 7.55938L9.0925 5.9675ZM13.75 7.5C13.75 10.9519 10.9519 13.75 7.5 13.75C4.04813 13.75 1.25 10.9519 1.25 7.5C1.25 4.04813 4.04813 1.25 7.5 1.25C10.9519 1.25 13.75 4.04813 13.75 7.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
+        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M12.3612 7.5C12.3612 6.21072 11.8491 4.97424 10.9374 4.06258C10.0258 3.15092 8.78928 2.63875 7.5 2.63875C6.21072 2.63875 4.97424 3.15092 4.06258 4.06258C3.15092 4.97424 2.63875 6.21072 2.63875 7.5C2.63875 8.78928 3.15092 10.0258 4.06258 10.9374C4.97424 11.8491 6.21072 12.3612 7.5 12.3612C8.78928 12.3612 10.0258 11.8491 10.9374 10.9374C11.8491 10.0258 12.3612 8.78928 12.3612 7.5ZM9.0925 5.9675C9.15693 5.90307 9.23342 5.85196 9.3176 5.81709C9.40178 5.78222 9.49201 5.76428 9.58313 5.76428C9.67424 5.76428 9.76447 5.78222 9.84865 5.81709C9.93283 5.85196 10.0093 5.90307 10.0737 5.9675C10.1382 6.03193 10.1893 6.10842 10.2242 6.1926C10.259 6.27678 10.277 6.36701 10.277 6.45813C10.277 6.54924 10.259 6.63947 10.2242 6.72365C10.1893 6.80783 10.1382 6.88432 10.0737 6.94875L7.99125 9.0325C7.9268 9.09713 7.85024 9.14841 7.76594 9.18339C7.68164 9.21838 7.59127 9.23639 7.5 9.23639C7.40873 9.23639 7.31836 9.21838 7.23406 9.18339C7.14976 9.14841 7.0732 9.09713 7.00875 9.0325L4.92563 6.95L4.87812 6.89687C4.76852 6.76374 4.71244 6.59456 4.72079 6.42232C4.72915 6.25008 4.80135 6.08713 4.92333 5.96523C5.0453 5.84334 5.2083 5.77124 5.38055 5.76299C5.55279 5.75474 5.72194 5.81094 5.855 5.92062L5.9075 5.96812L7.5 7.55938L9.0925 5.9675ZM13.75 7.5C13.75 10.9519 10.9519 13.75 7.5 13.75C4.04813 13.75 1.25 10.9519 1.25 7.5C1.25 4.04813 4.04813 1.25 7.5 1.25C10.9519 1.25 13.75 4.04813 13.75 7.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
+        transition: transform .16s ease;
+    }
+    .sr-card .sr-dr-col {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    .sr-card-expanded .sr-card-meta-clean {
+        top: 204px;
+        bottom: auto;
+        z-index: 2;
+    }
+    .sr-card-expanded .sr-card-footer {
+        top: 212px;
+        bottom: auto;
+        z-index: 3;
+    }
+
+    /* Focused Figma itinerary details and fare rules replica */
+    .sr-detail-panel {
+        width: 835px;
+        max-width: 100%;
+        margin-top: 112px;
+        border: 1px solid #b3b3b3;
+        border-top: 0;
+        border-radius: 0 0 10px 10px;
+        background: #fff;
+        box-shadow: 0 4px 10px 1px rgba(0,0,0,.09);
+        overflow: hidden;
+    }
+    .sr-detail-tabs {
+        display: flex;
+        align-items: stretch;
+        height: 40px;
+        padding: 0;
+        border: 0;
+        border-left: 1px solid #a6a6a6;
+        border-right: 1px solid #a6a6a6;
+        background: #fbfcfe;
+    }
+    .sr-detail-tab {
+        position: relative;
+        display: flex;
+        align-items: center;
+        height: 40px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        color: #000;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 20px;
+    }
+    .sr-detail-tab:first-child { width: 141px; padding-left: 32px; }
+    .sr-detail-tab:nth-child(2) { width: 120px; padding-left: 0; }
+    .sr-detail-tab.active { color: #303191; border: 0; }
+    .sr-detail-tab.active::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        width: 99px;
+        height: 2px;
+        background: #303191;
+    }
+    .sr-detail-tab:first-child.active::after { left: 32px; }
+    .sr-detail-tab:nth-child(2).active::after { left: 0; }
+    .sr-detail-body {
+        min-height: 361px;
+        padding: 13px 17px 15px;
+        background: #fff;
+    }
+    .sr-detail-cols {
+        position: relative;
+        display: grid;
+        grid-template-columns: 357px 357px;
+        gap: 80px;
+        align-items: start;
+    }
+    .sr-detail-cols::before {
+        content: "";
+        position: absolute;
+        top: 12px;
+        bottom: 10px;
+        left: 400px;
+        width: 1px;
+        background: #a6a6a6;
+    }
+    .sr-detail-col {
+        width: 357px;
+        gap: 0;
+    }
+    .sr-detail-leg-head {
+        position: relative;
+        display: block;
+        min-height: 29px;
+        margin: 0 0 13px;
+    }
+    .sr-detail-leg-title {
+        display: block;
+        max-width: 210px;
+        color: #000;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 20px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .sr-detail-leg-badge {
+        position: absolute;
+        top: 2px;
+        right: 7px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 68px;
+        height: 16px;
+        padding: 0;
+        border-radius: 30px;
+        background: #dbdcff;
+        color: #303191;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 14px;
+    }
+    .sr-detail-leg-badge.inbound { background: #ddffe9; color: #009933; }
+    .sr-detail-leg-badge.connecting { background: #f7f7ff; color: #303191; }
+    .sr-detail-seg {
+        width: 357px;
+        min-height: 131px;
+        margin: 0;
+        padding: 9px 13px 10px;
+        border: 0;
+        border-radius: 8px;
+        background: #fbfcfe;
+        border: 1px solid #eef0f4;
+        box-shadow: none;
+    }
+    .sr-detail-seg-airline {
+        height: 20px;
+        margin: 0 0 18px;
+        gap: 6px;
+    }
+    .sr-detail-seg-logo {
+        width: 18px;
+        height: 18px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+    .sr-detail-seg-airline-name {
+        max-width: 119px;
+        color: #000;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 16px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .sr-detail-seg-airline-name + span {
+        color: #676767 !important;
+        font-size: 10px !important;
+        font-weight: 400;
+    }
+    .sr-detail-seg-route {
+        margin: 0 0 8px;
+        align-items: flex-start;
+    }
+    .sr-detail-seg-point { width: 91px; min-width: 91px; }
+    .sr-detail-seg-point:last-child { width: 77px; min-width: 77px; }
+    .sr-detail-seg-time {
+        color: #000;
+        font-family: var(--font);
+        font-size: 16px;
+        font-weight: 850;
+        line-height: 18px;
+    }
+    .sr-detail-seg-iata {
+        margin-top: 0;
+        color: #676767;
+        font-size: 10px;
+        font-weight: 400;
+        line-height: 12px;
+    }
+    .sr-detail-seg-airport { display: none; }
+    .sr-detail-seg-mid {
+        width: 129px;
+        min-width: 129px;
+        padding: 1px 8px 0;
+        gap: 3px;
+    }
+    .sr-detail-seg-dur {
+        color: #000;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 13px;
+    }
+    .sr-detail-seg-track { height: 12px; position: relative; }
+    .sr-detail-seg-line { height: 1px; background: #a6a6a6; }
+    .sr-detail-seg-dot2 { display: none; }
+    .sr-detail-seg-track::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 10px;
+        height: 10px;
+        transform: translate(-50%, -50%);
+        background: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center / contain no-repeat;
+    }
+    .sr-detail-seg-stops { display: none; }
+    .sr-detail-seg-meta {
+        display: flex;
+        gap: 0;
+        padding-top: 0;
+        border-top: 0;
+        color: #676767;
+        font-size: 10px;
+        line-height: 12px;
+        flex-wrap: wrap;
+    }
+    .sr-detail-meta-item {
+        gap: 3px;
+        margin-right: 13px;
+        white-space: nowrap;
+    }
+    .sr-detail-meta-label {
+        color: #676767;
+        font-size: 10px;
+        font-weight: 600;
+    }
+    .sr-detail-meta-val {
+        color: #000;
+        font-size: 10px;
+        font-weight: 700;
+    }
+    .sr-detail-layover {
+        width: 275px;
+        height: 20px;
+        margin: 4px auto 4px;
+        padding: 0 18px;
+        justify-content: center;
+        border: 1px solid #eef0f4;
+        border-radius: 10px;
+        background: #fff;
+        color: #303191;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 16px;
+    }
+    .sr-detail-layover svg { width: 12px; height: 12px; flex: 0 0 12px; }
+    .sr-fare-rules-body {
+        min-height: 246px;
+        padding: 15px 32px 24px;
+        background: #fff;
+    }
+    .sr-fare-rules-body > div { margin-bottom: 0 !important; }
+    .sr-fare-rules-body > div > div:first-child {
+        margin: 0 0 13px !important;
+        color: #000 !important;
+        font-size: 12px !important;
+        font-weight: 700 !important;
+        letter-spacing: 0 !important;
+        text-transform: uppercase !important;
+    }
+    .sr-fare-rule-row {
+        min-height: 30px;
+        padding: 0;
+        border: 0;
+        display: grid;
+        grid-template-columns: 14px 98px minmax(0, 1fr);
+        align-items: center;
+        column-gap: 12px;
+        font-size: 12px;
+        line-height: 16px;
+    }
+    .sr-fare-rule-icon {
+        width: 14px;
+        height: 14px;
+        margin: 0;
+        color: #676767;
+        font-size: 12px;
+        overflow: hidden;
+    }
+    .sr-fare-rule-label {
+        min-width: 0;
+        color: #000;
+        font-size: 12px;
+        font-weight: 400;
+    }
+    .sr-fare-rule-val {
+        color: #000;
+        font-size: 12px;
+        font-weight: 700;
+    }
+    .sr-fare-rule-val.allowed { color: #009933; font-weight: 700; }
+    .sr-fare-rule-val.not-allowed { color: #ff0000; font-weight: 700; }
+    .sr-detail-footer { display: none; }
+
     /* ── Responsive ── */
+    .sr-mobile-filter-bar,
+    .sr-filter-backdrop,
+    .sr-filter-sheet {
+        display: none;
+    }
+    .sr-mobile-filter-bar {
+        align-items: center;
+        gap: 8px;
+    }
+    .sr-mobile-filter-btn,
+    .sr-mobile-filter-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 38px;
+        border-radius: 999px;
+        border: 1px solid #e1e5ee;
+        background: rgba(255,255,255,.94);
+        color: #30364a;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+        box-shadow: 0 8px 22px rgba(16,24,40,.06);
+        transition: transform .16s ease, border-color .16s ease, background .16s ease, color .16s ease;
+    }
+    .sr-mobile-filter-btn {
+        padding: 0 13px;
+        color: #303191;
+    }
+    .sr-mobile-filter-chip {
+        padding: 0 12px;
+    }
+    .sr-mobile-filter-btn:active,
+    .sr-mobile-filter-chip:active {
+        transform: scale(.98);
+    }
+    .sr-mobile-filter-chip.active,
+    .sr-mobile-filter-btn.has-filters {
+        border-color: #d7d8ff;
+        background: #f7f7ff;
+        color: #303191;
+    }
+    .sr-mobile-filter-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: #009933;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 900;
+    }
+    .sr-filter-sheet {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 920;
+        max-height: min(88vh, 720px);
+        flex-direction: column;
+        border-radius: 22px 22px 0 0;
+        background: #fff;
+        box-shadow: 0 -24px 54px rgba(17,24,39,.22);
+        overflow: hidden;
+    }
+    .sr-filter-sheet-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 16px 18px 12px;
+        border-bottom: 1px solid #eef0f4;
+    }
+    .sr-filter-sheet-title {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        color: #111827;
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1.2;
+    }
+    .sr-filter-sheet-title span:last-child {
+        color: #667085;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .sr-filter-sheet-close {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border: 1px solid #e1e5ee;
+        border-radius: 999px;
+        background: #fff;
+        color: #303191;
+    }
+    .sr-filter-sheet-body {
+        overflow-y: auto;
+        padding: 12px 14px 92px;
+        background: linear-gradient(180deg, #fff 0%, #fbfcfe 100%);
+    }
+    .sr-filter-sheet .sr-panel {
+        border-radius: 14px;
+        border-color: #e8ebf2;
+        background: #fff;
+        box-shadow: none;
+    }
+    .sr-filter-sheet .sr-panel + .sr-panel {
+        margin-top: 10px;
+    }
+    .sr-filter-sheet-footer {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: 1fr 1.35fr;
+        gap: 10px;
+        padding: 12px 14px 14px;
+        border-top: 1px solid #eef0f4;
+        background: rgba(255,255,255,.96);
+        backdrop-filter: blur(14px);
+    }
+    .sr-filter-sheet-clear,
+    .sr-filter-sheet-apply {
+        height: 44px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 900;
+    }
+    .sr-filter-sheet-clear {
+        border: 1px solid #e1e5ee;
+        background: #fff;
+        color: #30364a;
+    }
+    .sr-filter-sheet-apply {
+        border: 1px solid #303191;
+        background: #303191;
+        color: #fff;
+        box-shadow: 0 12px 24px rgba(48,49,145,.18);
+    }
+    .sr-filter-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 910;
+        background: rgba(17,24,39,.44);
+        backdrop-filter: blur(3px);
+    }
+    .translate-y-full { transform: translateY(100%); }
+    .translate-y-0 { transform: translateY(0); }
+    .transition { transition-property: transform, opacity; }
+    .ease-out { transition-timing-function: cubic-bezier(.16,1,.3,1); }
+    .ease-in { transition-timing-function: cubic-bezier(.4,0,1,1); }
+    .duration-200 { transition-duration: 200ms; }
+    .duration-160 { transition-duration: 160ms; }
+    .sr-time-pill {
+        background: #fff;
+        border-color: #e1e5ee;
+        color: #303191;
+    }
+    .sr-time-pill.active {
+        background: #f7f7ff;
+        border-color: #d7d8ff;
+        box-shadow: 0 0 0 3px rgba(48,49,145,.08);
+    }
+
     @media (max-width: 1100px) {
         .sr-page { grid-template-columns: 220px 1fr; gap: 14px; }
         .sr-rail { display: none; }
         .sr-matrix-scroll { width: 100%; }
+        .sr-fare-options { gap: 10px; }
+        .sr-fare-option { padding: 13px 14px; }
+        .sr-fare-option-price { font-size: 18px; }
     }
     @media (max-width: 860px) {
         .sr-page { grid-template-columns: 1fr; padding: 12px 10px 32px; gap: 12px; }
-        .sr-sidebar { position: static; display: flex; flex-direction: row; overflow-x: auto; gap: 10px; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; order: 2; }
+        .sr-sidebar { display: none; }
         .sr-sidebar::-webkit-scrollbar { display: none; }
         .sr-main { order: 1; }
-        .sr-sidebar .sr-panel { flex-shrink: 0; min-width: 200px; max-width: 260px; border-radius: 10px; }
+        .sr-mobile-filter-bar {
+            position: sticky;
+            top: 0;
+            z-index: 85;
+            display: flex;
+            width: calc(100vw - 20px);
+            margin: -2px 0 2px;
+            padding: 8px 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+            background: linear-gradient(180deg, rgba(248,249,252,.98) 0%, rgba(248,249,252,.9) 100%);
+            backdrop-filter: blur(14px);
+        }
+        .sr-mobile-filter-bar::-webkit-scrollbar { display: none; }
+        .sr-filter-backdrop { display: block; }
+        .sr-filter-sheet { display: flex; }
+        .sr-time-pill {
+            background: #fff;
+            border-color: #e1e5ee;
+            color: #303191;
+        }
+        .sr-time-pill.active {
+            background: #f7f7ff;
+            border-color: #d7d8ff;
+            box-shadow: 0 0 0 3px rgba(48,49,145,.08);
+        }
         .sr-stop-pills { padding: 8px 12px 10px; gap: 5px; }
         .sr-stop-pill  { padding: 5px 3px; font-size: 11px; }
         .sr-time-pills { padding: 8px 12px 10px; }
         .sr-time-pill  { padding: 4px 8px; font-size: 10.5px; }
+        .sr-fare-options { grid-template-columns: 1fr; gap: 9px; }
+        .sr-sort-bar { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
+        .sr-sort-bar::-webkit-scrollbar { display: none; }
+        .sr-sort-btn,
+        .sr-sort-label,
+        .sr-result-count { flex: 0 0 auto; }
+        .sr-card-head { grid-template-columns: 38px minmax(0,1fr); padding-right: 14px; }
+        .sr-card-price-wrap { position: static; width: auto; min-height: 0; grid-column: 1 / -1; align-self: auto; padding: 12px 0 0; border-left: 0; border-top: 1px solid #eceef3; text-align: left; }
+        .sr-card-body { padding: 0 14px 12px !important; }
+        .sr-card-body > div:first-child { position: static; display: flex !important; justify-content: flex-start; padding-right: 0; margin: 0 0 10px !important; }
+        .sr-card-footer { position: static; padding: 9px 14px 12px; }
+        .sr-card-head .sr-book-btn { grid-column: 1 / -1; }
+        .sr-depart-return { flex-direction: column; gap: 14px; }
+        .sr-dr-col + .sr-dr-col { border-left: none; border-top: 1px dashed var(--gray-200); padding-left: 0; margin-left: 0; padding-top: 12px; }
+        .sr-card-meta-clean { position: static; padding: 10px 0 0; margin-top: 10px; flex-wrap: wrap; border-top-color: #e5e7eb; }
+        .sr-card-actions .sr-book-btn,
+        .sr-installment-btn { width: 100%; margin-left: 0; }
+        .sr-seg-line { min-width: 0; }
+        .sr-detail-panel { width: 100%; margin-top: 0; }
+        .sr-detail-body { min-height: 0; padding: 13px 12px 16px; }
+        .sr-detail-cols { display: flex; flex-direction: column; gap: 14px; }
+        .sr-detail-cols::before { display: none; }
+        .sr-detail-col,
+        .sr-detail-seg { width: 100%; }
+        .sr-detail-seg-point { width: 78px; min-width: 78px; }
+        .sr-detail-seg-point:last-child { width: 70px; min-width: 70px; }
+        .sr-detail-seg-mid { width: auto; min-width: 0; flex: 1; }
+        .sr-detail-layover { width: min(275px, 100%); }
+        .sr-fare-rules-body { min-height: 0; padding: 15px 18px 22px; }
     }
     @media (max-width: 600px) {
-        .sr-topbar { padding: 0 12px; }
+        .sr-topbar { padding: 16px 12px 0; }
+        .sr-topbar-inner { align-items: stretch; flex-direction: column; gap: 14px; min-height: 0; padding: 16px; }
+        .sr-tb-route { flex-wrap: wrap; gap: 8px; font-size: var(--tw-text-lg, 17px); }
+        .sr-tb-route-text { max-width: calc(100vw - 116px); }
+        .sr-tb-meta { gap: 8px; font-size: 11.5px; }
+        .sr-tb-modify-btn { width: 100%; justify-content: center; margin-left: 0; height: 40px; }
         .sr-tb-pill { padding: 5px 9px; }
         .sr-tb-pill-value { font-size: 12px; }
         .sr-tb-search { padding: 0 14px; font-size: 12px; height: 34px; }
@@ -414,19 +2073,21 @@
         .sr-fare-cal-btn { padding: 6px 12px; font-size: 11.5px; }
         .sr-matrix-scroll { width: 100%; }
         .sr-fare-options { grid-template-columns: 1fr; }
-        .sr-fare-option { border-right: none; border-bottom: 1px solid var(--gray-100); padding: 10px 14px; }
-        .sr-fare-option:last-child { border-bottom: none; }
-        .sr-fare-option-price { font-size: 15px; }
+        .sr-fare-option { min-height: 66px; border-right: 1px solid var(--gray-200); border-bottom: 1px solid var(--gray-200); padding: 12px 14px; }
+        .sr-fare-option:last-child { border-bottom: 1px solid var(--gray-200); }
+        .sr-fare-option-price { font-size: 17px; }
         .sr-sort-bar { gap: 6px; }
         .sr-sort-btn { padding: 5px 10px; font-size: 11px; }
-        .sr-card-head { flex-wrap: wrap; gap: 10px; padding: 12px 14px 10px; }
+        .sr-card-head { gap: 10px; padding: 12px 14px 10px; }
         .sr-card-head > div:nth-child(2) { flex: 1; min-width: 0; }
         .sr-card-price-wrap { text-align: left; }
         .sr-card-price { font-size: 18px; }
         .sr-card-head .sr-book-btn { width: 100%; margin-left: 0; height: 36px; font-size: 13px; }
         .sr-card-body { padding: 0 14px 12px; }
-        .sr-depart-return { flex-direction: column; gap: 14px; }
-        .sr-dr-col + .sr-dr-col { border-left: none; border-top: 1px dashed var(--gray-200); padding-left: 0; margin-left: 0; padding-top: 12px; }
+        .sr-card-meta-clean { gap: 10px; }
+        .sr-card-meta-sep { display: none; }
+        .sr-seg { min-width: 68px; }
+        .sr-seg-line { min-width: 88px; padding-left: 8px; padding-right: 8px; }
         .sr-seg-time { font-size: 18px; }
         .sr-detail-cols { grid-template-columns: 1fr !important; }
         .sr-modify-head { padding: 12px 16px; }
@@ -588,11 +2249,55 @@
 
 
 {{-- ══ SINGLE ALPINE SCOPE wraps EVERYTHING ══ --}}
-<div x-data="flightResults()" x-init="init()">
+<div x-data="flightResults()" x-init="init()" x-effect="document.body.classList.toggle('sr-filter-open', filterSheetOpen)" class="sr-results-shell">
 
     {{-- ══ TOPBAR ══ --}}
     <div class="sr-topbar">
         <div class="sr-topbar-inner">
+            <div class="sr-tb-copy">
+                <div class="sr-tb-route">
+                    <span class="sr-tb-pin" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 21s7-4.7 7-11a7 7 0 1 0-14 0c0 6.3 7 11 7 11Z"/>
+                            <circle cx="12" cy="10" r="2.4"/>
+                        </svg>
+                    </span>
+                    <span class="sr-tb-route-text">{{ $from }}</span>
+                    <span class="sr-tb-route-arrow">&rarr;</span>
+                    <span class="sr-tb-pin" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 21s7-4.7 7-11a7 7 0 1 0-14 0c0 6.3 7 11 7 11Z"/>
+                            <circle cx="12" cy="10" r="2.4"/>
+                        </svg>
+                    </span>
+                    <span class="sr-tb-route-text">{{ $to }}</span>
+                </div>
+                <div class="sr-tb-meta">
+                    <span class="sr-tb-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M16 21v-2a4 4 0 0 0-8 0v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        {{ $totalPassengers }} passenger{{ $totalPassengers > 1 ? 's' : '' }}
+                    </span>
+                    <span class="sr-tb-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M4 9h16"/>
+                            <path d="M5 9v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/>
+                            <path d="M8 9V6a4 4 0 0 1 8 0v3"/>
+                        </svg>
+                        {{ $cabin }}
+                    </span>
+                    @if($depart)
+                        <span class="sr-tb-meta-item sr-tb-date-pill">
+                            {{ \Carbon\Carbon::createFromFormat('d/m/Y',$depart)->format('Y-m-d') }}
+                            @if($trip === 'return' && $return)
+                                &rarr; {{ \Carbon\Carbon::createFromFormat('d/m/Y',$return)->format('Y-m-d') }}
+                            @endif
+                        </span>
+                    @endif
+                </div>
+            </div>
 
             {{-- Route pill --}}
             <div class="sr-tb-pill">
@@ -638,42 +2343,32 @@
     </div>
 
     {{-- ══ Modify Search Backdrop ══ --}}
-    <div
-        class="sr-modify-backdrop"
-        x-show="modifyOpen"
-        @click="modifyOpen = false"
-        x-transition:enter="transition ease-out duration-200"
-        x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100"
-        x-transition:leave="transition ease-in duration-150"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
-        style="display:none;">
-    </div>
-
     {{-- ══ Modify Search Drop Modal ══ --}}
-    <div
-        class="sr-modify-modal"
+    <section
+        class="sr-modify-inline"
         x-show="modifyOpen"
-        x-transition:enter="transition ease-out duration-250"
-        x-transition:enter-start="opacity-0 -translate-y-4"
-        x-transition:enter-end="opacity-100 translate-y-0"
-        x-transition:leave="transition ease-in duration-180"
-        x-transition:leave-start="opacity-100 translate-y-0"
-        x-transition:leave-end="opacity-0 -translate-y-4"
-        style="display:none;"
-        @click.stop>
+        x-transition:enter="sr-modify-transition"
+        x-transition:enter-start="sr-modify-hidden"
+        x-transition:enter-end="sr-modify-shown"
+        x-transition:leave="sr-modify-transition"
+        x-transition:leave-start="sr-modify-shown"
+        x-transition:leave-end="sr-modify-hidden"
+        style="display:none;">
+        <div class="sr-modify-card">
 
         {{-- Modal Header --}}
         <div class="sr-modify-head">
-            <div style="display:flex; align-items:center; gap:8px;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#93c5fd;">
-                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <span style="font-size:14px; font-weight:700; color:#fff;">Modify Your Search</span>
+            <div class="sr-modify-title">
+                <span class="sr-modify-title-icon" aria-hidden="true">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 21l-4.3-4.3"/>
+                        <circle cx="11" cy="11" r="7"/>
+                    </svg>
+                </span>
+                <span>Modify search</span>
             </div>
-            <button class="sr-modify-close" @click="modifyOpen = false">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <button class="sr-modify-close" @click="modifyOpen = false" type="button" aria-label="Close modify search">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
                     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
             </button>
@@ -681,10 +2376,33 @@
 
         {{-- Embedded Widget --}}
         <div class="sr-modify-body">
+            @php
+                $modifyWidgetDefaults = [
+                    'trip' => $trip === 'oneway' ? 'OneWay' : ($trip === 'multi' ? 'multi' : 'Return'),
+                    'from' => $from,
+                    'to' => $to,
+                    'depart' => $depart,
+                    'returning' => $return,
+                    'adults' => $adults,
+                    'childs' => $childs,
+                    'kids' => $kids,
+                    'flightType' => $searchParams['flight_type'] ?? 'Y',
+                    'multiLegs' => collect($routes)->map(fn ($route) => [
+                        'from' => $route['from'] ?? '',
+                        'to' => $route['to'] ?? '',
+                        'depart' => $route['depart'] ?? '',
+                        'cabin' => $searchParams['flight_type'] ?? 'Y',
+                    ])->values()->all(),
+                ];
+            @endphp
+            <script>
+                window.travelwheelFlightWidgetDefaults = @json($modifyWidgetDefaults);
+            </script>
             @include('livewire.pages.flight.flight-search')
         </div>
 
-    </div>
+        </div>
+    </section>
 
     {{-- ══ MAIN PAGE ══ --}}
     <div class="sr-page">
@@ -751,11 +2469,156 @@
         </aside>
 
         {{-- ══ MAIN CONTENT ══ --}}
+        <div
+            class="sr-filter-backdrop"
+            x-cloak
+            x-show="filterSheetOpen"
+            x-transition.opacity
+            @click="filterSheetOpen = false"
+            aria-hidden="true"></div>
+
+        <section
+            class="sr-filter-sheet"
+            x-cloak
+            x-show="filterSheetOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="translate-y-full"
+            x-transition:enter-end="translate-y-0"
+            x-transition:leave="transition ease-in duration-160"
+            x-transition:leave-start="translate-y-0"
+            x-transition:leave-end="translate-y-full"
+            @keydown.escape.window="filterSheetOpen = false"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Flight filters">
+            <div class="sr-filter-sheet-head">
+                <div class="sr-filter-sheet-title">
+                    <span>Filters</span>
+                    <span x-text="activeFilterCount ? activeFilterCount + ' active filter' + (activeFilterCount > 1 ? 's' : '') : 'Refine flights by airline, stops, and time'"></span>
+                </div>
+                <button class="sr-filter-sheet-close" type="button" @click="filterSheetOpen = false" aria-label="Close filters">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="sr-filter-sheet-body">
+                <div class="sr-panel">
+                    <div class="sr-panel-head">
+                        <span class="sr-panel-title">Airlines</span>
+                        <a class="sr-panel-reset" @click.prevent="resetAirlines()">Reset</a>
+                    </div>
+                    <div class="sr-panel-body">
+                        <template x-for="airline in airlines" :key="'mobile-airline-'+airline.code">
+                            <label class="sr-check-row" @click.prevent="toggleAirline(airline.code)">
+                                <span class="sr-check-left">
+                                    <span class="sr-check-box" :class="{ checked: selectedAirlines.includes(airline.code) }"></span>
+                                    <span class="sr-check-name" x-text="airline.name"></span>
+                                </span>
+                                <span class="sr-check-price" x-text="airline.fromPrice"></span>
+                            </label>
+                        </template>
+                    </div>
+                </div>
+                <div class="sr-panel">
+                    <div class="sr-panel-head"><span class="sr-panel-title">Onward Journey</span></div>
+                    <div style="padding:8px 16px 4px;">
+                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-400);margin-bottom:6px;">Stops from Origin</div>
+                    </div>
+                    <div class="sr-stop-pills">
+                        <template x-for="stop in stopOptions" :key="'mobile-stop-'+stop.value">
+                            <div class="sr-stop-pill" :class="{ active: selectedStop === stop.value }" @click="selectedStop = (selectedStop === stop.value ? null : stop.value)">
+                                <div x-text="stop.label"></div>
+                                <div class="sr-stop-pill-sub" x-text="stop.sub"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div class="sr-panel">
+                    <div class="sr-panel-head"><span class="sr-panel-title">Departure from Origin</span></div>
+                    <div class="sr-time-pills">
+                        <template x-for="t in timeSlots" :key="'mobile-depart-'+t.value">
+                            <div class="sr-time-pill" :class="{ active: selectedDepartTime === t.value }" @click="selectedDepartTime = (selectedDepartTime === t.value ? null : t.value)">
+                                <div x-text="t.label"></div>
+                                <div style="font-size:10px;opacity:.7;" x-text="t.range"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div class="sr-panel">
+                    <div class="sr-panel-head"><span class="sr-panel-title">Arrival at Destination</span></div>
+                    <div class="sr-time-pills">
+                        <template x-for="t in timeSlots" :key="'mobile-arrival-'+t.value">
+                            <div class="sr-time-pill" :class="{ active: selectedArrivalTime === t.value }" @click="selectedArrivalTime = (selectedArrivalTime === t.value ? null : t.value)">
+                                <div x-text="t.label"></div>
+                                <div style="font-size:10px;opacity:.7;" x-text="t.range"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+            <div class="sr-filter-sheet-footer">
+                <button class="sr-filter-sheet-clear" type="button" @click="resetAll()">Clear all</button>
+                <button class="sr-filter-sheet-apply" type="button" @click="filterSheetOpen = false">
+                    Show <span x-text="filteredFlights.length"></span> flights
+                </button>
+            </div>
+        </section>
+
         <main class="sr-main">
+
+            <div class="sr-mobile-filter-bar">
+                <button
+                    class="sr-mobile-filter-btn"
+                    :class="{ 'has-filters': activeFilterCount > 0 }"
+                    type="button"
+                    @click="filterSheetOpen = true"
+                    aria-label="Open flight filters">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M4 6h16"/>
+                        <path d="M7 12h10"/>
+                        <path d="M10 18h4"/>
+                    </svg>
+                    <span>Filters</span>
+                    <span class="sr-mobile-filter-count" x-show="activeFilterCount > 0" x-text="activeFilterCount"></span>
+                </button>
+                <button
+                    class="sr-mobile-filter-chip"
+                    :class="{ active: sortBy === 'price' }"
+                    type="button"
+                    @click="sortBy = sortBy === 'price' ? 'recommended' : 'price'; activeFare = sortBy === 'price' ? 'cheapest' : 'recommended'">
+                    Cheapest
+                </button>
+                <button
+                    class="sr-mobile-filter-chip"
+                    :class="{ active: selectedStop === 0 }"
+                    type="button"
+                    @click="selectedStop = selectedStop === 0 ? null : 0">
+                    Non stop
+                </button>
+            </div>
 
             {{-- Header --}}
             <div class="sr-header">
                 <div>
+                    <div class="sr-header-title sr-header-title-clean">
+                        @if($trip === 'multi')
+                            Multi-city flights: {{ collect($routes)->pluck('from')->implode(' -> ') }} -> {{ last($routes)['to'] ?? '' }}
+                        @else
+                            Flights from {{ $routes[0]['from'] ?? '' }} to {{ $routes[0]['to'] ?? '' }}{{ $trip === 'return' ? ', and back' : '' }}
+                        @endif
+                    </div>
+                    <div class="sr-header-sub sr-header-sub-clean">
+                        @if($depart)
+                            <span>{{ \Carbon\Carbon::createFromFormat('d/m/Y',$depart)->format('D, d M') }}</span>
+                        @endif
+                        @if($trip === 'return' && $return)
+                            <span>{{ \Carbon\Carbon::createFromFormat('d/m/Y',$return)->format('D, d M') }}</span>
+                        @endif
+                        <span>{{ $totalPassengers }} passenger{{ $totalPassengers > 1 ? 's' : '' }}</span>
+                        <span>{{ $cabin }}</span>
+                        <span x-text="filteredFlights.length + ' flights found'"></span>
+                    </div>
                     <div class="sr-header-title">
                        @if($trip === 'multi')
                             ✈ Multi-city 
@@ -794,26 +2657,25 @@
                     <table>
                         <thead>
                             <tr>
-                                <th style="text-align:left;width:110px;"></th>
+                                <th class="sr-matrix-corner">
+                                    <span>Airline</span>
+                                    <span>/Stops</span>
+                                </th>
                                 <template x-for="col in matrixAirlines" :key="col.code">
                                     <th>
                                         <div class="airline-logo1">
                                             <img class="sr-mat-img" :src="col.logo" :alt="col.name">
                                         </div>
-                                        <div class="airline-name" x-text="col.name"></div>
                                     </th>
                                 </template>
-                                <th style="width:36px;"></th>
+                                <th class="sr-matrix-nav-cell"></th>
                             </tr>
                         </thead>
                         <tbody>
                             <template x-for="row in matrixRows" :key="row.label">
                                 <tr>
-                                    <td>
-                                        <div style="display:flex;align-items:center;gap:6px;">
-                                            <span style="display:inline-block;width:28px;height:2px;background:currentColor;border-radius:2px;vertical-align:middle;" :style="row.style"></span>
-                                            <span x-text="row.label"></span>
-                                        </div>
+                                    <td class="sr-matrix-row-label">
+                                        <span x-text="row.label === 'Non stop' ? 'Direct' : (row.label === '1+ Stops' ? '2 Stop' : row.label)"></span>
                                     </td>
                                     <template x-for="col in matrixAirlines" :key="col.code">
                                         <td>
@@ -821,7 +2683,7 @@
                                             <span x-show="!row.prices[col.code]" class="sr-matrix-empty">—</span>
                                         </td>
                                     </template>
-                                    <td><button class="sr-next-btn">›</button></td>
+                                    <td class="sr-matrix-nav-cell"></td>
                                 </tr>
                             </template>
                         </tbody>
@@ -851,7 +2713,7 @@
                         <div class="sr-fare-option-price" x-text="_fmtPrice([...allFlights].sort((a,b)=>a.totalDuration-b.totalDuration)[0]?.price, allFlights[0]?.currency) || '—'"></div>
                     </div>
                     <div class="sr-fare-option" :class="{ active: activeFare === 'recommended' }" @click="activeFare = 'recommended'; sortBy = 'recommended'">
-                        <div class="sr-fare-option-label">Recommended</div>
+                        <div class="sr-fare-option-label">Best (Recommended)</div>
                         <div class="sr-fare-option-price" x-text="cheapestPrice || '—'"></div>
                     </div>
                 </div>
@@ -859,6 +2721,26 @@
 
             {{-- Sort Bar --}}
             <div class="sr-sort-bar">
+                <span class="sr-result-pill">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M9 6h11"/>
+                        <path d="M9 12h11"/>
+                        <path d="M9 18h11"/>
+                        <path d="M4 6h.01"/>
+                        <path d="M4 12h.01"/>
+                        <path d="M4 18h.01"/>
+                    </svg>
+                    <span x-text="filteredFlights.length + ' flight' + (filteredFlights.length !== 1 ? 's' : '') + ' found'"></span>
+                </span>
+                <label class="sr-sort-select">
+                    <span>Sort:</span>
+                    <select x-model="sortBy">
+                        <option value="recommended">Recommended</option>
+                        <option value="price">Price Low to High</option>
+                        <option value="duration">Fastest</option>
+                        <option value="depart">Departure</option>
+                    </select>
+                </label>
                 <span class="sr-sort-label">Sort by:</span>
                 <button class="sr-sort-btn" :class="{ active: sortBy === 'recommended' }" @click="sortBy = 'recommended'">Recommended</button>
                 <button class="sr-sort-btn" :class="{ active: sortBy === 'price' }" @click="sortBy = 'price'">Cheapest</button>
@@ -869,7 +2751,7 @@
 
             {{-- ══ Flight Cards ══ --}}
             <template x-for="(flight, fi) in paginatedFlights" :key="flight.id">
-                <div class="sr-card" :style="'animation-delay:' + (fi * 60) + 'ms'">
+                <div class="sr-card" :class="{ 'sr-card-expanded': expandedId === flight.id }" :style="'animation-delay:' + (fi * 60) + 'ms'">
 
                     {{-- Card Head --}}
                     <div class="sr-card-head">
@@ -885,17 +2767,6 @@
                             <div class="sr-card-airline" x-text="flight.airline"></div>
                             <div class="sr-card-class" x-text="flight.cabin + ' · ' + (flight.stops === 0 ? 'Direct' : flight.stops + ' Stop' + (flight.stops > 1 ? 's' : ''))"></div>
                         </div>
-                        <div class="sr-card-price-wrap">
-                            <div class="sr-card-price-label">Full Pay</div>
-                            <div class="sr-card-price" x-text="_fmtPrice(flight.price, flight.currency)"></div>
-                            <div class="sr-card-price-sub" x-show="flight.isRefundable">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0;">
-                                    <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
-                                </svg>
-                                Travel Flex <span x-text="_fmtPrice(Math.round(flight.price/4), flight.currency)"></span>
-                            </div>
-                        </div>
-                        <button class="sr-book-btn" @click="selectFlight(flight)" style="flex-shrink:0;">Book Now</button>
                     </div>
 
                     
@@ -905,8 +2776,10 @@
  
                     {{-- Badge row --}}
                     <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                        <span class="sr-refund-badge" :class="flight.isRefundable ? 'yes' : 'no'"
-                            x-text="flight.isRefundable ? 'Refundable' : 'Non Refundable'"></span>
+                        <span class="sr-refund-badge" :class="flight.isRefundable ? 'yes' : 'no'">
+                            <span class="sr-icon-mask sr-icon-refund" aria-hidden="true"></span>
+                            <span x-text="flight.isRefundable ? 'Refundable' : 'Non Refundable'"></span>
+                        </span>
                         <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
                             <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#eff6ff;color:#1d4ed8;">
                                 Multi-city · <span x-text="flight.multiLegs.length + ' legs'"></span>
@@ -1019,6 +2892,31 @@
                     </template>
                 
                     {{-- Baggage & seats — shared --}}
+                    <div class="sr-card-meta-clean">
+                        <div class="sr-card-meta-item sr-card-meta-seat">
+                            <span class="sr-icon-mask sr-icon-cabin" aria-hidden="true"></span>
+                            <span>Cabin Bag:</span>
+                            <strong x-text="flight.fareBreakdown[0]?.cabinBaggage[0] || '-'"></strong>
+                        </div>
+                        <span class="sr-card-meta-sep"></span>
+                        <div class="sr-card-meta-item">
+                            <span class="sr-icon-mask sr-icon-luggage" aria-hidden="true"></span>
+                            <span>Luggage:</span>
+                            <strong x-text="flight.fareBreakdown[0]?.baggage[0] || '-'"></strong>
+                        </div>
+                        <span class="sr-card-meta-sep"></span>
+                        <div class="sr-card-meta-item">
+                            <span class="sr-icon-mask sr-icon-seat" aria-hidden="true"></span>
+                            <template x-if="!flight.multiLegs || flight.multiLegs.length === 0">
+                                <strong :style="(flight.segments[0]?.seatsLeft ?? 9) <= 5 ? 'color:#dc2626' : ''"
+                                    x-text="(flight.segments[0]?.seatsLeft ?? '-') + ' seats left'"></strong>
+                            </template>
+                            <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
+                                <strong :style="(flight.multiLegs[0]?.segments[0]?.seatsLeft ?? 9) <= 5 ? 'color:#dc2626' : ''"
+                                    x-text="((flight.multiLegs[0]?.segments[0]?.seatsLeft) ?? '-') + ' seats left'"></strong>
+                            </template>
+                        </div>
+                    </div>
                     <div style="display:flex;align-items:center;gap:18px;margin-top:12px;padding-top:10px;border-top:1px solid #f0f0f0;flex-wrap:wrap;">
                         {{-- Cabin Baggage --}}
                         <div class="sr-meta-item" style="display:flex; align-items:center; gap:5px;">
@@ -1055,13 +2953,29 @@
                 
                 </div>{{-- /sr-card-body --}}
 
+                    <div class="sr-card-price-wrap">
+                        <div class="sr-card-price-label">Total Itinerary Fee</div>
+                        <div class="sr-card-price" x-text="_fmtPrice(flight.price, flight.currency)"></div>
+                        <div class="sr-card-actions">
+                            <button class="sr-book-btn" @click="selectFlight(flight)">Book Now</button>
+                            <button
+                                class="sr-installment-btn"
+                                type="button"
+                                :disabled="!canUseTravelFlex(flight)"
+                                :title="canUseTravelFlex(flight) ? 'Continue with TravelFlex' : travelFlexUnavailableReason(flight)"
+                                @click="selectTravelFlex(flight)">
+                                TravelFlex
+                            </button>
+                        </div>
+                    </div>
+
 
                     {{-- Card Footer --}}
                     <div class="sr-card-footer">
                         <a class="sr-view-details"
                            href="#"
                            @click.prevent="toggleDetails(flight.id)"
-                           x-text="expandedId === flight.id ? 'Close Flight Details' : 'View Flight Details'">
+                           x-text="expandedId === flight.id ? 'Close' : 'Details'">
                         </a>
                     </div>
 
@@ -1331,14 +3245,14 @@
 
             {{-- Load More --}}
             <template x-if="filteredFlights.length > pageSize">
-                <div style="text-align:center;padding:8px 0;">
+                <div class="sr-load-more">
                     <button class="sr-book-btn" style="background:var(--gray-100);color:var(--gray-700);box-shadow:none;border:1.5px solid var(--gray-200);" @click="pageSize += 5" x-text="'Show more (' + (filteredFlights.length - pageSize) + ' remaining)'"></button>
                 </div>
             </template>
 
             {{-- No results --}}
             <template x-if="filteredFlights.length === 0">
-                <div style="text-align:center;padding:48px 24px;background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);">
+                <div class="sr-empty-results" style="text-align:center;padding:48px 24px;background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);">
                     <div style="font-size:32px;margin-bottom:12px;">✈️</div>
                     <div style="font-size:16px;font-weight:700;color:var(--gray-700);margin-bottom:6px;">No flights match your filters</div>
                     <div style="font-size:13px;color:var(--gray-400);">Try adjusting your filters to see more results</div>
@@ -1414,6 +3328,7 @@
 
             // ── KEY FIX: modifyOpen added here ──
             modifyOpen: false,
+            filterSheetOpen: false,
 
             selectedAirlines: [],
             selectedStop: null,
@@ -1444,6 +3359,13 @@
             matrixAirlines: [],
             matrixRows: [],
             cheapestPrice: '',
+
+            get activeFilterCount() {
+                return this.selectedAirlines.length
+                    + (this.selectedStop !== null ? 1 : 0)
+                    + (this.selectedDepartTime ? 1 : 0)
+                    + (this.selectedArrivalTime ? 1 : 0);
+            },
 
             get filteredFlights() {
                 let flights = [...this.allFlights];
@@ -1559,6 +3481,58 @@
                 this.selectedDepartTime  = null;
                 this.selectedArrivalTime = null;
                 this.sortBy = 'recommended';
+            },
+
+            _travelFlexDepartDate(flight) {
+                const candidates = [
+                    flight.departDate,
+                    flight.departureDate,
+                    flight.departDateRaw,
+                    flight.departDT,
+                    flight.departureDateTime,
+                    flight.segments?.[0]?.departDate,
+                    flight.segments?.[0]?.departureDate,
+                    flight.segments?.[0]?.departDT,
+                    flight.multiLegs?.[0]?.departDate,
+                    flight.multiLegs?.[0]?.segments?.[0]?.departDate,
+                    flight.multiLegs?.[0]?.segments?.[0]?.departDT,
+                ].filter(Boolean);
+
+                for (const value of candidates) {
+                    const date = new Date(value);
+                    if (!Number.isNaN(date.getTime())) return date;
+                }
+
+                return null;
+            },
+
+            canUseTravelFlex(flight) {
+                if (!flight?.isRefundable) return false;
+
+                const departDate = this._travelFlexDepartDate(flight);
+                if (!departDate) return true;
+
+                const dayMs = 24 * 60 * 60 * 1000;
+                return Math.floor((departDate.getTime() - Date.now()) / dayMs) >= 14;
+            },
+
+            travelFlexUnavailableReason(flight) {
+                if (!flight?.isRefundable) return 'TravelFlex is only available for refundable fares.';
+
+                const departDate = this._travelFlexDepartDate(flight);
+                if (departDate) {
+                    const dayMs = 24 * 60 * 60 * 1000;
+                    if (Math.floor((departDate.getTime() - Date.now()) / dayMs) < 14) {
+                        return 'TravelFlex is available when departure is at least 14 days away.';
+                    }
+                }
+
+                return 'TravelFlex is not available for this fare.';
+            },
+
+            selectTravelFlex(flight) {
+                if (!this.canUseTravelFlex(flight)) return;
+                this.selectFlight(flight);
             },
 
             selectFlight(flight) {

@@ -1,14 +1,14 @@
 <style>
-    .tw-trust-strip{background:#fff;padding:30px 20px;border-bottom:1px solid #eef0f4}
+    .tw-trust-strip{background:var(--tw-surface,#fff);padding:28px 20px;border-bottom:1px solid var(--tw-line,#eef0f4)}
     .tw-trust-inner{max-width:1060px;margin:0 auto;display:grid;grid-template-columns:repeat(4,auto);justify-content:center;gap:42px}
-    .tw-trust-item{display:flex;align-items:center;gap:10px;color:#1f2937!important;font-family:'Open Sans',var(--font-primary),Arial,sans-serif;font-size:16px;font-weight:600;white-space:nowrap}
-    .tw-trust-icon{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:#f4f7f5;color:#009933;flex:0 0 24px}
-    .tw-trust-icon svg{width:16px;height:16px;display:block;stroke:currentColor}
-    .tw-visa-banner{padding:60px 20px 34px;background:#fff}
+    .tw-trust-item{display:flex;align-items:center;gap:10px;color:var(--tw-text,#1f2937)!important;font-family:var(--tw-font-sans,var(--font-primary));font-size:var(--tw-text-md);font-weight:650;white-space:nowrap}
+    .tw-trust-icon{width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:#f4f7f5;color:var(--tw-accent,#009933);flex:0 0 22px}
+    .tw-trust-icon svg{width:15px;height:15px;display:block;stroke:currentColor}
+    .tw-visa-banner{padding:52px 20px 34px;background:var(--tw-surface,#fff)}
     .tw-visa-card{max-width:1356px;height:225px;margin:0 auto;display:flex;align-items:center;justify-content:center;overflow:hidden}
     .tw-visa-card img{width:100%;height:100%;object-fit:contain;display:block}
     @media(max-width:900px){.tw-trust-inner{grid-template-columns:repeat(2,auto);gap:18px 32px}.tw-visa-card{height:auto}}
-    @media(max-width:560px){.tw-trust-inner{grid-template-columns:1fr;justify-content:start}.tw-visa-banner{padding-top:36px}}
+    @media(max-width:560px){.tw-trust-inner{grid-template-columns:1fr;justify-content:center;justify-items:center;text-align:center}.tw-trust-item{justify-content:center}.tw-visa-banner{padding-top:36px}}
 </style>
 
 <section class="tw-trust-strip" aria-label="TravelWheel assurances">

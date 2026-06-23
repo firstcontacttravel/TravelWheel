@@ -24,6 +24,7 @@ class FlightBooking extends Component
     // ── Contact ───────────────────────────────────────────────────────────────
     public string $contactEmail        = '';
     public string $contactEmailConfirm = '';
+    public string $contactPhoneFull    = '';
     public string $contactPhone        = '';
     public string $contactAreaCode     = '';   // e.g. 080 (required by booking API)
     public string $contactCountryCode  = '';   // e.g. 234 (required by booking API)
@@ -146,6 +147,8 @@ class FlightBooking extends Component
         $this->contactPhone        = $savedContact['phone'] ?? '';
         $this->contactAreaCode     = $savedContact['area_code'] ?? '080';
         $this->contactCountryCode  = $savedContact['country_code'] ?? '234';
+        $this->contactPhoneFull    = $savedContact['phone_full'] ?? $this->formatContactPhoneFull();
+        $this->syncPhonePartsFromFull();
 
         $this->_rebuildPassengers();
 
@@ -354,6 +357,7 @@ class FlightBooking extends Component
         $rules = [
             'contactEmail'        => 'required|email',
             'contactEmailConfirm' => 'required|same:contactEmail',
+            'contactPhoneFull'    => 'required|string|min:7|max:30',
             'contactPhone'        => 'required|string|min:7|max:20',
             'contactAreaCode'     => 'required|string|max:10',
             'contactCountryCode'  => 'required|string|max:10',
@@ -383,6 +387,8 @@ class FlightBooking extends Component
     protected function messages(): array
     {
         return [
+            'contactPhoneFull.required'                 => 'Please enter a mobile number.',
+            'contactPhoneFull.min'                      => 'Please enter a valid mobile number.',
             'contactEmailConfirm.same'                 => 'Email addresses do not match.',
             'passengers.*.title.required'              => 'Please select a title.',
             'passengers.*.title.in'                    => 'Child and infant passenger titles must be Master or Miss.',
@@ -399,10 +405,75 @@ class FlightBooking extends Component
     public function proceed(): void
     {
         $this->normalizePassengerTitles();
+        $this->syncPhonePartsFromFull();
         $this->validate();
         $this->validatePassengerAges();
         $this->step = 2;
         $this->dispatch('scrollTop');
+    }
+
+    public function updatedContactPhoneFull(): void
+    {
+        $this->syncPhonePartsFromFull();
+    }
+
+    private function syncPhonePartsFromFull(): void
+    {
+        $digits = preg_replace('/\D+/', '', $this->contactPhoneFull) ?? '';
+
+        if ($digits === '') {
+            $this->contactPhone = '';
+            return;
+        }
+
+        $explicitInternational = str_starts_with(trim($this->contactPhoneFull), '+') || str_starts_with($digits, '00');
+
+        if (str_starts_with($digits, '00')) {
+            $digits = substr($digits, 2);
+        }
+
+        $country = '234';
+        $local = $digits;
+
+        if ($explicitInternational) {
+            $knownCountryCodes = [
+                '234', '233', '237', '225', '221', '212', '251', '254', '27',
+                '971', '966', '974', '91', '86', '81', '44', '49', '33', '39',
+                '34', '31', '61', '55', '90', '20', '1',
+            ];
+
+            foreach ($knownCountryCodes as $code) {
+                if (str_starts_with($digits, $code) && strlen($digits) > strlen($code)) {
+                    $country = $code;
+                    $local = substr($digits, strlen($code));
+                    break;
+                }
+            }
+        } elseif (str_starts_with($digits, '234')) {
+            $local = substr($digits, 3);
+        }
+
+        if (str_starts_with($local, '0')) {
+            $local = substr($local, 1);
+        }
+
+        $this->contactCountryCode = $country;
+        $this->contactPhone = $local;
+        $this->contactAreaCode = $local !== '' ? '0' . substr($local, 0, min(3, strlen($local))) : '';
+        $this->contactPhoneFull = $local !== '' ? '+' . $country . ' ' . $local : '';
+    }
+
+    private function formatContactPhoneFull(): string
+    {
+        $phone = preg_replace('/\D+/', '', $this->contactPhone) ?? '';
+
+        if ($phone === '') {
+            return '';
+        }
+
+        $country = preg_replace('/\D+/', '', $this->contactCountryCode) ?: '234';
+
+        return '+' . $country . ' ' . ltrim($phone, '0');
     }
 
     private function normalizePassengerTitles(): void
