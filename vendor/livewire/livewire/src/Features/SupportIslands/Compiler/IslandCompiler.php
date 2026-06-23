@@ -45,7 +45,12 @@ class IslandCompiler
             throw new \Exception('Start @island directive found without a matching @endisland directive');
         }
 
-        $result = $compiler->compileStatementsMadePublic($this->mutableContents);
+        // Strip Blade comments so @island directives inside them are ignored...
+        [$contents, $comments] = $this->stripBladeComments($this->mutableContents);
+
+        $result = $compiler->compileStatementsMadePublic($contents);
+
+        $result = $this->restoreBladeComments($result, $comments);
 
         for ($i=$maxNestingLevel; $i >= $currentNestingLevel; $i--) {
             $result = preg_replace_callback('/(\[STARTISLAND:([0-9]+):' . $i . '\])\((.*?)\)(.*?)(\[ENDISLAND:' . $i . '\])/s', function ($matches) use ($i) {
@@ -99,7 +104,7 @@ class IslandCompiler
         // Write the cached island to the file system...
         file_put_contents($cachedPath, $innerContent);
 
-        app('livewire.compiler')->cacheManager->mutateFileModificationTime($cachedPath);
+        app('livewire.compiler')->cacheManager->prepareGeneratedFileForCompilation($cachedPath);
 
         return $output;
     }
@@ -149,11 +154,31 @@ PHP;
         );
     }
 
+    protected function stripBladeComments(string $contents): array
+    {
+        $comments = [];
+
+        $contents = preg_replace_callback('/\{\{--(.*?)--\}\}/s', function ($match) use (&$comments) {
+            $placeholder = '[BLADE_COMMENT:' . count($comments) . ']';
+            $comments[] = $match[0];
+            return $placeholder;
+        }, $contents);
+
+        return [$contents, $comments];
+    }
+
+    protected function restoreBladeComments(string $contents, array $comments): string
+    {
+        return preg_replace_callback('/\[BLADE_COMMENT:(\d+)\]/', function ($match) use ($comments) {
+            return $comments[(int) $match[1]];
+        }, $contents);
+    }
+
     public function getHackedBladeCompiler()
     {
         $instance = new class (
             app('files'),
-            storage_path('framework/views/livewire'),
+            rtrim(config('view.compiled'), '/\\') . '/livewire',
         ) extends \Illuminate\View\Compilers\BladeCompiler {
             /**
              * Make this method public...

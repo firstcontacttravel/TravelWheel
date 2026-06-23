@@ -32,14 +32,15 @@ class EloquentCollectionSynth extends Synth {
         $class = $target::class;
         $modelClass = $target->getQueueableClass();
 
-        /**
-         * `getQueueableClass` above checks all models are the same and
-         * then returns the class. We then instantiate a model object
-         * so we can call `getMorphClass()` on it.
-         *
-         * If no alias is found, this just returns the class name
-         */
-        $modelAlias = $modelClass ? (new $modelClass)->getMorphClass() : null;
+        if ($modelClass) {
+            $morphMap = Relation::morphMap();
+
+            $modelAlias = in_array($modelClass, $morphMap)
+                ? array_search($modelClass, $morphMap, true)
+                : $modelClass;
+        } else {
+            $modelAlias = null;
+        }
 
         $meta = [];
 

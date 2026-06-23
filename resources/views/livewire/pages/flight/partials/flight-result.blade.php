@@ -627,7 +627,7 @@
     .sr-header-sub-clean { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .sr-header-sub-clean span { display: inline-flex; align-items: center; }
     .sr-header-sub-clean span + span::before { content: ''; width: 4px; height: 4px; margin-right: 8px; border-radius: 999px; background: var(--gray-400); }
-    .sr-fare-bar { order: 1; border-radius: 14px; box-shadow: 0 10px 28px rgba(16,24,40,.045); background: transparent; border: none; overflow: visible; }
+    .sr-fare-bar { order: 2; border-radius: 14px; box-shadow: 0 10px 28px rgba(16,24,40,.045); background: transparent; border: none; overflow: visible; }
     .sr-fare-bar-head { display: none; }
     .sr-fare-options { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; border: 0; }
     .sr-fare-option { position: relative; min-height: 60px; padding: 12px 44px 12px 14px; text-align: left; border: 1.5px solid #cfcfd7; border-radius: 8px; background: #fff; box-shadow: 0 3px 8px rgba(16,24,40,.12); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease; }
@@ -643,7 +643,7 @@
     .sr-fare-option-label { margin-bottom: 4px; font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--blue); font-weight: 800; }
     .sr-fare-option-price { font-size: 22px; line-height: 1.05; color: var(--gray-900); }
     .sr-fare-option.active .sr-fare-option-price { color: var(--blue); }
-    .sr-matrix { order: 2; border-radius: 8px; box-shadow: 0 4px 10px rgba(16,24,40,.14); border-color: #d7d7de; }
+    .sr-matrix { order: 1; border-radius: 8px; box-shadow: 0 4px 10px rgba(16,24,40,.14); border-color: #d7d7de; }
     .sr-matrix::before { content: "Lowest fares by Airlines and Stops"; display: flex; align-items: center; height: 28px; padding: 0 16px; background: var(--blue); color: #fff; font-size: 12px; font-weight: 700; }
     .sr-matrix-scroll { width: 100%; max-width: 100%; scrollbar-color: var(--blue) transparent; }
     .sr-matrix-scroll::-webkit-scrollbar { height: 6px; }
@@ -750,7 +750,7 @@
     .sr-stop-pill { min-height: 60px; border-radius: 7px; background: #fff; box-shadow: none; }
     .sr-time-pill { min-height: 48px; background: #d9d9d9; color: var(--blue); box-shadow: none; }
     .sr-main { gap: 14px; }
-    .sr-fare-bar { order: 1; margin-bottom: 0; }
+    .sr-fare-bar { order: 2; margin-bottom: 0; }
     .sr-fare-options { gap: 12px; }
     .sr-fare-option {
         min-height: 74px; border-radius: 8px; padding: 13px 42px 12px 14px;
@@ -758,7 +758,7 @@
     }
     .sr-fare-option-label { font-size: 11px; line-height: 1.2; }
     .sr-fare-option-price { font-family: var(--font); font-size: 22px; font-weight: 850; }
-    .sr-matrix { order: 2; border: 0; border-radius: 8px; box-shadow: 0 4px 13px rgba(0,0,0,.16); }
+    .sr-matrix { order: 1; border: 0; border-radius: 8px; box-shadow: 0 4px 13px rgba(0,0,0,.16); }
     .sr-matrix::before { height: 30px; border-radius: 8px 8px 0 0; font-size: 11px; font-weight: 600; }
     .sr-matrix th, .sr-matrix td { padding: 8px 12px; font-size: 11px; }
     .sr-matrix thead th { font-size: 10.5px; }
@@ -1282,6 +1282,21 @@
     .sr-installment-btn:hover {
         background: #f7f7ff;
         transform: translateY(-1px);
+    }
+    .sr-pay-small-small {
+        width: 147px;
+        margin-left: auto;
+        color: #303191;
+        font-size: 11.5px;
+        font-weight: 800;
+        line-height: 1.25;
+        text-align: right;
+    }
+    .sr-pay-small-small span {
+        display: block;
+        color: #111827;
+        font-size: 13px;
+        font-weight: 850;
     }
     .sr-installment-btn:disabled,
     .sr-installment-btn:disabled:hover {
@@ -2043,7 +2058,9 @@
         .sr-dr-col + .sr-dr-col { border-left: none; border-top: 1px dashed var(--gray-200); padding-left: 0; margin-left: 0; padding-top: 12px; }
         .sr-card-meta-clean { position: static; padding: 10px 0 0; margin-top: 10px; flex-wrap: wrap; border-top-color: #e5e7eb; }
         .sr-card-actions .sr-book-btn,
+        .sr-pay-small-small,
         .sr-installment-btn { width: 100%; margin-left: 0; }
+        .sr-pay-small-small { text-align: left; }
         .sr-seg-line { min-width: 0; }
         .sr-detail-panel { width: 100%; margin-top: 0; }
         .sr-detail-body { min-height: 0; padding: 13px 12px 16px; }
@@ -2958,6 +2975,9 @@
                         <div class="sr-card-price" x-text="_fmtPrice(flight.price, flight.currency)"></div>
                         <div class="sr-card-actions">
                             <button class="sr-book-btn" @click="selectFlight(flight)">Book Now</button>
+                            <div class="sr-pay-small-small" x-show="flight.isRefundable" x-cloak>
+                                <span x-text="_travelFlexInstallmentPrice(flight)"></span>
+                            </div>
                             <button
                                 class="sr-installment-btn"
                                 type="button"
@@ -3455,6 +3475,13 @@
                 return sym + parseFloat(amount).toLocaleString('en-NG', {
                     minimumFractionDigits: 2, maximumFractionDigits: 2
                 });
+            },
+
+            _travelFlexInstallmentPrice(flight) {
+                const total = parseFloat(flight?.price);
+                if (!Number.isFinite(total)) return '';
+
+                return this._fmtPrice((total * 1.04) / 4, flight?.currency);
             },
 
             toggleDetails(id) {

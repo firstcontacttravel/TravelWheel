@@ -23,11 +23,13 @@ class SupportIslands extends ComponentHook
 
     public static function registerInlineIslandPrecompiler()
     {
-        Blade::prepareStringsForCompilationUsing(function ($content) {
+        $compiler = app('blade.compiler');
+
+        $compiler->prepareStringsForCompilationUsing(function ($content) use ($compiler) {
             // Shortcut out if there are no islands in the content...
             if (! str_contains($content, '@endisland')) return $content;
 
-            $pathSignature = Blade::getPath() ?: crc32($content);
+            $pathSignature = $compiler->getPath() ?: crc32($content);
 
             return IslandCompiler::compile($pathSignature, $content);
         });
@@ -47,7 +49,7 @@ class SupportIslands extends ComponentHook
         }
 
         // if metadata contains an island, then we should render it...
-        return function (...$params) use ($island, $componentContext, $mount) {
+        return function (...$params) use ($island, $componentContext, $mount, $metadata) {
             ['name' => $name, 'mode' => $mode] = $island;
 
             $islands = $this->component->getIslands();
@@ -55,6 +57,11 @@ class SupportIslands extends ComponentHook
             $islands = array_filter($islands, fn ($island) => $island['name'] === $name);
 
             if (empty($islands)) return;
+
+            // Support `Wire:click.renderless`...
+            if ($metadata['renderless'] ?? false) {
+                return;
+            }
 
             // If #[Renderless] attribute was used, don't render the island...
             if ($this->storeGet('skipIslandsRender', false)) return;
@@ -80,6 +87,8 @@ class SupportIslands extends ComponentHook
 
     public function hydrate($memo)
     {
+        if (($memo['lazyLoaded'] ?? null) === false) return;
+
         $this->component->markIslandsAsMounted();
 
         $islands = $memo['islands'] ?? null;
