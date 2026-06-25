@@ -327,9 +327,20 @@ class FlightController extends Controller
                     }
 
                 } elseif ($tripType === 'multi') {
-                    $odo0      = $odos[0]['OriginDestinationOption'] ?? [];
-                    $allSegs   = $mapSegments($odo0);
-                    $legArrays = $splitMultiLegs($allSegs, $searchLegs);
+                    $legArrays = [];
+
+                    if (count($odos) > 1) {
+                        foreach ($odos as $odo) {
+                            $legSegs = $mapSegments($odo['OriginDestinationOption'] ?? []);
+                            if (!empty($legSegs)) {
+                                $legArrays[] = $legSegs;
+                            }
+                        }
+                    } else {
+                        $odo0      = $odos[0]['OriginDestinationOption'] ?? [];
+                        $allSegs   = $mapSegments($odo0);
+                        $legArrays = $splitMultiLegs($allSegs, $searchLegs);
+                    }
                 
                     // Build ALL legs into $multiLegs (leg 0 is included — no more skipping it)
                     $multiLegs = [];
@@ -367,14 +378,21 @@ class FlightController extends Controller
 
                         
                     }
+
+                    $totalStops    = array_sum(array_column($multiLegs, 'stops'));
+                    $totalMins     = array_sum(array_map(fn ($leg) => array_sum(array_column($leg['segments'], 'duration')), $multiLegs));
+                    $totalTimeMins = array_sum(array_column($multiLegs, 'totalTimeMins'));
                 }
 
                 $firstSeg        = $segments[0] ?? [];
                 $lastSeg         = !empty($segments) ? end($segments) : [];
                 if ($tripType === 'multi') {
                     // First leg drives the top-level fields (for backward compatibility)
-                    $firstSeg = $multiLegs[0]['segments'][0] ?? ($multiLegs[0]['segments'] ?? []);
-                    $lastSeg     = !empty($multiLegs) ? end($multiLegs)['segments'] : [];
+                    $firstSeg     = $multiLegs[0]['segments'][0] ?? [];
+                    $lastMultiLeg = !empty($multiLegs) ? $multiLegs[array_key_last($multiLegs)] : [];
+                    $lastSeg      = !empty($lastMultiLeg['segments'])
+                        ? $lastMultiLeg['segments'][array_key_last($lastMultiLeg['segments'])]
+                        : [];
                     
                 }
                 //dd($firstSeg);

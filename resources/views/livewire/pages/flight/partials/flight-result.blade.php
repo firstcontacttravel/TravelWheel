@@ -1277,26 +1277,27 @@
         color: #000;
         font-size: 13px;
         font-weight: 700;
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
         transition: background .16s ease, border-color .16s ease, transform .16s ease;
+    }
+    .sr-installment-btn-price {
+        color: #111827;
+        font-size: 12px;
+        font-weight: 850;
+        line-height: 1;
+    }
+    .sr-installment-btn-label {
+        color: inherit;
+        font-size: 12px;
+        line-height: 1;
     }
     .sr-installment-btn:hover {
         background: #f7f7ff;
         transform: translateY(-1px);
-    }
-    .sr-pay-small-small {
-        width: 147px;
-        margin-left: auto;
-        color: #303191;
-        font-size: 11.5px;
-        font-weight: 800;
-        line-height: 1.25;
-        text-align: right;
-    }
-    .sr-pay-small-small span {
-        display: block;
-        color: #111827;
-        font-size: 13px;
-        font-weight: 850;
     }
     .sr-installment-btn:disabled,
     .sr-installment-btn:disabled:hover {
@@ -2058,9 +2059,7 @@
         .sr-dr-col + .sr-dr-col { border-left: none; border-top: 1px dashed var(--gray-200); padding-left: 0; margin-left: 0; padding-top: 12px; }
         .sr-card-meta-clean { position: static; padding: 10px 0 0; margin-top: 10px; flex-wrap: wrap; border-top-color: #e5e7eb; }
         .sr-card-actions .sr-book-btn,
-        .sr-pay-small-small,
         .sr-installment-btn { width: 100%; margin-left: 0; }
-        .sr-pay-small-small { text-align: left; }
         .sr-seg-line { min-width: 0; }
         .sr-detail-panel { width: 100%; margin-top: 0; }
         .sr-detail-body { min-height: 0; padding: 13px 12px 16px; }
@@ -2118,18 +2117,28 @@
     }
 
     /* Multi-city card grid */
-    .mc-grid{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #f1f5f9;}
+    .sr-card.sr-card-multi .sr-card-body {
+        padding-bottom: 62px !important;
+    }
+    .sr-card.sr-card-multi .sr-card-body > div:first-child {
+        position: static;
+        display: flex !important;
+        margin: 0 0 10px !important;
+        padding: 0 !important;
+    }
+    .sr-card.sr-card-multi .sr-card-class {
+        max-width: 260px;
+    }
+    .mc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border-top:1px solid #f1f5f9;padding-top:8px;}
     .mc-leg {
+        min-width: 0;
         margin-top: 5px;
         padding: 12px 16px 14px;
         border: 1px solid #f1f5f9;
         border-radius: 8px;
-
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
-    .mc-leg:nth-child(even){border-right:none;}
-    /* last odd leg spans full width 
-    .mc-leg.mc-span{grid-column:1/-1;border-right:none;}*/
+    .mc-leg.mc-span{grid-column:1/-1;}
     .mc-leg-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:2px;display:flex;align-items:center;gap:6px;}
     .mc-leg-airline{font-size:10.5px;color:#64748b;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
     .mc-leg-airline img{width:16px;height:16px;object-fit:contain;border-radius:3px;background:#f1f5f9;}
@@ -2768,7 +2777,7 @@
 
             {{-- ══ Flight Cards ══ --}}
             <template x-for="(flight, fi) in paginatedFlights" :key="flight.id">
-                <div class="sr-card" :class="{ 'sr-card-expanded': expandedId === flight.id }" :style="'animation-delay:' + (fi * 60) + 'ms'">
+                <div class="sr-card" :class="{ 'sr-card-expanded': expandedId === flight.id, 'sr-card-multi': flight.multiLegs && flight.multiLegs.length > 0 }" :style="'animation-delay:' + (fi * 60) + 'ms'">
 
                     {{-- Card Head --}}
                     <div class="sr-card-head">
@@ -2782,7 +2791,7 @@
                         </div>
                         <div>
                             <div class="sr-card-airline" x-text="flight.airline"></div>
-                            <div class="sr-card-class" x-text="flight.cabin + ' · ' + (flight.stops === 0 ? 'Direct' : flight.stops + ' Stop' + (flight.stops > 1 ? 's' : ''))"></div>
+                            <div class="sr-card-class" x-text="flight.cabin + ' · ' + ((flight.multiLegs && flight.multiLegs.length > 0) ? ('Multi-city · ' + flight.multiLegs.length + ' legs') : (flight.stops === 0 ? 'Direct' : flight.stops + ' Stop' + (flight.stops > 1 ? 's' : '')))"></div>
                         </div>
                     </div>
 
@@ -2975,16 +2984,14 @@
                         <div class="sr-card-price" x-text="_fmtPrice(flight.price, flight.currency)"></div>
                         <div class="sr-card-actions">
                             <button class="sr-book-btn" @click="selectFlight(flight)">Book Now</button>
-                            <div class="sr-pay-small-small" x-show="flight.isRefundable" x-cloak>
-                                <span x-text="_travelFlexInstallmentPrice(flight)"></span>
-                            </div>
                             <button
                                 class="sr-installment-btn"
                                 type="button"
                                 :disabled="!canUseTravelFlex(flight)"
                                 :title="canUseTravelFlex(flight) ? 'Continue with TravelFlex' : travelFlexUnavailableReason(flight)"
                                 @click="selectTravelFlex(flight)">
-                                TravelFlex
+                                <span class="sr-installment-btn-price" x-show="flight.isRefundable" x-cloak x-text="_travelFlexInstallmentPrice(flight)"></span>
+                                <span class="sr-installment-btn-label">TravelFlex</span>
                             </button>
                         </div>
                     </div>
