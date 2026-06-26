@@ -1,5 +1,5 @@
 {{-- resources/views/livewire/pages/flight/flight-travelflex-pending.blade.php --}}
-@component('layouts.app', ['title' => 'TravelFlex — Plan Pending Activation'])
+@component('layouts.app', ['title' => 'TravelFlex - Plan Pending Activation'])
 
 @php
     $bookingFlight = session('bookingFlight', []);
@@ -80,18 +80,146 @@
     .loan-bar-lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,.55); margin-bottom:3px; }
     .loan-bar-val { font-size:14px; font-weight:800; color:#fff; font-family:var(--mono); }
 </style>
+<style>
+    :root {
+        --tf-brand:#39328f;
+        --tf-brand-700:#2f287c;
+        --tf-green:#049a63;
+        --tf-green-soft:#eefaf4;
+        --tf-ink:#101828;
+        --tf-muted:#667085;
+        --tf-subtle:#98a2b3;
+        --tf-line:#e6e9f0;
+        --tf-soft:#f7f8fb;
+        --navy:var(--tf-ink);
+        --blue:var(--tf-brand);
+        --blue-lt:#f5f7ff;
+        --blue-md:rgba(57,50,143,.16);
+        --indigo:var(--tf-brand);
+        --purple:var(--tf-brand);
+        --green:var(--tf-green);
+        --green-lt:var(--tf-green-soft);
+        --gray-50:var(--tf-soft);
+        --gray-100:#eef1f6;
+        --gray-200:var(--tf-line);
+        --gray-300:#cfd4df;
+        --gray-400:var(--tf-subtle);
+        --gray-500:var(--tf-muted);
+        --gray-700:#344054;
+        --gray-900:var(--tf-ink);
+    }
+    body { background:#f7f8fb; }
+    .tf-pnd-hero {
+        background:#fff;
+        border:1px solid var(--tf-line);
+        border-radius:8px;
+        color:var(--tf-ink);
+        box-shadow:0 14px 36px rgba(16,24,40,.06);
+        padding:24px;
+    }
+    .tf-pnd-hero-icon {
+        width:48px;
+        height:48px;
+        border-radius:999px;
+        background:#fff8ed;
+        color:#b7791f;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        font-size:0;
+    }
+    .tf-pnd-hero-icon::before {
+        content:"";
+        width:24px;
+        height:24px;
+        background:currentColor;
+        -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='m3 7 9 6 9-6'/%3E%3Cpath d='M8 21h8'/%3E%3C/svg%3E") center/contain no-repeat;
+        mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='m3 7 9 6 9-6'/%3E%3Cpath d='M8 21h8'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
+    .tf-pnd-kicker {
+        display:inline-flex;
+        align-items:center;
+        gap:7px;
+        min-height:30px;
+        padding:6px 10px;
+        border:1px solid rgba(57,50,143,.16);
+        border-radius:999px;
+        background:#f5f7ff;
+        color:var(--tf-brand);
+        font-size:11px;
+        font-weight:800;
+        margin-bottom:10px;
+    }
+    .tf-pnd-title { color:var(--tf-ink); font-size:clamp(22px,2.3vw,32px); line-height:1.14; font-weight:800; margin-bottom:8px; }
+    .tf-pnd-sub { color:var(--tf-muted); font-size:14px; line-height:1.65; max-width:640px; }
+    .tf-pnd-ref {
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        margin-top:14px;
+        padding:8px 12px;
+        background:var(--tf-soft);
+        border:1px solid var(--tf-line);
+        border-radius:8px;
+        color:var(--tf-ink);
+        font-size:13px;
+        font-weight:800;
+        font-family:var(--mono);
+    }
+    .pc, .pg-rail > div { border-radius:8px !important; border-color:var(--tf-line) !important; box-shadow:0 12px 32px rgba(16,24,40,.055) !important; }
+    .pc-icon { font-size:0 !important; border-radius:8px !important; background:#f5f7ff !important; color:var(--tf-brand) !important; }
+    .pc-icon::before {
+        content:"";
+        width:18px;
+        height:18px;
+        background:currentColor;
+        -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Cpath d='M12 8v4l3 2'/%3E%3C/svg%3E") center/contain no-repeat;
+        mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Cpath d='M12 8v4l3 2'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
+    .itin-card-icon::before {
+        content:"";
+        width:20px;
+        height:20px;
+        display:inline-block;
+        background:currentColor;
+        -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17.8 19.2 16 11l3.5-3.5C21 6 21 4 19 4c-2 0-2 0-3.5 1.5L12 9 4 7 2 9l7 4-3 3H3l-1 1 4 2 2 4 1-1v-3l3-3 4 7 2-2Z'/%3E%3C/svg%3E") center/contain no-repeat;
+        mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17.8 19.2 16 11l3.5-3.5C21 6 21 4 19 4c-2 0-2 0-3.5 1.5L12 9 4 7 2 9l7 4-3 3H3l-1 1 4 2 2 4 1-1v-3l3-3 4 7 2-2Z'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
+    .pc-icon.icon-calendar::before { -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4'/%3E%3Cpath d='M16 2v4'/%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M3 10h18'/%3E%3C/svg%3E") center/contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4'/%3E%3Cpath d='M16 2v4'/%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M3 10h18'/%3E%3C/svg%3E") center/contain no-repeat; }
+    .pc-icon.icon-users::before { -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-8 0v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87'/%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E") center/contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-8 0v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87'/%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E") center/contain no-repeat; }
+    .pc-icon.icon-gift::before { -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='8' width='18' height='4' rx='1'/%3E%3Cpath d='M12 8v13'/%3E%3Cpath d='M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7'/%3E%3Cpath d='M7.5 8A2.5 2.5 0 1 1 12 6a2.5 2.5 0 1 1 4.5 2'/%3E%3C/svg%3E") center/contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='8' width='18' height='4' rx='1'/%3E%3Cpath d='M12 8v13'/%3E%3Cpath d='M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7'/%3E%3Cpath d='M7.5 8A2.5 2.5 0 1 1 12 6a2.5 2.5 0 1 1 4.5 2'/%3E%3C/svg%3E") center/contain no-repeat; }
+    .loan-bar { background:#fff; border:1px solid var(--tf-line); border-radius:8px; box-shadow:0 12px 32px rgba(16,24,40,.055); }
+    .loan-bar-item { border-right:1px solid #eef1f6; text-align:left; }
+    .loan-bar-lbl { color:var(--tf-muted); }
+    .loan-bar-val { color:var(--tf-ink); }
+    .schedule-table th { background:#fbfcfe; color:var(--tf-muted); }
+    .schedule-table td { border-color:#eef1f6; }
+    .tf-rail-head-clean { padding:16px 18px; background:var(--tf-ink); }
+    .tf-rail-head-clean div { color:#fff; font-size:15px; font-weight:800; }
+    @media(max-width:760px) {
+        body { margin-top:0 !important; }
+        .pg-wrap { padding-top:12px !important; }
+        .tf-pnd-hero { flex-direction:column; padding:18px; }
+        .pg-grid { display:block !important; width:100% !important; }
+        .pg-main, .pg-rail, .pc { width:100% !important; max-width:100% !important; min-width:0 !important; }
+        .pc-body { overflow-x:auto; }
+        .loan-bar { flex-direction:column; }
+        .loan-bar-item { border-right:0; border-bottom:1px solid #eef1f6; }
+        .loan-bar-item:last-child { border-bottom:0; }
+    }
+</style>
 
 <div class="pg-wrap" x-data="{}">
 
     <div class="tf-pnd-hero">
-        <div class="tf-pnd-hero-icon">📬</div>
+        <div class="tf-pnd-hero-icon"></div>
         <div>
-            <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:rgba(255,255,255,.15);border-radius:999px;font-size:11px;font-weight:700;margin-bottom:8px;">📆 TravelFlex Plan</div>
-            <div style="font-size:20px;font-weight:800;margin-bottom:6px;">Down Payment Received — Awaiting Verification</div>
-            <div style="font-size:13px;opacity:.88;line-height:1.65;max-width:520px;">
-                We've received your payment notification. Our team will verify your transfer and activate your TravelFlex plan within <strong>2–4 business hours</strong>. Your e-ticket will be issued immediately after activation.
+            <div class="tf-pnd-kicker">TravelFlex Plan</div>
+            <div class="tf-pnd-title">Down Payment Received - Awaiting Verification</div>
+            <div class="tf-pnd-sub">
+                We've received your payment notification. Our team will verify your transfer and activate your TravelFlex plan within <strong>2-4 business hours</strong>. Your e-ticket will be issued immediately after activation.
             </div>
-            @if($uniqueId)<div style="display:inline-flex;align-items:center;gap:8px;margin-top:12px;padding:8px 16px;background:rgba(255,255,255,.15);border-radius:8px;font-size:13px;font-weight:700;font-family:var(--mono);">📋 {{ $uniqueId }}</div>@endif
+            @if($uniqueId)<div class="tf-pnd-ref">{{ $uniqueId }}</div>@endif
         </div>
     </div>
 
@@ -101,16 +229,15 @@
             {{-- Timeline --}}
             <div class="pc">
                 <div class="pc-head">
-                    <div class="pc-icon" style="background:var(--blue-lt);color:var(--blue);">🗺️</div>
+                    <div class="pc-icon" style="background:var(--blue-lt);color:var(--blue);"></div>
                     <div><div class="pc-title">What Happens Next</div></div>
                 </div>
                 <div class="pc-body" style="padding:14px 20px 4px;">
                     @foreach([
-                        ['done','✓','Flight Reserved','Your seat is on hold. Ref: '.$uniqueId],
-                        ['done','✓','TravelFlex Plan Created',$repaymentPlan.' instalment plan set up. Down payment: '.$fmt($downPayment)],
-                        ['done','✓','Down Payment Notified','You\'ve confirmed your bank transfer.'],
-                        ['current','⏳','Payment Verification','Verifying your transfer. 2–4 business hours (Mon–Fri 8am–6pm).'],
-                        ['pending','5','E-Ticket Issued & Plan Activated','Ticket sent to '.($contact['email']??'you').'. Repayment schedule begins.'],
+                        ['done','✓','Application Submitted','Your TravelFlex application, documents, and repayment plan have been received.'],
+                        ['current','2','Payment Verification','Verifying your down payment transfer. This usually takes 2-4 business hours.'],
+                        ['pending','3','Provider Review','After payment verification, your application package moves to the TravelFlex provider review queue.'],
+                        ['pending','4','Ticketing','Once approved, your ticket is issued or escalated for manual ticketing support.'],
                     ] as [$cls,$num,$title,$sub])
                     <div class="tl-step">
                         <div class="tl-num {{ $cls }}">{{ $num }}</div>
@@ -147,7 +274,7 @@
             {{-- Flight Itinerary --}}
             <div class="pc">
                 <div class="pc-head">
-                    <div class="pc-icon" style="background:var(--blue-lt);color:var(--blue);">✈️</div>
+                    <div class="pc-icon itin-card-icon" style="background:var(--blue-lt);color:var(--blue);"></div>
                     <div><div class="pc-title">Flight Itinerary</div><div class="pc-sub">{{ $tripLabel }} · {{ $cabinLabel }} · {{ $mf['airline']??'' }}</div></div>
                 </div>
                 @if(!$isMulti)
@@ -163,7 +290,7 @@
             @if(!empty($schedule))
             <div class="pc">
                 <div class="pc-head">
-                    <div class="pc-icon" style="background:var(--purple-lt);color:var(--purple);">📅</div>
+                    <div class="pc-icon icon-calendar" style="background:var(--purple-lt);color:var(--purple);"></div>
                     <div><div class="pc-title">Your Repayment Schedule</div><div class="pc-sub">{{ count($schedule) }} instalment(s) · {{ $repaymentPlan }}</div></div>
                 </div>
                 <div class="pc-body" style="padding:0;">
@@ -189,7 +316,7 @@
             {{-- Passengers --}}
             @if(!empty($passengers))
             <div class="pc">
-                <div class="pc-head"><div class="pc-icon" style="background:#f0f9ff;color:#0369a1;">👥</div><div><div class="pc-title">Passengers</div></div></div>
+                <div class="pc-head"><div class="pc-icon icon-users" style="background:#f0f9ff;color:#0369a1;"></div><div><div class="pc-title">Passengers</div></div></div>
                 <div class="pc-body" style="padding:0;">
                     <table class="pax-table">
                         <thead><tr><th>#</th><th>Name</th><th>Type</th><th>DOB</th><th>Nationality</th><th>Passport</th></tr></thead>
@@ -215,7 +342,7 @@
             @if(!empty($extraServices['baggage']) || !empty($extraServices['meal']))
             <div class="pc">
                 <div class="pc-head">
-                    <div class="pc-icon" style="background:#fef3c7;color:#d97706;">🎁</div>
+                    <div class="pc-icon icon-gift" style="background:#fef3c7;color:#d97706;"></div>
                     <div>
                         <div class="pc-title">Extra Services</div>
                         <div class="pc-sub">Included in TravelFlex payment plan</div>
@@ -228,7 +355,7 @@
                             @if(!empty($extraServices['baggage']))
                                 @foreach($extraServices['baggage'] as $baggage)
                                 <tr>
-                                    <td><strong style="color:#059669;">🧳 Extra Baggage</strong></td>
+                                    <td><strong style="color:#059669;">Extra Baggage</strong></td>
                                     <td>
                                         {{ $baggage['description'] ?? '' }}
                                         <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($baggage['direction'] ?? '') }} · Qty: {{ $baggage['quantity'] ?? 1 }}</span>
@@ -240,7 +367,7 @@
                             @if(!empty($extraServices['meal']))
                                 @foreach($extraServices['meal'] as $meal)
                                 <tr>
-                                    <td><strong style="color:#d97706;">🍽️ Meal</strong></td>
+                                    <td><strong style="color:#d97706;">Meal</strong></td>
                                     <td>
                                         {{ $meal['description'] ?? '' }}
                                         <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($meal['direction'] ?? '') }} · Segment {{ ($meal['segment'] ?? 0) + 1 }}</span>
@@ -276,7 +403,7 @@
         <aside class="pg-rail">
             <div class="pc">
                 <div style="padding:14px 18px;background:linear-gradient(135deg,var(--navy),var(--indigo),var(--purple));">
-                    <div style="font-size:15px;font-weight:800;color:#fff;">📆 TravelFlex Summary</div>
+                    <div style="font-size:15px;font-weight:800;color:#fff;">TravelFlex Summary</div>
                 </div>
                 <div class="pc-body">
                     <div class="dr"><span class="dr-lbl">Route</span><span class="dr-val">@if($isMulti)@foreach($routeLines as $line)<div>{{ $line['route'] }}</div>@endforeach @else {{ ($firstSeg['from']??'') }} → {{ ($finalDest['to']??'') }} @endif</span></div>
@@ -286,14 +413,14 @@
                     <div class="dr"><span class="dr-lbl">Down Paid</span><span class="dr-val" style="color:var(--green);">{{ $fmt($downPayment) }} ({{ $downPercent }}%)</span></div>
                     <div class="dr"><span class="dr-lbl">Balance</span><span class="dr-val">{{ $fmt($remainingBal) }}</span></div>
                     <div class="dr"><span class="dr-lbl">Repayment</span><span class="dr-val">{{ $repaymentPlan }}</span></div>
-                    <div class="dr"><span class="dr-lbl">Status</span><span class="dr-val"><span class="status-badge status-pending" style="font-size:10px;">⏳ Pending</span></span></div>
+                    <div class="dr"><span class="dr-lbl">Status</span><span class="dr-val"><span class="status-badge status-pending" style="font-size:10px;">Pending</span></span></div>
                 </div>
                 <div class="fare-total"><span class="fare-total-lbl">Grand Total</span><span class="fare-total-val">{{ $fmt($grandTotal) }}</span></div>
             </div>
             <div style="background:#fff;border:1px solid var(--gray-200);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow-sm);">
                 <div style="font-size:13px;font-weight:800;color:var(--gray-900);margin-bottom:8px;">Need Help?</div>
                 <div style="font-size:12.5px;color:var(--gray-500);line-height:1.65;">
-                    📧 <a href="mailto:support@travelwheel.com" style="color:var(--blue);font-weight:600;">support@travelwheel.com</a><br>
+                    <a href="mailto:support@travelwheel.com" style="color:var(--blue);font-weight:600;">support@travelwheel.com</a><br>
                     📞 <strong>+234 800 000 0000</strong><br>
                     Quote: <strong style="font-family:var(--mono);color:var(--navy);">{{ $uniqueId }}</strong>
                 </div>

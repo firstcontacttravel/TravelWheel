@@ -73,7 +73,10 @@ body { font-family: var(--font); background: var(--gray-50); color: var(--gray-9
 .seg-dur   { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--gray-400); }
 
 .seg-baggage { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
-.seg-bag-tag { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--green); font-weight: 600; background: var(--green-lt); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.seg-bag-tag { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--green); font-weight: 600; background: var(--green-lt); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.seg-bag-icon { width: 12px; height: 12px; display: inline-block; flex: 0 0 auto; background: currentColor; -webkit-mask: var(--icon-mask) center/contain no-repeat; mask: var(--icon-mask) center/contain no-repeat; }
+.seg-bag-icon.checked { --icon-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 7V6a4 4 0 0 1 8 0v1'/%3E%3Crect x='3' y='7' width='18' height='14' rx='2'/%3E%3Cpath d='M16 13l-3 3-2-2'/%3E%3C/svg%3E"); }
+.seg-bag-icon.cabin { --icon-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 7V5a4 4 0 0 1 8 0v2'/%3E%3Crect x='5' y='7' width='14' height='14' rx='2'/%3E%3Cpath d='M9 11h6'/%3E%3C/svg%3E"); }
 
 /* Layover strip */
 .layover { display: flex; align-items: center; gap: 8px; margin: 0 20px 0; padding: 8px 14px; background: var(--amber-lt); border: 1px solid #fed7aa; border-radius: 8px; font-size: 12px; color: var(--amber); font-weight: 600; }

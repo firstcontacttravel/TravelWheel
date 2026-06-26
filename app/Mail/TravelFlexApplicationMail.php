@@ -33,15 +33,19 @@ class TravelFlexApplicationMail extends Mailable
 
     public function envelope(): Envelope
     {
+        $reference = $this->bookingRef ? ' - ' . $this->bookingRef : '';
+        $applicant = $this->applicant['full_name'] ?? 'Applicant';
+
         return new Envelope(
-            subject: 'TravelFlex Loan Application — ' . ($this->applicant['full_name'] ?? 'Applicant') . ' — ' . $this->bookingRef,
+            subject: 'TravelFlex Provider Review - ' . $applicant . $reference,
         );
+
     }
 
     public function content(): Content
     {
         return new Content(
-            view: 'emails.travelflex-application',
+            view: 'emails.travelflex-provider-review',
         );
     }
 

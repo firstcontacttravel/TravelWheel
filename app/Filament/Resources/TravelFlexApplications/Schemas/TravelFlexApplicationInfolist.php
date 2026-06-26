@@ -33,6 +33,12 @@ class TravelFlexApplicationInfolist
                     ])
                     ->columns(3),
 
+                Section::make('Provider Handoff')
+                    ->description('Provider package readiness, email status, and review handoff.')
+                    ->schema([
+                        Html::make(fn ($record) => TravelFlexPresentation::providerHandoff($record))->columnSpanFull(),
+                    ]),
+
                 Section::make('Applicant')
                     ->schema([
                         Html::make(fn ($record) => TravelFlexPresentation::applicant($record))->columnSpanFull(),

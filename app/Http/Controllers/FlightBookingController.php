@@ -30,7 +30,10 @@ class FlightBookingController extends Controller
         $validated = $request->validate([
             'fare_source_code' => 'required|string',
             'session_id'       => 'required|string',
+            'intent'           => 'nullable|in:booking,travelflex',
         ]);
+
+        $checkoutIntent = $validated['intent'] ?? 'booking';
     
         $payload = [
             'session_id'       => $validated['session_id'],
@@ -380,6 +383,7 @@ class FlightBookingController extends Controller
             'extraServices'       => $extraResponse->json(),
             'fareRules'           => $fareRulesResponse->json(),
             'tripType'            => $mappedFlight['directionInd'] ?? 'N/A',
+            'bookingIntent'       => $checkoutIntent,
         ]);
     
         return redirect()->route('flights.booking');
@@ -425,6 +429,7 @@ class FlightBookingController extends Controller
             'passengers.*.frequent_flyer_number' => 'nullable|string|max:30',
             'extra_baggage'                       => 'nullable|array',
             'extra_meal'                          => 'nullable|array',
+            'intent'                              => 'nullable|in:booking,travelflex',
         ]);
 
         $this->_validateBookingPassengers($validated);
@@ -444,7 +449,24 @@ class FlightBookingController extends Controller
 
         $bookingFlight = session('bookingFlight', []);
         $mappedFlight  = $bookingFlight['flight'] ?? $bookingFlight;
+        if (empty($mappedFlight) && $dbBooking) {
+            $mappedFlight = $dbBooking->flight_snapshot ?? [];
+        }
         $fareType      = strtolower($mappedFlight['fareType'] ?? 'public');
+        $checkoutIntent = $validated['intent'] ?? session('bookingIntent', 'booking');
+        $travelFlexIneligibleReason = null;
+
+        if ($checkoutIntent === 'travelflex') {
+            session(['bookingIntent' => 'travelflex']);
+
+            $travelFlexEligibility = $this->_travelFlexEligibility($mappedFlight);
+            if (! $travelFlexEligibility['eligible']) {
+                $travelFlexIneligibleReason = $travelFlexEligibility['reason'];
+                session()->forget('bookingIntent');
+            } elseif ($fareType === 'webfare') {
+                return redirect()->route('flights.travelflex');
+            }
+        }
 
         // ── WebFare: go to payment FIRST, then book ───────────────────────────
         if ($fareType === 'webfare') {
@@ -487,6 +509,23 @@ class FlightBookingController extends Controller
         ]);
 
         $this->_sendPendingEmail($dbBooking, 'hold');
+
+        if ($travelFlexIneligibleReason) {
+            return redirect()->route('flights.payment.options')
+                ->withErrors(['flex_error' => $travelFlexIneligibleReason]);
+        }
+
+        if (session('bookingIntent') === 'travelflex') {
+            $travelFlexEligibility = $this->_travelFlexEligibility($mappedFlight);
+            if ($travelFlexEligibility['eligible']) {
+                return redirect()->route('flights.travelflex');
+            }
+
+            session()->forget('bookingIntent');
+
+            return redirect()->route('flights.payment.options')
+                ->withErrors(['flex_error' => $travelFlexEligibility['reason']]);
+        }
 
         return redirect()->route('flights.payment.options');
     }
@@ -767,27 +806,20 @@ class FlightBookingController extends Controller
     public function travelFlexBankTransfer(Request $request)
     {
         $request->validate([
-            'down_payment'      => 'required|numeric|min:1',
-            'down_percent'      => 'required|integer|between:30,90',
-            'repayment_plan'    => 'required|string',
-            'grand_total'       => 'required|numeric',
-            'total_interest'    => 'required|numeric',
-            'schedule_json'     => 'required|string',
             'payment_reference' => 'nullable|string|max:100',
         ]);
- 
-        $schedule = json_decode($request->input('schedule_json', '[]'), true) ?: [];
- 
-        $tfPlan = [
-            'down_payment'      => (float) $request->input('down_payment'),
-            'down_percent'      => (int)   $request->input('down_percent'),
-            'repayment_plan'    => $request->input('repayment_plan'),
-            'grand_total'       => (float) $request->input('grand_total'),
-            'total_interest'    => (float) $request->input('total_interest'),
-            'schedule'          => $schedule,
-            'payment_method'    => 'bank_transfer',
-        ];
- 
+
+        $currentPlan = session('travelFlexPlan', []);
+        if (empty($currentPlan)) {
+            return redirect()->route('flights.travelflex')
+                ->withErrors(['error' => 'TravelFlex plan missing. Please choose your repayment plan again.']);
+        }
+
+        $tfPlan = $this->_normalizeTravelFlexPlan(
+            (int) data_get($currentPlan, 'down_percent', 30),
+            (string) data_get($currentPlan, 'repayment_plan', ''),
+            'bank_transfer',
+        );
         session(['travelFlexPlan' => $tfPlan]);
  
         // ── Update DB record if it exists (from the hold booking) ─────────────
@@ -841,25 +873,15 @@ class FlightBookingController extends Controller
     public function travelFlexGateway(Request $request)
     {
         $request->validate([
-            'down_payment'   => 'required|numeric|min:1',
             'down_percent'   => 'required|integer|between:30,90',
             'repayment_plan' => 'required|string',
-            'grand_total'    => 'required|numeric',
-            'total_interest' => 'required|numeric',
-            'schedule_json'  => 'required|string',
         ]);
- 
-        $schedule = json_decode($request->input('schedule_json', '[]'), true) ?: [];
- 
-        $tfPlan = [
-            'down_payment'   => (float) $request->input('down_payment'),
-            'down_percent'   => (int)   $request->input('down_percent'),
-            'repayment_plan' => $request->input('repayment_plan'),
-            'grand_total'    => (float) $request->input('grand_total'),
-            'total_interest' => (float) $request->input('total_interest'),
-            'schedule'       => $schedule,
-            'payment_method' => 'gateway',
-        ];
+
+        $tfPlan = $this->_normalizeTravelFlexPlan(
+            (int) $request->input('down_percent'),
+            (string) $request->input('repayment_plan'),
+            'gateway',
+        );
  
         session(['travelFlexPlan' => $tfPlan]);
  
@@ -1000,10 +1022,10 @@ class FlightBookingController extends Controller
             'flight'      => $mappedFlight,
             'dbBooking'   => $dbBooking,
             'tripDetails' => $tripDetails,   // ← live API data
-            'uniqueId'    => $uniqueId,      // API e-ticket ref
+            'uniqueId'    => $uniqueId ?: $dbBooking?->unique_id,      // API e-ticket ref
             'bookingRef'  => session('bookingRef', $dbBooking?->booking_ref ?? ''), // OUR ref
-            'contact'     => session('bookingContact', []),
-            'passengers'  => session('bookingPassengers', []),
+            'contact'     => session('bookingContact', ['email' => $dbBooking?->contact_email, 'phone' => $dbBooking?->contact_phone]),
+            'passengers'  => session('bookingPassengers', $dbBooking?->passengers_snapshot ?? []),
         ]);
     }
  
@@ -1377,10 +1399,12 @@ class FlightBookingController extends Controller
     {
         if ($flow === 'travelflex_down_payment') {
             $tfPlan = session('travelFlexPlan', []);
-            $downPercent = min(90, max(30, (int) data_get($tfPlan, 'down_percent', 30)));
-            $amount = round($this->_fullPayableAmount($booking) * ($downPercent / 100), 2);
-            $tfPlan['down_payment'] = $amount;
-            $tfPlan['down_percent'] = $downPercent;
+            $tfPlan = $this->_normalizeTravelFlexPlan(
+                (int) data_get($tfPlan, 'down_percent', 30),
+                (string) data_get($tfPlan, 'repayment_plan', '1 month'),
+                (string) data_get($tfPlan, 'payment_method', 'gateway'),
+            );
+            $amount = round((float) data_get($tfPlan, 'down_payment', 0), 2);
             session(['travelFlexPlan' => $tfPlan]);
 
             return $amount;
@@ -1422,6 +1446,125 @@ class FlightBookingController extends Controller
         }
 
         return round($total, 2);
+    }
+
+    private function _normalizeTravelFlexPlan(int $downPercent, string $repaymentPlan, string $paymentMethod): array
+    {
+        $bookingFlight = session('bookingFlight', []);
+        $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
+        $eligibility = $this->_travelFlexEligibility($mappedFlight);
+
+        if (! $eligibility['eligible']) {
+            throw ValidationException::withMessages([
+                'travelflex' => $eligibility['reason'],
+            ]);
+        }
+
+        $downPercent = min(90, max(30, $downPercent));
+        $repaymentPlan = trim($repaymentPlan);
+        $paymentMethod = in_array($paymentMethod, ['bank_transfer', 'gateway'], true) ? $paymentMethod : 'gateway';
+        $ticketCost = round(((float) ($mappedFlight['price'] ?? 0)) + $this->_selectedExtrasTotal(session('selectedExtras', [])), 2);
+
+        if ($ticketCost <= 0) {
+            throw ValidationException::withMessages([
+                'travelflex' => 'Unable to calculate the TravelFlex ticket cost. Please restart checkout.',
+            ]);
+        }
+
+        $parsed = $this->_parseTravelFlexRepaymentPlan($repaymentPlan);
+        $departureDate = $this->_travelFlexDepartureDate($mappedFlight);
+        $daysToDepart = $departureDate ? Carbon::today()->diffInDays($departureDate->copy()->startOfDay(), false) : null;
+        $safeDays = $daysToDepart === null ? null : max(0, $daysToDepart - 14);
+
+        if ($safeDays !== null && $parsed['unit_days'] > $safeDays) {
+            throw ValidationException::withMessages([
+                'repayment_plan' => 'Selected repayment plan does not fit within the TravelFlex eligibility window.',
+            ]);
+        }
+
+        $downPayment = round($ticketCost * ($downPercent / 100), 2);
+        $remainingBalance = round($ticketCost - $downPayment, 2);
+        $rate = 0.05;
+        $proportions = [
+            1 => [1.0],
+            2 => [0.5, 0.5],
+            3 => [0.4, 0.3, 0.3],
+            4 => [0.25, 0.25, 0.25, 0.25],
+            5 => [0.2, 0.2, 0.2, 0.2, 0.2],
+        ][$parsed['count']] ?? [1.0];
+
+        $dueDate = Carbon::today()->addDays($parsed['unit_days']);
+        $ordinals = ['1st', '2nd', '3rd', '4th', '5th'];
+        $totalInterest = 0.0;
+        $schedule = [];
+
+        foreach ($proportions as $index => $portion) {
+            if ($index > 0) {
+                $dueDate->addDays($parsed['unit_days']);
+            }
+
+            $interest = round($remainingBalance * $rate, 2);
+            $principal = round($remainingBalance * $portion, 2);
+            $total = round($principal + $interest, 2);
+            $totalInterest = round($totalInterest + $interest, 2);
+
+            $schedule[] = [
+                'label' => ($ordinals[$index] ?? (($index + 1) . 'th')) . ' Payment',
+                'dueDate' => $dueDate->toFormattedDateString(),
+                'due_date' => $dueDate->toDateString(),
+                'principal' => $principal,
+                'interest' => $interest,
+                'total' => $total,
+            ];
+        }
+
+        return [
+            'ticket_cost' => $ticketCost,
+            'down_payment' => $downPayment,
+            'down_percent' => $downPercent,
+            'remaining_balance' => $remainingBalance,
+            'repayment_plan' => $repaymentPlan,
+            'repayment_interval_days' => $parsed['unit_days'],
+            'repayment_count' => count($schedule),
+            'grand_total' => round($ticketCost + $totalInterest, 2),
+            'total_interest' => $totalInterest,
+            'schedule' => $schedule,
+            'payment_method' => $paymentMethod,
+            'normalized_at' => now()->toIso8601String(),
+        ];
+    }
+
+    private function _parseTravelFlexRepaymentPlan(string $label): array
+    {
+        $normalized = strtolower(trim($label));
+
+        if (preg_match('/(\d+)\s*month/', $normalized, $matches)) {
+            return ['count' => max(1, (int) $matches[1]), 'unit_days' => 30];
+        }
+
+        if (preg_match('/(\d+)\s*week/', $normalized, $matches)) {
+            return ['count' => max(1, (int) $matches[1]), 'unit_days' => 7];
+        }
+
+        if (preg_match('/(\d+)\s*hour/', $normalized, $matches)) {
+            return ['count' => 1, 'unit_days' => max(1, (int) ceil(((int) $matches[1]) / 24))];
+        }
+
+        if (str_contains($normalized, 'month')) {
+            return ['count' => 1, 'unit_days' => 30];
+        }
+
+        if (str_contains($normalized, 'week')) {
+            return ['count' => 1, 'unit_days' => 7];
+        }
+
+        if (str_contains($normalized, 'hour')) {
+            return ['count' => 1, 'unit_days' => 1];
+        }
+
+        throw ValidationException::withMessages([
+            'repayment_plan' => 'Please select a valid repayment plan.',
+        ]);
     }
 
     private function _generatePaymentReference(): string
@@ -1976,6 +2119,7 @@ class FlightBookingController extends Controller
             'extraServices',
             'fareRules',
             'paymentMethod',
+            'bookingIntent',
             'seerbitPaymentReference',
             'seerbitPaymentFlow',
             'ticketOrderResult',
@@ -2011,6 +2155,7 @@ class FlightBookingController extends Controller
             'fareRules',
             'bookingConfirmation',
             'bookingTktTimeLimit',
+            'bookingIntent',
             'seerbitPaymentReference',
             'seerbitPaymentFlow',
             'travelFlexPlan',
@@ -2143,7 +2288,65 @@ class FlightBookingController extends Controller
     }
  
     // =========================================================================
-    //  travelFlex() — Updated: block if ticket is NOT refundable
+    //  TravelFlex eligibility helpers
+    // =========================================================================
+    private function _travelFlexEligibility(array $flight): array
+    {
+        $refundableValue = $flight['isRefundable'] ?? false;
+        $isRefundable = is_bool($refundableValue)
+            ? $refundableValue
+            : in_array(strtolower((string) $refundableValue), ['1', 'true', 'yes', 'y', 'refundable'], true);
+
+        if (! $isRefundable) {
+            return [
+                'eligible' => false,
+                'reason' => 'TravelFlex is only available for refundable fares.',
+            ];
+        }
+
+        $departureDate = $this->_travelFlexDepartureDate($flight);
+        if ($departureDate && Carbon::today()->diffInDays($departureDate->copy()->startOfDay(), false) < 14) {
+            return [
+                'eligible' => false,
+                'reason' => 'TravelFlex is available when departure is at least 14 days away.',
+            ];
+        }
+
+        return [
+            'eligible' => true,
+            'reason' => '',
+        ];
+    }
+
+    private function _travelFlexDepartureDate(array $flight): ?Carbon
+    {
+        $candidates = [
+            data_get($flight, 'departDT'),
+            data_get($flight, 'segments.0.departDT'),
+            data_get($flight, 'multiLegs.0.departDT'),
+            data_get($flight, 'multiLegs.0.segments.0.departDT'),
+            data_get($flight, 'departDate'),
+            data_get($flight, 'segments.0.departDate'),
+            data_get($flight, 'multiLegs.0.segments.0.departDate'),
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (! $candidate) {
+                continue;
+            }
+
+            try {
+                return Carbon::parse($candidate);
+            } catch (\Throwable $e) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    // =========================================================================
+    //  travelFlex() - block unavailable TravelFlex fares before application
     // =========================================================================
     public function travelFlex()
     {
@@ -2155,10 +2358,12 @@ class FlightBookingController extends Controller
         $mappedFlight  = $bookingFlight['flight'] ?? $bookingFlight;
  
         // ── Refundable check ──────────────────────────────────────────────────
-        $isRefundable = $mappedFlight['isRefundable'] ?? false;
-        if (! $isRefundable) {
+        $travelFlexEligibility = $this->_travelFlexEligibility($mappedFlight);
+        if (! $travelFlexEligibility['eligible']) {
+            session()->forget('bookingIntent');
+
             return redirect()->route('flights.payment.options')
-                ->withErrors(['flex_error' => 'TravelFlex is only available for refundable tickets. This fare is non-refundable.']);
+                ->withErrors(['flex_error' => $travelFlexEligibility['reason']]);
         }
  
         return view('livewire.pages.flight.flight-travelflex');
@@ -2174,26 +2379,26 @@ class FlightBookingController extends Controller
         // Store plan data from the calculator POST before showing the form
         if ($request->isMethod('POST')) {
             $request->validate([
-                'down_payment'   => 'required|numeric|min:1',
                 'down_percent'   => 'required|integer|between:30,90',
                 'repayment_plan' => 'required|string',
-                'grand_total'    => 'required|numeric',
-                'total_interest' => 'required|numeric',
-                'schedule_json'  => 'required|string',
-                'pay_method'     => 'required|in:bank_transfer,gateway',
             ]);
- 
-            $schedule = json_decode($request->input('schedule_json', '[]'), true) ?: [];
- 
-            session(['travelFlexPlan' => [
-                'down_payment'   => (float) $request->input('down_payment'),
-                'down_percent'   => (int)   $request->input('down_percent'),
-                'repayment_plan' => $request->input('repayment_plan'),
-                'grand_total'    => (float) $request->input('grand_total'),
-                'total_interest' => (float) $request->input('total_interest'),
-                'schedule'       => $schedule,
-                'payment_method' => $request->input('pay_method'),
-            ]]);
+
+            $bookingFlight = session('bookingFlight', []);
+            $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
+            $travelFlexEligibility = $this->_travelFlexEligibility($mappedFlight);
+
+            if (! $travelFlexEligibility['eligible']) {
+                session()->forget(['travelFlexPlan', 'bookingIntent']);
+
+                return redirect()->route('flights.payment.options')
+                    ->withErrors(['flex_error' => $travelFlexEligibility['reason']]);
+            }
+
+            session(['travelFlexPlan' => $this->_normalizeTravelFlexPlan(
+                (int) $request->input('down_percent'),
+                (string) $request->input('repayment_plan'),
+                (string) data_get(session('travelFlexPlan', []), 'payment_method', 'gateway'),
+            )]);
         }
  
         if (! session()->has('travelFlexPlan')) {
@@ -2224,13 +2429,6 @@ class FlightBookingController extends Controller
             'work_id_card'      => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
             'employment_letter' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
             'bank_statements'   => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            // Plan hidden fields
-            'down_payment'      => 'required|numeric',
-            'down_percent'      => 'required|integer',
-            'repayment_plan'    => 'required|string',
-            'grand_total'       => 'required|numeric',
-            'total_interest'    => 'required|numeric',
-            'schedule_json'     => 'required|string',
             'pay_method'        => 'required|in:bank_transfer,gateway',
         ], [
             'bvn.size'  => 'BVN must be exactly 11 digits.',
@@ -2251,16 +2449,17 @@ class FlightBookingController extends Controller
         }
  
         // ── Update plan in session ────────────────────────────────────────────
-        $schedule = json_decode($request->input('schedule_json', '[]'), true) ?: [];
-        $tfPlan = [
-            'down_payment'   => (float) $request->input('down_payment'),
-            'down_percent'   => (int)   $request->input('down_percent'),
-            'repayment_plan' => $request->input('repayment_plan'),
-            'grand_total'    => (float) $request->input('grand_total'),
-            'total_interest' => (float) $request->input('total_interest'),
-            'schedule'       => $schedule,
-            'payment_method' => $request->input('pay_method'),
-        ];
+        $currentPlan = session('travelFlexPlan', []);
+        if (empty($currentPlan)) {
+            return redirect()->route('flights.travelflex')
+                ->withErrors(['error' => 'TravelFlex plan missing. Please choose your repayment plan again.']);
+        }
+
+        $tfPlan = $this->_normalizeTravelFlexPlan(
+            (int) data_get($currentPlan, 'down_percent', 30),
+            (string) data_get($currentPlan, 'repayment_plan', ''),
+            (string) $request->input('pay_method'),
+        );
         session(['travelFlexPlan' => $tfPlan]);
  
         $applicant = [
@@ -2282,13 +2481,6 @@ class FlightBookingController extends Controller
         $payMethod = $request->input('pay_method');
  
         if ($payMethod === 'bank_transfer') {
-            // Send application emails
-            $this->_sendTravelFlexApplicationEmails($applicant, $tfPlan, $uploadPaths);
-            $travelFlexApplication->update([
-                'provider_status' => 'sent',
-                'provider_email_sent_at' => now(),
-                'provider_email_error' => null,
-            ]);
             return redirect()->route('flights.travelflex.bank-transfer-form');
         }
  
@@ -2301,7 +2493,28 @@ class FlightBookingController extends Controller
     // =========================================================================
     public function travelFlexBankTransferForm()
     {
-        return redirect()->route('flights.travelflex.bank-transfer');
+        $tfPlan = session('travelFlexPlan', []);
+        $applicant = session('travelFlexApplicant', []);
+
+        if (empty($tfPlan) || empty($applicant)) {
+            return redirect()->route('flights.travelflex')
+                ->withErrors(['error' => 'TravelFlex application session expired. Please continue again.']);
+        }
+
+        $tfPlan = $this->_normalizeTravelFlexPlan(
+            (int) data_get($tfPlan, 'down_percent', 30),
+            (string) data_get($tfPlan, 'repayment_plan', ''),
+            'bank_transfer',
+        );
+        session(['travelFlexPlan' => $tfPlan]);
+
+        return view('livewire.pages.flight.flight-travelflex-bank-transfer', [
+            'bankAccounts' => [
+                ['bank' => 'Access Bank', 'account_number' => '0123456789', 'account_name' => 'Travelwheel Limited'],
+                ['bank' => 'Zenith Bank',  'account_number' => '2109876543', 'account_name' => 'Travelwheel Limited'],
+                ['bank' => 'GTBank',       'account_number' => '0156789234', 'account_name' => 'Travelwheel Limited'],
+            ],
+        ]);
     }
  
     // =========================================================================
@@ -2316,6 +2529,13 @@ class FlightBookingController extends Controller
         if (empty($contact) || empty($passengers) || empty($tfPlan)) {
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Session expired.']);
         }
+
+        $tfPlan = $this->_normalizeTravelFlexPlan(
+            (int) data_get($tfPlan, 'down_percent', 30),
+            (string) data_get($tfPlan, 'repayment_plan', ''),
+            'gateway',
+        );
+        session(['travelFlexPlan' => $tfPlan]);
  
         return $this->_startSeerbitPayment('travelflex_down_payment');
     }

@@ -2565,6 +2565,7 @@
                         @csrf
                         <input type="hidden" name="fare_source_code" value="{{ $flight['flight']['fareSourceCode'] ?? $flight['fareSourceCode'] ?? '' }}">
                         <input type="hidden" name="session_id"            value="{{ $sessionId }}">
+                        <input type="hidden" name="intent"                value="{{ session('bookingIntent', 'booking') }}">
                         <input type="hidden" name="contact[email]"        value="{{ $contactEmail }}">
                         <input type="hidden" name="contact[phone]"        value="{{ $contactPhone }}">
                         <input type="hidden" name="contact[area_code]"    value="{{ $contactAreaCode }}">

@@ -109,21 +109,88 @@ class TravelFlexPresentation
             return self::empty('No documents stored.');
         }
 
-        $html = '<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">';
+        $required = ['valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements'];
+        $stored = collect($documents)->filter(fn ($path): bool => filled($path));
+        $available = $stored->filter(fn ($path): bool => Storage::disk('local')->exists((string) $path));
 
-        foreach ($documents as $key => $path) {
+        $html = '<div class="space-y-4">';
+        $html .= '<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
+        $html .= '<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">';
+        $html .= '<div>';
+        $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">Document package</div>';
+        $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e($available->count()) . ' of ' . e(count($required)) . ' required files available on local storage.</div>';
+        $html .= '</div>';
+        $html .= '<div class="inline-flex w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-200">' . e($available->count() === count($required) ? 'Complete' : 'Needs attention') . '</div>';
+        $html .= '</div></div>';
+        $html .= '<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">';
+
+        foreach ($required as $key) {
+            $path = $documents[$key] ?? null;
             $exists = $path && Storage::disk('local')->exists($path);
-            $html .= '<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
-            $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">' . e(str((string) $key)->headline()) . '</div>';
-            $html .= '<div class="mt-1 break-all text-xs text-gray-500 dark:text-gray-400">' . e($path ?: '-') . '</div>';
-            $html .= '<div class="mt-3 text-xs ' . ($exists ? 'text-success-600' : 'text-danger-600') . '">' . e($exists ? 'File available on local disk' : 'File missing') . '</div>';
+            $html .= '<div class="flex min-h-40 flex-col rounded-lg border ' . ($exists ? 'border-gray-200' : 'border-danger-200') . ' bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
+            $html .= '<div class="flex items-start justify-between gap-3">';
+            $html .= '<div>';
+            $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">' . e(self::documentLabel($key)) . '</div>';
+            $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e(self::documentDescription($key)) . '</div>';
+            $html .= '</div>';
+            $html .= '<span class="rounded-full px-2 py-1 text-[11px] font-semibold ' . ($exists ? 'bg-success-50 text-success-700' : 'bg-danger-50 text-danger-700') . '">' . e($exists ? 'Ready' : 'Missing') . '</span>';
+            $html .= '</div>';
+            $html .= '<div class="mt-4 rounded-lg bg-gray-50 p-3 text-xs text-gray-500 dark:bg-white/5 dark:text-gray-400">';
+            $html .= $exists ? 'Uploaded document is available for secure review.' : 'Applicant has not provided this document.';
+            $html .= '</div>';
+            $html .= '<div class="mt-auto pt-4 text-xs text-gray-500 dark:text-gray-400">' . e($exists ? self::fileSize($path) . ' uploaded' : 'Upload not found') . '</div>';
             if ($exists) {
-                $html .= '<a class="mt-3 inline-flex rounded-md bg-primary-600 px-3 py-2 text-xs font-semibold text-white hover:bg-primary-500" href="' . e(route('admin.travelflex.documents.download', [$application, $key])) . '" target="_blank">Download</a>';
+                $html .= '<a class="mt-3 inline-flex w-fit rounded-md bg-primary-600 px-3 py-2 text-xs font-semibold text-white hover:bg-primary-500" href="' . e(route('admin.travelflex.documents.download', [$application, $key])) . '" target="_blank">Download document</a>';
             }
             $html .= '</div>';
         }
 
-        return new HtmlString($html . '</div>');
+        return new HtmlString($html . '</div></div>');
+    }
+
+    public static function providerHandoff(TravelFlexApplication $application): HtmlString
+    {
+        $paymentReady = $application->payment_status === 'paid';
+        $providerSent = $application->provider_status === 'sent';
+        $providerFailed = $application->provider_status === 'failed';
+        $documents = is_array($application->document_paths) ? $application->document_paths : [];
+        $required = ['valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements'];
+        $documentsReady = collect($required)->every(fn (string $key): bool => filled($documents[$key] ?? null));
+
+        $nextAction = match (true) {
+            $providerFailed => 'Provider email failed. Review the error, confirm documents, then resend the provider package.',
+            $providerSent => 'Provider package has been sent. Monitor provider decision and ticketing status.',
+            ! $paymentReady => 'Waiting for down payment verification before provider handoff.',
+            ! $documentsReady => 'Documents are incomplete. Resolve missing files before provider handoff.',
+            default => 'Ready to send provider package with applicant details, repayment plan, and documents.',
+        };
+
+        $html = '<div class="space-y-4">';
+        $html .= '<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
+        $html .= '<div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">';
+        $html .= '<div>';
+        $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">Provider handoff</div>';
+        $html .= '<div class="mt-1 max-w-3xl text-sm text-gray-500 dark:text-gray-400">' . e($nextAction) . '</div>';
+        $html .= '</div>';
+        $html .= '<div class="flex flex-wrap gap-2">';
+        $html .= self::smallState('Payment', $paymentReady ? 'Verified' : self::label($application->payment_status), $paymentReady);
+        $html .= self::smallState('Documents', $documentsReady ? 'Complete' : 'Needs attention', $documentsReady);
+        $html .= self::smallState('Provider', self::label($application->provider_status), $providerSent, $providerFailed);
+        $html .= '</div></div>';
+        $html .= '<div class="mt-4 grid gap-3 md:grid-cols-3">';
+        $html .= self::handoffFact('Provider status', self::label($application->provider_status), filled($application->provider_email_sent_at) ? 'Sent ' . self::watDateTime($application->provider_email_sent_at) : 'Not sent yet');
+        $html .= self::handoffFact('Payment status', self::label($application->payment_status), 'Down payment ' . self::money($application->down_payment));
+        $html .= self::handoffFact('Application status', self::label($application->application_status), filled($application->reviewed_at) ? 'Reviewed ' . self::watDateTime($application->reviewed_at) : 'Awaiting review');
+        $html .= '</div>';
+
+        if (filled($application->provider_email_error)) {
+            $html .= '<div class="mt-4 rounded-lg border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-300">';
+            $html .= '<div class="font-semibold">Provider email error</div>';
+            $html .= '<div class="mt-1 break-words">' . e($application->provider_email_error) . '</div>';
+            $html .= '</div>';
+        }
+
+        return new HtmlString($html . '</div></div>');
     }
 
     private static function card(array $items): HtmlString
@@ -171,6 +238,26 @@ class TravelFlexPresentation
             '</div>';
     }
 
+    private static function handoffFact(string $label, string $value, string $description): string
+    {
+        return '<div class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">' .
+            '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e($label) . '</div>' .
+            '<div class="mt-1 text-sm font-semibold text-gray-950 dark:text-white">' . e($value) . '</div>' .
+            '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e($description) . '</div>' .
+            '</div>';
+    }
+
+    private static function smallState(string $label, string $value, bool $good, bool $bad = false): string
+    {
+        $classes = $bad
+            ? 'bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-300'
+            : ($good ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300' : 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300');
+
+        return '<span class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ' . $classes . '">' .
+            e($label) . ': ' . e($value) .
+            '</span>';
+    }
+
     private static function watDateTime(mixed $value, string $format = 'd M Y, H:i'): string
     {
         if (blank($value)) {
@@ -189,6 +276,43 @@ class TravelFlexPresentation
     private static function label(?string $value): string
     {
         return filled($value) ? str((string) $value)->replace('_', ' ')->headline()->toString() : '-';
+    }
+
+    private static function documentLabel(string $key): string
+    {
+        return [
+            'valid_id' => 'Valid government ID',
+            'passport_photo' => 'Passport photograph',
+            'work_id_card' => 'Work ID card',
+            'employment_letter' => 'Employment letter',
+            'bank_statements' => '6-month bank statement',
+        ][$key] ?? str($key)->headline()->toString();
+    }
+
+    private static function documentDescription(string $key): string
+    {
+        return [
+            'valid_id' => 'Identity verification document',
+            'passport_photo' => 'Applicant profile photograph',
+            'work_id_card' => 'Employment identity proof',
+            'employment_letter' => 'Employment confirmation document',
+            'bank_statements' => 'Financial review document',
+        ][$key] ?? 'Uploaded applicant document';
+    }
+
+    private static function fileSize(string $path): string
+    {
+        try {
+            $bytes = Storage::disk('local')->size($path);
+        } catch (\Throwable) {
+            return 'Size unavailable';
+        }
+
+        if ($bytes >= 1024 * 1024) {
+            return number_format($bytes / (1024 * 1024), 1) . ' MB';
+        }
+
+        return number_format(max(1, $bytes / 1024), 0) . ' KB';
     }
 
     private static function empty(string $message): HtmlString

@@ -53,6 +53,11 @@ class TravelFlexApplicationsTable
                     ->searchable()
                     ->placeholder('-')
                     ->description(fn (TravelFlexApplication $record): string => data_get($record->applicant_details, 'email') ?: '-'),
+                TextColumn::make('documents_status')
+                    ->label('Documents')
+                    ->state(fn (TravelFlexApplication $record): string => self::documentsStatus($record))
+                    ->badge()
+                    ->color(fn (string $state): string => $state === '5/5 uploaded' ? 'success' : 'warning'),
                 TextColumn::make('down_payment')
                     ->label('Down payment')
                     ->money('NGN')
@@ -157,6 +162,17 @@ class TravelFlexApplicationsTable
         };
     }
 
+    private static function documentsStatus(TravelFlexApplication $record): string
+    {
+        $required = ['valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements'];
+        $documents = is_array($record->document_paths) ? $record->document_paths : [];
+        $uploaded = collect($required)
+            ->filter(fn (string $key): bool => filled($documents[$key] ?? null))
+            ->count();
+
+        return $uploaded . '/' . count($required) . ' uploaded';
+    }
+
     private static function label(?string $value): string
     {
         return filled($value) ? str((string) $value)->replace('_', ' ')->headline()->toString() : '-';
@@ -209,6 +225,8 @@ class TravelFlexApplicationsTable
                     'admin_note' => $data['admin_note'] ?? $record->admin_note,
                 ]);
 
+                self::tryNotifyCustomer($record->fresh(['booking']), 'reviewed', $data['admin_note'] ?? null);
+
                 Notification::make()->title('TravelFlex application reviewed')->success()->send();
             });
     }
@@ -239,6 +257,8 @@ class TravelFlexApplicationsTable
                     'reviewed_by' => auth()->id(),
                     'admin_note' => $data['admin_note'] ?? $record->admin_note,
                 ]);
+
+                self::tryNotifyCustomer($record->fresh(['booking']), 'approved', $data['admin_note'] ?? null);
 
                 Notification::make()->title('TravelFlex application approved')->success()->send();
             });
@@ -276,6 +296,8 @@ class TravelFlexApplicationsTable
                     'admin_note' => $data['admin_note'],
                 ]);
 
+                self::tryNotifyCustomer($record->fresh(['booking']), 'rejected', $data['admin_note'] ?? null);
+
                 Notification::make()->title('TravelFlex application rejected')->success()->send();
             });
     }
@@ -292,6 +314,9 @@ class TravelFlexApplicationsTable
             ->modalIcon('heroicon-o-paper-airplane')
             ->modalIconColor('gray')
             ->modalSubmitActionLabel('Resend provider email')
+            ->form(fn (TravelFlexApplication $record): array => [
+                Placeholder::make('application_context')->hiddenLabel()->content(fn () => self::actionContext($record, 'Provider handoff')),
+            ])
             ->action(function (TravelFlexApplication $record): void {
                 try {
                     app(TravelFlexApplicationService::class)->sendProviderEmail($record);
@@ -326,6 +351,27 @@ class TravelFlexApplicationsTable
             return $formatted;
         } catch (Throwable) {
             return (string) $value;
+        }
+    }
+
+    private static function tryNotifyCustomer(TravelFlexApplication $record, string $status, ?string $note = null): void
+    {
+        try {
+            $sent = app(TravelFlexApplicationService::class)->notifyCustomerStatus($record, $status, $note);
+
+            if (! $sent) {
+                Notification::make()
+                    ->title('Customer email not sent')
+                    ->body('No customer email address is available on this TravelFlex application.')
+                    ->warning()
+                    ->send();
+            }
+        } catch (Throwable $exception) {
+            Notification::make()
+                ->title('Customer email failed')
+                ->body($exception->getMessage())
+                ->danger()
+                ->send();
         }
     }
 }

@@ -125,8 +125,8 @@
                                 <div class="seg-terminal">{{ $seg['fromAirport'] ?? '' }}</div>
                             </div>
                             <div class="seg-baggage">
-                                <span class="seg-bag-tag">🧳 {{ $bagStr }}</span>
-                                <span class="seg-bag-tag" style="background:var(--blue-lt);color:var(--blue);">💼 {{ $cabinBag }}</span>
+                                <span class="seg-bag-tag"><span class="seg-bag-icon checked" aria-hidden="true"></span>{{ $bagStr }}</span>
+                                <span class="seg-bag-tag" style="background:var(--blue-lt);color:var(--blue);"><span class="seg-bag-icon cabin" aria-hidden="true"></span>{{ $cabinBag }}</span>
                             </div>
                         </div>
 

@@ -25,6 +25,8 @@ Route::get('/air/flight-s', FlightPage::class)->name('air.flight-s');
 // Route::post('/air/flight/select', [FlightSearchController::class, 'select'])->name('flights.select');
 
 Route::post('/flights/search', [FlightController::class, 'search'])->name('flights.search');
+Route::get('/flights/search/loading', [FlightController::class, 'loading'])->name('flights.search.loading');
+Route::get('/flights/search/run', [FlightController::class, 'runPendingSearch'])->name('flights.search.run');
 
 
 //Route::post('/flights/select', [FlightController::class, 'select'])->name('flights.select');

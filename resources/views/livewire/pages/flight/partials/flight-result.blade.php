@@ -2990,7 +2990,7 @@
                                 :disabled="!canUseTravelFlex(flight)"
                                 :title="canUseTravelFlex(flight) ? 'Continue with TravelFlex' : travelFlexUnavailableReason(flight)"
                                 @click="selectTravelFlex(flight)">
-                                <span class="sr-installment-btn-price" x-show="flight.isRefundable" x-cloak x-text="_travelFlexInstallmentPrice(flight)"></span>
+                                <span class="sr-installment-btn-price" x-show="canUseTravelFlex(flight)" x-cloak x-text="_travelFlexInstallmentPrice(flight)"></span>
                                 <span class="sr-installment-btn-label">TravelFlex</span>
                             </button>
                         </div>
@@ -3566,10 +3566,10 @@
 
             selectTravelFlex(flight) {
                 if (!this.canUseTravelFlex(flight)) return;
-                this.selectFlight(flight);
+                this.selectFlight(flight, 'travelflex');
             },
 
-            selectFlight(flight) {
+            selectFlight(flight, intent = 'booking') {
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '{{ route("flights.select") }}';
@@ -3583,9 +3583,13 @@
                 const sid = document.createElement('input');
                 sid.type = 'hidden'; sid.name = 'session_id';
                 sid.value = '{{ session("searchSessionId", "") }}';
+                const checkoutIntent = document.createElement('input');
+                checkoutIntent.type = 'hidden'; checkoutIntent.name = 'intent';
+                checkoutIntent.value = intent;
                 form.appendChild(csrf);
                 form.appendChild(fsc);
                 form.appendChild(sid);
+                form.appendChild(checkoutIntent);
                 document.body.appendChild(form);
                 form.submit();
             },

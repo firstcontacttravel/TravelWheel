@@ -14,6 +14,40 @@ class FlightController extends Controller
     {
         $this->forgetCheckoutSession();
 
+        session([
+            'pendingFlightSearch' => $request->except('_token'),
+            'pendingFlightSearchStartedAt' => now()->toIso8601String(),
+        ]);
+
+        return redirect()->route('flights.search.loading');
+    }
+
+    public function loading()
+    {
+        if (! session()->has('pendingFlightSearch')) {
+            return redirect()->route('air')->withErrors(['error' => 'Please start a new flight search.']);
+        }
+
+        return view('livewire.pages.flight.flight-loading-modern', [
+            'search' => session('pendingFlightSearch', []),
+        ]);
+    }
+
+    public function runPendingSearch()
+    {
+        $pending = session('pendingFlightSearch');
+
+        if (! is_array($pending) || $pending === []) {
+            return redirect()->route('air')->withErrors(['error' => 'Flight search expired. Please search again.']);
+        }
+
+        return $this->performSearch(new Request($pending));
+    }
+
+    private function performSearch(Request $request)
+    {
+        $this->forgetCheckoutSession();
+
         //dd($request->all());
         // ── Normalise trip type ───────────────────────────────────────────────
         $request->merge(['trip' => strtolower($request->trip)]);
@@ -480,6 +514,8 @@ class FlightController extends Controller
         // ── Write ONLY to durable session — no flash data needed ─────────────
         // The Livewire FlightPage component reads directly from these session
         // keys in mount(), so data persists across refreshes and back-navigation.
+        session()->forget(['pendingFlightSearch', 'pendingFlightSearchStartedAt']);
+
         session([
             'flightResultsStore' => $flights,
             'searchParamsStore'  => $validated,

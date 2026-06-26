@@ -1,12 +1,20 @@
 {{-- resources/views/livewire/pages/flight/flight-travelflex-confirmation.blade.php --}}
-@component('layouts.app', ['title' => 'TravelFlex — Plan Activated!'])
+@component('layouts.app', ['title' => 'TravelFlex - Plan Activated'])
 
 @php
     // ── Core data ──────────────────────────────────────────────────────────────
+    $dbBooking = $dbBooking ?? null;
     $bookingFlight = session('bookingFlight', []);
-    $mf            = $bookingFlight['flight'] ?? $bookingFlight;
+    $mf            = $flight ?? ($bookingFlight['flight'] ?? $bookingFlight);
+    if (empty($mf) && isset($dbBooking)) {
+        $mf = $dbBooking?->flight_snapshot ?? [];
+    }
+    if (isset($dbBooking) && $dbBooking?->flight_snapshot) {
+        $snapshot = $dbBooking->flight_snapshot;
+        $mf = array_replace_recursive($snapshot, array_filter($mf, fn ($value) => ! blank($value)));
+    }
 
-    $currency  = $mf['currency'] ?? 'NGN';
+    $currency  = $mf['currency'] ?? $dbBooking?->currency ?? 'NGN';
     $sym       = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
     $fmt       = fn($v) => $sym . number_format((float)$v, 2);
 
@@ -20,14 +28,22 @@
     $firstSeg  = $segments[0] ?? [];
     $lastSeg   = !empty($segments) ? $segments[count($segments)-1] : [];
     $finalDest = $isReturn && !empty($retSegs) ? $retSegs[count($retSegs)-1] : $lastSeg;
+    $storedRoute = $dbBooking?->route ?? ($mf['route'] ?? '');
+    if (empty($firstSeg) && $storedRoute) {
+        $parts = preg_split('/\s*(?:->|→|â†’|-)\s*/u', (string) $storedRoute);
+        $firstSeg = ['from' => trim($parts[0] ?? ''), 'fromCity' => ''];
+        $finalDest = ['to' => trim($parts[count($parts) - 1] ?? ''), 'toCity' => ''];
+    }
+    $displayRoute = $storedRoute ?: trim(($firstSeg['from'] ?? '') . ' -> ' . ($finalDest['to'] ?? ''));
+    $displayAirline = $mf['airline'] ?? $mf['validatingAirline'] ?? $dbBooking?->airline ?? '';
 
     $breakdown  = $bookingFlight['fareBreakdown'] ?? $mf['fareBreakdown'] ?? [];
-    $contact    = session('bookingContact', []);
-    $passengers = session('bookingPassengers', []);
+    $contact    = ($contact ?? []) ?: session('bookingContact', ['email' => $dbBooking?->contact_email, 'phone' => $dbBooking?->contact_phone]);
+    $passengers = ($passengers ?? []) ?: session('bookingPassengers', $dbBooking?->passengers_snapshot ?? []);
     $passengers = \App\Support\FlightDisplay::passengers($passengers);
     $cabinLabel = \App\Support\FlightDisplay::cabin($mf, $dbBooking ?? null);
-    $total      = (float)($mf['price'] ?? 0);
-    $uniqueId   = session('bookingUniqueId', '');
+    $total      = (float)($mf['price'] ?? $dbBooking?->total_price ?? 0);
+    $uniqueId   = $uniqueId ?? session('bookingUniqueId', $dbBooking?->unique_id ?? '');
     $bookingRef    = $bookingRef ?? session('bookingRef', $dbBooking?->booking_ref ?? '');
 
     // TravelFlex plan
@@ -35,10 +51,14 @@
     $downPayment   = (float) ($tfPlan['down_payment']   ?? 0);
     $downPercent   = (int)   ($tfPlan['down_percent']   ?? 30);
     $repaymentPlan = $tfPlan['repayment_plan']           ?? '';
+    $ticketCost    = (float) ($tfPlan['ticket_cost'] ?? $total);
+    if ($total <= 0 && $ticketCost > 0) {
+        $total = $ticketCost;
+    }
     $grandTotal    = (float) ($tfPlan['grand_total']    ?? 0);
     $totalInterest = (float) ($tfPlan['total_interest'] ?? 0);
     $schedule      = $tfPlan['schedule']                 ?? [];
-    $remainingBal  = $total - $downPayment;
+    $remainingBal  = (float) ($tfPlan['remaining_balance'] ?? ($ticketCost - $downPayment));
 
     // Live trip details (fetched by controller after ticketing)
     $tripDetails   = $tripDetails ?? [];
@@ -73,9 +93,12 @@
     }
 
     // ── UPDATE: Status detection ──
-    $ticketStatus = $tripDetails['TicketStatus'] ?? 'UNKNOWN';
-    $bookingStatus = $tripDetails['BookingStatus'] ?? 'Booked';
-    $isTicketed = strtoupper($ticketStatus) === 'TICKETED';
+    $ticketStatus = $tripDetails['TicketStatus'] ?? ($dbBooking?->ticket_ordered ? 'TICKETED' : 'PROCESSING');
+    $bookingStatus = $tripDetails['BookingStatus'] ?? ($dbBooking?->booking_status ?? session('bookingStatus', 'Booked'));
+    $isTicketed = strtoupper((string) $ticketStatus) === 'TICKETED'
+        || $dbBooking?->isTicketed()
+        || $dbBooking?->ticket_ordered
+        || session('ticketSuccess') === true;
     $isConfirmedOnly = strtoupper($bookingStatus) === 'CONFIRMED' && !$isTicketed;
 
     // ── Extra Services ──────────────────────────────────────────────────────
@@ -92,6 +115,10 @@
                 $extrasTotal += (float) ($item['unit_price'] ?? 0);
             }
         }
+    }
+    if (empty($tfPlan['ticket_cost'])) {
+        $ticketCost = $total + $extrasTotal;
+        $remainingBal = $ticketCost - $downPayment;
     }
 @endphp
 
@@ -144,15 +171,273 @@
     /* ── Upcoming badge ── */
     .upcoming-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; font-size:10.5px; font-weight:700; background:var(--amber-lt); color:var(--amber); }
 </style>
+<style>
+    :root {
+        --tf-brand:#39328f;
+        --tf-brand-700:#2f287c;
+        --tf-green:#049a63;
+        --tf-green-soft:#eefaf4;
+        --tf-ink:#101828;
+        --tf-muted:#667085;
+        --tf-subtle:#98a2b3;
+        --tf-line:#e6e9f0;
+        --tf-soft:#f7f8fb;
+        --navy:var(--tf-ink);
+        --blue:var(--tf-brand);
+        --blue-lt:#f5f7ff;
+        --blue-md:rgba(57,50,143,.16);
+        --indigo:var(--tf-brand);
+        --purple:var(--tf-brand);
+        --green:var(--tf-green);
+        --green-lt:var(--tf-green-soft);
+        --gray-50:var(--tf-soft);
+        --gray-100:#eef1f6;
+        --gray-200:var(--tf-line);
+        --gray-300:#cfd4df;
+        --gray-400:var(--tf-subtle);
+        --gray-500:var(--tf-muted);
+        --gray-700:#344054;
+        --gray-900:var(--tf-ink);
+    }
+    body { background:#f7f8fb; }
+    .tf-hero {
+        background:#fff;
+        border:1px solid var(--tf-line);
+        border-radius:8px;
+        color:var(--tf-ink);
+        box-shadow:0 14px 36px rgba(16,24,40,.06);
+        padding:24px;
+    }
+    .tf-hero::before { display:none; }
+    .tf-hero-icon {
+        width:52px;
+        height:52px;
+        border-radius:999px;
+        background:var(--tf-green-soft);
+        color:var(--tf-green);
+        font-size:0;
+    }
+    .tf-hero-icon::before {
+        content:"";
+        width:26px;
+        height:26px;
+        background:currentColor;
+        -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat;
+        mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
+    .tf-hero-kicker {
+        display:inline-flex;
+        align-items:center;
+        gap:7px;
+        min-height:30px;
+        padding:6px 10px;
+        border:1px solid rgba(4,154,99,.18);
+        border-radius:999px;
+        background:var(--tf-green-soft);
+        color:var(--tf-green);
+        font-size:11px;
+        font-weight:800;
+        margin-bottom:10px;
+    }
+    .tf-hero-title { color:var(--tf-ink); font-size:clamp(22px,2.3vw,32px); line-height:1.14; }
+    .tf-hero-sub { color:var(--tf-muted); opacity:1; font-size:14px; max-width:640px; }
+    .tf-hero-sub strong { color:var(--tf-ink) !important; }
+    .tf-hero-ref {
+        background:var(--tf-soft);
+        border:1px solid var(--tf-line);
+        border-radius:8px;
+        color:var(--tf-ink);
+    }
+    .tf-hero-ref-label, .tf-hero-ref-val { color:var(--tf-ink) !important; }
+    .tf-hero { display:none !important; }
+    .tf-confirm-hero {
+        display:flex;
+        align-items:flex-start;
+        gap:16px;
+        background:#fff;
+        border:1px solid var(--tf-line);
+        border-radius:8px;
+        box-shadow:0 14px 36px rgba(16,24,40,.06);
+        padding:24px;
+        margin-bottom:24px;
+    }
+    .tf-confirm-hero-icon {
+        width:52px;
+        height:52px;
+        border-radius:999px;
+        background:var(--tf-green-soft);
+        color:var(--tf-green);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        flex:0 0 auto;
+    }
+    .tf-confirm-hero-icon::before {
+        content:"";
+        width:26px;
+        height:26px;
+        background:currentColor;
+        -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat;
+        mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
+    .tf-confirm-hero.is-processing .tf-confirm-hero-icon {
+        background:#fff8ed;
+        color:#b7791f;
+    }
+    .tf-confirm-hero.is-processing .tf-confirm-hero-icon::before {
+        -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6v6l4 2'/%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3C/svg%3E") center/contain no-repeat;
+        mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6v6l4 2'/%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
+    .tf-confirm-kicker {
+        display:inline-flex;
+        align-items:center;
+        min-height:30px;
+        padding:6px 10px;
+        border:1px solid rgba(4,154,99,.18);
+        border-radius:999px;
+        background:var(--tf-green-soft);
+        color:var(--tf-green);
+        font-size:11px;
+        font-weight:800;
+        margin-bottom:10px;
+    }
+    .tf-confirm-title { color:var(--tf-ink); font-size:clamp(22px,2.3vw,32px); line-height:1.14; font-weight:800; margin-bottom:8px; }
+    .tf-confirm-sub { color:var(--tf-muted); font-size:14px; line-height:1.65; max-width:640px; }
+    .tf-confirm-ref {
+        display:inline-flex;
+        align-items:center;
+        gap:10px;
+        margin-top:14px;
+        padding:10px 14px;
+        background:var(--tf-soft);
+        border:1px solid var(--tf-line);
+        border-radius:8px;
+        color:var(--tf-ink);
+        font-family:var(--mono);
+        font-weight:800;
+    }
+    .pc, .pg-rail > div { border-radius:8px !important; border-color:var(--tf-line) !important; box-shadow:0 12px 32px rgba(16,24,40,.055) !important; }
+    .pc-icon { font-size:0 !important; border-radius:8px !important; background:#f5f7ff !important; color:var(--tf-brand) !important; }
+    .pc-icon::before {
+        content:"";
+        width:18px;
+        height:18px;
+        background:currentColor;
+        -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Cpath d='M12 8v4l3 2'/%3E%3C/svg%3E") center/contain no-repeat;
+        mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8'/%3E%3Cpath d='M12 8v4l3 2'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
+    .itin-card-icon::before,
+    .itin-plane-icon {
+        content:"";
+        width:20px;
+        height:20px;
+        display:inline-block;
+        background:currentColor;
+        -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17.8 19.2 16 11l3.5-3.5C21 6 21 4 19 4c-2 0-2 0-3.5 1.5L12 9 4 7 2 9l7 4-3 3H3l-1 1 4 2 2 4 1-1v-3l3-3 4 7 2-2Z'/%3E%3C/svg%3E") center/contain no-repeat;
+        mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17.8 19.2 16 11l3.5-3.5C21 6 21 4 19 4c-2 0-2 0-3.5 1.5L12 9 4 7 2 9l7 4-3 3H3l-1 1 4 2 2 4 1-1v-3l3-3 4 7 2-2Z'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
+    .pc-icon.icon-ticket::before { -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 9a3 3 0 0 0 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 0 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z'/%3E%3Cpath d='M13 5v14'/%3E%3C/svg%3E") center/contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 9a3 3 0 0 0 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 0 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z'/%3E%3Cpath d='M13 5v14'/%3E%3C/svg%3E") center/contain no-repeat; }
+    .pc-icon.icon-calendar::before { -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4'/%3E%3Cpath d='M16 2v4'/%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M3 10h18'/%3E%3C/svg%3E") center/contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 2v4'/%3E%3Cpath d='M16 2v4'/%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M3 10h18'/%3E%3C/svg%3E") center/contain no-repeat; }
+    .pc-icon.icon-users::before { -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-8 0v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87'/%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E") center/contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-8 0v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3Cpath d='M22 21v-2a4 4 0 0 0-3-3.87'/%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E") center/contain no-repeat; }
+    .pc-icon.icon-gift::before { -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='8' width='18' height='4' rx='1'/%3E%3Cpath d='M12 8v13'/%3E%3Cpath d='M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7'/%3E%3Cpath d='M7.5 8A2.5 2.5 0 1 1 12 6a2.5 2.5 0 1 1 4.5 2'/%3E%3C/svg%3E") center/contain no-repeat; mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='8' width='18' height='4' rx='1'/%3E%3Cpath d='M12 8v13'/%3E%3Cpath d='M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7'/%3E%3Cpath d='M7.5 8A2.5 2.5 0 1 1 12 6a2.5 2.5 0 1 1 4.5 2'/%3E%3C/svg%3E") center/contain no-repeat; }
+    .ticket-processing-icon {
+        width:32px;
+        height:32px;
+        margin:0 auto 8px;
+        color:var(--gray-400);
+        background:currentColor;
+        -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6v6l4 2'/%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3C/svg%3E") center/contain no-repeat;
+        mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 6v6l4 2'/%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
+    .loan-bar { background:#fff; border:1px solid var(--tf-line); border-radius:8px; box-shadow:0 12px 32px rgba(16,24,40,.055); }
+    .loan-bar-item { border-right:1px solid #eef1f6; text-align:left; }
+    .loan-bar-lbl { color:var(--tf-muted); }
+    .loan-bar-val { color:var(--tf-ink); }
+    .schedule-table th { background:#fbfcfe; color:var(--tf-muted); }
+    .schedule-table td { border-color:#eef1f6; }
+    .tf-mini-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:16px; }
+    .tf-mini-card { background:#fbfcfe; border:1px solid #eef1f6; border-radius:8px; padding:12px; min-width:0; }
+    .tf-mini-label { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--tf-muted); margin-bottom:5px; }
+    .tf-mini-value { font-size:13px; font-weight:800; color:var(--tf-ink); overflow-wrap:anywhere; }
+    .tf-support-line { display:flex; align-items:flex-start; gap:8px; margin-top:7px; }
+    .tf-support-dot { width:18px; height:18px; display:inline-block; flex:0 0 auto; color:var(--tf-brand); background:currentColor; -webkit-mask:var(--support-icon) center/contain no-repeat; mask:var(--support-icon) center/contain no-repeat; }
+    .tf-support-dot.mail { --support-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='m3 7 9 6 9-6'/%3E%3C/svg%3E"); }
+    .tf-support-dot.phone { --support-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.32 1.77.6 2.6a2 2 0 0 1-.45 2.11L8 9.69a16 16 0 0 0 6 6l1.26-1.26a2 2 0 0 1 2.11-.45c.83.28 1.7.48 2.6.6A2 2 0 0 1 22 16.92Z'/%3E%3C/svg%3E"); }
+    @media(max-width:760px) {
+        body { margin-top:0 !important; }
+        .pg-wrap { padding-top:12px !important; }
+        .tf-confirm-hero { flex-direction:column; padding:18px; }
+        .tf-mini-grid { grid-template-columns:1fr 1fr; }
+        .pg-grid { display:block !important; width:100% !important; }
+        .pg-main, .pg-rail, .pc { width:100% !important; max-width:100% !important; min-width:0 !important; }
+        .pc-body { overflow-x:auto; }
+        .loan-bar { flex-direction:column; }
+        .loan-bar-item { border-right:0; border-bottom:1px solid #eef1f6; }
+        .loan-bar-item:last-child { border-bottom:0; }
+    }
+    @media(max-width:480px) { .tf-mini-grid { grid-template-columns:1fr; } }
+    @media print {
+        body { background:#fff !important; margin-top:0 !important; }
+        header, nav, footer, .btn-row, .pg-rail, script { display:none !important; }
+        .pg-wrap { max-width:none !important; padding:0 !important; }
+        .pg-grid { display:block !important; }
+        .pg-main { width:100% !important; }
+        .tf-confirm-hero, .pc, .loan-bar { box-shadow:none !important; break-inside:avoid; page-break-inside:avoid; }
+        .pc { margin-bottom:12px !important; }
+        .pc-body { overflow:visible !important; }
+        .schedule-table, .pax-table { font-size:11px !important; }
+        a { color:inherit !important; text-decoration:none !important; }
+    }
+</style>
 
 <div class="pg-wrap" x-data="{}">
 
+    <div class="tf-confirm-hero {{ $isTicketed ? 'is-ticketed' : 'is-processing' }}">
+        <div class="tf-confirm-hero-icon"></div>
+        <div>
+            <div class="tf-confirm-kicker">{{ $isTicketed ? 'TravelFlex Plan Activated' : 'TravelFlex Plan Activated - Ticketing' }}</div>
+            <div class="tf-confirm-title">{{ $isTicketed ? 'Flight Booked & TravelFlex Plan Live' : 'TravelFlex Activated - E-Ticket Processing' }}</div>
+            <div class="tf-confirm-sub">
+                @if($isTicketed)
+                    Your down payment has been processed, your seat is confirmed, and your e-ticket has been issued. Keep your repayment schedule active to keep your booking in good standing.
+                @else
+                    Your TravelFlex plan is active and your down payment has been processed. Your e-ticket is being processed and will be emailed to <strong>{{ $contact['email'] ?? '' }}</strong> within 15-30 minutes.
+                @endif
+            </div>
+            @if($uniqueId)
+            <div class="tf-confirm-ref">
+                <span>Booking Reference</span>
+                <span>{{ $bookingRef ?: $uniqueId }}</span>
+                <span class="status-badge status-confirmed" style="font-size:11px;">{{ $isTicketed ? 'Ticketed' : 'Processing' }}</span>
+            </div>
+            @endif
+            <div class="tf-mini-grid">
+                <div class="tf-mini-card">
+                    <div class="tf-mini-label">Ticket state</div>
+                    <div class="tf-mini-value" style="color:{{ $isTicketed ? 'var(--tf-green)' : '#b7791f' }};">{{ $isTicketed ? 'Ticketed' : 'Processing' }}</div>
+                </div>
+                <div class="tf-mini-card">
+                    <div class="tf-mini-label">Down payment</div>
+                    <div class="tf-mini-value">{{ $fmt($downPayment) }}</div>
+                </div>
+                <div class="tf-mini-card">
+                    <div class="tf-mini-label">Repayment</div>
+                    <div class="tf-mini-value">{{ $repaymentPlan ?: '-' }}</div>
+                </div>
+                <div class="tf-mini-card">
+                    <div class="tf-mini-label">Total payable</div>
+                    <div class="tf-mini-value">{{ $fmt($grandTotal) }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- ── Hero ── --}}
     <div class="tf-hero">
-        <div class="tf-hero-icon">{{ $isTicketed ? '🎉' : '⏳' }}</div>
+        <div class="tf-hero-icon"></div>
         <div style="position:relative;z-index:2;flex:1;">
             <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:rgba(255,255,255,.15);border-radius:999px;font-size:11px;font-weight:700;color:rgba(255,255,255,.85);margin-bottom:10px;">
-                {{ $isTicketed ? '✅ TravelFlex Plan Activated' : '⏳ TravelFlex Plan Activated (Ticketing)' }}
+                {{ $isTicketed ? 'TravelFlex Plan Activated' : 'TravelFlex Plan Activated (Ticketing)' }}
             </div>
             <div class="tf-hero-title">
                 {{ $isTicketed ? 'Flight Booked & TravelFlex Plan Live!' : 'TravelFlex Activated — E-Ticket Processing' }}
@@ -175,7 +460,7 @@
                     <div class="tf-hero-ref-val" style="color: white;">{{ $bookingRef }}</div>
                 </div>
                 <span class="status-badge status-confirmed" style="font-size:11px;">
-                    {{ $isTicketed ? '✓ Ticketed' : '⏳ Confirmed' }}
+                    {{ $isTicketed ? 'Ticketed' : 'Confirmed' }}
                 </span>
             </div>
             @endif
@@ -217,7 +502,7 @@
             <div class="notice amber" style="background:var(--amber-lt);border:1px solid var(--amber-md);border-radius:12px;margin-bottom:20px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:var(--amber);flex-shrink:0;"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
                 <div>
-                    <div style="font-weight:700;color:var(--amber-dark);margin-bottom:3px;">🎫 E-Ticket Processing</div>
+                    <div style="font-weight:700;color:var(--amber-dark);margin-bottom:3px;">E-Ticket Processing</div>
                     <div style="font-size:13px;color:var(--amber-dark);line-height:1.6;">
                         Your booking is confirmed and your seat is reserved. Your e-ticket is being processed and will be emailed to <strong>{{ $contact['email'] ?? '' }}</strong> shortly (usually within 15–30 minutes).
                         <br><br>
@@ -230,10 +515,10 @@
             {{-- ── Flight Itinerary ── --}}
             <div class="pc">
                 <div class="pc-head">
-                    <div class="pc-icon" style="background:var(--blue-lt);color:var(--blue);">✈️</div>
+                    <div class="pc-icon itin-card-icon" style="background:var(--blue-lt);color:var(--blue);"></div>
                     <div>
                         <div class="pc-title">Flight Itinerary</div>
-                        <div class="pc-sub">{{ $tripLabel }} · {{ $cabinLabel }} · {{ $mf['airline'] ?? '' }}</div>
+                        <div class="pc-sub">{{ $tripLabel }} · {{ $cabinLabel }} · {{ $displayAirline ?: '-' }}</div>
                     </div>
                 </div>
 
@@ -244,7 +529,7 @@
                     </div>
                     <div style="flex:1;display:flex;align-items:center;gap:6px;justify-content:center;">
                         <div class="itin-line"></div>
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.5" stroke-linecap="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21 4 19 4c-2 0-2 0-3.5 1.5L11 9l-8.2-1.8A1 1 0 0 0 2 8.05L3.95 11a1 1 0 0 0 .67.45L11 13l-1 4.5a1 1 0 0 0 .28.95L12 20a1 1 0 0 0 1.6-.35l1.54-3.81"/></svg>
+                        <span class="itin-plane-icon" aria-hidden="true" style="color:var(--blue);"></span>
                         <div class="itin-line"></div>
                     </div>
                     <div style="text-align:center;">
@@ -296,7 +581,7 @@
             @if($isTicketed && !empty($eticketMap))
             <div class="pc">
                 <div class="pc-head">
-                    <div class="pc-icon" style="background:var(--indigo-lt);color:var(--indigo);">🎫</div>
+                    <div class="pc-icon icon-ticket" style="background:var(--indigo-lt);color:var(--indigo);"></div>
                     <div>
                         <div class="pc-title">E-Ticket Numbers</div>
                         <div class="pc-sub">Present these at airport check-in</div>
@@ -315,11 +600,26 @@
                     </div>
                 </div>
             </div>
+            @elseif($isTicketed)
+            <div class="pc">
+                <div class="pc-head">
+                    <div class="pc-icon icon-ticket" style="background:var(--indigo-lt);color:var(--indigo);"></div>
+                    <div>
+                        <div class="pc-title">E-Ticket Status</div>
+                        <div class="pc-sub">Ticket issued; numbers will be available in your email or admin record</div>
+                    </div>
+                </div>
+                <div class="pc-body">
+                    <div style="background:var(--green-lt);border:1px solid rgba(4,154,99,.18);border-radius:8px;padding:14px;color:var(--green);font-size:13px;line-height:1.6;">
+                        Your booking is ticketed. If ticket numbers are not visible here yet, use your booking reference when contacting support.
+                    </div>
+                </div>
+            </div>
             @elseif(!$isTicketed)
             {{-- Show placeholder when not yet ticketed --}}
             <div class="pc">
                 <div class="pc-head">
-                    <div class="pc-icon" style="background:var(--gray-lt);color:var(--gray-400);">🎫</div>
+                    <div class="pc-icon icon-ticket" style="background:var(--gray-lt);color:var(--gray-400);"></div>
                     <div>
                         <div class="pc-title">E-Ticket Numbers</div>
                         <div class="pc-sub">Will appear here once issued</div>
@@ -327,7 +627,7 @@
                 </div>
                 <div class="pc-body">
                     <div style="text-align:center;padding:20px;color:var(--gray-400);">
-                        <div style="font-size:32px;margin-bottom:8px;">⏳</div>
+                        <div class="ticket-processing-icon" aria-hidden="true"></div>
                         <div style="font-size:13px;font-weight:600;color:var(--gray-500);">Your e-tickets are being processed</div>
                         <div style="font-size:12px;color:var(--gray-400);margin-top:6px;line-height:1.6;">
                             This typically takes 15–30 minutes. Check your email at <strong>{{ $contact['email'] ?? 'your registered email' }}</strong> for updates.
@@ -341,7 +641,7 @@
             @if(!empty($schedule))
             <div class="pc">
                 <div class="pc-head">
-                    <div class="pc-icon" style="background:var(--purple-lt);color:var(--purple);">📅</div>
+                    <div class="pc-icon icon-calendar" style="background:var(--purple-lt);color:var(--purple);"></div>
                     <div>
                         <div class="pc-title">Your Repayment Schedule</div>
                         <div class="pc-sub">{{ count($schedule) }} instalment(s) · {{ $repaymentPlan }} · 5% interest per period</div>
@@ -359,7 +659,7 @@
                                 <td><strong>{{ $inst['label'] ?? (($i+1).'. Payment') }}</strong></td>
                                 <td>
                                     <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:var(--blue-lt);color:var(--blue);border-radius:999px;font-size:10.5px;font-weight:700;">
-                                        📅 {{ $inst['dueDate'] ?? '—' }}
+                                        {{ $inst['dueDate'] ?? '-' }}
                                     </span>
                                 </td>
                                 <td style="font-family:var(--mono);">{{ $fmt($inst['principal'] ?? 0) }}</td>
@@ -386,7 +686,7 @@
             @if(!empty($passengers))
             <div class="pc">
                 <div class="pc-head">
-                    <div class="pc-icon" style="background:#f0f9ff;color:#0369a1;">👥</div>
+                    <div class="pc-icon icon-users" style="background:#f0f9ff;color:#0369a1;"></div>
                     <div><div class="pc-title">Passengers ({{ count($passengers) }})</div></div>
                 </div>
                 <div class="pc-body" style="padding:0;">
@@ -414,7 +714,7 @@
             @if(!empty($extraServices['baggage']) || !empty($extraServices['meal']))
             <div class="pc">
                 <div class="pc-head">
-                    <div class="pc-icon" style="background:#fef3c7;color:#d97706;">🎁</div>
+                    <div class="pc-icon icon-gift" style="background:#fef3c7;color:#d97706;"></div>
                     <div>
                         <div class="pc-title">Extra Services</div>
                         <div class="pc-sub">Selected baggage & meals included in TravelFlex plan</div>
@@ -427,7 +727,7 @@
                             @if(!empty($extraServices['baggage']))
                                 @foreach($extraServices['baggage'] as $baggage)
                                 <tr>
-                                    <td><strong style="color:#059669;">🧳 Extra Baggage</strong></td>
+                                    <td><strong style="color:#059669;">Extra Baggage</strong></td>
                                     <td>
                                         {{ $baggage['description'] ?? '' }}
                                         <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($baggage['direction'] ?? '') }} · Qty: {{ $baggage['quantity'] ?? 1 }}</span>
@@ -439,7 +739,7 @@
                             @if(!empty($extraServices['meal']))
                                 @foreach($extraServices['meal'] as $meal)
                                 <tr>
-                                    <td><strong style="color:#d97706;">🍽️ Meal</strong></td>
+                                    <td><strong style="color:#d97706;">Meal</strong></td>
                                     <td>
                                         {{ $meal['description'] ?? '' }}
                                         <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($meal['direction'] ?? '') }} · Segment {{ ($meal['segment'] ?? 0) + 1 }}</span>
@@ -499,11 +799,11 @@
             {{-- TravelFlex Plan Card --}}
             <div class="pc">
                 <div style="padding:14px 18px;background:linear-gradient(135deg,var(--navy),var(--indigo),var(--purple));">
-                    <div style="font-size:15px;font-weight:800;color:#fff;">📆 TravelFlex Plan</div>
+                    <div style="font-size:15px;font-weight:800;color:#fff;">TravelFlex Plan</div>
                     <div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:2px;">{{ $repaymentPlan }} · {{ count($schedule) }} instalments</div>
                 </div>
                 <div class="pc-body-tight">
-                    <div class="fare-row"><span class="fare-lbl">Ticket Cost</span><span class="fare-val">{{ $fmt($total) }}</span></div>
+                    <div class="fare-row"><span class="fare-lbl">Ticket Cost</span><span class="fare-val">{{ $fmt($ticketCost) }}</span></div>
                     <div class="fare-row"><span class="fare-lbl">Down Paid ({{ $downPercent }}%)</span><span class="fare-val" style="color:var(--green);">{{ $fmt($downPayment) }}</span></div>
                     <div class="fare-row"><span class="fare-lbl">Balance</span><span class="fare-val">{{ $fmt($remainingBal) }}</span></div>
                     <div class="fare-row"><span class="fare-lbl">Total Interest</span><span class="fare-val" style="color:var(--amber);">{{ $fmt($totalInterest) }}</span></div>
@@ -517,18 +817,18 @@
             {{-- Quick Flight Summary --}}
             <div class="pc">
                 <div class="pc-head">
-                    <div class="pc-icon" style="background:var(--blue-lt);color:var(--blue);">✈️</div>
+                    <div class="pc-icon itin-card-icon" style="background:var(--blue-lt);color:var(--blue);"></div>
                     <div><div class="pc-title">Flight Details</div></div>
                 </div>
                 <div class="pc-body">
-                    <div class="dr"><span class="dr-lbl">Route</span><span class="dr-val">@if($isMulti)@foreach($routeLines as $line)<div>{{ $line['route'] }}</div>@endforeach @else {{ ($firstSeg['from']??'') }} → {{ ($finalDest['to']??'') }} @endif</span></div>
+                    <div class="dr"><span class="dr-lbl">Route</span><span class="dr-val">@if($isMulti)@foreach($routeLines as $line)<div>{{ $line['route'] }}</div>@endforeach @else {{ $displayRoute ?: '-' }} @endif</span></div>
                     @if(!empty($mf['departDateLabel']))<div class="dr"><span class="dr-lbl">Departure</span><span class="dr-val">{{ $mf['departDateLabel'] }}</span></div>@endif
                     @if($isReturn && !empty($mf['returnDateLabel']))<div class="dr"><span class="dr-lbl">Return</span><span class="dr-val">{{ $mf['returnDateLabel'] }}</span></div>@endif
                     <div class="dr"><span class="dr-lbl">Trip Type</span><span class="dr-val">{{ $tripLabel }}</span></div>
-                    <div class="dr"><span class="dr-lbl">Airline</span><span class="dr-val">{{ $mf['airline'] ?? '—' }}</span></div>
+                    <div class="dr"><span class="dr-lbl">Airline</span><span class="dr-val">{{ $displayAirline ?: '-' }}</span></div>
                     <div class="dr"><span class="dr-lbl">Cabin</span><span class="dr-val">{{ $cabinLabel }}</span></div>
                     @if($uniqueId)<div class="dr"><span class="dr-lbl">Booking Ref</span><span class="dr-val mono">{{ $bookingRef }}</span></div>@endif
-                    <div class="dr"><span class="dr-lbl">Ticket Status</span><span class="dr-val" style="color:{{ $isTicketed ? 'var(--green)' : 'var(--amber)' }};font-weight:700;">{{ $isTicketed ? '✓ Ticketed' : '⏳ Processing' }}</span></div>
+                    <div class="dr"><span class="dr-lbl">Ticket Status</span><span class="dr-val" style="color:{{ $isTicketed ? 'var(--green)' : 'var(--amber)' }};font-weight:700;">{{ $isTicketed ? 'Ticketed' : 'Processing' }}</span></div>
                 </div>
             </div>
 
@@ -537,9 +837,9 @@
                 <div style="font-size:13px;font-weight:800;color:var(--gray-900);margin-bottom:10px;">Need Help?</div>
                 <div style="font-size:12.5px;color:var(--gray-500);line-height:1.65;">
                     For TravelFlex queries or booking support:<br>
-                    📧 <a href="mailto:support@travelwheel.com" style="color:var(--blue);font-weight:600;">support@travelwheel.com</a><br>
-                    📞 <strong>+234 800 000 0000</strong><br>
-                    Quote ref: <strong style="font-family:var(--mono);color:var(--navy);">{{ $uniqueId }}</strong>
+                    <div class="tf-support-line"><span class="tf-support-dot mail" aria-hidden="true"></span><a href="mailto:support@travelwheel.com" style="color:var(--blue);font-weight:600;">support@travelwheel.com</a></div>
+                    <div class="tf-support-line"><span class="tf-support-dot phone" aria-hidden="true"></span><strong>+234 800 000 0000</strong></div>
+                    <div style="margin-top:8px;">Quote ref: <strong style="font-family:var(--mono);color:var(--navy);">{{ $bookingRef ?: $uniqueId }}</strong></div>
                 </div>
             </div>
 

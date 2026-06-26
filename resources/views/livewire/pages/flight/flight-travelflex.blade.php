@@ -1,5 +1,5 @@
 {{-- resources/views/livewire/pages/flight/flight-travelflex.blade.php --}}
-@component('layouts.app', ['title' => 'TravelFlex — Pay in Instalments'])
+@component('layouts.app', ['title' => 'TravelFlex - Pay in Instalments'])
 
 @php
     $bookingFlight  = session('bookingFlight', []);
@@ -234,6 +234,170 @@
     @media (max-width: 580px) { .tf-outer { padding: 12px 10px 60px; } .tf-field-grid { grid-template-columns: 1fr; } .tf-hero-title { font-size: 18px; } .tf-installment-body { gap: 8px; } }
 </style>
 
+<style>
+    :root {
+        --tf-brand: #39328f;
+        --tf-brand-700: #2f287c;
+        --tf-green: #049a63;
+        --tf-green-soft: #eefaf4;
+        --tf-blue-soft: #f5f7ff;
+        --tf-amber: #b7791f;
+        --tf-amber-soft: #fff8ed;
+        --tf-red: #c62828;
+        --tf-red-soft: #fff3f3;
+        --tf-ink: #101828;
+        --tf-muted: #667085;
+        --tf-subtle: #98a2b3;
+        --tf-line: #e6e9f0;
+        --tf-soft: #f7f8fb;
+        --tf-card: #ffffff;
+        --gray-50: #f7f8fb;
+        --gray-100: #eef1f6;
+        --gray-200: #e6e9f0;
+        --gray-300: #cfd4df;
+        --gray-400: #98a2b3;
+        --gray-500: #667085;
+        --gray-700: #344054;
+        --gray-900: #101828;
+        --tf-blue: var(--tf-brand);
+        --tf-blue-lt: var(--tf-blue-soft);
+        --tf-blue-md: rgba(57,50,143,.16);
+        --tf-indigo: var(--tf-brand);
+        --tf-navy: var(--tf-ink);
+        --tf-green-lt: var(--tf-green-soft);
+        --tf-amber-lt: var(--tf-amber-soft);
+        --tf-red-lt: var(--tf-red-soft);
+    }
+
+    body { background: #f7f8fb; color: var(--tf-ink); font-size: 14px; }
+    .tf-outer { max-width: 1180px; padding: 24px 18px 80px; }
+    .tf-grid { grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; }
+    .tf-hero {
+        background: #fff;
+        border: 1px solid var(--tf-line);
+        border-radius: 8px;
+        padding: 22px;
+        color: var(--tf-ink);
+        margin-bottom: 16px;
+        box-shadow: 0 14px 36px rgba(16,24,40,.06);
+    }
+    .tf-hero::before { display: none; }
+    .tf-hero-badge { background: var(--tf-blue-soft); color: var(--tf-brand); border: 1px solid rgba(57,50,143,.16); border-radius: 999px; padding: 6px 10px; font-size: 11px; letter-spacing: .02em; }
+    .tf-hero-badge svg { stroke: var(--tf-brand); }
+    .tf-hero-title { color: var(--tf-ink); font-size: clamp(22px, 2.5vw, 34px); line-height: 1.12; letter-spacing: 0; max-width: 680px; }
+    .tf-hero-sub { color: var(--tf-muted); opacity: 1; font-size: 14px; max-width: 720px; }
+    .tf-progress-wrap { background: #eef1f6; height: 7px; margin-top: 20px; }
+    .tf-progress-bar { background: linear-gradient(90deg, var(--tf-brand), var(--tf-green)); }
+    .tf-flow-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    .tf-flow-pill { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 6px 10px; border-radius: 999px; background: var(--tf-soft); color: var(--tf-muted); font-size: 12px; font-weight: 700; }
+    .tf-flow-pill strong { color: var(--tf-brand); font-weight: 800; }
+
+    .tf-card, .tf-rail-card, .tf-eligibility-card {
+        background: #fff;
+        border: 1px solid var(--tf-line);
+        border-radius: 8px;
+        box-shadow: 0 12px 32px rgba(16,24,40,.055);
+    }
+    .tf-card { padding: 22px; }
+    .tf-step.active, .tf-pay-option.active .tf-pay-option-body { animation: tfFadeIn .28s ease both; }
+    @keyframes tfFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .tf-step-label { color: var(--tf-muted); font-size: 12px; letter-spacing: .05em; }
+    .tf-step-label span { width: 28px; height: 28px; background: var(--tf-brand); box-shadow: 0 8px 18px rgba(57,50,143,.16); }
+
+    .tf-disclaimer-box, .tf-summary-strip, .tf-bank-card { background: #fbfcfe; border: 1px solid var(--tf-line); border-radius: 8px; }
+    .tf-disclaimer-box { color: var(--tf-muted); font-size: 13px; line-height: 1.72; max-height: 340px; }
+    .tf-disclaimer-box h4 { color: var(--tf-ink); font-size: 11px; letter-spacing: .05em; }
+    .tf-agree-row { background: var(--tf-blue-soft); border: 1px solid rgba(57,50,143,.16); border-radius: 8px; transition: border-color .18s, box-shadow .18s, background .18s; }
+    .tf-agree-row:hover { border-color: rgba(57,50,143,.28); box-shadow: 0 10px 22px rgba(16,24,40,.05); }
+    .tf-agree-row input[type=checkbox] { accent-color: var(--tf-brand); }
+    .tf-agree-row label { color: var(--tf-ink); font-size: 13px; font-weight: 650; }
+
+    .tf-label, .tf-ref-label { color: var(--tf-muted); font-size: 11px; letter-spacing: .045em; }
+    .tf-input, .tf-select, .tf-ref-input {
+        height: 48px;
+        border: 1px solid var(--tf-line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--tf-ink);
+        transition: border-color .18s, box-shadow .18s, background .18s;
+    }
+    .tf-input:focus, .tf-select:focus, .tf-ref-input:focus { border-color: var(--tf-brand); box-shadow: 0 0 0 4px rgba(57,50,143,.08); }
+    .tf-input[readonly], .tf-input[disabled], .tf-select:disabled { background: var(--tf-soft); color: var(--tf-muted); }
+    .tf-locked-badge { color: var(--tf-subtle); font-size: 11px; }
+
+    .tf-installment { background: #fff; border: 1px solid var(--tf-line); border-radius: 8px; transition: transform .18s, box-shadow .18s; }
+    .tf-installment:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(16,24,40,.06); }
+    .tf-installment-head { color: var(--tf-ink); gap: 12px; }
+    .tf-installment-total { color: var(--tf-brand); white-space: nowrap; }
+    .tf-sum-row { border-bottom: 1px solid #eef1f6; gap: 14px; }
+    .tf-sum-lbl { color: var(--tf-muted); }
+    .tf-sum-val { color: var(--tf-ink); overflow-wrap: anywhere; text-align: right; }
+    .tf-total-row { background: var(--tf-ink); border-radius: 8px; }
+    .tf-downpay-box { background: var(--tf-green-soft); border: 1px solid #bee9d3; border-radius: 8px; }
+    .tf-downpay-label, .tf-downpay-value { color: var(--tf-green); }
+
+    .tf-pay-option { border: 1px solid var(--tf-line); border-radius: 8px; transition: border-color .18s, box-shadow .18s, transform .18s; }
+    .tf-pay-option { display: none !important; }
+    .tf-pay-option:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(16,24,40,.06); }
+    .tf-pay-option.active { border-color: rgba(57,50,143,.42); box-shadow: 0 12px 28px rgba(57,50,143,.08); }
+    .tf-pay-radio { border-color: #cfd4df; }
+    .tf-pay-option.active .tf-pay-radio { border-color: var(--tf-brand); background: var(--tf-brand); }
+    .tf-pay-option-icon { border-radius: 8px; color: var(--tf-brand); background: var(--tf-blue-soft) !important; font-size: 0; }
+    .tf-pay-option-body { border-top: 1px solid #eef1f6; }
+    .tf-bank-card { padding: 12px 92px 12px 14px; min-height: 76px; }
+    .tf-bank-acct { color: var(--tf-ink); overflow-wrap: anywhere; }
+    .tf-copy-btn { height: 32px; border: 1px solid var(--tf-line); border-radius: 8px; color: var(--tf-muted); }
+    .tf-copy-btn:hover { border-color: var(--tf-brand); color: var(--tf-brand); background: var(--tf-blue-soft); }
+
+    .tf-btn-primary, .tf-btn-secondary, .tf-btn-ghost, .tf-btn-pay, .tf-btn-bank {
+        border-radius: 8px;
+        min-height: 48px;
+        transition: transform .18s, box-shadow .18s, background .18s, border-color .18s;
+    }
+    .tf-btn-primary { background: var(--tf-brand); box-shadow: 0 10px 22px rgba(57,50,143,.18); }
+    .tf-btn-primary:hover { background: var(--tf-brand-700); }
+    .tf-btn-secondary, .tf-btn-pay { background: var(--tf-green); box-shadow: 0 10px 22px rgba(4,154,99,.16); }
+    .tf-btn-ghost { border: 1px solid var(--tf-line); color: var(--tf-muted); }
+    .tf-btn-ghost:hover { border-color: #cfd4df; color: var(--tf-ink); background: var(--tf-soft); }
+    .tf-btn-bank { background: var(--tf-ink); }
+    .tf-btn-primary:hover, .tf-btn-secondary:hover, .tf-btn-pay:hover, .tf-btn-bank:hover { transform: translateY(-1px); }
+
+    .tf-notice { border-radius: 8px; line-height: 1.55; }
+    .tf-notice.info { background: var(--tf-blue-soft); color: var(--tf-brand); border: 1px solid rgba(57,50,143,.16); }
+    .tf-notice.warn { background: var(--tf-amber-soft); color: var(--tf-amber); border: 1px solid #f2d8ac; }
+    .tf-notice.green { background: var(--tf-green-soft); color: var(--tf-green); border: 1px solid #bee9d3; }
+    .tf-ineligible { background: var(--tf-amber-soft); border: 1px solid #f2d8ac; border-radius: 8px; }
+    .tf-ineligible-icon { width: 38px; height: 38px; border-radius: 999px; background: #fff; display: inline-flex; align-items: center; justify-content: center; color: var(--tf-amber); font-size: 0; flex: 0 0 auto; }
+
+    .tf-rail-card { border-radius: 8px; }
+    .tf-rail-head { background: var(--tf-ink); padding: 16px 18px; }
+    .tf-rail-title { display: flex; align-items: center; gap: 8px; }
+    .tf-rail-row { border-bottom: 1px solid #eef1f6; padding: 8px 0; gap: 12px; }
+    .tf-rail-lbl { color: var(--tf-muted); }
+    .tf-rail-val { overflow-wrap: anywhere; }
+    .tf-rail-total { background: #fbfcfe; border-top: 1px solid var(--tf-line); }
+    .tf-rail-total-val { color: var(--tf-green); }
+    .tf-flex-logo { color: var(--tf-brand); border-top: 1px solid #eef1f6; }
+
+    @media (max-width: 960px) {
+        body { margin-top: 0; }
+        .tf-grid { grid-template-columns: 1fr; }
+        .tf-grid > aside { order: 2; }
+        .tf-rail-card { position: static; }
+    }
+    @media (max-width: 640px) {
+        .tf-outer { padding: 14px 12px 64px; }
+        .tf-hero, .tf-card { padding: 16px; }
+        .tf-field-grid { grid-template-columns: 1fr; }
+        .tf-btn-row { flex-direction: column; }
+        .tf-btn-row > * { width: 100%; }
+        .tf-downpay-box, .tf-total-row, .tf-rail-total { align-items: flex-start; flex-direction: column; gap: 8px; }
+        .tf-sum-row { flex-direction: column; gap: 4px; }
+        .tf-sum-val, .tf-total-val, .tf-downpay-value { text-align: left; }
+        .tf-pay-option-head { align-items: flex-start; }
+    }
+</style>
+
 <div class="tf-outer">
 
     {{-- ── Hero Header ── --}}
@@ -248,6 +412,12 @@
                 Secure your seat today with a 30% down payment. 
                 Pay the balance over your chosen repayment period at a fixed 5% interest rate. 
                 Provided by a licensed third-party lender.
+            </div>
+            <div class="tf-flow-pills">
+                <div class="tf-flow-pill"><strong>1</strong> Review terms</div>
+                <div class="tf-flow-pill"><strong>2</strong> Build plan</div>
+                <div class="tf-flow-pill"><strong>3</strong> Apply</div>
+                <div class="tf-flow-pill"><strong>4</strong> Pay deposit</div>
             </div>
             <div class="tf-progress-wrap" id="tfProgressWrap">
                 <div class="tf-progress-bar" id="tfProgress" style="width: {{ $eligible ? '20%' : '0%' }};"></div>
@@ -265,13 +435,15 @@
     @if(!$eligible)
     {{-- ── Ineligibility Notice ── --}}
     <div class="tf-ineligible" style="margin-bottom: 22px;">
-        <div class="tf-ineligible-icon">⏰</div>
+        <div class="tf-ineligible-icon">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </div>
         <div>
             <div style="font-size:16px;font-weight:800;color:#92400e;margin-bottom:6px;">TravelFlex Not Available for This Booking</div>
             <div style="font-size:13.5px;color:#78350f;line-height:1.65;">
                 TravelFlex requires a minimum of <strong>14 days</strong> between today and the travel date.
                 Your flight departs on <strong>{{ $departDateLabel }}</strong>
-                @if($daysToDepart > 0) ({{ $daysToDepart }} day{{ $daysToDepart !== 1 ? 's' : '' }} away) @else — which has already passed or is today @endif.
+                @if($daysToDepart > 0) ({{ $daysToDepart }} day{{ $daysToDepart !== 1 ? 's' : '' }} away) @else - which has already passed or is today @endif.
                 <br><br>
                 Please choose a different payment method for this booking.
             </div>
@@ -357,7 +529,7 @@
                     <div class="tf-step-label"><span>2</span> Payment Calculator</div>
 
                     <div class="tf-field-grid">
-                        {{-- Travel Date — prefilled & locked --}}
+                        {{-- Travel Date - prefilled and locked --}}
                         <div class="tf-field">
                             <div class="tf-label">Travel Date</div>
                             <input class="tf-input" type="text" value="{{ $departDateLabel }}" readonly>
@@ -367,7 +539,7 @@
                             </div>
                         </div>
 
-                        {{-- Ticket Cost — prefilled & locked --}}
+                        {{-- Ticket Cost - prefilled and locked --}}
                         <div class="tf-field">
                             <div class="tf-label">Ticket Cost</div>
                             <input class="tf-input" type="text" :value="formatCurrency(ticketCost)" readonly>
@@ -377,7 +549,7 @@
                             </div>
                         </div>
 
-                        {{-- Down Payment % — pre-selected 30%, changeable --}}
+                        {{-- Down Payment % - pre-selected 30%, changeable --}}
                         <div class="tf-field">
                             <div class="tf-label">Down Payment % <span class="tf-req">*</span></div>
                             <select class="tf-select" x-model="downPercent" @change="onDownPercentChange()">
@@ -391,7 +563,7 @@
                             </select>
                         </div>
 
-                        {{-- Down Payment Amount — computed --}}
+                        {{-- Down Payment Amount - computed --}}
                         <div class="tf-field">
                             <div class="tf-label">Down Payment Amount</div>
                             <input class="tf-input" type="text" :value="formatCurrency(downPaymentAmount)" readonly>
@@ -427,7 +599,7 @@
                             <template x-for="(inst, i) in schedule" :key="i">
                                 <div class="tf-installment">
                                     <div class="tf-installment-head">
-                                        <span x-text="inst.label + ' — ' + inst.dueDate"></span>
+                                        <span x-text="inst.label + ' - ' + inst.dueDate"></span>
                                         <span class="tf-installment-total" x-text="formatCurrency(inst.total)"></span>
                                     </div>
                                     <div class="tf-installment-body">
@@ -461,7 +633,7 @@
                         </button>
                         <button type="button" class="tf-btn-secondary" x-show="calculated && repaymentPlan === lastPlan" @click="proceedToPayment()">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                            Proceed to Pay Down
+                            Continue to Application
                         </button>
                     </div>
                 </div>
@@ -470,12 +642,12 @@
             {{-- ══ STEP 2: PAY DOWN PAYMENT ══ --}}
             <div x-show="step === 2" x-transition>
                 <div class="tf-card">
-                    <div class="tf-step-label"><span>3</span> Pay Down Payment</div>
+                    <div class="tf-step-label"><span>3</span> Review Plan &amp; Apply</div>
 
                     <div class="tf-downpay-box">
                         <div>
                             <div class="tf-downpay-label">Down Payment Due Now</div>
-                            <div class="tf-downpay-sub">Required to secure your booking</div>
+                            <div class="tf-downpay-sub">Paid once after your application details are submitted</div>
                         </div>
                         <div>
                             <div class="tf-downpay-value" x-text="formatCurrency(downPaymentAmount)"></div>
@@ -492,7 +664,7 @@
                     <div class="tf-summary-strip" style="margin-bottom:20px;">
                         <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:8px;">Plan Summary</div>
                         <div class="tf-sum-row"><span class="tf-sum-lbl">Flight</span>
-                            <span class="tf-sum-val" style="font-family:var(--font);">{{ ($firstSeg['from']??'') }} → {{ ($lastSeg['to']??'') }}</span>
+                            <span class="tf-sum-val" style="font-family:var(--font);">{{ ($firstSeg['from']??'') }} &rarr; {{ ($lastSeg['to']??'') }}</span>
                         </div>
                         <div class="tf-sum-row"><span class="tf-sum-lbl">Travel Date</span>
                             <span class="tf-sum-val" style="font-family:var(--font);">{{ $departDateLabel }}</span>
@@ -522,10 +694,22 @@
                     </div>
 
                     {{-- ── Payment Option 1: Bank Transfer ── --}}
+                    <form method="POST" action="{{ route('flights.travelflex.application') }}" id="tf-apply-form">
+                        @csrf
+                        <input type="hidden" name="down_percent" :value="downPercent" x-bind:value="downPercent">
+                        <input type="hidden" name="repayment_plan" :value="repaymentPlan" x-bind:value="repaymentPlan">
+                        <button type="submit" class="tf-btn-pay" id="tf-apply-btn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            Continue to Application
+                        </button>
+                    </form>
+
                     <div class="tf-pay-option" :class="{ active: payOption === 'bank' }" @click="payOption = 'bank'">
                         <div class="tf-pay-option-head">
                             <div class="tf-pay-radio"><div class="tf-pay-radio-dot"></div></div>
-                            <div class="tf-pay-option-icon" style="background:#e0f2fe;">🏦</div>
+                            <div class="tf-pay-option-icon" style="background:#e0f2fe;">
+                                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-6 9 6"/><path d="M5 10v9"/><path d="M19 10v9"/><path d="M3 19h18"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/></svg>
+                            </div>
                             <div>
                                 <div style="font-size:14px;font-weight:800;color:var(--gray-900);">Direct Bank Transfer</div>
                                 <div style="font-size:12px;color:var(--gray-500);margin-top:2px;">Transfer down payment to our account</div>
@@ -535,7 +719,7 @@
                         <div class="tf-pay-option-body">
                             <div class="tf-notice warn" style="margin-top:12px">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                <span>Transfer exactly <strong x-text="formatCurrency(downPaymentAmount)"></strong>. Your plan will be activated once payment is verified (2–4 hrs).</span>
+                                <span>Transfer exactly <strong x-text="formatCurrency(downPaymentAmount)"></strong>. Your plan will be activated once payment is verified (2-4 hrs).</span>
                             </div>
                             @foreach($bankAccounts as $acct)
                             <div class="tf-bank-card">
@@ -551,17 +735,11 @@
                             <form method="POST" action="{{ route('flights.travelflex.application') }}" id="tf-bank-form">
                                 @csrf
                                 <input type="hidden" name="pay_method" value="bank_transfer">
-                                <input type="hidden" name="down_payment" :value="downPaymentAmount" x-bind:value="downPaymentAmount">
                                 <input type="hidden" name="down_percent" :value="downPercent" x-bind:value="downPercent">
                                 <input type="hidden" name="repayment_plan" :value="repaymentPlan" x-bind:value="repaymentPlan">
-                                <input type="hidden" name="grand_total" :value="grandTotal" x-bind:value="grandTotal">
-                                <input type="hidden" name="total_interest" :value="totalInterest" x-bind:value="totalInterest">
-                                <input type="hidden" name="schedule_json" :value="JSON.stringify(schedule)" x-bind:value="JSON.stringify(schedule)">
-                                <label class="tf-ref-label" style="margin-top:14px;">Your Payment Reference (optional)</label>
-                                <input class="tf-ref-input" type="text" name="payment_reference" placeholder="e.g. bank transaction ref or your name">
                                 <button type="submit" class="tf-btn-bank">
                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                    I Have Made Payment
+                                    Continue to Application
                                 </button>
                             </form>
                         </div>
@@ -571,10 +749,12 @@
                     <div class="tf-pay-option" :class="{ active: payOption === 'gateway' }" @click="payOption = 'gateway'">
                         <div class="tf-pay-option-head">
                             <div class="tf-pay-radio"><div class="tf-pay-radio-dot"></div></div>
-                            <div class="tf-pay-option-icon" style="background:#f0fdf4;">💳</div>
+                            <div class="tf-pay-option-icon" style="background:#f0fdf4;">
+                                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M7 15h2"/><path d="M12 15h5"/></svg>
+                            </div>
                             <div>
                                 <div style="font-size:14px;font-weight:800;color:var(--gray-900);">Pay Online</div>
-                                <div style="font-size:12px;color:var(--gray-500);margin-top:2px;">Card, bank transfer or USSD — instant confirmation</div>
+                                <div style="font-size:12px;color:var(--gray-500);margin-top:2px;">Card, bank transfer or USSD - instant confirmation</div>
                             </div>
                             <!-- <span style="margin-left:auto;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--tf-green-lt);color:var(--tf-green);flex-shrink:0;">Instant</span> -->
                         </div>
@@ -586,12 +766,8 @@
                             <form method="POST" action="{{ route('flights.travelflex.application') }}" id="tf-gw-form" style="margin-top:12px;">
                                 @csrf
                                 <input type="hidden" name="pay_method" value="gateway">
-                                <input type="hidden" name="down_payment" :value="downPaymentAmount" x-bind:value="downPaymentAmount">
                                 <input type="hidden" name="down_percent" :value="downPercent" x-bind:value="downPercent">
                                 <input type="hidden" name="repayment_plan" :value="repaymentPlan" x-bind:value="repaymentPlan">
-                                <input type="hidden" name="grand_total" :value="grandTotal" x-bind:value="grandTotal">
-                                <input type="hidden" name="total_interest" :value="totalInterest" x-bind:value="totalInterest">
-                                <input type="hidden" name="schedule_json" :value="JSON.stringify(schedule)" x-bind:value="JSON.stringify(schedule)">
                                 <button type="submit" class="tf-btn-pay" id="tf-gw-btn">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                                     Pay <span x-text="formatCurrency(downPaymentAmount)" style="margin:0 4px;"></span> Down Payment Now
@@ -615,18 +791,21 @@
         <aside>
             <div class="tf-rail-card">
                 <div class="tf-rail-head">
-                    <div class="tf-rail-title">📆 TravelFlex</div>
+                    <div class="tf-rail-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+                        TravelFlex
+                    </div>
                     <div class="tf-rail-sub">Your instalment plan summary</div>
                 </div>
                 <div class="tf-rail-body">
                     @php
                         $tfOutFirst = $firstSeg ?? [];
                         $tfOutLast  = !empty($segments) ? $segments[count($segments)-1] : [];
-                        $tfOutRoute = ($tfOutFirst['from']??'') . ' → ' . ($tfOutLast['to']??'');
+                        $tfOutRoute = ($tfOutFirst['from']??'') . ' -> ' . ($tfOutLast['to']??'');
                         
                         $tfRetFirst = ($mf['returnSegments'][0] ?? []);
                     $tfRetLast  = !empty($mf['returnSegments']) ? $mf['returnSegments'][count($mf['returnSegments'])-1] : [];
-                    $tfRetRoute = ($tfRetFirst['from']??'') . ' → ' . ($tfRetLast['to']??'');
+                    $tfRetRoute = ($tfRetFirst['from']??'') . ' -> ' . ($tfRetLast['to']??'');
                     
                     $tfIsReturn = count($mf['returnSegments'] ?? []) > 0;
                     $tfIsMulti  = count($mf['multiLegs'] ?? []) > 0;
@@ -636,7 +815,7 @@
                         foreach (($mf['multiLegs'] ?? []) as $li => $leg) {
                             $tfRouteLines[] = [
                                 'label' => 'Leg ' . ($li + 1),
-                                'route' => ($leg['from'] ?? '') . ' → ' . ($leg['to'] ?? ''),
+                                'route' => ($leg['from'] ?? '') . ' -> ' . ($leg['to'] ?? ''),
                                 'date'  => $leg['departDateLabel'] ?? '',
                             ];
                         }
@@ -693,7 +872,7 @@
                     </div>
                     <div class="tf-rail-row" x-show="calculated">
                         <span class="tf-rail-lbl">Repayment</span>
-                        <span class="tf-rail-val" x-text="repaymentPlan || '—'"></span>
+                        <span class="tf-rail-val" x-text="repaymentPlan || '-'"></span>
                     </div>
                     <div class="tf-rail-row" x-show="calculated">
                         <span class="tf-rail-lbl">Interest</span>
@@ -717,7 +896,7 @@
                 <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:10px;">Eligibility</div>
                 <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:8px;color:var(--tf-green)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-                    Travel date ≥ 14 days away ({{ $daysToDepart }} days)
+                    Travel date at least 14 days away ({{ $daysToDepart }} days)
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:8px;color:var(--tf-green)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
@@ -884,15 +1063,15 @@ function travelFlex() {
     };
 }
 
-// Prevent double-submit on gateway form
+// Prevent double-submit on application handoff form
 document.addEventListener('DOMContentLoaded', function () {
-    const gwForm = document.getElementById('tf-gw-form');
-    if (gwForm) {
-        gwForm.addEventListener('submit', function () {
-            const btn = document.getElementById('tf-gw-btn');
+    const applyForm = document.getElementById('tf-apply-form');
+    if (applyForm) {
+        applyForm.addEventListener('submit', function () {
+            const btn = document.getElementById('tf-apply-btn');
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = 'Processing Payment…';
+                btn.textContent = 'Opening application...';
             }
         });
     }

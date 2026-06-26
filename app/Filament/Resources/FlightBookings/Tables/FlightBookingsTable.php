@@ -12,6 +12,7 @@ use App\Services\AdminPostTicketingService;
 use App\Services\AdminReplacementFlightSearchService;
 use App\Services\AdminTicketingService;
 use App\Services\SeerbitPaymentService;
+use App\Services\TravelFlexApplicationService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
@@ -579,8 +580,25 @@ class FlightBookingsTable
                     'verification_note' => $data['verification_note'],
                 ]);
 
+                $paidBooking = $record->fresh();
+
                 if ($data['send_receipt'] ?? false) {
-                    self::trySendReceipt($record->fresh());
+                    self::trySendReceipt($paidBooking);
+                }
+
+                if ($paidBooking->payment_method === 'flex_bank_transfer') {
+                    $application = app(TravelFlexApplicationService::class)->syncPaymentFromBooking($paidBooking);
+
+                    if ($application && $application->provider_status !== 'sent') {
+                        try {
+                            app(TravelFlexApplicationService::class)->sendProviderEmail($application);
+                        } catch (Throwable $exception) {
+                            $application->update([
+                                'provider_status' => 'failed',
+                                'provider_email_error' => $exception->getMessage(),
+                            ]);
+                        }
+                    }
                 }
 
                 Notification::make()
@@ -643,7 +661,13 @@ class FlightBookingsTable
                     'payment_gateway_response' => $gatewayResponse,
                 ]);
 
-                self::recordPaymentVerification($record->fresh(), [
+                $verifiedBooking = $record->fresh();
+
+                if ($result['ok'] && $verifiedBooking->payment_method === 'flex_gateway') {
+                    app(TravelFlexApplicationService::class)->syncPaymentFromBooking($verifiedBooking);
+                }
+
+                self::recordPaymentVerification($verifiedBooking, [
                     'action' => $result['ok'] ? 'seerbit_verified_paid' : 'seerbit_verified_unpaid',
                     'previous_payment_status' => $previousStatus,
                     'new_payment_status' => $newStatus,
