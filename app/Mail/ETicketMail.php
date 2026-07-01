@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Models\FlightBooking;
 use App\Services\ETicketPdfService;
+use App\Services\ItineraryPdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
@@ -52,8 +53,8 @@ class ETicketMail extends Mailable
                 'booking_ref' => $this->booking->booking_ref,
             ]);
 
-            $pdfService = app(ETicketPdfService::class);
-            $pdfBytes = $pdfService->generate($this->booking, $this->tripDetails, 'pdf.eticket');
+            $pdfService = app(ItineraryPdfService::class);
+            $pdfBytes = $pdfService->generate($this->booking, $this->tripDetails, 'ticketed');
 
             Log::info('[ETicketMail] attachment pdf generated', [
                 'booking_ref' => $this->booking->booking_ref,

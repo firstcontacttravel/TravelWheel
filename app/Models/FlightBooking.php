@@ -45,6 +45,7 @@ class FlightBooking extends Model
         'infant_count',
         'booking_api_response',
         'ticket_api_response',
+        'itinerary_snapshot',
         'passengers_snapshot',
         'flight_snapshot',
         'extra_services_snapshot',
@@ -58,6 +59,7 @@ class FlightBooking extends Model
     protected $casts = [
         'booking_api_response'       => 'array',
         'ticket_api_response'        => 'array',
+        'itinerary_snapshot'         => 'array',
         'passengers_snapshot'        => 'array',
         'flight_snapshot'            => 'array',
         'extra_services_snapshot'    => 'array',

@@ -1,0 +1,52 @@
+<?php
+
+namespace App\Filament\Resources\VisaProducts\Pages;
+
+use App\Enums\VisaPublicationStatus;
+use App\Filament\Resources\VisaProducts\VisaProductResource;
+use App\Services\VisaCataloguePublicationService;
+use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\EditRecord;
+use Illuminate\Validation\ValidationException;
+
+class EditVisaProduct extends EditRecord
+{
+    protected static string $resource = VisaProductResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('publish')
+                ->label('Validate and publish')
+                ->icon('heroicon-o-check-badge')
+                ->color('success')
+                ->visible(fn (): bool => $this->record->publication_status !== VisaPublicationStatus::Published)
+                ->requiresConfirmation()
+                ->action(function (): void {
+                    try {
+                        app(VisaCataloguePublicationService::class)->publish($this->record);
+                    } catch (ValidationException $exception) {
+                        Notification::make()->title('Product is not ready to publish')->body(collect($exception->errors())->flatten()->map(fn ($error) => '• '.$error)->implode("\n"))->danger()->persistent()->send();
+
+                        return;
+                    }
+                    Notification::make()->title('Visa product published')->success()->send();
+                    $this->redirect(static::getResource()::getUrl('edit', ['record' => $this->record]));
+                }),
+            Action::make('unpublish')
+                ->label('Return to draft')
+                ->icon('heroicon-o-arrow-uturn-left')
+                ->color('warning')
+                ->visible(fn (): bool => $this->record->publication_status === VisaPublicationStatus::Published)
+                ->requiresConfirmation()
+                ->action(function (): void {
+                    app(VisaCataloguePublicationService::class)->unpublish($this->record);
+                    Notification::make()->title('Visa product returned to draft')->success()->send();
+                    $this->redirect(static::getResource()::getUrl('edit', ['record' => $this->record]));
+                }),
+            DeleteAction::make(),
+        ];
+    }
+}

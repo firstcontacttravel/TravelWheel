@@ -144,9 +144,14 @@
         <table>
             <tr><td>Flight Cost</td><td><strong>{{ $sym }}{{ number_format((float)($flightInfo['price']??0), 2) }}</strong></td></tr>
             @if($extrasTotal > 0)<tr><td>Extra Services</td><td><strong>{{ $sym }}{{ number_format($extrasTotal, 2) }}</strong></td></tr>@endif
-            <tr><td>Total Loan Amount</td><td><strong style="color:#7c3aed;">{{ $sym }}{{ number_format((float)($loanPlan['grand_total']??0), 2) }}</strong></td></tr>
+            @php
+                $ticketCost = (float) ($loanPlan['ticket_cost'] ?? (($flightInfo['price'] ?? 0) + $extrasTotal));
+                $downPayment = (float) ($loanPlan['down_payment'] ?? 0);
+                $loanAmount = (float) ($loanPlan['loan_amount'] ?? $loanPlan['remaining_balance'] ?? max(0, $ticketCost - $downPayment));
+            @endphp
+            <tr><td>Total Loan Amount</td><td><strong style="color:#7c3aed;">{{ $sym }}{{ number_format($loanAmount, 2) }}</strong></td></tr>
             <tr><td>Down Payment</td><td>{{ $sym }}{{ number_format((float)($loanPlan['down_payment']??0), 2) }} ({{ $loanPlan['down_percent']??30 }}%)</td></tr>
-            <tr><td>Remaining Balance</td><td>{{ $sym }}{{ number_format((float)($loanPlan['grand_total']??0) - (float)($loanPlan['down_payment']??0), 2) }}</td></tr>
+            <tr><td>Total Payable</td><td>{{ $sym }}{{ number_format((float)($loanPlan['grand_total'] ?? ($ticketCost + (float)($loanPlan['total_interest'] ?? 0))), 2) }}</td></tr>
             <tr><td>Repayment Plan</td><td>{{ $loanPlan['repayment_plan'] ?? '—' }}</td></tr>
             <tr><td>Total Interest</td><td>{{ $sym }}{{ number_format((float)($loanPlan['total_interest']??0), 2) }}</td></tr>
             <tr><td>Payment Method</td><td>{{ ucfirst($loanPlan['payment_method'] ?? '—') }}</td></tr>

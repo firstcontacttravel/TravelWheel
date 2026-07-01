@@ -62,6 +62,10 @@ class AdminTicketingService
         $ok = filter_var(data_get($result, 'Success'), FILTER_VALIDATE_BOOLEAN);
         $tripData = data_get($result, 'TravelItinerary', []);
 
+        if ($ok && is_array($tripData) && $tripData !== []) {
+            $booking->update(['itinerary_snapshot' => $tripData]);
+        }
+
         return [
             'ok' => $ok,
             'message' => $ok ? 'Trip details fetched.' : $this->extractApiErrorMessage($result, 'Trip details failed.'),

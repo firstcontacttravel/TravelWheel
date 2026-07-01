@@ -5,6 +5,8 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\AttachesItineraryPdf;
+use App\Models\FlightBooking;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
@@ -14,7 +16,7 @@ use Illuminate\Queue\SerializesModels;
 
 class TravelFlexApplicationMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use AttachesItineraryPdf, Queueable, SerializesModels;
 
     /**
      * @param array  $applicant   Validated applicant fields
@@ -67,6 +69,16 @@ class TravelFlexApplicationMail extends Mailable
                 $attachments[] = Attachment::fromPath($path)
                     ->as(($labels[$key] ?? $key) . '_' . $this->bookingRef . '.' . $ext);
             }
+        }
+
+        $booking = FlightBooking::query()
+            ->where('booking_ref', $this->bookingRef)
+            ->orWhere('unique_id', $this->bookingRef)
+            ->latest()
+            ->first();
+
+        if ($booking) {
+            $attachments[] = $this->itineraryAttachment($booking, state: 'travelflex_review', audience: 'provider');
         }
 
         return $attachments;

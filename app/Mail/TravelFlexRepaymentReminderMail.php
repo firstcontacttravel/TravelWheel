@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\AttachesItineraryPdf;
 use App\Models\TravelFlexApplication;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -11,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class TravelFlexRepaymentReminderMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use AttachesItineraryPdf, Queueable, SerializesModels;
 
     public function __construct(
         public readonly TravelFlexApplication $application,
@@ -36,5 +37,12 @@ class TravelFlexRepaymentReminderMail extends Mailable
                 'timing' => $this->timing,
             ],
         );
+    }
+
+    public function attachments(): array
+    {
+        $booking = $this->application->booking;
+
+        return $booking ? [$this->itineraryAttachment($booking)] : [];
     }
 }

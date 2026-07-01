@@ -1,43 +1,92 @@
 <?php
 
-use App\Livewire\Pages\HomePage;
-use App\Livewire\Pages\FlightPage;
-use App\Livewire\Pages\FlightIndex;
-use App\Http\Controllers\FlightSearchController;
-use App\Http\Controllers\FlightBookingController;
 use App\Http\Controllers\AdminReportExportController;
-use App\Livewire\Pages\FlightBooking;
+use App\Http\Controllers\AdminVisaDocumentController;
+use App\Http\Controllers\FlightBookingController;
 use App\Http\Controllers\FlightController;
+use App\Http\Controllers\FlightSearchController;
+use App\Http\Controllers\VisaApplicationController;
+use App\Http\Controllers\VisaPaymentController;
+use App\Http\Controllers\VisaPortalController;
+use App\Http\Controllers\VisaSearchController;
+use App\Http\Middleware\EnsureVisaProductEnabled;
+use App\Livewire\Pages\FlightBooking;
+use App\Livewire\Pages\FlightIndex;
+use App\Livewire\Pages\FlightPage;
+use App\Livewire\Pages\HomePage;
+use App\Livewire\Pages\Visa\ApplicationWizard as VisaApplicationWizard;
+use App\Livewire\Pages\Visa\Discovery as VisaDiscovery;
+use App\Livewire\Pages\Visa\Results as VisaResults;
 
+if (app()->environment('local')) {
+    Route::view('/__design-system/visa', 'design-system.visa')->name('design-system.visa');
+}
 
 Route::get('/', HomePage::class)->name('home');
 Route::get('/air', HomePage::class)->name('air');
 
 // Add other routes
-Route::get('/about-us', function() { /* ... */ })->name('aboutus');
-Route::get('/faq', function() { /* ... */ })->name('faq'); 
-Route::get('/help', function() { /* ... */ })->name('help');
+Route::get('/about-us', function () { /* ... */
+})->name('aboutus');
+Route::get('/faq', function () { /* ... */
+})->name('faq');
+Route::get('/help', function () { /* ... */
+})->name('help');
 
 // Air routes
 Route::get('/air/flight', FlightIndex::class)->name('air.flight');
 Route::get('/air/flight-s', FlightPage::class)->name('air.flight-s');
-//Route::post('/air/flight/search', [FlightPage::class, 'search'])->name('flights.search');
+// Route::post('/air/flight/search', [FlightPage::class, 'search'])->name('flights.search');
 // Route::post('/air/flight/select', [FlightSearchController::class, 'select'])->name('flights.select');
 
 Route::post('/flights/search', [FlightController::class, 'search'])->name('flights.search');
 Route::get('/flights/search/loading', [FlightController::class, 'loading'])->name('flights.search.loading');
 Route::get('/flights/search/run', [FlightController::class, 'runPendingSearch'])->name('flights.search.run');
 
+// Route::post('/flights/select', [FlightController::class, 'select'])->name('flights.select');
 
-//Route::post('/flights/select', [FlightController::class, 'select'])->name('flights.select');
-
-Route::get('/air/hotel', function() { /* ... */ })->name('air.hotel');
-Route::get('/air/protocol', function() { /* ... */ })->name('air.protocol');
-Route::get('/air/lounge', function() { /* ... */ })->name('air.lounge');
-Route::get('/air/insurance', function() { /* ... */ })->name('air.insurance');
-Route::get('/air/visa', function() { /* ... */ })->name('air.visa');
-Route::get('/air/cargo', function() { /* ... */ })->name('air.cargo');
-Route::get('/air/support', function() { /* ... */ })->name('air.support');
+Route::get('/air/hotel', function () { /* ... */
+})->name('air.hotel');
+Route::get('/air/protocol', function () { /* ... */
+})->name('air.protocol');
+Route::get('/air/lounge', function () { /* ... */
+})->name('air.lounge');
+Route::get('/air/insurance', function () { /* ... */
+})->name('air.insurance');
+Route::middleware(EnsureVisaProductEnabled::class)->group(function () {
+    Route::get('/air/visa', VisaDiscovery::class)->name('air.visa');
+    Route::post('/visas/search', [VisaSearchController::class, 'search'])->name('visa.search');
+    Route::get('/visas/search/loading', [VisaSearchController::class, 'loading'])->name('visa.search.loading');
+    Route::get('/visas/search/run', [VisaSearchController::class, 'runPendingSearch'])->name('visa.search.run');
+    Route::get('/visas/results', VisaResults::class)->name('visa.results');
+    Route::post('/visas/applications', [VisaApplicationController::class, 'start'])->name('visa.applications.start');
+    Route::get('/visas/applications/{application:reference}', VisaApplicationWizard::class)->name('visa.application');
+    Route::get('/visas/applications/{application:reference}/resume/{token}', [VisaApplicationController::class, 'resume'])->name('visa.application.resume');
+    Route::post('/visas/applications/{application:reference}/quote', [VisaPaymentController::class, 'quote'])->name('visa.quotes.create');
+    Route::post('/visas/quotes/{quote:reference}/payments', [VisaPaymentController::class, 'initialize'])->name('visa.payments.initialize');
+    Route::get('/visas/payments/seerbit/callback', [VisaPaymentController::class, 'callback'])->name('visa.payments.callback');
+    Route::post('/visas/payments/seerbit/webhook', [VisaPaymentController::class, 'webhook'])->name('visa.payments.webhook');
+    Route::get('/visas/payments/{payment:reference}/result', [VisaPaymentController::class, 'result'])->name('visa.payments.result');
+    Route::get('/visa-portal', [VisaPortalController::class, 'entry'])->name('visa.portal.entry');
+    Route::post('/visa-portal/access-code', [VisaPortalController::class, 'requestCode'])->name('visa.portal.code.request');
+    Route::get('/visa-portal/verify', [VisaPortalController::class, 'verifyForm'])->name('visa.portal.verify.form');
+    Route::post('/visa-portal/verify', [VisaPortalController::class, 'verify'])->name('visa.portal.verify');
+    Route::get('/visa-portal/{application:reference}', [VisaPortalController::class, 'show'])->name('visa.portal.show');
+    Route::post('/visa-portal/{application:reference}/requests/{documentRequest}/upload', [VisaPortalController::class, 'upload'])->name('visa.portal.requests.upload');
+    Route::get('/visa-portal/{application:reference}/documents/{document}/download', [VisaPortalController::class, 'downloadDocument'])->name('visa.portal.documents.download');
+    Route::get('/visa-portal/{application:reference}/issued-documents/{document}/download', [VisaPortalController::class, 'downloadIssuedDocument'])->name('visa.portal.issued-documents.download');
+    Route::get('/visa-portal/{application:reference}/payments/{payment}/receipt', [VisaPortalController::class, 'receipt'])->name('visa.portal.receipts.show');
+    Route::post('/visa-portal/{application:reference}/notifications/{notification}/resend', [VisaPortalController::class, 'resend'])->name('visa.portal.notifications.resend');
+});
+Route::middleware('auth')->prefix('admin/visa-documents')->name('admin.visa.documents.')->group(function () {
+    Route::get('/application/{document}', [AdminVisaDocumentController::class, 'application'])->name('application');
+    Route::get('/requested/{documentRequest}', [AdminVisaDocumentController::class, 'requested'])->name('requested');
+    Route::get('/issued/{document}', [AdminVisaDocumentController::class, 'issued'])->name('issued');
+});
+Route::get('/air/cargo', function () { /* ... */
+})->name('air.cargo');
+Route::get('/air/support', function () { /* ... */
+})->name('air.support');
 
 Route::get('/admin/travelflex-applications/{application}/documents/{key}', function (\App\Models\TravelFlexApplication $application, string $key) {
     $user = auth()->user();
@@ -60,43 +109,43 @@ Route::get('/admin/reports/export/{report}', AdminReportExportController::class)
     ->name('admin.reports.export');
 
 // Flight routes
- 
+
 Route::post('/flights/select', [FlightBookingController::class, 'select'])
     ->name('flights.select');
- 
-Route::get('/flights/booking', FlightBooking::class) ->name('flights.booking');
- 
+
+Route::get('/flights/booking', FlightBooking::class)->name('flights.booking');
+
 Route::post('/flights/book', [FlightBookingController::class, 'book'])
     ->name('flights.book');
-    Route::get( '/flights/payment/gateway',         [FlightBookingController::class, 'paymentGateway'])->name('flights.payment.gateway');
-    Route::post('/flights/payment/gateway/process', [FlightBookingController::class, 'processGatewayPayment'])->name('flights.payment.gateway.process');
-     
-    // Non-LCC: 3-option payment page (booking already on hold)
-    Route::get( '/flights/payment/options',         [FlightBookingController::class, 'paymentOptions'])->name('flights.payment.options');
-    Route::get('/flights/payment/options/resume/{bookingRef}', [FlightBookingController::class, 'resumePaymentOptions'])
-        ->name('flights.payment.options.resume');
-     
-    // Non-LCC: Bank transfer — user clicks "I have paid"
-    Route::post('/flights/payment/bank-transfer',   [FlightBookingController::class, 'bankTransferNotify'])->name('flights.payment.bank-transfer');
-     
-    // Non-LCC: Gateway on payment options → ticket_order
-    Route::post('/flights/payment/gateway-ticket',  [FlightBookingController::class, 'processTicketPayment'])->name('flights.payment.gateway-ticket');
-     
-    // Pending page (bank transfer awaiting verification)
-    Route::get('/flights/pending',       [FlightBookingController::class, 'pending'])->name('flights.pending');
-     
-    // Final confirmation (WebFare confirmed OR Non-LCC ticketed)
-    Route::get('/flights/confirmation',  [FlightBookingController::class, 'confirmation'])->name('flights.confirmation');
-    // COMMENTED OUT - Seerbit integration disabled for simulated payments
-    Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerbitCallback'])->name('payments.seerbit.callback');
-    Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->name('payments.seerbit.webhook');
-    Route::get( '/flights/travelflex',                       [FlightBookingController::class, 'travelFlex'])->name('flights.travelflex');
-    Route::post('/flights/travelflex/application',           [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application');
-    Route::get( '/flights/travelflex/application',           [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application.get');
-    Route::post('/flights/travelflex/submit-application',    [FlightBookingController::class, 'travelFlexSubmitApplication'])->name('flights.travelflex.submit-application');
-    Route::get( '/flights/travelflex/gateway-process',       [FlightBookingController::class, 'travelFlexGatewayProcess'])->name('flights.travelflex.gateway-process');
-    Route::post('/flights/travelflex/bank-transfer',         [FlightBookingController::class, 'travelFlexBankTransfer'])->name('flights.travelflex.bank-transfer');
-    Route::get( '/flights/travelflex/bank-transfer-form',    [FlightBookingController::class, 'travelFlexBankTransferForm'])->name('flights.travelflex.bank-transfer-form');
-    Route::get( '/flights/travelflex/pending',               [FlightBookingController::class, 'travelFlexPending'])->name('flights.travelflex.pending');
-    Route::get( '/flights/travelflex/confirmation',          [FlightBookingController::class, 'travelFlexConfirmation'])->name('flights.travelflex.confirmation');
-//Route::get('/flights/booking', \App\Livewire\Pages\FlightBooking::class)->name('flights.booking');
+Route::get('/flights/payment/gateway', [FlightBookingController::class, 'paymentGateway'])->name('flights.payment.gateway');
+Route::post('/flights/payment/gateway/process', [FlightBookingController::class, 'processGatewayPayment'])->name('flights.payment.gateway.process');
+
+// Non-LCC: 3-option payment page (booking already on hold)
+Route::get('/flights/payment/options', [FlightBookingController::class, 'paymentOptions'])->name('flights.payment.options');
+Route::get('/flights/payment/options/resume/{bookingRef}', [FlightBookingController::class, 'resumePaymentOptions'])
+    ->name('flights.payment.options.resume');
+
+// Non-LCC: Bank transfer — user clicks "I have paid"
+Route::post('/flights/payment/bank-transfer', [FlightBookingController::class, 'bankTransferNotify'])->name('flights.payment.bank-transfer');
+
+// Non-LCC: Gateway on payment options → ticket_order
+Route::post('/flights/payment/gateway-ticket', [FlightBookingController::class, 'processTicketPayment'])->name('flights.payment.gateway-ticket');
+
+// Pending page (bank transfer awaiting verification)
+Route::get('/flights/pending', [FlightBookingController::class, 'pending'])->name('flights.pending');
+
+// Final confirmation (WebFare confirmed OR Non-LCC ticketed)
+Route::get('/flights/confirmation', [FlightBookingController::class, 'confirmation'])->name('flights.confirmation');
+// COMMENTED OUT - Seerbit integration disabled for simulated payments
+Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerbitCallback'])->name('payments.seerbit.callback');
+Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->name('payments.seerbit.webhook');
+Route::get('/flights/travelflex', [FlightBookingController::class, 'travelFlex'])->name('flights.travelflex');
+Route::post('/flights/travelflex/application', [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application');
+Route::get('/flights/travelflex/application', [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application.get');
+Route::post('/flights/travelflex/submit-application', [FlightBookingController::class, 'travelFlexSubmitApplication'])->name('flights.travelflex.submit-application');
+Route::get('/flights/travelflex/gateway-process', [FlightBookingController::class, 'travelFlexGatewayProcess'])->name('flights.travelflex.gateway-process');
+Route::post('/flights/travelflex/bank-transfer', [FlightBookingController::class, 'travelFlexBankTransfer'])->name('flights.travelflex.bank-transfer');
+Route::get('/flights/travelflex/bank-transfer-form', [FlightBookingController::class, 'travelFlexBankTransferForm'])->name('flights.travelflex.bank-transfer-form');
+Route::get('/flights/travelflex/pending', [FlightBookingController::class, 'travelFlexPending'])->name('flights.travelflex.pending');
+Route::get('/flights/travelflex/confirmation', [FlightBookingController::class, 'travelFlexConfirmation'])->name('flights.travelflex.confirmation');
+// Route::get('/flights/booking', \App\Livewire\Pages\FlightBooking::class)->name('flights.booking');

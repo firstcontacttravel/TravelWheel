@@ -32,11 +32,20 @@
 @endphp
 
 <style>
-    body { background: #f7f8fb; }
-    main.navbarmain.upper-space { margin-top: 113px !important; padding-top: 0 !important; }
+    :root { --tw-loader-nav-height: 113px; }
+    html, body { height: 100%; overflow: hidden; background: #f7f8fb; }
+    body > div > .footter { display: none !important; }
+    main.navbarmain.upper-space {
+        height: calc(100vh - var(--tw-loader-nav-height));
+        height: calc(100dvh - var(--tw-loader-nav-height));
+        margin-top: var(--tw-loader-nav-height) !important;
+        padding-top: 0 !important;
+        overflow: hidden;
+    }
 
     .tw-loader {
-        min-height: calc(100vh - 113px);
+        height: 100%;
+        overflow: hidden;
         background:
             radial-gradient(circle at 18% 8%, rgba(57,50,143,.08), transparent 28%),
             radial-gradient(circle at 82% 18%, rgba(4,154,99,.08), transparent 26%),
@@ -47,8 +56,12 @@
 
     .tw-loader-shell {
         width: min(1120px, calc(100% - 32px));
+        height: 100%;
         margin: 0 auto;
-        padding: 34px 0 64px;
+        padding: clamp(12px, 3vh, 34px) 0 clamp(12px, 3vh, 32px);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
     }
 
     .tw-search-summary {
@@ -142,20 +155,28 @@
     }
 
     .tw-loader-card {
-        margin: 28px auto 0;
+        margin: clamp(10px, 2.5vh, 28px) auto 0;
         max-width: 760px;
+        width: 100%;
+        min-height: 0;
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
         text-align: center;
         background: rgba(255,255,255,.86);
         border: 1px solid rgba(230,233,240,.95);
         border-radius: 18px;
         box-shadow: 0 24px 70px rgba(16,24,40,.08);
-        padding: 42px 28px 34px;
+        padding: clamp(14px, 3.5vh, 42px) 28px clamp(14px, 3vh, 34px);
         backdrop-filter: blur(10px);
     }
 
     .tw-loader-media {
-        width: min(320px, 82vw);
+        width: min(320px, 82vw, 34vh);
+        max-height: 25vh;
         height: auto;
+        object-fit: contain;
         display: block;
         margin: 0 auto 12px;
     }
@@ -315,17 +336,44 @@
     }
 
     @media (max-width: 650px) {
-        main.navbarmain.upper-space { margin-top: 104px !important; padding-top: 0 !important; }
-        .tw-loader { min-height: calc(100vh - 104px); }
-        .tw-loader-shell { width: min(100% - 24px, 1120px); padding: 18px 0 46px; }
-        .tw-search-summary { grid-template-columns: 1fr; border-radius: 12px; }
-        .tw-summary-item { padding: 13px 14px; }
-        .tw-summary-value { font-size: 15px; }
-        .tw-leg-strip { grid-template-columns: 1fr; }
-        .tw-loader-card { margin-top: 16px; border-radius: 14px; padding: 30px 16px 24px; }
-        .tw-products { grid-template-columns: 1fr; }
-        .tw-product { display: grid; grid-template-columns: 34px 1fr; column-gap: 12px; align-items: start; }
-        .tw-product-icon { margin-bottom: 0; }
+        :root { --tw-loader-nav-height: 104px; }
+        .tw-loader-shell { width: min(100% - 20px, 1120px); padding: 10px 0; }
+        .tw-search-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); border-radius: 12px; }
+        .tw-summary-item { padding: 8px 10px; }
+        .tw-summary-item:last-child { grid-column: 1 / -1; }
+        .tw-summary-label { font-size: 9px; }
+        .tw-summary-value { margin-top: 3px; font-size: 12px; }
+        .tw-leg-strip { display: flex; gap: 6px; overflow: hidden; margin-top: 6px; }
+        .tw-leg-chip { flex: 1 1 0; padding: 6px 7px; gap: 6px; }
+        .tw-leg-no { width: 22px; height: 22px; font-size: 10px; }
+        .tw-leg-main { font-size: 10px; }
+        .tw-leg-date { font-size: 9px; }
+        .tw-loader-card { margin-top: 8px; border-radius: 14px; padding: 12px 12px 10px; }
+        .tw-loader-media { width: min(190px, 52vw, 24vh); max-height: 18vh; margin-bottom: 4px; }
+        .tw-loader-title { font-size: clamp(17px, 5vw, 22px); }
+        .tw-loader-copy { margin-top: 5px; font-size: 11px; line-height: 1.4; }
+        .tw-progress-wrap { margin-top: 10px; }
+        .tw-products { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+        .tw-product { padding: 7px 4px; }
+        .tw-product-icon { margin: 0 auto 3px; }
+        .tw-product strong { font-size: 10px; }
+        .tw-product span { display: none; }
+    }
+
+    @media (max-height: 700px) {
+        .tw-loader-shell { padding-top: 8px; padding-bottom: 8px; }
+        .tw-summary-item { padding-top: 8px; padding-bottom: 8px; }
+        .tw-loader-card { margin-top: 8px; padding-top: 10px; padding-bottom: 9px; }
+        .tw-loader-media { width: min(220px, 29vh); max-height: 18vh; margin-bottom: 2px; }
+        .tw-loader-copy { margin-top: 4px; line-height: 1.4; }
+        .tw-progress-wrap, .tw-products { margin-top: 9px; }
+    }
+
+    @media (max-height: 560px) {
+        .tw-loader-media { width: min(150px, 19vh); max-height: 13vh; }
+        .tw-loader-title { font-size: 17px; }
+        .tw-loader-copy { font-size: 10px; }
+        .tw-product span { display: none; }
     }
 </style>
 

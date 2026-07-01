@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\AttachesItineraryPdf;
 use App\Models\TravelFlexApplication;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -11,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class TravelFlexStatusMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use AttachesItineraryPdf, Queueable, SerializesModels;
 
     public function __construct(
         public readonly TravelFlexApplication $application,
@@ -41,5 +42,19 @@ class TravelFlexStatusMail extends Mailable
                 'note' => $this->note,
             ],
         );
+    }
+
+    public function attachments(): array
+    {
+        $booking = $this->application->booking;
+        if (! $booking) return [];
+
+        $state = match ($this->status) {
+            'approved' => 'travelflex_approved',
+            'rejected' => 'travelflex_rejected',
+            default => 'travelflex_review',
+        };
+
+        return [$this->itineraryAttachment($booking, state: $state)];
     }
 }

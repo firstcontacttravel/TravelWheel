@@ -1522,6 +1522,7 @@ class FlightBookingController extends Controller
             'ticket_cost' => $ticketCost,
             'down_payment' => $downPayment,
             'down_percent' => $downPercent,
+            'loan_amount' => $remainingBalance,
             'remaining_balance' => $remainingBalance,
             'repayment_plan' => $repaymentPlan,
             'repayment_interval_days' => $parsed['unit_days'],
@@ -1943,6 +1944,10 @@ class FlightBookingController extends Controller
                 'booking_ref'       => $booking->booking_ref,
                 'trip_details_keys' => array_keys($tripDetails),
             ]);
+        }
+
+        if (! empty($tripDetails)) {
+            $booking->update(['itinerary_snapshot' => $tripDetails]);
         }
  
         try {

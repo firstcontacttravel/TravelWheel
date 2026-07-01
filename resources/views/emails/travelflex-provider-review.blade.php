@@ -26,7 +26,7 @@
     $ticketCost = (float) ($flightInfo['price'] ?? $loanPlan['ticket_cost'] ?? $loanPlan['base_fare'] ?? 0);
     $grandTotal = (float) ($loanPlan['grand_total'] ?? $ticketCost);
     $downPayment = (float) ($loanPlan['down_payment'] ?? 0);
-    $remaining = max(0, $grandTotal - $downPayment);
+    $loanAmount = (float) ($loanPlan['loan_amount'] ?? $loanPlan['remaining_balance'] ?? max(0, $ticketCost - $downPayment));
     $documents = [
         'valid_id' => 'Valid government ID',
         'passport_photo' => 'Passport photograph',
@@ -151,7 +151,7 @@
                                         <tr><td style="{{ $cellLabel }}">Refundable</td><td style="{{ $cellValue }}">{{ ($flightInfo['isRefundable'] ?? false) ? 'Yes' : 'No' }}</td></tr>
                                         <tr><td style="{{ $cellLabel }}">Ticket cost</td><td style="{{ $cellValue }}">{{ $money($ticketCost, $currency) }}</td></tr>
                                         <tr><td style="{{ $cellLabel }}">Total payable</td><td style="{{ $cellValue }}">{{ $money($grandTotal, $currency) }}</td></tr>
-                                        <tr><td style="{{ $cellLabel }}">Remaining balance</td><td style="{{ $cellValue }}">{{ $money($remaining, $currency) }}</td></tr>
+                                        <tr><td style="{{ $cellLabel }}">Loan amount</td><td style="{{ $cellValue }}">{{ $money($loanAmount, $currency) }}</td></tr>
                                         <tr><td style="{{ $cellLabel }}">Total interest</td><td style="{{ $cellValue }}">{{ $money($loanPlan['total_interest'] ?? 0, $currency) }}</td></tr>
                                         <tr><td style="{{ $cellLabel }}">Repayment plan</td><td style="{{ $cellValue }}">{{ $loanPlan['repayment_plan'] ?? '-' }}</td></tr>
                                         <tr><td style="{{ $cellLabel }}">Payment method</td><td style="{{ $cellValue }}">{{ $label($loanPlan['payment_method'] ?? null) }}</td></tr>

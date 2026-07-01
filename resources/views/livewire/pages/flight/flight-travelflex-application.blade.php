@@ -9,8 +9,9 @@
     $prefillEmail = $contact['email'] ?? '';
 
     $tfPlan       = session('travelFlexPlan', []);
-    $loanAmount   = (float) ($tfPlan['grand_total'] ?? 0);
+    $ticketCost   = (float) ($tfPlan['ticket_cost'] ?? 0);
     $downPayment  = (float) ($tfPlan['down_payment'] ?? 0);
+    $loanAmount   = (float) ($tfPlan['loan_amount'] ?? $tfPlan['remaining_balance'] ?? max(0, $ticketCost - $downPayment));
     $repayPlan    = $tfPlan['repayment_plan'] ?? '';
 
     $flight       = session('bookingFlight.flight') ?? session('bookingFlight', []);

@@ -9,8 +9,11 @@ use RuntimeException;
 class SeerbitPaymentService
 {
     private string $baseUrl;
+
     private ?string $publicKey;
+
     private ?string $secretKey;
+
     private string $country;
 
     public function __construct()
@@ -26,7 +29,7 @@ class SeerbitPaymentService
         $response = Http::timeout(30)
             ->withToken($this->encryptedKey())
             ->acceptJson()
-            ->post($this->baseUrl . '/api/v2/payments', array_merge([
+            ->post($this->baseUrl.'/api/v2/payments', array_merge([
                 'publicKey' => $this->publicKey,
                 'country' => $this->country,
             ], $payload));
@@ -36,7 +39,6 @@ class SeerbitPaymentService
         if ($response->failed()) {
             Log::error('SeerBit initialize payment failed', [
                 'status' => $response->status(),
-                'response' => $data,
             ]);
             throw new RuntimeException('Unable to initialize payment. Please try again.');
         }
@@ -46,7 +48,7 @@ class SeerbitPaymentService
             ?? data_get($data, 'payments.redirectLink');
 
         if (! $redirectLink) {
-            Log::error('SeerBit initialize payment returned no redirect link', ['response' => $data]);
+            Log::error('SeerBit initialize payment returned no redirect link');
             throw new RuntimeException('Payment gateway did not return a checkout link.');
         }
 
@@ -61,7 +63,7 @@ class SeerbitPaymentService
         $response = Http::timeout(30)
             ->withToken($this->encryptedKey())
             ->acceptJson()
-            ->get($this->baseUrl . '/api/v3/payments/query/' . urlencode($paymentReference));
+            ->get($this->baseUrl.'/api/v3/payments/query/'.urlencode($paymentReference));
 
         $data = $response->json() ?: [];
 
@@ -69,8 +71,8 @@ class SeerbitPaymentService
             Log::error('SeerBit verify payment failed', [
                 'payment_reference' => $paymentReference,
                 'status' => $response->status(),
-                'response' => $data,
             ]);
+
             return ['ok' => false, 'raw' => $data, 'message' => 'Payment verification failed.'];
         }
 
@@ -93,12 +95,17 @@ class SeerbitPaymentService
         $currency = data_get($data, 'data.payments.currency')
             ?? data_get($data, 'data.currency')
             ?? data_get($data, 'currency');
+        $fee = data_get($data, 'data.payments.fee')
+            ?? data_get($data, 'data.customers.fee')
+            ?? data_get($data, 'data.fee')
+            ?? data_get($data, 'fee');
 
         return [
             'ok' => $gatewayCode === '00' || strcasecmp($gatewayMessage, 'Successful') === 0,
             'gateway_code' => $gatewayCode,
             'gateway_message' => $gatewayMessage,
             'amount' => $amount === null ? null : (float) str_replace(',', '', (string) $amount),
+            'fee' => $fee === null ? null : (float) str_replace(',', '', (string) $fee),
             'currency' => $currency,
             'raw' => $data,
             'message' => $gatewayMessage ?: 'Payment verification completed.',
@@ -113,8 +120,8 @@ class SeerbitPaymentService
 
         $response = Http::timeout(20)
             ->acceptJson()
-            ->post($this->baseUrl . '/api/v2/encrypt/keys', [
-                'key' => $this->secretKey . '.' . $this->publicKey,
+            ->post($this->baseUrl.'/api/v2/encrypt/keys', [
+                'key' => $this->secretKey.'.'.$this->publicKey,
             ]);
 
         $data = $response->json() ?: [];
@@ -128,7 +135,6 @@ class SeerbitPaymentService
         if ($response->failed() || ! $encryptedKey) {
             Log::error('SeerBit key encryption failed', [
                 'status' => $response->status(),
-                'response' => $data,
             ]);
             throw new RuntimeException('Unable to authenticate with payment gateway.');
         }

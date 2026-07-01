@@ -24,6 +24,7 @@ class User extends Authenticatable implements FilamentUser
         'email',
         'password',
         'is_admin',
+        'visa_role',
     ];
 
     /**
@@ -56,7 +57,7 @@ class User extends Authenticatable implements FilamentUser
             return false;
         }
 
-        if ($this->is_admin) {
+        if ($this->is_admin || in_array($this->visa_role, ['administrator', 'visa_officer', 'finance', 'support'], true)) {
             return true;
         }
 
@@ -65,5 +66,24 @@ class User extends Authenticatable implements FilamentUser
             ->filter();
 
         return $adminEmails->contains(strtolower($this->email));
+    }
+
+    public function isVisaAdministrator(): bool
+    {
+        if ($this->is_admin || $this->visa_role === 'administrator') {
+            return true;
+        }
+
+        return collect(explode(',', (string) env('ADMIN_EMAILS', '')))->map(fn (string $email) => strtolower(trim($email)))->contains(strtolower($this->email));
+    }
+
+    public function canOperateVisas(): bool
+    {
+        return $this->isVisaAdministrator() || $this->visa_role === 'visa_officer';
+    }
+
+    public function canViewVisaOperations(): bool
+    {
+        return $this->canOperateVisas() || $this->visa_role === 'support';
     }
 }

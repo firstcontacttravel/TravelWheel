@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\AttachesItineraryPdf;
 use App\Models\FlightBooking;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\URL;
 
 class BookingPendingMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use AttachesItineraryPdf, Queueable, SerializesModels;
 
     public function __construct(
         public FlightBooking $booking,
@@ -58,5 +59,12 @@ class BookingPendingMail extends Mailable
                 'isBankTransferNotice' => $this->method === 'bank_transfer',
             ],
         );
+    }
+
+    public function attachments(): array
+    {
+        $state = $this->booking->booking_status === 'on_hold' ? 'on_hold' : 'payment_pending';
+
+        return [$this->itineraryAttachment($this->booking, state: $state)];
     }
 }

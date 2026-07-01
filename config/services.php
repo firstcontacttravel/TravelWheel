@@ -48,4 +48,8 @@ return [
         'country' => env('SEERBIT_COUNTRY', 'NG'),
     ],
 
+    'visa' => [
+        'quote_ttl_minutes' => env('VISA_QUOTE_TTL_MINUTES', 30),
+    ],
+
 ];
