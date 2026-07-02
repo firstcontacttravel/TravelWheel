@@ -216,7 +216,7 @@ class ApplicationWizard extends Component
         ];
     }
 
-    private function validationAttributes(): array
+    protected function validationAttributes(): array
     {
         $attributes = ['contactEmail' => 'email address', 'processingOptionId' => 'processing option', 'declarationAccepted' => 'declaration'];
         foreach ($this->application->travelers as $traveler) {

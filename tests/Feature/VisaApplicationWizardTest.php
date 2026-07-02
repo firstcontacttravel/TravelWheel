@@ -7,6 +7,8 @@ use App\Models\Country;
 use App\Models\VisaApplication;
 use App\Models\VisaProduct;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -168,6 +170,34 @@ class VisaApplicationWizardTest extends TestCase
             ->assertHasNoErrors()
             ->assertSet('step', 5)
             ->assertSee('TravelWheel services');
+    }
+
+    public function test_document_upload_can_be_validated_stored_and_advanced_to_review(): void
+    {
+        Storage::fake('local');
+        [$product, $search, $result] = $this->catalogue();
+        $this->withSession(['visaSearchParamsStore' => $search, 'visaResultsStore' => [$result]])
+            ->post(route('visa.applications.start'), ['visa_product_id' => $product->id]);
+        $application = VisaApplication::query()->firstOrFail();
+        $application->travelers()->where('id', '!=', $application->travelers()->value('id'))->delete();
+        $application->load('travelers');
+        session()->put("visa_application_access.{$application->reference}", true);
+        $requirement = $product->requirements()->firstOrFail();
+        $traveler = $application->travelers->first();
+
+        Livewire::test(ApplicationWizard::class, ['application' => $application])
+            ->set('step', 6)
+            ->set("uploads.{$requirement->id}_{$traveler->id}", UploadedFile::fake()->create('passport.pdf', 100, 'application/pdf'))
+            ->call('next')
+            ->assertHasNoErrors()
+            ->assertSet('step', 7);
+
+        $this->assertDatabaseHas('visa_application_documents', [
+            'visa_application_id' => $application->id,
+            'visa_requirement_id' => $requirement->id,
+            'visa_traveler_id' => $traveler->id,
+            'original_name' => 'passport.pdf',
+        ]);
     }
 
     public function test_traveler_labels_only_show_positions_when_type_is_repeated(): void
