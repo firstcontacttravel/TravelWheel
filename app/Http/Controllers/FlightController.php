@@ -6,6 +6,7 @@ use App\Support\FlightMarkup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class FlightController extends Controller
@@ -46,6 +47,8 @@ class FlightController extends Controller
 
     private function performSearch(Request $request)
     {
+        set_time_limit(120); // give the API call + processing enough headroom
+
         $this->forgetCheckoutSession();
 
         //dd($request->all());
@@ -167,7 +170,22 @@ class FlightController extends Controller
 
         $jsonData = $response->json();
 
-        //dd($jsonData);
+        // ── Diagnostic logging — remove after return/multi trip is confirmed working ──
+        $itCount  = count(data_get($jsonData, 'AirSearchResponse.AirSearchResult.FareItineraries', []));
+        $firstIt  = data_get($jsonData, 'AirSearchResponse.AirSearchResult.FareItineraries.0.FareItinerary', null);
+        $odoCount = $firstIt ? count($firstIt['OriginDestinationOptions'] ?? []) : null;
+        $apiErr   = data_get($jsonData, 'AirSearchResponse.AirSearchResult.Errors')
+                 ?? data_get($jsonData, 'Errors')
+                 ?? null;
+        Log::info('FlightSearch API response', [
+            'trip'           => $request->trip,
+            'payload'        => $payload,
+            'http_status'    => $response->status(),
+            'itinerary_count'=> $itCount,
+            'first_odo_count'=> $odoCount,
+            'api_errors'     => $apiErr,
+        ]);
+
         // ── Reference data ────────────────────────────────────────────────────
         $airlines = collect(
             json_decode(file_get_contents(public_path('assets/data/airline.json')), true)
@@ -182,6 +200,10 @@ class FlightController extends Controller
         $itineraries = data_get($jsonData, 'AirSearchResponse.AirSearchResult.FareItineraries', []);
 
         $mapSegments = function (array $odo) use ($airlines, $airports): array {
+            // Normalize: single-segment direct flights may arrive as an object, not an array of objects
+            if (!empty($odo) && isset($odo['FlightSegment'])) {
+                $odo = [$odo];
+            }
             return collect($odo)->map(function ($seg) use ($airlines, $airports) {
                 $fs          = $seg['FlightSegment'];
                 $dep         = \Carbon\Carbon::parse($fs['DepartureDateTime']);

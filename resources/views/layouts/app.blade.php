@@ -84,6 +84,7 @@
 
     
     @livewireStyles
+    @stack('head')
 </head>
 <body>
     <div>
@@ -122,6 +123,7 @@
 
     
     <script src="{{ asset('js/flight-widget.js') }}"></script>
-    
+    @stack('scripts')
+
 </body>
 </html>

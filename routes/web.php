@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\AdminReportExportController;
+use App\Http\Controllers\AirCargoController;
+use App\Http\Controllers\InsuranceController;
+use App\Http\Controllers\LeadwayController;
+use App\Http\Controllers\ProtocolController;
+use App\Http\Controllers\LoungeController;
 use App\Http\Controllers\AdminVisaDocumentController;
 use App\Http\Controllers\FlightBookingController;
 use App\Http\Controllers\FlightController;
@@ -47,12 +52,43 @@ Route::get('/flights/search/run', [FlightController::class, 'runPendingSearch'])
 
 Route::get('/air/hotel', function () { /* ... */
 })->name('air.hotel');
-Route::get('/air/protocol', function () { /* ... */
-})->name('air.protocol');
-Route::get('/air/lounge', function () { /* ... */
-})->name('air.lounge');
-Route::get('/air/insurance', function () { /* ... */
-})->name('air.insurance');
+// Protocol routes
+Route::get('/air/protocol', [ProtocolController::class, 'protocol'])->name('air.protocol');
+Route::post('/air/protocol/plan', [ProtocolController::class, 'protocolPlan'])->name('air.protocolplan');
+Route::get('/air/protocol/plans/{id}', [ProtocolController::class, 'protocolPlans'])->name('air.protocolplans');
+Route::get('/air/protocol/plans-intl/{id}', [ProtocolController::class, 'protocolPlansI'])->name('air.protocolplansI');
+Route::get('/air/protocol/form/{plan}', [ProtocolController::class, 'protocolForm'])->name('air.protocolForm');
+Route::post('/air/protocol/checkout', [ProtocolController::class, 'protocol_checkout'])->name('air.protocol_checkout');
+Route::post('/air/protocol/purchase', [ProtocolController::class, 'makePurchase'])->name('air.protocolmakePurchase');
+Route::get('/air/protocol/payment/callback', [ProtocolController::class, 'callbackSeerbit'])->name('air.protocol.callback');
+Route::get('/air/protocol/payment/{trans_id}', [ProtocolController::class, 'protocol_payment'])->name('air.protocol_payment');
+Route::get('/air/protocol/generate/{trans_id}', [ProtocolController::class, 'generateProtocolPass'])->name('air.protocol_generate');
+Route::get('/air/protocol/success', [ProtocolController::class, 'protocol_success'])->name('air.protocol_success');
+
+// Lounge routes
+Route::get('/air/lounge', [LoungeController::class, 'lounge'])->name('air.lounge');
+Route::post('/air/lounge/search', [LoungeController::class, 'lounges'])->name('air.lounges');
+Route::get('/air/lounge/plans/{id}', [LoungeController::class, 'loungePlan'])->name('air.loungeplans');
+Route::get('/air/lounge/booking/{id}', [LoungeController::class, 'loungeBooking'])->name('air.loungebooking');
+Route::post('/air/lounge/checkout', [LoungeController::class, 'loungecheckout'])->name('air.loungecheckout');
+Route::post('/air/lounge/purchase', [LoungeController::class, 'makePurchase'])->name('air.lounge.purchase');
+Route::get('/air/lounge/payment/callback', [LoungeController::class, 'callbackSeerbit'])->name('air.lounge.callback');
+Route::get('/air/lounge/payment/{trans_id}', [LoungeController::class, 'lounge_payment'])->name('air.lounge_payment');
+Route::get('/air/lounge/generate/{trans_id}', [LoungeController::class, 'generateLoungePass'])->name('air.lounge_generate');
+Route::get('/air/lounge/success', [LoungeController::class, 'lounge_success'])->name('air.lounge_success');
+// Insurance (Sanla/Allianz) routes
+Route::get('/air/insurance', [InsuranceController::class, 'insurance'])->name('air.insurance');
+Route::post('/air/insurance/quote', [InsuranceController::class, 'makeRequestQuote'])->name('air.insurance.quote');
+Route::get('/air/insurance/request', [InsuranceController::class, 'insuranceRequest'])->name('air.insurance.request');
+Route::post('/air/insurance/purchase', [InsuranceController::class, 'insurancePurchase'])->name('air.insurance.purchase');
+Route::post('/air/insurance/pay', [InsuranceController::class, 'makeRequestPurchase'])->name('air.insurance.pay');
+Route::get('/air/insurance/payment/callback', [InsuranceController::class, 'callbackSeerbit'])->name('air.insurance.callback');
+Route::get('/air/insurance/success', [InsuranceController::class, 'insuranceSuccess'])->name('air.insurance.success');
+// Insurance (Leadway) routes
+Route::get('/air/insurance/leadway', [LeadwayController::class, 'insuranceLeadway'])->name('air.insuranceLeadway');
+Route::get('/air/insurance/leadway/plan', [LeadwayController::class, 'insuranceLeadwayP'])->name('air.insuranceLeadwayP');
+Route::post('/air/insurance/leadway/quote', [LeadwayController::class, 'insuranceLeadwayQ'])->name('air.insuranceLeadwayQ');
+Route::post('/air/insurance/leadway/purchase', [LeadwayController::class, 'makePurchase'])->name('air.makePurchase');
 Route::middleware(EnsureVisaProductEnabled::class)->group(function () {
     Route::get('/air/visa', VisaDiscovery::class)->name('air.visa');
     Route::post('/visas/search', [VisaSearchController::class, 'search'])->name('visa.search');
@@ -83,8 +119,14 @@ Route::middleware('auth')->prefix('admin/visa-documents')->name('admin.visa.docu
     Route::get('/requested/{documentRequest}', [AdminVisaDocumentController::class, 'requested'])->name('requested');
     Route::get('/issued/{document}', [AdminVisaDocumentController::class, 'issued'])->name('issued');
 });
-Route::get('/air/cargo', function () { /* ... */
-})->name('air.cargo');
+// Air Cargo routes
+Route::get('/air/cargo', [AirCargoController::class, 'airCargo'])->name('air.cargo');
+Route::get('/air/cargo/international', [AirCargoController::class, 'airCargoInternational'])->name('air.cargo.international');
+Route::post('/air/cargo/shipping-price', [AirCargoController::class, 'getShippingPrice'])->name('air.cargo.shipping-price');
+Route::get('/air/cargo/zones', [AirCargoController::class, 'getShippingZones'])->name('air.cargo.zones');
+Route::post('/air/cargo/create', [AirCargoController::class, 'airCargoPost'])->name('air.cargo.post');
+Route::get('/air/cargo/payment/callback', [AirCargoController::class, 'callbackSeerbit'])->name('air.cargo.callback');
+Route::get('/air/cargo/success', [AirCargoController::class, 'airCargoSuccess'])->name('air.cargo.success');
 Route::get('/air/support', function () { /* ... */
 })->name('air.support');
 

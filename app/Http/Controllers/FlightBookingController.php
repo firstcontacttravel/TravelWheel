@@ -79,6 +79,10 @@ class FlightBookingController extends Controller
     
         // ── 3. Segment mapper ─────────────────────────────────────────────────────
         $mapSegments = function (array $odo) use ($airlines, $airports): array {
+            // Normalize: single-segment direct flights may arrive as an object, not an array of objects
+            if (!empty($odo) && isset($odo['FlightSegment'])) {
+                $odo = [$odo];
+            }
             return collect($odo)->map(function ($seg) use ($airlines, $airports) {
                 $fs          = $seg['FlightSegment'];
                 $dep         = \Carbon\Carbon::parse($fs['DepartureDateTime']);
@@ -257,11 +261,10 @@ class FlightBookingController extends Controller
                 ];
             }
     
-            // First leg drives the top-level outbound fields for the card header
-            //$segments         = $multiLegs[0]['segments'] ?? [];
-            $totalMins        = array_sum(array_column($segments, 'duration'));
-            $layoverDurations = $calcLayovers($segments);
-            $totalTimeMins    = $totalMins + $calcLayoverMins($segments);
+            // Aggregate totals across all legs
+            $totalMins        = array_sum(array_map(fn ($leg) => array_sum(array_column($leg['segments'], 'duration')), $multiLegs));
+            $totalTimeMins    = array_sum(array_column($multiLegs, 'totalTimeMins'));
+            $layoverDurations = [];
         }
     
         // ── 6. Shared shortcuts ───────────────────────────────────────────────────
