@@ -10,14 +10,23 @@ use Illuminate\Support\Str;
 
 class LegacyVisaCatalogueImporter
 {
+    public function importVoaOnly(): int
+    {
+        if (! Schema::hasTable('visa_products')) {
+            return 0;
+        }
+
+        return DB::transaction(fn (): int => $this->importVoa());
+    }
+
     public function import(): array
     {
-        if (! Schema::hasTable('visas') || ! Schema::hasTable('visa_products')) {
+        if (! Schema::hasTable('visa_products')) {
             return ['standard' => 0, 'voa' => 0];
         }
 
         return DB::transaction(fn (): array => [
-            'standard' => $this->importStandardVisas(),
+            'standard' => Schema::hasTable('visas') ? $this->importStandardVisas() : 0,
             'voa' => $this->importVoa(),
         ]);
     }
@@ -107,12 +116,23 @@ class LegacyVisaCatalogueImporter
 
     private function importVoa(): int
     {
+        if (Schema::hasTable('voa')) {
+            return $this->importDestinationVoaProducts();
+        }
+
         if (! Schema::hasTable('voas')) {
             return 0;
         }
 
         $nigeria = Country::query()->where('is_active', true)->where(fn ($query) => $query->where('alpha2', 'NG')->orWhere('code', 'NG'))->first();
-        $eligible = DB::table('voas')->orderBy('id')->get()->filter(fn ($row) => Country::query()->whereKey($row->from_country_id)->where('is_active', true)->exists());
+        $eligible = DB::table('voas')->orderBy('id')->get()
+            ->map(function ($row) {
+                $row->matched_country = Country::query()->whereKey($row->from_country_id)->where('is_active', true)->first();
+                $row->single_entry_fee = $row->visa_fee;
+
+                return $row;
+            })
+            ->filter(fn ($row) => $row->matched_country);
         if (! $nigeria || $eligible->isEmpty()) {
             return 0;
         }
@@ -142,12 +162,12 @@ class LegacyVisaCatalogueImporter
         foreach ($eligible as $index => $row) {
             $product->eligibilityRules()->create([
                 'rule_type' => 'include_country',
-                'country_id' => $row->from_country_id,
+                'country_id' => $row->matched_country->id,
                 'public_message' => 'Visa on Arrival is available for this nationality.',
                 'sort_order' => $index,
                 'is_active' => true,
             ]);
-            $this->fee($product, $processing->id, 'Visa on Arrival fee', 'visa', 'all', 'USD', $row->visa_fee, false, $index, 'per_traveler', ['nationality_country_id' => $row->from_country_id]);
+            $this->fee($product, $processing->id, 'Single-entry Visa on Arrival fee', 'visa', 'all', 'USD', $row->single_entry_fee, false, $index, 'per_traveler', ['nationality_country_id' => $row->matched_country->id]);
         }
 
         if (Schema::hasTable('voa_fees')) {
@@ -181,6 +201,101 @@ class LegacyVisaCatalogueImporter
         }
 
         return 1;
+    }
+
+    private function importDestinationVoaProducts(): int
+    {
+        $nigeria = Country::query()->where('is_active', true)->where(fn ($query) => $query->where('alpha2', 'NG')->orWhere('code', 'NG'))->first();
+        $destinations = $this->singularVoaRows();
+        if (! $nigeria || $destinations->isEmpty()) {
+            return 0;
+        }
+
+        // Earlier singular-table imports incorrectly treated every row as a nationality for one Nigeria-bound product.
+        VisaProduct::query()->where('slug', 'legacy-nigeria-visa-on-arrival')->update(['publication_status' => 'archived']);
+
+        foreach ($destinations as $row) {
+            /** @var Country $destination */
+            $destination = $row->matched_country;
+            $product = VisaProduct::query()->updateOrCreate(
+                ['slug' => 'legacy-voa-'.Str::lower($destination->alpha2)],
+                [
+                    'destination_country_id' => $destination->id,
+                    'name' => $destination->name.' Visa on Arrival',
+                    'family' => 'voa',
+                    'category' => 'tourist',
+                    'entry_type' => 'single',
+                    'publication_status' => 'published',
+                    'eligibility_mode' => 'rules',
+                    'summary' => 'Visa on Arrival assistance for Nigerian passport holders travelling to '.$destination->name.'.',
+                    'processing_disclaimer' => 'Processing and entry requirements remain subject to the destination immigration authority.',
+                    'issuance_disclaimer' => 'Final admission and visa issuance are controlled by the destination immigration authority.',
+                    'published_at' => now(),
+                ]
+            );
+
+            $this->replaceRelations($product);
+            $processing = $product->processingOptions()->create([
+                'name' => 'Standard',
+                'minimum_business_days' => 1,
+                'maximum_business_days' => 3,
+                'is_active' => true,
+            ]);
+            $product->eligibilityRules()->create([
+                'rule_type' => 'include_country',
+                'country_id' => $nigeria->id,
+                'public_message' => 'Visa on Arrival is available for Nigerian passport holders.',
+                'is_active' => true,
+            ]);
+            $this->fee($product, $processing->id, 'Single-entry Visa on Arrival fee', 'visa', 'all', 'USD', $row->single_entry_fee, false, 0, 'per_traveler', ['nationality_country_id' => $nigeria->id]);
+            $product->requirements()->create([
+                'name' => 'Passport bio-data page',
+                'category' => 'passport',
+                'scope' => 'traveler',
+                'requirement_state' => 'required',
+                'guidance' => 'Upload a clear colour scan of the passport bio-data page.',
+                'is_active' => true,
+            ]);
+        }
+
+        return $destinations->count();
+    }
+
+    private function singularVoaRows(): \Illuminate\Support\Collection
+    {
+        $aliases = [
+            'congo' => 'congo brazzaville',
+            'democratic republic of congo' => 'congo kinshasa',
+            'czech republic' => 'czechia',
+            'hong kong s a r china' => 'hong kong sar china',
+            'macedonia' => 'north macedonia',
+            'myanmar' => 'myanmar burma',
+            'swaziland' => 'eswatini',
+            'turkey' => 'turkiye',
+            'vatican' => 'vatican city',
+        ];
+        $countries = Country::query()->where('is_active', true)->get()->keyBy(fn (Country $country) => $this->normalizeCountryName($country->name));
+
+        return DB::table('voa')->orderBy('id')->get()
+            ->reject(fn ($row) => str_contains((string) $row->country, '_'))
+            ->map(function ($row) use ($aliases, $countries) {
+                $key = $this->normalizeCountryName($row->country);
+                $row->matched_country = $countries->get($aliases[$key] ?? $key);
+
+                return $row;
+            })
+            ->filter(fn ($row) => $row->matched_country && $row->matched_country->alpha2 !== 'NG')
+            ->values();
+    }
+
+    private function normalizeCountryName(string $name): string
+    {
+        return (string) Str::of(Str::ascii($name))
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]+/', ' ')
+            ->replaceMatches('/\b(and|the)\b/', ' ')
+            ->replaceMatches('/\bsaint\b/', 'st')
+            ->squish();
     }
 
     private function replaceRelations(VisaProduct $product): void
