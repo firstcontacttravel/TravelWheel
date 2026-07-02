@@ -62,8 +62,8 @@ class VisaProduct extends Model
     {
         return $query
             ->where('publication_status', VisaPublicationStatus::Published->value)
-            ->where(fn (Builder $query) => $query->whereNull('effective_from')->orWhere('effective_from', '<=', now()))
-            ->where(fn (Builder $query) => $query->whereNull('effective_until')->orWhere('effective_until', '>=', now()));
+            ->where(fn (Builder $query) => $query->whereNull('effective_from')->orWhereDate('effective_from', '<=', today()))
+            ->where(fn (Builder $query) => $query->whereNull('effective_until')->orWhereDate('effective_until', '>=', today()));
     }
 
     public function destinationCountry(): BelongsTo

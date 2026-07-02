@@ -23,6 +23,24 @@ class VisaCatalogueTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_published_product_is_available_for_the_entire_effective_calendar_day(): void
+    {
+        $country = Country::query()->create(['alpha2' => 'IE', 'name' => 'Ireland']);
+        $product = VisaProduct::query()->create([
+            'destination_country_id' => $country->id,
+            'name' => 'Ireland Study Visa',
+            'slug' => 'ireland-study-visa',
+            'category' => 'study',
+            'publication_status' => 'published',
+            'eligibility_mode' => 'all',
+            'published_at' => now(),
+            'effective_from' => today()->setTime(23, 59),
+            'effective_until' => today()->setTime(0, 1),
+        ]);
+
+        $this->assertTrue(VisaProduct::query()->currentlyPublished()->whereKey($product)->exists());
+    }
+
     public function test_administrator_can_open_the_guided_create_and_edit_forms(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

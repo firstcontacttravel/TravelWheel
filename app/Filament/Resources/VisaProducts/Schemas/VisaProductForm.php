@@ -6,7 +6,7 @@ use App\Enums\VisaEligibilityMode;
 use App\Enums\VisaProductFamily;
 use App\Enums\VisaPublicationStatus;
 use App\Models\Country;
-use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -38,8 +38,8 @@ class VisaProductForm
                         Select::make('entry_type')->options(['single' => 'Single entry', 'multiple' => 'Multiple entry', 'transit' => 'Transit', 'other' => 'Other'])->default('single')->required(),
                         TextInput::make('validity_days')->numeric()->minValue(1)->suffix('days'),
                         TextInput::make('maximum_stay_days')->numeric()->minValue(1)->suffix('days'),
-                        DateTimePicker::make('effective_from')->label('Available from')->helperText('Optional product availability date.'),
-                        DateTimePicker::make('effective_until')->label('Available until')->after('effective_from')->helperText('Leave empty for no scheduled end date.'),
+                        DatePicker::make('effective_from')->label('Available from')->helperText('Optional. The product is available for the entire selected day.'),
+                        DatePicker::make('effective_until')->label('Available until')->afterOrEqual('effective_from')->helperText('Optional. The product remains available through the selected day.'),
                         Select::make('publication_status')->options(VisaPublicationStatus::options())->default('draft')->disabled()->dehydrated(),
                         TextInput::make('version')->numeric()->disabled()->dehydrated()->default(1),
                     ])->columns(2),
