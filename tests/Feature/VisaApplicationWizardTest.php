@@ -154,6 +154,22 @@ class VisaApplicationWizardTest extends TestCase
             ->assertSee('Insurance information form');
     }
 
+    public function test_application_without_additional_questions_can_continue_to_services(): void
+    {
+        [$product, $search, $result] = $this->catalogue();
+        $this->withSession(['visaSearchParamsStore' => $search, 'visaResultsStore' => [$result]])
+            ->post(route('visa.applications.start'), ['visa_product_id' => $product->id]);
+        $application = VisaApplication::query()->firstOrFail();
+        session()->put("visa_application_access.{$application->reference}", true);
+
+        Livewire::test(ApplicationWizard::class, ['application' => $application])
+            ->set('step', 4)
+            ->call('next')
+            ->assertHasNoErrors()
+            ->assertSet('step', 5)
+            ->assertSee('TravelWheel services');
+    }
+
     public function test_traveler_labels_only_show_positions_when_type_is_repeated(): void
     {
         [$product, $search, $result] = $this->catalogue();

@@ -119,7 +119,10 @@ class ApplicationWizard extends Component
     private function validateStep(): void
     {
         if (in_array($this->step, [1, 2, 3, 4, 7], true)) {
-            $this->validate($this->rulesForStep($this->step), $this->validationMessages(), $this->validationAttributes());
+            $rules = $this->rulesForStep($this->step);
+            if ($rules !== []) {
+                $this->validate($rules, $this->validationMessages(), $this->validationAttributes());
+            }
         }
         if ($this->step === 6) {
             $this->storeDocuments();
