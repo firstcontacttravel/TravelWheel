@@ -1,5 +1,5 @@
 @component('layouts.app', ['title' => 'Track Visa Application'])
-<link rel="stylesheet" href="{{ asset('css/visa-portal.css') }}">
+<link rel="stylesheet" href="{{ asset('css/visa-portal.css') }}?v={{ filemtime(public_path('css/visa-portal.css')) }}">
 <div class="vp-auth-shell">
     <section class="vp-auth-card">
         <div class="vp-auth-icon"><x-ui.icon name="shield" :size="30" /></div>

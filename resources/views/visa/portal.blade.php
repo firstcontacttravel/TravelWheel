@@ -5,7 +5,7 @@
     $issuedDocuments = $application->issuedDocuments->whereNull('superseded_at');
 @endphp
 @component('layouts.app', ['title' => 'Visa Application '.$application->reference])
-<link rel="stylesheet" href="{{ asset('css/visa-portal.css') }}">
+<link rel="stylesheet" href="{{ asset('css/visa-portal.css') }}?v={{ filemtime(public_path('css/visa-portal.css')) }}">
 <div class="vp-page">
     <header class="vp-hero">
         <div><p class="vp-eyebrow">Visa application</p><h1>{{ $application->product->name }}</h1><p class="vp-reference">Reference <strong>{{ $application->reference }}</strong></p></div>

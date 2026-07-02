@@ -1,5 +1,5 @@
 @component('layouts.app', ['title' => 'Verify Visa Portal Access'])
-<link rel="stylesheet" href="{{ asset('css/visa-portal.css') }}">
+<link rel="stylesheet" href="{{ asset('css/visa-portal.css') }}?v={{ filemtime(public_path('css/visa-portal.css')) }}">
 <div class="vp-auth-shell"><section class="vp-auth-card">
     <div class="vp-auth-icon"><x-ui.icon name="lock" :size="30" /></div><p class="vp-eyebrow">Identity check</p><h1>Enter your access code</h1>
     <p>We sent a six-digit code for application <strong>{{ $reference }}</strong>.</p>

@@ -1,5 +1,5 @@
 @component('layouts.app', ['title' => $payment->status === 'paid' ? 'Visa Payment Confirmed' : 'Visa Payment Status'])
-<link rel="stylesheet" href="{{ asset('css/visa-portal.css') }}">
+<link rel="stylesheet" href="{{ asset('css/visa-portal.css') }}?v={{ filemtime(public_path('css/visa-portal.css')) }}">
 <div class="vps-page">
     @if($payment->status === 'paid')
         <section class="vps-hero" aria-labelledby="payment-result-title">
