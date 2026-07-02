@@ -3,11 +3,10 @@
 <div class="vps-page">
     @if($payment->status === 'paid')
         <section class="vps-hero" aria-labelledby="payment-result-title">
-            <div class="vps-glow vps-glow--one"></div><div class="vps-glow vps-glow--two"></div>
             <div class="vps-hero__inner">
-                <div class="vps-success-mark"><x-ui.icon name="check-circle" :size="48" /></div>
+                <div class="vps-success-mark"><x-ui.icon name="check-circle" :size="34" /></div>
                 <p class="vps-kicker">Payment successful</p>
-                <h1 id="payment-result-title">Your visa application is on its way</h1>
+                <h1 id="payment-result-title">Payment confirmed</h1>
                 <p class="vps-lead">Your payment has been confirmed and your application has been submitted securely to TravelWheel.</p>
                 <div class="vps-actions">
                     <a class="vps-button vps-button--primary" href="{{ route('visa.portal.entry') }}">Track your application <x-ui.icon name="arrow-right" :size="18" /></a>
