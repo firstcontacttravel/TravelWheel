@@ -124,7 +124,7 @@ class LegacyVisaCatalogueImporter
             return 0;
         }
 
-        $nigeria = Country::query()->where('is_active', true)->where(fn ($query) => $query->where('alpha2', 'NG')->orWhere('code', 'NG'))->first();
+        $nigeria = $this->nigeriaCountry();
         $eligible = DB::table('voas')->orderBy('id')->get()
             ->map(function ($row) {
                 $row->matched_country = Country::query()->whereKey($row->from_country_id)->where('is_active', true)->first();
@@ -205,7 +205,7 @@ class LegacyVisaCatalogueImporter
 
     private function importDestinationVoaProducts(): int
     {
-        $nigeria = Country::query()->where('is_active', true)->where(fn ($query) => $query->where('alpha2', 'NG')->orWhere('code', 'NG'))->first();
+        $nigeria = $this->nigeriaCountry();
         $destinations = $this->singularVoaRows();
         if (! $nigeria || $destinations->isEmpty()) {
             return 0;
@@ -296,6 +296,19 @@ class LegacyVisaCatalogueImporter
             ->replaceMatches('/\b(and|the)\b/', ' ')
             ->replaceMatches('/\bsaint\b/', 'st')
             ->squish();
+    }
+
+    private function nigeriaCountry(): ?Country
+    {
+        return Country::query()
+            ->where('is_active', true)
+            ->where(function ($query): void {
+                $query->where('alpha2', 'NG');
+                if (Schema::hasColumn('countries', 'code')) {
+                    $query->orWhere('code', 'NG');
+                }
+            })
+            ->first();
     }
 
     private function replaceRelations(VisaProduct $product): void
