@@ -6,6 +6,8 @@ document.getElementById('myForm').addEventListener('keypress', function(event) {
 // Initialize Google Maps Autocomplete for the first address input
 function initAutocomplete1() {
   const input = document.getElementById('autocomplete1');
+  if (input.dataset.autocompleteInit) return;
+  input.dataset.autocompleteInit = '1';
 
   // Initialize Google Maps Autocomplete
   const autocomplete = new google.maps.places.Autocomplete(input);
@@ -65,14 +67,16 @@ function initAutocomplete1() {
         }
       }
 
-      // Update the country_code dropdown
+      // Update the country_code dropdown, if present
       const countryCodeDropdown = document.getElementById('country_code');
-      const phoneCodeOptions = countryCodeDropdown.options;
+      if (countryCodeDropdown) {
+        const phoneCodeOptions = countryCodeDropdown.options;
 
-      for (let i = 0; i < phoneCodeOptions.length; i++) {
-        if (phoneCodeOptions[i].text.includes(countryName)) {
-          countryCodeDropdown.selectedIndex = i;
-          break;
+        for (let i = 0; i < phoneCodeOptions.length; i++) {
+          if (phoneCodeOptions[i].text.includes(countryName)) {
+            countryCodeDropdown.selectedIndex = i;
+            break;
+          }
         }
       }
     }
@@ -81,7 +85,6 @@ function initAutocomplete1() {
     console.log("Detected Country Code:", countryCode);
     console.log("Detected Country Name:", countryName);
     console.log("Selected Country:", document.getElementById('countrySelect1').value);
-    console.log("Selected Phone Code:", document.getElementById('country_code').value);
   });
 }
 
@@ -90,6 +93,8 @@ function initAutocomplete1() {
 // Initialize Google Maps Autocomplete for the second address input
 function initAutocomplete2() {
   const input = document.getElementById('autocomplete2');
+  if (input.dataset.autocompleteInit) return;
+  input.dataset.autocompleteInit = '1';
 
   // Initialize Google Maps Autocomplete
   const autocomplete = new google.maps.places.Autocomplete(input);
@@ -144,14 +149,16 @@ function initAutocomplete2() {
         }
       }
 
-      // Update the country_code dropdown
+      // Update the country_code dropdown, if present
       const countryCodeDropdown1 = document.getElementById('country_code2');
-      const phoneCodeOptions1 = countryCodeDropdown1.options;
+      if (countryCodeDropdown1) {
+        const phoneCodeOptions1 = countryCodeDropdown1.options;
 
-      for (let i = 0; i < phoneCodeOptions1.length; i++) {
-        if (phoneCodeOptions1[i].text.includes(countryName)) {
-          countryCodeDropdown1.selectedIndex = i;
-          break;
+        for (let i = 0; i < phoneCodeOptions1.length; i++) {
+          if (phoneCodeOptions1[i].text.includes(countryName)) {
+            countryCodeDropdown1.selectedIndex = i;
+            break;
+          }
         }
       }
     }
@@ -164,7 +171,6 @@ function initAutocomplete2() {
     console.log("Detected Country Code:", countryCode);
     console.log("Detected Country Name:", countryName);
     console.log("Selected Country:", document.getElementById('countrySelect').value);
-    console.log("Selected Phone Code:", document.getElementById('country_code2').value);
   });
 }
 /*
@@ -220,7 +226,10 @@ document.getElementById('doc_weight').addEventListener('change', function() {
 
 function updateParagraph() {
   // Get the values from the input fields
+  var address1 = document.getElementById('autocomplete1').value;
+  var postalcode1 = document.getElementById('postalcode1').value;
   var address2 = document.getElementById('autocomplete2').value;
+  var postalcode2 = document.getElementById('postalcode2').value;
   var text2 = address2;
 
   var packageSelect = document.getElementById('packageSelect').options[document.getElementById('packageSelect').selectedIndex].value;
@@ -239,7 +248,7 @@ function updateParagraph() {
   var dropOffDate = document.getElementById('dropoff_date').value;
   var priceInput2 = document.getElementById('priceInput2').value;
 
-  var pickUpPrice = document.getElementById('pPrice2').value;
+  var pickUpPrice = document.getElementById('pick-Upshipment').value;
   if (priceInput  && !pickUpPrice) {
 
     var priceValue = parseInt(priceInput.replace(/,/g, '')); // Convert to a float 
@@ -268,6 +277,16 @@ function updateParagraph() {
     var pickUpPrice2 = parseInt(pickUpPrice.replace(/,/g, ''));
     var totalAmount2 = priceValue2 + pickUpPrice2;
   }
+
+  document.getElementById('shipFrom').innerText = address1;
+  document.getElementById('sAddress').innerText = address1;
+  document.getElementById('postalCodeD1').innerText = postalcode1;
+  document.getElementById('postalCodeP1').innerText = postalcode1;
+
+  document.getElementById('shipmentTo').innerText = address2;
+  document.getElementById('rAddress').innerText = address2;
+  document.getElementById('postalCodeD2').innerText = postalcode2;
+  document.getElementById('postalCodeP2').innerText = postalcode2;
 
   var fullname1 = document.getElementById('fullname').value;
   document.getElementById('senderName').innerText = fullname1;

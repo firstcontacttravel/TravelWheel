@@ -48,6 +48,10 @@ return [
         'country' => env('SEERBIT_COUNTRY', 'NG'),
     ],
 
+    'google_maps' => [
+        'key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
     'visa' => [
         'quote_ttl_minutes' => env('VISA_QUOTE_TTL_MINUTES', 30),
     ],

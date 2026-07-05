@@ -1,30 +1,37 @@
 @component('layouts.app', ['title' => 'Shipment Successful - TravelWheel'])
+@include('air.air_cargo.partials.cargo-ui')
 
-<section class="shadow-sm">
-    <div class="container">
-        <div class="row justify-content-center py-5">
-            <div class="col-sm-7 text-center">
-                <div class="card shadow p-4">
-                    <div class="card-body">
-                        <div style="font-size:80px; color:rgba(13,156,83,1);">
-                            <i class="fa fa-check-circle"></i>
-                        </div>
-                        <h3 class="mt-3">Shipment Booking Successful!</h3>
-                        @if(session('data'))
-                            @php $shipData = session('data'); @endphp
-                            <p class="text-muted">
-                                Your shipment <strong>{{ $shipData['shipping_id'] }}</strong> has been booked.
-                                A confirmation document has been sent to <strong>{{ $shipData['sender_email'] }}</strong>.
-                            </p>
-                        @else
-                            <p class="text-muted">Your shipment has been booked. A confirmation document has been sent to your email.</p>
-                        @endif
-                        <a href="{{ route('air.cargo') }}" class="btn btn-pry mt-3">Book Another Shipment</a>
+<section class="cargo-page">
+    <div class="cargo-wrap">
+        <div class="cargo-success">
+            <div class="cargo-success-icon"><x-ph-icon name="check" /></div> <br>
+            <div class="cargo-kicker justify-content-center"><x-ph-icon name="shield-check" /> Booking Successful</div>
+            <h1 class="cargo-title">Shipment booked</h1>
+
+            @if(session('data'))
+                @php $shipData = session('data'); @endphp
+                <p class="cargo-copy">
+                    Your shipment has been booked and a confirmation document has been sent to the email address provided.
+                </p>
+
+                <div class="cargo-success-detail">
+                    <div>
+                        <span>Shipping ID</span>
+                        <strong>{{ $shipData['shipping_id'] ?? '—' }}</strong>
+                    </div>
+                    <div>
+                        <span>Confirmation Sent To</span>
+                        <strong>{{ $shipData['sender_email'] ?? '—' }}</strong>
                     </div>
                 </div>
-            </div>
+            @else
+                <p class="cargo-copy">Your shipment has been booked. A confirmation document has been sent to your email.</p>
+            @endif
+
+            <a href="{{ route('air.cargo') }}" class="cargo-btn mt-2">
+                Book Another Shipment <x-ph-icon name="arrow-right" />
+            </a>
         </div>
     </div>
 </section>
-
 @endcomponent

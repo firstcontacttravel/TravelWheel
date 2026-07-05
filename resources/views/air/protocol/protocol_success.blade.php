@@ -1,28 +1,23 @@
 @component('layouts.app', ['title' => 'Protocol Booking Successful - TravelWheel'])
+@include('air.protocol.partials.protocol-ui')
 
-<section class="shadow-sm py-5">
-    <div class="container">
-        <div class="row">
-            <div class="col-sm-3"></div>
-            <div class="col-sm-6 pt-3 pb-5">
-                <div class="p-3 text-center">
-                    <img src="{{ asset('assets/img/77suc.gif') }}" class="w-auto mb-3" alt="Success" style="max-height:120px;">
-                    <h4>Purchase Successful!</h4>
-                    <p>You have successfully booked a Protocol Service.
-                    Please check your inbox (or spam/junk) for the email provided — your Protocol Service Pass will be sent there.</p>
+<section class="protocol-page">
+    <div class="protocol-wrap">
+        <div class="protocol-success">
+            <div class="protocol-success-icon"><x-ph-icon name="check" /></div>
+            <div class="protocol-kicker justify-content-center"><x-ph-icon name="shield-check" /> Booking Successful</div>
+            <h1 class="protocol-title">Protocol service booked</h1>
+            <p class="protocol-copy">
+                Your booking has been completed. Please check your inbox, spam, or junk folder for the email address provided.
+            </p>
 
-                    @if(session('message'))
-                        <div class="alert alert-info">{{ session('message') }}</div>
-                    @endif
+            @if(session('message'))
+                <div class="alert alert-info mt-3">{{ session('message') }}</div>
+            @endif
 
-                    <div class="row justify-content-center mt-3">
-                        <div class="col-auto">
-                            <a href="{{ route('air.protocol') }}" class="btn btn-primary">Back to Protocol</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-3"></div>
+            <a href="{{ route('air.protocol') }}" class="protocol-btn mt-4">
+                Book Another Protocol Service <x-ph-icon name="arrow-right" />
+            </a>
         </div>
     </div>
 </section>
