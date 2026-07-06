@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\VisaApplications\VisaApplicationResource;
+use App\Mail\VisaApplicationVendorMail;
 use App\Models\Country;
 use App\Models\User;
 use App\Models\VisaApplication;
 use App\Models\VisaProduct;
+use App\Models\VisaVendor;
 use App\Services\VisaApplicationTransitionService;
 use App\Services\VisaOperationsService;
+use App\Services\VisaVendorDispatchService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -95,6 +98,33 @@ class VisaOperationsTest extends TestCase
         $this->assertSame([], $service->allowedTargets($application, $officer));
         $service->transition($application, 'under_review', $admin, ['public_note' => 'Application reopened.', 'internal_note' => 'Authorized appeal correction.']);
         $this->assertSame('under_review', $application->fresh()->status);
+    }
+
+    public function test_application_can_be_queued_to_its_vendor_with_private_documents_and_an_audit_event(): void
+    {
+        Mail::fake();
+        Storage::fake('local');
+        $application = $this->application('submitted');
+        $vendor = VisaVendor::query()->create(['name' => 'Consular Partner', 'contact_person' => 'Visa Desk', 'email' => 'vendor@example.com', 'is_active' => true]);
+        $application->product->update(['visa_vendor_id' => $vendor->id]);
+        $requirement = $application->product->requirements()->create(['name' => 'Passport data page', 'category' => 'passport', 'scope' => 'traveler', 'requirement_state' => 'required']);
+        $path = "visa-applications/{$application->reference}/documents/passport.pdf";
+        Storage::disk('local')->put($path, 'private passport');
+        $document = $application->documents()->create(['visa_requirement_id' => $requirement->id, 'disk' => 'local', 'path' => $path, 'original_name' => 'passport.pdf', 'mime_type' => 'application/pdf', 'size' => 16]);
+        $officer = User::factory()->create(['visa_role' => 'visa_officer']);
+
+        app(VisaVendorDispatchService::class)->send($application->fresh(), $officer);
+
+        $response = $this->actingAs($officer)->get(route('admin.visa.documents.application', $document));
+        $response->assertOk()->assertHeader('content-type', 'application/pdf');
+        $this->assertStringStartsWith('inline;', (string) $response->headers->get('content-disposition'));
+
+        Mail::assertQueued(VisaApplicationVendorMail::class, fn (VisaApplicationVendorMail $mail) => $mail->hasTo('vendor@example.com') && count($mail->attachments()) === 1);
+        $this->assertDatabaseHas('visa_audit_events', [
+            'visa_application_id' => $application->id,
+            'user_id' => $officer->id,
+            'event_type' => 'sent_to_vendor',
+        ]);
     }
 
     private function application(string $status): VisaApplication

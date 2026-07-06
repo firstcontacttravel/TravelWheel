@@ -6,6 +6,7 @@ use App\Mail\ETicketMail;
 use App\Mail\UnTicketedConfirmationAlert;
 use App\Models\FlightBooking;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class AdminTicketingService
@@ -14,8 +15,22 @@ class AdminTicketingService
     {
         $payload = $this->travelNextPayload($booking->unique_id);
 
-        $response = Http::timeout(60)
-            ->post('https://travelnext.works/api/aeroVE5/ticket_order', $payload);
+        try {
+            $response = Http::timeout(60)
+                ->post('https://travelnext.works/api/aeroVE5/ticket_order', $payload);
+        } catch (\Throwable $exception) {
+            Log::error('Admin ticket order request failed', [
+                'booking_id' => $booking->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return [
+                'ok' => false,
+                'message' => 'Ticketing provider is temporarily unavailable.',
+                'request' => $this->redactPayload($payload),
+                'response' => [],
+            ];
+        }
 
         $data = $response->json() ?: [];
 
@@ -44,8 +59,22 @@ class AdminTicketingService
     {
         $payload = $this->travelNextPayload($booking->unique_id);
 
-        $response = Http::timeout(30)
-            ->post('https://travelnext.works/api/aeroVE5/trip_details', $payload);
+        try {
+            $response = Http::timeout(30)
+                ->post('https://travelnext.works/api/aeroVE5/trip_details', $payload);
+        } catch (\Throwable $exception) {
+            Log::error('Admin trip details request failed', [
+                'booking_id' => $booking->id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return [
+                'ok' => false,
+                'message' => 'Trip details provider is temporarily unavailable.',
+                'request' => $this->redactPayload($payload),
+                'response' => [],
+            ];
+        }
 
         $data = $response->json() ?: [];
 

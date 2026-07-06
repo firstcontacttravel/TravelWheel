@@ -14,7 +14,7 @@ class AdminVisaDocumentController extends Controller
     {
         $this->authorizeStaff();
 
-        return $this->download($document->disk, $document->path, $document->original_name);
+        return $this->view($document->disk, $document->path, $document->original_name);
     }
 
     public function requested(VisaAdditionalDocumentRequest $documentRequest): StreamedResponse
@@ -22,26 +22,29 @@ class AdminVisaDocumentController extends Controller
         $this->authorizeStaff();
         abort_unless($documentRequest->path, 404);
 
-        return $this->download($documentRequest->disk ?: 'local', $documentRequest->path, $documentRequest->original_name ?: 'document');
+        return $this->view($documentRequest->disk ?: 'local', $documentRequest->path, $documentRequest->original_name ?: 'document');
     }
 
     public function issued(VisaIssuedDocument $document): StreamedResponse
     {
         $this->authorizeStaff();
 
-        return $this->download($document->disk, $document->path, $document->original_name);
+        return $this->view($document->disk, $document->path, $document->original_name);
     }
 
     private function authorizeStaff(): void
     {
         $user = auth()->user();
-        abort_unless($user && ($user->is_admin || in_array($user->visa_role, ['administrator', 'visa_officer', 'support'], true)), 403);
+        abort_unless($user?->canViewVisaOperations(), 403);
     }
 
-    private function download(string $disk, string $path, string $name): StreamedResponse
+    private function view(string $disk, string $path, string $name): StreamedResponse
     {
         abort_unless(Storage::disk($disk)->exists($path), 404);
 
-        return Storage::disk($disk)->download($path, $name);
+        return Storage::disk($disk)->response($path, $name, [
+            'Cache-Control' => 'private, no-store, max-age=0',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 }

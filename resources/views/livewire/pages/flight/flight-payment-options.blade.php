@@ -49,11 +49,7 @@
         }
     }
 
-    $bankAccounts = [
-        ['bank' => 'Access Bank', 'account_number' => '0123456789', 'account_name' => 'Travelwheel Limited'],
-        ['bank' => 'Zenith Bank', 'account_number' => '2109876543', 'account_name' => 'Travelwheel Limited'],
-        ['bank' => 'GTBank', 'account_number' => '0156789234', 'account_name' => 'Travelwheel Limited'],
-    ];
+    $bankAccounts = config('travelwheel.travelflex_bank_accounts', []);
 @endphp
 
 <style>
@@ -727,6 +723,7 @@
                     </div>
                 </article>
 
+                @if($bankAccounts !== [])
                 <article class="pay-option" data-pay-option="bank">
                     <button class="pay-option-head" type="button" data-pay-trigger="bank">
                         <span class="pay-icon">
@@ -757,12 +754,13 @@
                             @csrf
                             <label class="pay-field">
                                 <span class="pay-label">Payment reference</span>
-                                <input class="pay-input" type="text" name="payment_reference" placeholder="Transaction ref, depositor name, or bank note">
+                                <input class="pay-input" type="text" name="payment_reference" required minlength="3" maxlength="100" placeholder="Transaction ref, depositor name, or bank note">
                             </label>
                             <button type="submit" class="pay-action secondary">I have made payment</button>
                         </form>
                     </div>
                 </article>
+                @endif
 
                 <article class="pay-option" data-pay-option="flex">
                     <button class="pay-option-head" type="button" data-pay-trigger="flex">

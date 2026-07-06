@@ -18,8 +18,14 @@ class VisaApplicationDraftService
 
         $product->load(['processingOptions' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order'), 'requirements' => fn ($query) => $query->where('is_active', true), 'questions' => fn ($query) => $query->where('is_active', true), 'optionalServices' => fn ($query) => $query->where('is_active', true)]);
         $plainToken = Str::random(64);
+        $formConfiguration = app(VisaFormWorkflow::class)->snapshot(
+            $product->form_configuration,
+            $product->questions->isNotEmpty(),
+            $product->optionalServices->isNotEmpty(),
+            $product->requirements->isNotEmpty(),
+        );
 
-        $application = DB::transaction(function () use ($product, $search, $plainToken): VisaApplication {
+        $application = DB::transaction(function () use ($product, $search, $plainToken, $formConfiguration): VisaApplication {
             $application = VisaApplication::query()->create([
                 'reference' => (string) Str::ulid(),
                 'resume_token_hash' => hash('sha256', $plainToken),
@@ -29,7 +35,8 @@ class VisaApplicationDraftService
                 'status' => 'draft',
                 'nationality_country_id' => $search['nationality_id'],
                 'residence_country_id' => $search['residence_country_id'] ?? null,
-                'destination_country_id' => $search['destination_id'],
+                'destination_country_id' => $search['destination_id'] ?? null,
+                'visa_destination_id' => $search['visa_destination_id'] ?? null,
                 'arrival_date' => $search['arrival_date'],
                 'departure_date' => $search['departure_date'],
                 'adult_count' => $search['adults'],
@@ -37,6 +44,7 @@ class VisaApplicationDraftService
                 'infant_count' => $search['infants'],
                 'search_snapshot' => $search,
                 'product_snapshot' => ['id' => $product->id, 'version' => $product->version, 'name' => $product->name, 'family' => $product->family->value, 'requirements' => $product->requirements->pluck('id')->all(), 'questions' => $product->questions->pluck('id')->all()],
+                'form_configuration' => $formConfiguration,
                 'last_activity_at' => now(),
                 'expires_at' => now()->addDays(30),
             ]);

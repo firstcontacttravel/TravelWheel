@@ -8,6 +8,7 @@ use App\Models\VisaApplicationAnswer;
 use App\Models\VisaApplicationDocument;
 use App\Models\VisaApplicationServiceSelection;
 use App\Services\VisaApplicationDraftService;
+use App\Services\VisaFormWorkflow;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -41,7 +42,7 @@ class ApplicationWizard extends Component
     {
         abort_unless($drafts->authorize($application), 403);
         $this->application = $application->load(['product.processingOptions', 'product.questions', 'product.requirements', 'product.optionalServices', 'travelers', 'answers', 'documents', 'serviceSelections']);
-        $this->step = max(1, min(8, $application->current_step));
+        $this->step = max(1, min(count($this->formFlow()), $application->current_step));
         $this->contactEmail = $application->contact_email;
         $this->processingOptionId = $application->visa_processing_option_id;
         $this->declarationAccepted = $application->declaration_accepted;
@@ -87,7 +88,7 @@ class ApplicationWizard extends Component
     {
         $this->validateStep();
         $this->persist(true);
-        $this->step = min(8, $this->step + 1);
+        $this->step = min(count($this->formFlow()), $this->step + 1);
         $drafts->touch($this->application, $this->step, $this->step - 1);
         $this->savedMessage = 'Step saved';
         $this->dispatch('visa-step-changed');
@@ -96,7 +97,7 @@ class ApplicationWizard extends Component
     public function previous(VisaApplicationDraftService $drafts): void
     {
         if ($this->application->status === 'awaiting_payment') {
-            $this->step = 8;
+            $this->step = count($this->formFlow());
 
             return;
         }
@@ -108,8 +109,8 @@ class ApplicationWizard extends Component
 
     public function goTo(int $step, VisaApplicationDraftService $drafts): void
     {
-        abort_if($this->application->status === 'awaiting_payment' && $step !== 8, 422, 'Application details are locked while a quote is active.');
-        abort_if($step < 1 || $step > min(8, $this->application->completed_step + 1), 422);
+        abort_if($this->application->status === 'awaiting_payment' && $step !== count($this->formFlow()), 422, 'Application details are locked while a quote is active.');
+        abort_if($step < 1 || $step > min(count($this->formFlow()), $this->application->completed_step + 1), 422);
         $this->persist(false);
         $this->step = $step;
         $drafts->touch($this->application, $step, $this->application->completed_step);
@@ -118,13 +119,14 @@ class ApplicationWizard extends Component
 
     private function validateStep(): void
     {
-        if (in_array($this->step, [1, 2, 3, 4, 7], true)) {
+        $stepKey = $this->currentStepKey();
+        if (in_array($stepKey, ['trip', 'travelers', 'passports', 'questions', 'services', 'review'], true) || $this->questionsForCurrentStep()->isNotEmpty()) {
             $rules = $this->rulesForStep($this->step);
             if ($rules !== []) {
                 $this->validate($rules, $this->validationMessages(), $this->validationAttributes());
             }
         }
-        if ($this->step === 6) {
+        if ($stepKey === 'documents') {
             $this->storeDocuments();
             foreach ($this->requiredDocumentSlots() as $slot) {
                 if (! $this->application->documents()->where('visa_requirement_id', $slot['requirement_id'])->where('visa_traveler_id', $slot['traveler_id'])->exists()) {
@@ -139,7 +141,9 @@ class ApplicationWizard extends Component
 
     private function rulesForStep(int $step): array
     {
-        if ($step === 1) {
+        $stepKey = $this->formFlow()[$step - 1]['key'] ?? null;
+
+        if ($stepKey === 'trip') {
             return [
                 'contactEmail' => ['required', 'email:rfc', 'max:255'],
                 'processingOptionId' => ['required', 'integer', Rule::exists('visa_processing_options', 'id')->where(fn ($query) => $query->where('visa_product_id', $this->application->visa_product_id)->where('is_active', true))],
@@ -147,35 +151,45 @@ class ApplicationWizard extends Component
         }
 
         $rules = [];
-        if ($step === 2) {
+        if ($stepKey === 'travelers') {
             foreach ($this->application->travelers as $traveler) {
                 $id = $traveler->id;
-                $rules["travelers.$id.applicant_type"] = ['required', Rule::in($traveler->traveler_type === 'adult' ? ['individual', 'company'] : ['minor_nigerian', 'minor_foreign'])];
-                $rules["travelers.$id.first_name"] = ['required', 'string', 'max:100'];
-                $rules["travelers.$id.last_name"] = ['required', 'string', 'max:100'];
-                $rules["travelers.$id.sex"] = ['required', Rule::in(['male', 'female'])];
-                $rules["travelers.$id.date_of_birth"] = ['required', 'date', 'before:today'];
-                $rules["travelers.$id.place_of_birth"] = ['required', 'string', 'max:150'];
-                $rules["travelers.$id.nationality_country_id"] = ['required', Rule::exists('countries', 'id')->where('is_active', true)];
-                $rules["travelers.$id.email"] = ['nullable', 'email:rfc', 'max:255'];
-                $rules["travelers.$id.phone"] = ['required', 'string', 'regex:/^\+?[0-9 ()-]{7,40}$/'];
-                $rules["travelers.$id.home_address"] = ['required', 'string', 'min:5', 'max:1000'];
+                $fieldRules = [
+                    'applicant_type' => ['required', Rule::in($traveler->traveler_type === 'adult' ? ['individual', 'company'] : ['minor_nigerian', 'minor_foreign'])],
+                    'first_name' => ['required', 'string', 'max:100'],
+                    'middle_name' => ['nullable', 'string', 'max:100'],
+                    'last_name' => ['required', 'string', 'max:100'],
+                    'sex' => ['required', Rule::in(['male', 'female'])],
+                    'date_of_birth' => ['required', 'date', 'before:today'],
+                    'place_of_birth' => ['required', 'string', 'max:150'],
+                    'nationality_country_id' => ['required', Rule::exists('countries', 'id')->where('is_active', true)],
+                    'email' => ['nullable', 'email:rfc', 'max:255'],
+                    'phone' => ['required', 'string', 'regex:/^\+?[0-9 ()-]{7,40}$/'],
+                    'home_address' => ['required', 'string', 'min:5', 'max:1000'],
+                ];
+                foreach ($this->enabledTravelerFields() as $field) {
+                    $rules["travelers.$id.$field"] = $fieldRules[$field];
+                }
             }
         }
 
-        if ($step === 3) {
+        if ($stepKey === 'passports') {
             foreach ($this->application->travelers as $traveler) {
                 $id = $traveler->id;
-                $rules["travelers.$id.passport_number"] = ['required', 'string', 'regex:/^[A-Za-z0-9]{5,50}$/'];
-                $rules["travelers.$id.passport_type"] = ['required', Rule::in(['ordinary', 'official', 'diplomatic'])];
-                $rules["travelers.$id.passport_issued_at"] = ['required', 'date', 'before_or_equal:today'];
-                $rules["travelers.$id.passport_expires_at"] = ['required', 'date', 'after:'.$this->application->departure_date->format('Y-m-d')];
-                $rules["travelers.$id.passport_issuing_country_id"] = ['required', Rule::exists('countries', 'id')->where('is_active', true)];
+                $fieldRules = [
+                    'passport_number' => ['required', 'string', 'regex:/^[A-Za-z0-9]{5,50}$/'],
+                    'passport_type' => ['required', Rule::in(['ordinary', 'official', 'diplomatic'])],
+                    'passport_issued_at' => ['required', 'date', 'before_or_equal:today'],
+                    'passport_expires_at' => ['required', 'date', 'after:'.$this->application->departure_date->format('Y-m-d')],
+                    'passport_issuing_country_id' => ['required', Rule::exists('countries', 'id')->where('is_active', true)],
+                ];
+                foreach ($this->enabledPassportFields() as $field) {
+                    $rules["travelers.$id.$field"] = $fieldRules[$field];
+                }
             }
         }
 
-        if ($step === 4) {
-            foreach ($this->application->product->questions->where('is_active', true) as $question) {
+        foreach ($this->questionsForStep($stepKey) as $question) {
                 $travelerIds = $question->scope === 'traveler' ? $this->application->travelers->pluck('id')->all() : [null];
                 foreach ($travelerIds as $travelerId) {
                     $field = 'answers.'.$this->answerKey($question->id, $travelerId);
@@ -190,10 +204,9 @@ class ApplicationWizard extends Component
                     });
                     $rules[$field] = array_merge($questionRules, $question->validation_rules ?? []);
                 }
-            }
         }
 
-        if ($step === 7) {
+        if ($stepKey === 'review') {
             $rules['declarationAccepted'] = ['accepted'];
         }
 
@@ -383,6 +396,43 @@ class ApplicationWizard extends Component
     private function answerKey(int $questionId, ?int $travelerId = null): string
     {
         return $questionId.'_'.($travelerId ?: 'app');
+    }
+
+    public function formFlow(): array
+    {
+        return app(VisaFormWorkflow::class)->applicationFlow(
+            $this->application->form_configuration,
+            $this->application->product->questions->where('is_active', true)->isNotEmpty(),
+            $this->application->product->optionalServices->where('is_active', true)->isNotEmpty(),
+            $this->application->product->requirements->where('is_active', true)->isNotEmpty(),
+        );
+    }
+
+    public function currentStepKey(): string
+    {
+        return $this->formFlow()[$this->step - 1]['key'] ?? 'trip';
+    }
+
+    public function enabledTravelerFields(): array
+    {
+        return app(VisaFormWorkflow::class)->normalize($this->application->form_configuration)['traveler_fields'];
+    }
+
+    public function enabledPassportFields(): array
+    {
+        return app(VisaFormWorkflow::class)->normalize($this->application->form_configuration)['passport_fields'];
+    }
+
+    public function questionsForCurrentStep(): \Illuminate\Support\Collection
+    {
+        return $this->questionsForStep($this->currentStepKey());
+    }
+
+    private function questionsForStep(?string $stepKey): \Illuminate\Support\Collection
+    {
+        return $stepKey === 'questions'
+            ? $this->application->product->questions->where('is_active', true)
+            : collect();
     }
 
     public function render()

@@ -77,7 +77,9 @@ class ETicketPdfService
 
         $ticketStatus = strtoupper($tripDetails['TicketStatus'] ?? '');
         $bookingStatus = strtoupper($tripDetails['BookingStatus'] ?? 'CONFIRMED');
-        $isTicketed = $ticketStatus === 'TICKETED';
+        $isTicketed = $ticketStatus === 'TICKETED'
+            || $booking->isTicketed()
+            || $booking->ticket_ordered;
 
         $customerInfos = collect(data_get($tripDetails, 'ItineraryInfo.CustomerInfos', []))
             ->map(fn ($customer) => $customer['CustomerInfo'] ?? $customer);

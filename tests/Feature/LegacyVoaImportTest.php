@@ -32,16 +32,21 @@ class LegacyVoaImportTest extends TestCase
             ['country' => 'processing_adult', 'single_entry_fee' => 40000],
             ['country' => 'Nigeria', 'single_entry_fee' => 0],
         ]);
+        VisaProduct::query()->create(['destination_country_id' => $ghana->id, 'name' => 'Incorrect Ghana VOA', 'slug' => 'legacy-voa-gh', 'family' => 'voa', 'category' => 'tourist', 'entry_type' => 'single', 'publication_status' => 'published']);
 
         $counts = app(LegacyVisaCatalogueImporter::class)->import();
 
-        $this->assertSame(['standard' => 0, 'voa' => 2], $counts);
-        $ghanaProduct = VisaProduct::query()->where('family', 'voa')->where('destination_country_id', $ghana->id)->firstOrFail();
-        $czechiaProduct = VisaProduct::query()->where('family', 'voa')->where('destination_country_id', $czechia->id)->firstOrFail();
-        $this->assertSame('published', $czechiaProduct->publication_status->value);
-        $this->assertSame([$nigeria->id], $czechiaProduct->eligibilityRules()->pluck('country_id')->all());
-        $this->assertDatabaseHas('visa_fee_components', ['visa_product_id' => $ghanaProduct->id, 'name' => 'Single-entry Visa on Arrival fee', 'currency' => 'USD', 'amount' => 0]);
-        $this->assertDatabaseHas('visa_fee_components', ['visa_product_id' => $czechiaProduct->id, 'name' => 'Single-entry Visa on Arrival fee', 'currency' => 'USD', 'amount' => 88]);
+        $this->assertSame(['standard' => 0, 'voa' => 1], $counts);
+        $product = VisaProduct::query()->where('slug', 'legacy-nigeria-business-visa')->firstOrFail();
+        $this->assertSame($nigeria->id, $product->destination_country_id);
+        $this->assertSame('Nigerian Business Visa', $product->name);
+        $this->assertSame('business', $product->category);
+        $this->assertSame('single', $product->entry_type);
+        $this->assertSame('published', $product->publication_status->value);
+        $this->assertEqualsCanonicalizing([$ghana->id, $czechia->id], $product->eligibilityRules()->pluck('country_id')->all());
+        $this->assertDatabaseHas('visa_fee_components', ['visa_product_id' => $product->id, 'name' => 'Nigerian Business Visa fee', 'currency' => 'USD', 'amount' => 0]);
+        $this->assertDatabaseHas('visa_fee_components', ['visa_product_id' => $product->id, 'name' => 'Nigerian Business Visa fee', 'currency' => 'USD', 'amount' => 88]);
         $this->assertDatabaseMissing('visa_fee_components', ['amount' => 40000]);
+        $this->assertDatabaseHas('visa_products', ['slug' => 'legacy-voa-gh', 'publication_status' => 'archived']);
     }
 }

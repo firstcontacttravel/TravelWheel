@@ -41,12 +41,7 @@
 
     $breakdown = $mappedFlight['fareBreakdown'] ?? [];
 
-    // Bank accounts (same as payment options)
-    $bankAccounts = [
-        ['bank' => 'Access Bank', 'account_number' => '0123456789', 'account_name' => 'Travelwheel Limited'],
-        ['bank' => 'Zenith Bank',  'account_number' => '2109876543', 'account_name' => 'Travelwheel Limited'],
-        ['bank' => 'GTBank',       'account_number' => '0156789234', 'account_name' => 'Travelwheel Limited'],
-    ];
+    $bankAccounts = config('travelwheel.travelflex_bank_accounts', []);
 
     // Add these lines to define $isReturn, $isMulti, $multiLegs, $tripLabel
     $mf = $mappedFlight;
@@ -704,6 +699,7 @@
                         </button>
                     </form>
 
+                    @if(false)
                     <div class="tf-pay-option" :class="{ active: payOption === 'bank' }" @click="payOption = 'bank'">
                         <div class="tf-pay-option-head">
                             <div class="tf-pay-radio"><div class="tf-pay-radio-dot"></div></div>
@@ -774,6 +770,12 @@
                                 </button>
                             </form>
                         </div>
+                    </div>
+
+                    @endif
+                    <div class="tf-notice green" style="margin-top:12px">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                        <span>No payment is due now. Fast Credit reviews your application first. If approved, you will receive a secure link to choose online payment or bank transfer.</span>
                     </div>
 
                     <div class="tf-btn-row" style="margin-top:10px;">

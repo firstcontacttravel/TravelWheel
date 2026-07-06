@@ -66,6 +66,18 @@
         </td>
     </tr>
     @endif
+    @if($status === 'approved' && filled($paymentUrl))
+    <tr>
+        <td style="padding:22px 30px 0;text-align:center;">
+            <div style="font-size:13px;line-height:1.7;color:{{ $muted }};margin-bottom:14px;">
+                Your held fare is available until <strong style="color:{{ $ink }};">{{ $paymentDeadline?->timezone('Africa/Lagos')->format('D, d M Y H:i') }} WAT</strong>. Complete the down payment before this deadline so TravelWheel can issue your ticket.
+            </div>
+            <a href="{{ $paymentUrl }}" style="display:inline-block;background:{{ $primary }};color:#ffffff;text-decoration:none;font-size:14px;font-weight:900;padding:13px 22px;border-radius:8px;">Continue to down payment</a>
+        </td>
+    </tr>
+    @elseif($status === 'approved')
+    <tr><td style="padding:20px 30px 0;color:#b54708;font-size:13px;line-height:1.6;">Your application is approved, but the original airline hold is too close to expiry. Contact TravelWheel so we can revalidate or rebook the fare before collecting payment.</td></tr>
+    @endif
     <tr>
         <td style="padding:22px 30px 28px;font-size:12px;line-height:1.7;color:{{ $muted }};">
             For help, email <a href="mailto:support@travelwheel.ng" style="color:{{ $primary }};font-weight:800;text-decoration:none;">support@travelwheel.ng</a>

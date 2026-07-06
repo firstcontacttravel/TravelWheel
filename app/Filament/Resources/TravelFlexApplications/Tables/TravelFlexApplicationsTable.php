@@ -68,6 +68,11 @@ class TravelFlexApplicationsTable
                     ->badge()
                     ->formatStateUsing(fn (?string $state): string => self::label($state))
                     ->sortable(),
+                TextColumn::make('financing_status')
+                    ->label('Fast Credit')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => self::label($state))
+                    ->sortable(),
                 TextColumn::make('provider_status')
                     ->label('Provider')
                     ->badge()
@@ -87,6 +92,11 @@ class TravelFlexApplicationsTable
                         'awaiting_bank_transfer', 'pending' => 'warning',
                         default => 'gray',
                     })
+                    ->formatStateUsing(fn (?string $state): string => self::label($state))
+                    ->sortable(),
+                TextColumn::make('deposit_status')
+                    ->label('Deposit')
+                    ->badge()
                     ->formatStateUsing(fn (?string $state): string => self::label($state))
                     ->sortable(),
                 TextColumn::make('created_at')
@@ -220,11 +230,11 @@ class TravelFlexApplicationsTable
             ->action(function (TravelFlexApplication $record, array $data): void {
                 $record->update([
                     'application_status' => 'reviewed',
+                    'financing_status' => 'under_review',
                     'reviewed_at' => now(),
                     'reviewed_by' => auth()->id(),
                     'admin_note' => $data['admin_note'] ?? $record->admin_note,
                 ]);
-
                 self::tryNotifyCustomer($record->fresh(['booking']), 'reviewed', $data['admin_note'] ?? null);
 
                 Notification::make()->title('TravelFlex application reviewed')->success()->send();
@@ -240,7 +250,7 @@ class TravelFlexApplicationsTable
             ->visible(fn (TravelFlexApplication $record): bool => $record->application_status !== 'approved')
             ->requiresConfirmation()
             ->modalHeading(fn (TravelFlexApplication $record): string => 'Approve TravelFlex application ' . ($record->booking_ref ?: ''))
-            ->modalDescription('Approving records the decision in admin history. It does not automatically change provider or payment status.')
+            ->modalDescription('Approval opens the down-payment step only while the airline hold has at least two hours remaining. It does not ticket the flight.')
             ->modalIcon('heroicon-o-check-circle')
             ->modalIconColor('success')
             ->modalSubmitActionLabel('Approve application')
@@ -249,18 +259,32 @@ class TravelFlexApplicationsTable
                 Textarea::make('admin_note')->label('Approval note')->rows(4)->maxLength(2000),
             ])
             ->action(function (TravelFlexApplication $record, array $data): void {
+                $record->loadMissing('booking');
+                $paymentDeadline = $record->booking?->tkt_time_limit?->copy()->subHours(2);
+                $requiresRebooking = ! $paymentDeadline || $paymentDeadline->isPast();
+
                 $record->update([
                     'application_status' => 'approved',
+                    'financing_status' => 'approved',
+                    'deposit_status' => $requiresRebooking ? 'rebooking_required' : 'pending',
                     'approved_at' => now(),
+                    'approval_expires_at' => $requiresRebooking ? null : $paymentDeadline,
                     'rejected_at' => null,
                     'reviewed_at' => $record->reviewed_at ?: now(),
                     'reviewed_by' => auth()->id(),
                     'admin_note' => $data['admin_note'] ?? $record->admin_note,
                 ]);
+                $record->booking?->update([
+                    'booking_status' => $requiresRebooking ? 'awaiting_rebooking' : 'awaiting_deposit',
+                ]);
 
                 self::tryNotifyCustomer($record->fresh(['booking']), 'approved', $data['admin_note'] ?? null);
 
-                Notification::make()->title('TravelFlex application approved')->success()->send();
+                Notification::make()
+                    ->title($requiresRebooking ? 'Approved - rebooking required' : 'TravelFlex application approved')
+                    ->body($requiresRebooking ? 'Fast Credit approval was recorded, but the airline hold must be revalidated or replaced before collecting a deposit.' : null)
+                    ->{$requiresRebooking ? 'warning' : 'success'}()
+                    ->send();
             });
     }
 
@@ -289,12 +313,22 @@ class TravelFlexApplicationsTable
             ->action(function (TravelFlexApplication $record, array $data): void {
                 $record->update([
                     'application_status' => 'rejected',
+                    'financing_status' => 'rejected',
+                    'deposit_status' => $record->deposit_status === 'paid' ? 'refund_pending' : 'not_due',
                     'rejected_at' => now(),
                     'approved_at' => null,
                     'reviewed_at' => $record->reviewed_at ?: now(),
                     'reviewed_by' => auth()->id(),
                     'admin_note' => $data['admin_note'],
                 ]);
+                $record->loadMissing('booking');
+                if ($record->booking && ! $record->booking->ticket_ordered) {
+                    $record->booking->update([
+                        'booking_status' => 'on_hold',
+                        'payment_method' => null,
+                        'payment_flow' => null,
+                    ]);
+                }
 
                 self::tryNotifyCustomer($record->fresh(['booking']), 'rejected', $data['admin_note'] ?? null);
 

@@ -18,7 +18,8 @@ class VisaProductsTable
             ->defaultSort('updated_at', 'desc')
             ->columns([
                 TextColumn::make('name')->searchable()->sortable()->weight('bold')->description(fn ($record) => $record->slug),
-                TextColumn::make('destinationCountry.name')->label('Destination')->searchable()->sortable(),
+                TextColumn::make('destination_label')->label('Destination')->state(fn ($record) => $record->destination?->name ?? $record->destinationCountry?->name ?? 'Not assigned'),
+                TextColumn::make('vendor.name')->label('Vendor')->searchable()->placeholder('Not assigned')->toggleable(),
                 TextColumn::make('family')->badge()->formatStateUsing(fn ($state) => VisaProductFamily::options()[$state instanceof \BackedEnum ? $state->value : $state] ?? (string) $state),
                 TextColumn::make('category')->badge()->searchable(),
                 TextColumn::make('publication_status')->label('Status')->badge()->color(fn ($state) => match ($state instanceof \BackedEnum ? $state->value : $state) {
@@ -31,6 +32,8 @@ class VisaProductsTable
                 SelectFilter::make('publication_status')->options(VisaPublicationStatus::options()),
                 SelectFilter::make('family')->options(VisaProductFamily::options()),
                 SelectFilter::make('destination_country_id')->label('Destination')->relationship('destinationCountry', 'name')->searchable()->preload(),
+                SelectFilter::make('visa_destination_id')->label('Regional destination')->relationship('destination', 'name')->searchable()->preload(),
+                SelectFilter::make('visa_vendor_id')->label('Vendor')->relationship('vendor', 'name')->searchable()->preload(),
             ])
             ->recordActions([EditAction::make(), DeleteAction::make()]);
     }

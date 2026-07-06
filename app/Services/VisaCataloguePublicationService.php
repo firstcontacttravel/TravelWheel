@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\VisaEligibilityMode;
+use App\Enums\VisaProductFamily;
 use App\Enums\VisaPublicationStatus;
 use App\Models\VisaProduct;
 use Illuminate\Support\Facades\DB;
@@ -14,16 +15,27 @@ class VisaCataloguePublicationService
     {
         $product->loadMissing([
             'destinationCountry',
+            'destination',
             'eligibilityRules',
             'processingOptions',
             'fees.processingOption',
             'requirements',
+            'questions',
+            'optionalServices',
         ]);
 
         $errors = [];
 
-        if (! $product->destinationCountry?->is_active) {
+        if (($product->destination_country_id && $product->visa_destination_id) || (! $product->destination_country_id && ! $product->visa_destination_id)) {
+            $errors[] = 'Choose exactly one country or regional destination.';
+        } elseif ($product->destination_country_id && ! $product->destinationCountry?->is_active) {
             $errors[] = 'Choose an active destination country.';
+        } elseif ($product->visa_destination_id && ! $product->destination?->is_active) {
+            $errors[] = 'Choose an active regional destination.';
+        }
+
+        if ($product->family === VisaProductFamily::VisaOnArrival && ($product->visa_destination_id || $product->destinationCountry?->alpha2 !== 'NG')) {
+            $errors[] = 'Nigerian Business Visa products must use Nigeria as the destination.';
         }
 
         if (blank($product->name) || blank($product->category) || blank($product->entry_type)) {
@@ -66,8 +78,16 @@ class VisaCataloguePublicationService
             }
         }
 
-        if ($product->requirements->where('is_active', true)->isEmpty()) {
+        if ($product->requirements->where('is_active', true)->isEmpty() && $product->form_configuration === null) {
             $errors[] = 'Add at least one active requirement or explicitly add a “No documents required” requirement.';
+        }
+
+        $formConfiguration = app(VisaFormWorkflow::class)->normalize($product->form_configuration);
+        $usesApplicantTypeConditions = $product->requirements
+            ->where('is_active', true)
+            ->contains(fn ($requirement): bool => array_key_exists('applicant_type', $requirement->conditions ?? []));
+        if ($usesApplicantTypeConditions && ! in_array('applicant_type', $formConfiguration['traveler_fields'], true)) {
+            $errors[] = 'Application profile / parent type must be selected because document requirements depend on it.';
         }
 
         return $errors;

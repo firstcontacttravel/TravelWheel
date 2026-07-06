@@ -18,4 +18,14 @@ class VisaTraveler extends Model
     {
         return $this->belongsTo(VisaApplication::class, 'visa_application_id');
     }
+
+    public function nationalityCountry(): BelongsTo
+    {
+        return $this->belongsTo(Country::class, 'nationality_country_id');
+    }
+
+    public function passportIssuingCountry(): BelongsTo
+    {
+        return $this->belongsTo(Country::class, 'passport_issuing_country_id');
+    }
 }

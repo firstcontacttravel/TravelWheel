@@ -79,7 +79,7 @@
                     <article class="vd-product {{ $status === 'ineligible' ? 'vd-product--muted' : '' }}" wire:key="visa-product-{{ $result['id'] }}">
                         <div class="vd-product__main">
                             <div class="vd-product__topline">
-                                <div><span class="vd-product__family">{{ $result['family'] === 'voa' ? 'Visa on arrival' : 'Standard visa' }}</span><h3>{{ $result['name'] }}</h3></div>
+                                <div><span class="vd-product__family">{{ $result['family'] === 'voa' ? 'Nigerian Business Visa' : 'Standard visa' }}</span><h3>{{ $result['name'] }}</h3></div>
                                 <x-ui.badge :variant="$badgeVariant">{{ str($status)->replace('_', ' ')->headline() }}</x-ui.badge>
                             </div>
                             @if($result['summary'])<p class="vd-product__summary">{{ $result['summary'] }}</p>@endif

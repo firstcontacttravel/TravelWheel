@@ -19,17 +19,10 @@ class BookingPendingMail extends Mailable
         public FlightBooking $booking,
         public string $method = 'bank_transfer'
     )
-    {
-        \Log::info('BookingPendingMail instantiated', [
-            'booking_id' => $booking->id ?? null,
-            'method' => $method
-        ]);
-    }
+    {}
 
     public function envelope(): Envelope
     {
-        \Log::info('BookingPendingMail envelope method called');
-        
         return new Envelope(
             subject: 'Booking Pending - ' . ($this->booking->booking_ref ?? 'N/A'),
         );
@@ -37,8 +30,6 @@ class BookingPendingMail extends Mailable
 
     public function content(): Content
     {
-        \Log::info('BookingPendingMail content method called');
-
         $resumePaymentUrl = null;
 
         if ($this->booking->booking_ref && $this->booking->booking_status === 'on_hold') {

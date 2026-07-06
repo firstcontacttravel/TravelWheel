@@ -161,11 +161,27 @@ class FlightController extends Controller
 
         //dd($payload);
 
-        $response = Http::timeout(60)
-            ->post('https://travelnext.works/api/aeroVE5/availability', $payload);
+        try {
+            $response = Http::timeout(60)
+                ->post('https://travelnext.works/api/aeroVE5/availability', $payload);
+        } catch (\Throwable $exception) {
+            Log::error('Flight availability request failed', [
+                'error' => $exception->getMessage(),
+                'trip' => $request->trip,
+            ]);
+
+            return redirect()->route('air')->withErrors([
+                'error' => 'Flight search is temporarily unavailable. Please try again shortly.',
+            ]);
+        }
 
         if ($response->failed()) {
-            return back()->withErrors(['error' => 'Flight search failed. Please try again.']);
+            Log::warning('Flight availability returned an error response', [
+                'status' => $response->status(),
+                'trip' => $request->trip,
+            ]);
+
+            return redirect()->route('air')->withErrors(['error' => 'Flight search failed. Please try again.']);
         }
 
         $jsonData = $response->json();
@@ -471,7 +487,7 @@ class FlightController extends Controller
                         'totalFare'     => (float) $fb['PassengerFare']['TotalFare']['Amount'],
                         'currency'      => $fb['PassengerFare']['TotalFare']['CurrencyCode'],
                         'baggage'       => $fb['Baggage']      ?? [],
-                        'cabinBaggage'  => $fb['CabinBaggage'] ?? [],
+                        'cabinBaggage'  => \App\Support\FlightDisplay::cabinBaggageValues($fb['CabinBaggage'] ?? []),
                         'taxes'         => $fb['PassengerFare']['Taxes'] ?? [],
                         'serviceTax'    => (float) ($fb['PassengerFare']['ServiceTax']['Amount'] ?? 0),
                         'surcharges'    => (float) ($fb['PassengerFare']['Surcharges']['Amount'] ?? 0),

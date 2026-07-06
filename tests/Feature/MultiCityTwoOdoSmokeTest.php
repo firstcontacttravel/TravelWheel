@@ -77,7 +77,10 @@ class MultiCityTwoOdoSmokeTest extends TestCase
                 ['from' => 'Paris (CDG)', 'to' => 'Lagos (LOS)', 'depart' => '20/07/2026'],
                 ['from' => 'Lagos (LOS)', 'to' => 'Paris (CDG)', 'depart' => '24/07/2026'],
             ]),
-        ])->assertRedirect(route('air.flight-s'));
+        ])->assertRedirect(route('flights.search.loading'));
+
+        $this->get(route('flights.search.run'))
+            ->assertRedirect(route('air.flight-s'));
 
         $legs = session('flightResultsStore.0.multiLegs');
 

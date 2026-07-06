@@ -24,10 +24,10 @@ class VisaProduct extends Model
     ];
 
     protected $fillable = [
-        'destination_country_id', 'name', 'slug', 'family', 'category', 'entry_type',
+        'destination_country_id', 'visa_destination_id', 'visa_vendor_id', 'name', 'slug', 'family', 'category', 'entry_type',
         'publication_status', 'eligibility_mode', 'validity_days', 'maximum_stay_days',
         'summary', 'description', 'processing_disclaimer', 'issuance_disclaimer',
-        'important_notes', 'effective_from', 'effective_until', 'published_at',
+        'important_notes', 'form_configuration', 'effective_from', 'effective_until', 'published_at',
         'version', 'created_by', 'updated_by',
     ];
 
@@ -40,6 +40,7 @@ class VisaProduct extends Model
             'effective_from' => 'datetime',
             'effective_until' => 'datetime',
             'published_at' => 'datetime',
+            'form_configuration' => 'array',
         ];
     }
 
@@ -69,6 +70,16 @@ class VisaProduct extends Model
     public function destinationCountry(): BelongsTo
     {
         return $this->belongsTo(Country::class, 'destination_country_id');
+    }
+
+    public function vendor(): BelongsTo
+    {
+        return $this->belongsTo(VisaVendor::class, 'visa_vendor_id');
+    }
+
+    public function destination(): BelongsTo
+    {
+        return $this->belongsTo(VisaDestination::class, 'visa_destination_id');
     }
 
     public function eligibilityRules(): HasMany

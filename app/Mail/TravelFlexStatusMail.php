@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Mail\Concerns\AttachesItineraryPdf;
 use App\Models\TravelFlexApplication;
+use App\Services\TravelFlexFlowService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -34,12 +35,18 @@ class TravelFlexStatusMail extends Mailable
 
     public function content(): Content
     {
+        $paymentUrl = $this->status === 'approved'
+            ? app(TravelFlexFlowService::class)->approvalUrl($this->application)
+            : null;
+
         return new Content(
             view: 'emails.travelflex-status',
             with: [
                 'application' => $this->application,
                 'status' => $this->status,
                 'note' => $this->note,
+                'paymentUrl' => $paymentUrl,
+                'paymentDeadline' => app(TravelFlexFlowService::class)->approvalDeadline($this->application),
             ],
         );
     }

@@ -9,9 +9,11 @@ use App\Models\FlightBooking;
 use App\Models\TravelFlexApplication;
 use App\Services\SeerbitPaymentService;
 use App\Services\TravelFlexApplicationService;
+use App\Services\TravelFlexFlowService;
 use App\Support\FlightMarkup;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -41,8 +43,18 @@ class FlightBookingController extends Controller
         ];
     
         // ── 1. Revalidate ─────────────────────────────────────────────────────────
-        $revalidateResponse = Http::timeout(60)
-            ->post('https://travelnext.works/api/aeroVE5/revalidate', $payload);
+        try {
+            $revalidateResponse = Http::timeout(60)
+                ->post('https://travelnext.works/api/aeroVE5/revalidate', $payload);
+        } catch (\Throwable $exception) {
+            Log::error('Flight revalidation request failed', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return back()->withErrors([
+                'error' => 'Fare revalidation is temporarily unavailable. Please try again shortly.',
+            ]);
+        }
         
     
         if ($revalidateResponse->failed()) {
@@ -298,7 +310,7 @@ class FlightBookingController extends Controller
                 'totalFare'     => (float) $fb['PassengerFare']['TotalFare']['Amount'],
                 'currency'      => $fb['PassengerFare']['TotalFare']['CurrencyCode'],
                 'baggage'       => $fb['Baggage']      ?? [],
-                'cabinBaggage'  => $fb['CabinBaggage'] ?? [],
+                'cabinBaggage'  => \App\Support\FlightDisplay::cabinBaggageValues($fb['CabinBaggage'] ?? []),
                 'taxes'         => $fb['PassengerFare']['Taxes'] ?? [],
                 'serviceTax'    => (float) ($fb['PassengerFare']['ServiceTax']['Amount'] ?? 0),
                 'surcharges'    => (float) ($fb['PassengerFare']['Surcharges']['Amount'] ?? 0),
@@ -363,15 +375,25 @@ class FlightBookingController extends Controller
         ];
 
         // ── 9. Fetch extra services & fare rules ──────────────────────────────────
-        $extraResponse = Http::timeout(60)
-            ->post('https://travelnext.works/api/aeroVE5/extra_services', $payload1);
+        try {
+            $extraResponse = Http::timeout(60)
+                ->post('https://travelnext.works/api/aeroVE5/extra_services', $payload1);
+
+            $fareRulesResponse = Http::timeout(60)
+                ->post('https://travelnext.works/api/aeroVE5/fare_rules', $payload1);
+        } catch (\Throwable $exception) {
+            Log::error('Flight ancillary request failed', [
+                'error' => $exception->getMessage(),
+            ]);
+
+            return back()->withErrors([
+                'error' => 'Fare details are temporarily unavailable. Please try again shortly.',
+            ]);
+        }
     
         if ($extraResponse->failed()) {
             return back()->withErrors(['error' => 'Extra services fetch failed.']);
         }
-    
-        $fareRulesResponse = Http::timeout(60)
-            ->post('https://travelnext.works/api/aeroVE5/fare_rules', $payload1);
     
         if ($fareRulesResponse->failed()) {
             return back()->withErrors(['error' => 'Fare rules fetch failed.']);
@@ -534,7 +556,7 @@ class FlightBookingController extends Controller
     }
 
     // =========================================================================
-    //  paymentGateway() — WebFare simulated payment page
+    //  paymentGateway() - WebFare payment page
     // =========================================================================
     public function paymentGateway()
     {
@@ -599,6 +621,12 @@ class FlightBookingController extends Controller
         $bookingFlight = session('bookingFlight', []);
         $mappedFlight  = $bookingFlight['flight'] ?? $bookingFlight;
         $bookingRef    = session('bookingRef', '');
+        $dbBooking = session('flightBookingDbId') ? FlightBooking::find(session('flightBookingDbId')) : null;
+        if ($dbBooking && $dbBooking->tkt_time_limit && $dbBooking->tkt_time_limit->isPast()) {
+            return redirect()->route('air.flight-s')->withErrors([
+                'error' => 'This airline hold has expired. Please search again for a current fare.',
+            ]);
+        }
         $selectedExtras = session('selectedExtras', []);
         $extrasTotal = $this->_selectedExtrasTotal($selectedExtras);
 
@@ -658,8 +686,10 @@ class FlightBookingController extends Controller
     // =========================================================================
     public function bankTransferNotify(Request $request)
     {
+        abort_if(config('travelwheel.travelflex_bank_accounts', []) === [], 503, 'Bank transfer is unavailable.');
+
         $request->validate([
-            'payment_reference' => 'nullable|string|max:100',
+            'payment_reference' => 'required|string|min:3|max:100',
         ]);
 
         $dbId     = session('flightBookingDbId');
@@ -670,6 +700,7 @@ class FlightBookingController extends Controller
         }
 
         if ($dbId && $dbBooking = FlightBooking::find($dbId)) {
+            $this->_assertHeldBookingPayable($dbBooking, 0);
             $dbBooking->update([
                 'payment_method'            => 'bank_transfer',
                 'payment_status'            => 'awaiting_bank_transfer',
@@ -688,7 +719,7 @@ class FlightBookingController extends Controller
     }
 
     // =========================================================================
-    //  processTicketPayment() — Gateway on payment options → simulate + ticket_order
+    //  processTicketPayment() - Gateway payment for a held booking
     // =========================================================================
     public function processTicketPayment(Request $request)
     {
@@ -699,9 +730,12 @@ class FlightBookingController extends Controller
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Session expired.']);
         }
 
-        if (! $dbId || ! FlightBooking::find($dbId)) {
+        $booking = $dbId ? FlightBooking::find($dbId) : null;
+        if (! $booking) {
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Booking record not found.']);
         }
+
+        $this->_assertHeldBookingPayable($booking);
 
         return $this->_startSeerbitPayment('held_ticket_full');
     }
@@ -722,19 +756,68 @@ class FlightBookingController extends Controller
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Payment record not found.']);
         }
 
-        if ($booking->payment_status === 'paid' && in_array($booking->booking_status, ['confirmed', 'ticketed', 'ticketing_failed'], true)) {
+        $lock = Cache::lock('flight-payment-callback:'.$booking->id, 180);
+        if (! $lock->get()) {
+            $this->_primeBookingSession($booking);
+
+            return $this->_redirectAfterSeerbitFailure(
+                $booking,
+                'Your payment is already being processed. Please wait a moment and refresh the status page.'
+            );
+        }
+
+        try {
+            return $this->_processSeerbitCallback($request, $seerbit, $booking->fresh(), $reference);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    private function _processSeerbitCallback(
+        Request $request,
+        SeerbitPaymentService $seerbit,
+        FlightBooking $booking,
+        string $reference,
+    ) {
+
+        if ($booking->payment_verified_at && in_array($booking->booking_status, ['confirmed', 'ticketed', 'ticketing_failed', 'failed'], true)) {
             $this->_sendPaymentReceipt($booking);
             $this->_primeBookingSession($booking);
             session(['paymentMethod' => $booking->payment_method]);
             return $this->_redirectAfterSeerbitFlow($booking);
         }
 
-        $verification = $seerbit->verifyPayment($reference);
+        try {
+            $verification = $seerbit->verifyPayment($reference);
+        } catch (\Throwable $exception) {
+            Log::error('SeerBit payment verification could not start', [
+                'booking_ref' => $booking->booking_ref,
+                'payment_reference' => $reference,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return $this->_redirectAfterSeerbitFailure(
+                $booking,
+                'We could not confirm the payment yet. Please retry shortly. Your booking remains pending.'
+            );
+        }
         $expectedAmount = round((float) $booking->payment_amount, 2);
         $verifiedAmount = $verification['amount'] === null ? null : round((float) $verification['amount'], 2);
         $amountMatches = $verifiedAmount !== null && $verifiedAmount >= $expectedAmount;
         $currencyMatches = empty($verification['currency'])
             || strtoupper((string) $verification['currency']) === strtoupper((string) $booking->payment_currency);
+
+        if (! ($verification['query_succeeded'] ?? true)) {
+            Log::warning('SeerBit payment verification temporarily unavailable', [
+                'booking_ref' => $booking->booking_ref,
+                'payment_reference' => $reference,
+            ]);
+
+            return $this->_redirectAfterSeerbitFailure(
+                $booking,
+                'We could not confirm the payment yet. Please retry shortly. Your booking remains pending.'
+            );
+        }
 
         if (! $verification['ok'] || ! $amountMatches || ! $currencyMatches) {
             $booking->update([
@@ -808,8 +891,10 @@ class FlightBookingController extends Controller
     // =========================================================================
     public function travelFlexBankTransfer(Request $request)
     {
+        abort_if(config('travelwheel.travelflex_bank_accounts', []) === [], 503, 'Bank transfer is unavailable.');
+
         $request->validate([
-            'payment_reference' => 'nullable|string|max:100',
+            'payment_reference' => 'required|string|min:3|max:100',
         ]);
 
         $currentPlan = session('travelFlexPlan', []);
@@ -817,6 +902,9 @@ class FlightBookingController extends Controller
             return redirect()->route('flights.travelflex')
                 ->withErrors(['error' => 'TravelFlex plan missing. Please choose your repayment plan again.']);
         }
+
+        $application = TravelFlexApplication::with('booking')->findOrFail((int) session('travelFlexApplicationId'));
+        app(TravelFlexFlowService::class)->assertApprovedForDeposit($application);
 
         $tfPlan = $this->_normalizeTravelFlexPlan(
             (int) data_get($currentPlan, 'down_percent', 30),
@@ -993,9 +1081,14 @@ class FlightBookingController extends Controller
  
         $dbId      = session('flightBookingDbId');
         $dbBooking = $dbId ? \App\Models\FlightBooking::find($dbId) : null;
+        $application = session('travelFlexApplicationId')
+            ? TravelFlexApplication::find(session('travelFlexApplicationId'))
+            : null;
 
         return view('livewire.pages.flight.flight-travelflex-pending', [
             'bookingRef' => session('bookingRef', $dbBooking?->booking_ref ?? ''),
+            'application' => $application,
+            'dbBooking' => $dbBooking,
         ]);
     }
  
@@ -1146,6 +1239,9 @@ class FlightBookingController extends Controller
                 'extra_services_snapshot' => session('selectedExtras', []),
             ]);
         } else {
+            if ($flow === 'held_ticket_full') {
+                $this->_assertHeldBookingPayable($booking);
+            }
             $booking->update([
                 'payment_status' => 'pending',
                 'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
@@ -1158,6 +1254,27 @@ class FlightBookingController extends Controller
         }
 
         return $booking->fresh();
+    }
+
+    private function _assertHeldBookingPayable(FlightBooking $booking, int $minimumMinutes = 10): void
+    {
+        if ($booking->ticket_ordered || $booking->booking_status === 'ticketed') {
+            throw ValidationException::withMessages([
+                'payment' => 'This booking has already been ticketed.',
+            ]);
+        }
+
+        if (! $booking->unique_id) {
+            throw ValidationException::withMessages([
+                'payment' => 'The airline hold reference is missing. Please restart checkout.',
+            ]);
+        }
+
+        if ($booking->tkt_time_limit && $booking->tkt_time_limit->lte(now()->addMinutes($minimumMinutes))) {
+            throw ValidationException::withMessages([
+                'payment' => 'The airline hold no longer leaves enough time to verify payment and issue the ticket. Please search again.',
+            ]);
+        }
     }
 
     private function _completeWebfarePayment(FlightBooking $booking, Request $request)
@@ -1270,12 +1387,42 @@ class FlightBookingController extends Controller
     private function _completeTravelFlexPayment(FlightBooking $booking, Request $request)
     {
         $tfPlan = session('travelFlexPlan', []);
-        $applicant = session('travelFlexApplicant', []);
-        $docPaths = session('travelFlexDocPaths', []);
 
         if (empty($tfPlan)) {
             return redirect()->route('flights.travelflex')->withErrors(['error' => 'TravelFlex plan missing.']);
         }
+
+        $application = app(TravelFlexFlowService::class)->applicationForBooking($booking);
+        if (! $application) {
+            return redirect()->route('flights.travelflex.pending')->withErrors(['error' => 'Payment was received, but the TravelFlex application could not be matched. Ticketing has been stopped for manual review.']);
+        }
+
+        if ($booking->ticket_ordered || $booking->booking_status === 'ticketed') {
+            return redirect()->route('flights.travelflex.confirmation');
+        }
+
+        try {
+            app(TravelFlexFlowService::class)->assertApprovedForDeposit($application->load('booking'));
+        } catch (ValidationException $exception) {
+            $application->update([
+                'deposit_status' => 'refund_pending',
+                'payment_status' => 'paid',
+                'deposit_reference' => $booking->payment_reference,
+                'deposit_paid_at' => now(),
+            ]);
+            $booking->update(['payment_status' => 'partially_paid']);
+
+            return redirect()->route('flights.travelflex.pending')->withErrors([
+                'error' => 'The down payment was received, but ticketing was stopped because the approval or airline hold is no longer valid. TravelWheel will review the payment immediately.',
+            ]);
+        }
+
+        $application->update([
+            'deposit_status' => 'paid',
+            'payment_status' => 'paid',
+            'deposit_reference' => $booking->payment_reference,
+            'deposit_paid_at' => now(),
+        ]);
 
         if ($booking->unique_id) {
             $ticketResult = $this->_callTicketOrderApi($booking->unique_id);
@@ -1285,7 +1432,7 @@ class FlightBookingController extends Controller
 
             $booking->update([
                 'payment_method' => 'flex_gateway',
-                'payment_status' => 'paid',
+                'payment_status' => 'partially_paid',
                 'booking_status' => $ticketSuccess ? 'ticketed' : 'ticketing_failed',
                 'ticket_ordered' => $ticketSuccess,
                 'ticket_ordered_at' => $ticketSuccess ? now() : null,
@@ -1331,16 +1478,12 @@ class FlightBookingController extends Controller
             }
         }
 
-        $uploadPaths = array_map(
-            fn($p) => $p ? storage_path('app/' . $p) : null,
-            $docPaths
-        );
-            $this->_sendTravelFlexApplicationEmails($applicant, $tfPlan, $uploadPaths, session('bookingUniqueId', $booking->unique_id ?? ''));
-            $this->_syncTravelFlexApplicationBooking($booking->fresh(), [
-                'provider_status' => 'sent',
-                'provider_email_sent_at' => now(),
-                'provider_email_error' => null,
-            ]);
+        $this->_syncTravelFlexApplicationBooking($booking->fresh(), [
+            'deposit_status' => 'paid',
+            'payment_status' => 'paid',
+            'deposit_reference' => $booking->payment_reference,
+            'deposit_paid_at' => now(),
+        ]);
 
         session(['paymentMethod' => 'flex_gateway']);
 
@@ -2300,6 +2443,13 @@ class FlightBookingController extends Controller
     // =========================================================================
     private function _travelFlexEligibility(array $flight): array
     {
+        if (strtolower((string) ($flight['fareType'] ?? $flight['fare_type'] ?? '')) === 'webfare') {
+            return [
+                'eligible' => false,
+                'reason' => 'TravelFlex is only available on fares that can be held while Fast Credit reviews the application.',
+            ];
+        }
+
         $refundableValue = $flight['isRefundable'] ?? false;
         $isRefundable = is_bool($refundableValue)
             ? $refundableValue
@@ -2437,7 +2587,6 @@ class FlightBookingController extends Controller
             'work_id_card'      => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
             'employment_letter' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
             'bank_statements'   => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'pay_method'        => 'required|in:bank_transfer,gateway',
         ], [
             'bvn.size'  => 'BVN must be exactly 11 digits.',
             'bvn.regex' => 'BVN must contain only numbers.',
@@ -2466,8 +2615,9 @@ class FlightBookingController extends Controller
         $tfPlan = $this->_normalizeTravelFlexPlan(
             (int) data_get($currentPlan, 'down_percent', 30),
             (string) data_get($currentPlan, 'repayment_plan', ''),
-            (string) $request->input('pay_method'),
+            'gateway',
         );
+        $tfPlan['payment_method'] = null;
         session(['travelFlexPlan' => $tfPlan]);
  
         $applicant = [
@@ -2486,18 +2636,82 @@ class FlightBookingController extends Controller
         $travelFlexApplication = $this->_persistTravelFlexApplication($applicant, $tfPlan, $storagePaths);
  
         // ── Now branch on payment method ──────────────────────────────────────
-        $payMethod = $request->input('pay_method');
- 
-        if ($payMethod === 'bank_transfer') {
-            return redirect()->route('flights.travelflex.bank-transfer-form');
+        if ($booking = $travelFlexApplication->booking) {
+            $booking->update([
+                'booking_status' => 'awaiting_approval',
+                'payment_status' => 'pending',
+                'payment_method' => null,
+            ]);
         }
- 
-        // Gateway: simulate payment → book → send emails → redirect to confirmation
-        return redirect()->route('flights.travelflex.gateway-process');
+
+        try {
+            app(TravelFlexApplicationService::class)->sendProviderEmail($travelFlexApplication->fresh(['booking']));
+        } catch (\Throwable $exception) {
+            $travelFlexApplication->update([
+                'provider_status' => 'failed',
+                'provider_email_error' => $exception->getMessage(),
+            ]);
+            Log::error('TravelFlex provider handoff failed', ['application_id' => $travelFlexApplication->id, 'error' => $exception->getMessage()]);
+        }
+
+        try {
+            app(TravelFlexApplicationService::class)->notifyCustomerStatus(
+                $travelFlexApplication->fresh(['booking']),
+                'submitted',
+                'Fast Credit will contact you and provide a decision within 24 hours.',
+            );
+        } catch (\Throwable $exception) {
+            Log::error('TravelFlex submission email failed', ['application_id' => $travelFlexApplication->id, 'error' => $exception->getMessage()]);
+        }
+
+        return redirect()->route('flights.travelflex.pending');
     }
  
     // =========================================================================
-    //  travelFlexBankTransferForm() — Show bank details after application submitted
+    public function travelFlexApproved(TravelFlexApplication $application, TravelFlexFlowService $flow)
+    {
+        try {
+            $booking = $flow->revalidateHold($application->load('booking'));
+        } catch (ValidationException $exception) {
+            return redirect()->route('air.flight-s')->withErrors($exception->errors());
+        }
+
+        $flow->primeSession($application);
+
+        return view('livewire.pages.flight.flight-travelflex-approved', [
+            'application' => $application,
+            'booking' => $booking,
+            'paymentDeadline' => $flow->approvalDeadline($application),
+        ]);
+    }
+
+    public function travelFlexApprovedPayment(Request $request, TravelFlexFlowService $flow)
+    {
+        $validated = $request->validate(['pay_method' => 'required|in:gateway,bank_transfer']);
+        $application = TravelFlexApplication::with('booking')->findOrFail((int) session('travelFlexApplicationId'));
+        $booking = ! $application->pricing_revalidated_at || $application->pricing_revalidated_at->lt(now()->subMinutes(10))
+            ? $flow->revalidateHold($application)
+            : $flow->assertApprovedForDeposit($application);
+        $plan = $this->_normalizeTravelFlexPlan(
+            (int) data_get($application->repayment_plan, 'down_percent', 30),
+            (string) data_get($application->repayment_plan, 'repayment_plan', ''),
+            $validated['pay_method'],
+        );
+        session(['travelFlexPlan' => $plan]);
+        $application->update([
+            'repayment_plan' => $plan,
+            'payment_method' => $validated['pay_method'],
+            'deposit_status' => 'pending',
+            'pricing_revalidated_at' => now(),
+        ]);
+        $booking->update(['booking_status' => 'awaiting_deposit']);
+
+        return $validated['pay_method'] === 'gateway'
+            ? $this->travelFlexGatewayProcess($request)
+            : redirect()->route('flights.travelflex.bank-transfer-form');
+    }
+
+    //  travelFlexBankTransferForm() — Show bank details after application approval
     // =========================================================================
     public function travelFlexBankTransferForm()
     {
@@ -2509,6 +2723,9 @@ class FlightBookingController extends Controller
                 ->withErrors(['error' => 'TravelFlex application session expired. Please continue again.']);
         }
 
+        $application = TravelFlexApplication::with('booking')->findOrFail((int) session('travelFlexApplicationId'));
+        app(TravelFlexFlowService::class)->assertApprovedForDeposit($application);
+
         $tfPlan = $this->_normalizeTravelFlexPlan(
             (int) data_get($tfPlan, 'down_percent', 30),
             (string) data_get($tfPlan, 'repayment_plan', ''),
@@ -2516,13 +2733,16 @@ class FlightBookingController extends Controller
         );
         session(['travelFlexPlan' => $tfPlan]);
 
-        return view('livewire.pages.flight.flight-travelflex-bank-transfer', [
-            'bankAccounts' => [
-                ['bank' => 'Access Bank', 'account_number' => '0123456789', 'account_name' => 'Travelwheel Limited'],
-                ['bank' => 'Zenith Bank',  'account_number' => '2109876543', 'account_name' => 'Travelwheel Limited'],
-                ['bank' => 'GTBank',       'account_number' => '0156789234', 'account_name' => 'Travelwheel Limited'],
-            ],
-        ]);
+        $bankAccounts = config('travelwheel.travelflex_bank_accounts', []);
+        if ($bankAccounts === []) {
+            Log::critical('TravelFlex bank transfer requested without configured bank accounts');
+
+            return back()->withErrors([
+                'error' => 'Bank transfer is temporarily unavailable. Please choose online payment or contact support.',
+            ]);
+        }
+
+        return view('livewire.pages.flight.flight-travelflex-bank-transfer', compact('bankAccounts'));
     }
  
     // =========================================================================
@@ -2537,6 +2757,9 @@ class FlightBookingController extends Controller
         if (empty($contact) || empty($passengers) || empty($tfPlan)) {
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Session expired.']);
         }
+
+        $application = TravelFlexApplication::with('booking')->findOrFail((int) session('travelFlexApplicationId'));
+        app(TravelFlexFlowService::class)->assertApprovedForDeposit($application);
 
         $tfPlan = $this->_normalizeTravelFlexPlan(
             (int) data_get($tfPlan, 'down_percent', 30),
@@ -2583,8 +2806,10 @@ class FlightBookingController extends Controller
                 'grand_total' => $tfPlan['grand_total'] ?? null,
                 'total_interest' => $tfPlan['total_interest'] ?? null,
                 'payment_method' => $tfPlan['payment_method'] ?? null,
-                'payment_status' => $booking?->payment_status ?? 'pending',
+                'payment_status' => 'not_due',
                 'application_status' => 'submitted',
+                'financing_status' => 'pending',
+                'deposit_status' => 'not_due',
             ],
         );
 
@@ -2646,17 +2871,20 @@ class FlightBookingController extends Controller
         $esResult = $extraServices['ExtraServicesResponse']['ExtraServicesResult']['ExtraServicesData'] ?? [];
         $dynBaggage = $esResult['DynamicBaggage'] ?? [];
         $dynMeal = $esResult['DynamicMeal'] ?? [];
+        $flight = session('bookingFlight.flight', session('bookingFlight', []));
+        $bookingCurrency = strtoupper((string) ($flight['currency'] ?? 'NGN'));
 
         $collected = [
             'baggage' => [],
             'meal' => [],
             'total_amount' => 0,
-            'currency' => 'USD',
+            'currency' => $bookingCurrency,
         ];
 
         // ── Process selected baggage ──────────────────────────────────────
         foreach ($extraBaggage as $direction => $items) {
             foreach ($items as $serviceId => $quantity) {
+                $quantity = min(9, max(0, (int) $quantity));
                 if ($quantity <= 0) continue;
 
                 // Find matching baggage service from API data
@@ -2666,7 +2894,12 @@ class FlightBookingController extends Controller
                         foreach (($bag['Services'][0] ?? []) as $svc) {
                             if ((string)$svc['ServiceId'] === (string)$serviceId) {
                                 $price = (float)($svc['ServiceCost']['Amount'] ?? 0);
-                                $currency = $svc['ServiceCost']['CurrencyCode'] ?? 'USD';
+                                $currency = strtoupper((string) ($svc['ServiceCost']['CurrencyCode'] ?? $bookingCurrency));
+                                if ($currency !== $bookingCurrency) {
+                                    throw ValidationException::withMessages([
+                                        'extra_baggage' => 'The selected baggage price uses a different currency. Please refresh the booking before continuing.',
+                                    ]);
+                                }
                                 $collected['currency'] = $currency;
                                 $collected['total_amount'] += $price * $quantity;
                                 $collected['baggage'][] = [
@@ -2699,7 +2932,12 @@ class FlightBookingController extends Controller
                             foreach (($meal['Services'][$segmentIndex] ?? []) as $svc) {
                                 if ((string)$svc['ServiceId'] === (string)$serviceId) {
                                     $price = (float)($svc['ServiceCost']['Amount'] ?? 0);
-                                    $currency = $svc['ServiceCost']['CurrencyCode'] ?? 'USD';
+                                    $currency = strtoupper((string) ($svc['ServiceCost']['CurrencyCode'] ?? $bookingCurrency));
+                                    if ($currency !== $bookingCurrency) {
+                                        throw ValidationException::withMessages([
+                                            'extra_meal' => 'The selected meal price uses a different currency. Please refresh the booking before continuing.',
+                                        ]);
+                                    }
                                     $collected['currency'] = $currency;
                                     $collected['total_amount'] += $price;
                                     $collected['meal'][] = [

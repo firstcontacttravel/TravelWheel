@@ -60,7 +60,7 @@
                 $equip     = $seg['equipment'] ?? '';
                 $equipLbl  = $equipMap[$equip]  ?? $equip;
                 $bagArr    = array_filter((array)($breakdown[0]['baggage']      ?? []), fn($v) => $v !== '');
-                $cabArr    = array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== '');
+                $cabArr    = \App\Support\FlightDisplay::cabinBaggageValues($breakdown[0]['cabinBaggage'] ?? []);
                 $bagStr    = implode(' / ', array_unique($bagArr)) ?: '1 × 23 kg';
                 $cabinBag  = implode(' / ', array_unique($cabArr)) ?: '7 kg';
                 $depDt     = !empty($seg['departDT']) ? \Carbon\Carbon::parse($seg['departDT']) : null;

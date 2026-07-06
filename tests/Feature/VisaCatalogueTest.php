@@ -6,12 +6,15 @@ use App\Enums\VisaEligibilityMode;
 use App\Enums\VisaPublicationStatus;
 use App\Filament\Resources\VisaProducts\Pages\CreateVisaProduct;
 use App\Filament\Resources\VisaProducts\VisaProductResource;
+use App\Filament\Resources\VisaDestinations\VisaDestinationResource;
 use App\Models\Country;
 use App\Models\CountryGroup;
 use App\Models\User;
 use App\Models\VisaProduct;
+use App\Models\VisaVendor;
 use App\Services\VisaCataloguePublicationService;
 use App\Services\VisaEligibilityService;
+use App\Services\VisaFormWorkflow;
 use Database\Seeders\CountrySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -46,19 +49,21 @@ class VisaCatalogueTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
         $product = $this->completeProduct();
 
-        $this->actingAs($admin)->get(VisaProductResource::getUrl('create'))->assertOk()->assertSee('Basics')->assertSee('Processing &amp; pricing', false);
+        $this->actingAs($admin)->get(VisaProductResource::getUrl('create'))->assertOk()->assertSee('Basics')->assertSee('Processing &amp; pricing', false)->assertSee('Visa type')->assertSee('Two entries');
         $this->actingAs($admin)->get(VisaProductResource::getUrl('edit', ['record' => $product]))->assertOk()->assertSee($product->name);
+        $this->actingAs($admin)->get(VisaDestinationResource::getUrl('create'))->assertOk()->assertSee('Regional visa destination');
     }
 
     public function test_new_processing_option_can_be_linked_to_a_fee_before_first_save(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
         $destination = Country::query()->create(['alpha2' => 'GB', 'name' => 'United Kingdom']);
+        $vendor = VisaVendor::query()->create(['name' => 'Test Vendor', 'email' => 'vendor@example.com', 'is_active' => true]);
         $code = (string) Str::uuid();
         $serviceCode = (string) Str::uuid();
 
         Livewire::actingAs($admin)->test(CreateVisaProduct::class)->fillForm([
-            'destination_country_id' => $destination->id, 'name' => 'Test Visitor Visa', 'slug' => 'test-visitor-visa', 'family' => 'standard', 'category' => 'tourist', 'entry_type' => 'single', 'eligibility_mode' => 'all',
+            'destination_country_id' => $destination->id, 'visa_vendor_id' => $vendor->id, 'name' => 'Test Visitor Visa', 'slug' => 'test-visitor-visa', 'family' => 'standard', 'category' => 'tourist', 'entry_type' => 'single', 'eligibility_mode' => 'all',
             'processingOptions' => [['code' => $code, 'name' => 'Priority', 'minimum_business_days' => 2, 'maximum_business_days' => 3, 'is_active' => true]],
             'fees' => [['name' => 'Priority surcharge', 'fee_type' => 'processing', 'traveler_type' => 'all', 'calculation_basis' => 'per_application', 'processing_option_code' => $code, 'currency' => 'NGN', 'amount' => 25000, 'payee' => 'travelwheel', 'pay_online' => true, 'is_active' => true]],
             'optionalServices' => [['code' => $serviceCode, 'service_type' => 'insurance', 'name' => 'Travel insurance', 'pricing_model' => 'included', 'is_active' => true]],
@@ -177,6 +182,17 @@ class VisaCatalogueTest extends TestCase
         ]);
 
         $this->assertGreaterThan($version, $product->fresh()->version);
+    }
+
+    public function test_application_questions_require_no_manual_form_step_assignment(): void
+    {
+        $product = $this->completeProduct();
+        $product->questions()->create(['key' => 'employer_name', 'label' => 'Employer name', 'input_type' => 'text', 'is_active' => true]);
+        $product->update(['form_configuration' => app(VisaFormWorkflow::class)->defaults()]);
+
+        $errors = app(VisaCataloguePublicationService::class)->errors($product->fresh());
+
+        $this->assertSame([], $errors);
     }
 
     private function completeProduct(): VisaProduct

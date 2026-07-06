@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Country;
+use App\Models\VisaDestination;
 use App\Services\VisaDiscoveryService;
 use App\Services\VisaFunnelService;
 use Illuminate\Http\RedirectResponse;
@@ -17,6 +18,11 @@ class VisaSearchController extends Controller
         $validated = $request->validate($this->rules(), [
             'infants.lte' => 'The number of infants cannot exceed the number of adults.',
         ]);
+        [$destinationType, $destination] = $this->resolveDestination($validated);
+        $validated['destination_type'] = $destinationType;
+        $validated['destination_id'] = $destinationType === 'country' ? $destination->id : null;
+        $validated['visa_destination_id'] = $destinationType === 'region' ? $destination->id : null;
+        $validated['destination_ref'] = $destinationType.':'.$destination->id;
 
         session()->forget(['visaResultsStore', 'visaSearchParamsStore']);
         session(['pendingVisaSearch' => $validated, 'pendingVisaSearchStartedAt' => now()->toIso8601String()]);
@@ -36,7 +42,9 @@ class VisaSearchController extends Controller
             'search' => $search,
             'nationality' => Country::query()->find($search['nationality_id']),
             'residence' => filled($search['residence_country_id'] ?? null) ? Country::query()->find($search['residence_country_id']) : null,
-            'destination' => Country::query()->find($search['destination_id']),
+            'destination' => ($search['destination_type'] ?? 'country') === 'region'
+                ? VisaDestination::query()->find($search['visa_destination_id'])
+                : Country::query()->find($search['destination_id']),
         ]);
     }
 
@@ -48,7 +56,9 @@ class VisaSearchController extends Controller
         }
 
         $nationality = Country::query()->findOrFail($search['nationality_id']);
-        $destination = Country::query()->findOrFail($search['destination_id']);
+        $destination = ($search['destination_type'] ?? 'country') === 'region'
+            ? VisaDestination::query()->findOrFail($search['visa_destination_id'])
+            : Country::query()->findOrFail($search['destination_id']);
         $residence = filled($search['residence_country_id'] ?? null) ? Country::query()->findOrFail($search['residence_country_id']) : null;
         $travelers = ['adult' => (int) $search['adults'], 'child' => (int) $search['children'], 'infant' => (int) $search['infants']];
 
@@ -78,12 +88,27 @@ class VisaSearchController extends Controller
         return [
             'nationality_id' => ['required', Rule::exists('countries', 'id')->where('is_active', true)],
             'residence_country_id' => ['nullable', Rule::exists('countries', 'id')->where('is_active', true)],
-            'destination_id' => ['required', Rule::exists('countries', 'id')->where('is_active', true)],
+            'destination_ref' => ['nullable', 'required_without:destination_id', 'regex:/^(country|region):[1-9][0-9]*$/'],
+            'destination_id' => ['nullable', 'required_without:destination_ref', Rule::exists('countries', 'id')->where('is_active', true)],
             'arrival_date' => ['required', 'date', 'after_or_equal:today'],
             'departure_date' => ['required', 'date', 'after:arrival_date'],
             'adults' => ['required', 'integer', 'min:1', 'max:9'],
             'children' => ['required', 'integer', 'min:0', 'max:9'],
             'infants' => ['required', 'integer', 'min:0', 'max:9', 'lte:adults'],
         ];
+    }
+
+    private function resolveDestination(array $search): array
+    {
+        if (filled($search['destination_ref'] ?? null)) {
+            [$type, $id] = explode(':', $search['destination_ref'], 2);
+            $destination = $type === 'region'
+                ? VisaDestination::query()->where('is_active', true)->findOrFail($id)
+                : Country::query()->where('is_active', true)->findOrFail($id);
+
+            return [$type, $destination];
+        }
+
+        return ['country', Country::query()->where('is_active', true)->findOrFail($search['destination_id'])];
     }
 }

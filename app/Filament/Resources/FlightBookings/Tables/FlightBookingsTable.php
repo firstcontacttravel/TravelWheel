@@ -13,6 +13,7 @@ use App\Services\AdminReplacementFlightSearchService;
 use App\Services\AdminTicketingService;
 use App\Services\SeerbitPaymentService;
 use App\Services\TravelFlexApplicationService;
+use App\Services\TravelFlexFlowService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
@@ -35,6 +36,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\HtmlString;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class FlightBookingsTable
@@ -124,7 +126,7 @@ class FlightBookingsTable
                     ->label('Payment')
                     ->badge()
                     ->color(fn (?string $state): string => match ($state) {
-                        'paid' => 'success',
+                        'paid', 'partially_paid' => 'success',
                         'failed' => 'danger',
                         'awaiting_bank_transfer', 'pending' => 'warning',
                         default => 'gray',
@@ -558,10 +560,33 @@ class FlightBookingsTable
                     ->default(false),
             ])
             ->action(function (FlightBooking $record, array $data): void {
+                $isTravelFlex = $record->payment_method === 'flex_bank_transfer';
+                $travelFlexApplication = $isTravelFlex
+                    ? app(TravelFlexApplicationService::class)->syncPaymentFromBooking($record)
+                    : null;
+
+                if ($isTravelFlex && (! $travelFlexApplication || $travelFlexApplication->application_status !== 'approved' || $travelFlexApplication->financing_status !== 'approved')) {
+                    Notification::make()->title('TravelFlex approval required')->body('Fast Credit must approve the application before the down payment can be verified.')->danger()->send();
+                    return;
+                }
+
+                if ($travelFlexApplication) {
+                    try {
+                        app(TravelFlexFlowService::class)->assertApprovedForDeposit($travelFlexApplication->load('booking'));
+                    } catch (ValidationException $exception) {
+                        Notification::make()
+                            ->title('Airline hold must be revalidated')
+                            ->body($exception->validator->errors()->first('travelflex'))
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+                }
+
                 $previousStatus = $record->payment_status;
 
                 $record->update([
-                    'payment_status' => 'paid',
+                    'payment_status' => $isTravelFlex ? 'partially_paid' : 'paid',
                     'payment_method' => $record->payment_method ?: 'bank_transfer',
                     'payment_reference' => $data['payment_reference'] ?: $record->payment_reference,
                     'payment_amount' => $data['amount_received'],
@@ -588,6 +613,13 @@ class FlightBookingsTable
 
                 if ($paidBooking->payment_method === 'flex_bank_transfer') {
                     $application = app(TravelFlexApplicationService::class)->syncPaymentFromBooking($paidBooking);
+
+                    $application?->update([
+                        'payment_status' => 'paid',
+                        'deposit_status' => 'paid',
+                        'deposit_reference' => $data['payment_reference'] ?: $record->payment_reference,
+                        'deposit_paid_at' => now(),
+                    ]);
 
                     if ($application && $application->provider_status !== 'sent') {
                         try {
@@ -1006,11 +1038,20 @@ class FlightBookingsTable
 
     private static function canOrderTicket(FlightBooking $record): bool
     {
-        return $record->payment_status === 'paid'
+        $paymentReady = $record->payment_status === 'paid';
+        if (in_array($record->payment_method, ['flex_gateway', 'flex_bank_transfer'], true)) {
+            $application = $record->travelFlexApplications()->latest()->first();
+            $paymentReady = $record->payment_status === 'partially_paid'
+                && $application?->application_status === 'approved'
+                && $application?->financing_status === 'approved'
+                && $application?->deposit_status === 'paid';
+        }
+
+        return $paymentReady
             && filled($record->unique_id)
             && ! $record->ticket_ordered
             && $record->booking_status !== 'ticketed'
-            && in_array($record->booking_status, ['on_hold', 'confirmed', 'failed', 'ticketing_failed'], true);
+            && in_array($record->booking_status, ['on_hold', 'confirmed', 'awaiting_deposit', 'failed', 'ticketing_failed'], true);
     }
 
     private static function recordTicketing(FlightBooking $record, array $data): void

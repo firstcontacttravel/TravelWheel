@@ -1,7 +1,7 @@
 <?php
 // ── app/Mail/TravelFlexApplicationMail.php ────────────────────────────────────
 // Sent to the loan provider (+ CC to Travelwheel) when a user submits a
-// TravelFlex loan application and pays the down payment.
+// TravelFlex loan application before any down payment is collected.
 
 namespace App\Mail;
 

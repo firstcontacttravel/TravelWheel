@@ -15,6 +15,7 @@ class ViewVisaApplication extends ViewRecord
     {
         return [
             ActionGroup::make([VisaApplicationsTable::assignAction(), VisaApplicationsTable::addNoteAction()])->label('Ownership')->icon('heroicon-o-user-group')->button(),
+            VisaApplicationsTable::sendToVendorAction()->button(),
             ActionGroup::make([VisaApplicationsTable::requestDocumentAction(), VisaApplicationsTable::reviewDocumentAction(), VisaApplicationsTable::reviewRequestAction()])->label('Documents')->icon('heroicon-o-document-check')->button(),
             ActionGroup::make([VisaApplicationsTable::transitionAction(), VisaApplicationsTable::issueAction()])->label('Decision')->icon('heroicon-o-arrows-right-left')->color('primary')->button(),
         ];

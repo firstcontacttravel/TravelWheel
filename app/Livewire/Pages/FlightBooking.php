@@ -404,11 +404,17 @@ class FlightBooking extends Component
  
     public function proceed(): void
     {
-        $this->normalizePassengerTitles();
-        $this->syncPhonePartsFromFull();
-        $this->validate();
-        $this->validatePassengerAges();
-        $this->step = 2;
+        if ($this->step === 1) {
+            $this->normalizePassengerTitles();
+            $this->syncPhonePartsFromFull();
+            $this->validate();
+            $this->validatePassengerAges();
+            $this->step = 2;
+        } elseif ($this->step === 2) {
+            $this->recalcExtrasTotal();
+            $this->step = 3;
+        }
+
         $this->dispatch('scrollTop');
     }
 
@@ -541,7 +547,7 @@ class FlightBooking extends Component
  
     public function back(): void
     {
-        $this->step = 1;
+        $this->step = max(1, $this->step - 1);
         $this->dispatch('scrollTop');
     }
 

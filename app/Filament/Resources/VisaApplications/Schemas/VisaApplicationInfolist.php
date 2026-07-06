@@ -14,7 +14,7 @@ class VisaApplicationInfolist
         return $schema->components([
             Section::make('Application overview')->schema([
                 TextEntry::make('reference')->copyable()->weight('bold'), TextEntry::make('status')->badge(), TextEntry::make('product.name')->label('Visa product'),
-                TextEntry::make('product.family')->label('Flow')->badge(), TextEntry::make('contact_email')->copyable(), TextEntry::make('assignee.name')->label('Assigned officer')->placeholder('Shared queue'),
+                TextEntry::make('product.family')->label('Flow')->badge(), TextEntry::make('product.vendor.name')->label('Vendor')->placeholder('Not assigned'), TextEntry::make('contact_email')->copyable(), TextEntry::make('assignee.name')->label('Assigned officer')->placeholder('Shared queue'),
                 TextEntry::make('arrival_date')->date(), TextEntry::make('departure_date')->date(), TextEntry::make('processingOption.name')->label('Processing option')->placeholder('-'),
             ])->columns(3),
             Section::make('Travellers')->schema([
@@ -28,14 +28,14 @@ class VisaApplicationInfolist
             ]),
             Section::make('Uploaded documents')->schema([
                 RepeatableEntry::make('documents')->hiddenLabel()->schema([
-                    TextEntry::make('requirement.name')->label('Requirement'), TextEntry::make('traveler.first_name')->label('Traveller')->placeholder('Application'), TextEntry::make('original_name')->url(fn ($record) => route('admin.visa.documents.application', $record))->openUrlInNewTab(), TextEntry::make('status')->badge(), TextEntry::make('review_note')->placeholder('-'),
+                    TextEntry::make('requirement.name')->label('Requirement'), TextEntry::make('traveler.first_name')->label('Traveller')->placeholder('Application'), TextEntry::make('original_name')->label('File — click to view')->url(fn ($record) => route('admin.visa.documents.application', $record))->openUrlInNewTab()->color('primary')->icon('heroicon-o-eye'), TextEntry::make('status')->badge(), TextEntry::make('review_note')->placeholder('-'),
                 ])->columns(5),
             ]),
             Section::make('Additional-document requests')->schema([
-                RepeatableEntry::make('additionalDocumentRequests')->hiddenLabel()->schema([TextEntry::make('title'), TextEntry::make('traveler.first_name')->label('Traveller')->placeholder('Application'), TextEntry::make('status')->badge(), TextEntry::make('due_at')->dateTime()->placeholder('-'), TextEntry::make('original_name')->label('Uploaded file')->placeholder('-')->url(fn ($record) => $record->path ? route('admin.visa.documents.requested', $record) : null)->openUrlInNewTab(), TextEntry::make('review_note')->placeholder('-')])->columns(3),
+                RepeatableEntry::make('additionalDocumentRequests')->hiddenLabel()->schema([TextEntry::make('title'), TextEntry::make('traveler.first_name')->label('Traveller')->placeholder('Application'), TextEntry::make('status')->badge(), TextEntry::make('due_at')->dateTime()->placeholder('-'), TextEntry::make('original_name')->label('File — click to view')->placeholder('-')->url(fn ($record) => $record->path ? route('admin.visa.documents.requested', $record) : null)->openUrlInNewTab()->color('primary')->icon('heroicon-o-eye'), TextEntry::make('review_note')->placeholder('-')])->columns(3),
             ]),
             Section::make('Issued visa documents')->schema([
-                RepeatableEntry::make('issuedDocuments')->hiddenLabel()->schema([TextEntry::make('version')->badge(), TextEntry::make('original_name')->url(fn ($record) => route('admin.visa.documents.issued', $record))->openUrlInNewTab(), TextEntry::make('issuer.name')->label('Issued by')->placeholder('System'), TextEntry::make('issued_at')->dateTime(), TextEntry::make('superseded_at')->dateTime()->placeholder('Current')])->columns(5),
+                RepeatableEntry::make('issuedDocuments')->hiddenLabel()->schema([TextEntry::make('version')->badge(), TextEntry::make('original_name')->label('File — click to view')->url(fn ($record) => route('admin.visa.documents.issued', $record))->openUrlInNewTab()->color('primary')->icon('heroicon-o-eye'), TextEntry::make('issuer.name')->label('Issued by')->placeholder('System'), TextEntry::make('issued_at')->dateTime(), TextEntry::make('superseded_at')->dateTime()->placeholder('Current')])->columns(5),
             ]),
             Section::make('Pricing and payment')->schema([
                 RepeatableEntry::make('payments')->hiddenLabel()->schema([TextEntry::make('reference')->copyable(), TextEntry::make('status')->badge(), TextEntry::make('expected_amount')->money(fn ($record) => $record->expected_currency), TextEntry::make('verified_amount')->money(fn ($record) => $record->verified_currency)->placeholder('-'), TextEntry::make('verified_at')->dateTime()->placeholder('-')])->columns(5),

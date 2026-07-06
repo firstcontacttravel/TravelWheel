@@ -216,9 +216,9 @@
         <div class="tf-pnd-hero-icon"></div>
         <div>
             <div class="tf-pnd-kicker">TravelFlex Plan</div>
-            <div class="tf-pnd-title">Down Payment Received - Awaiting Verification</div>
+            <div class="tf-pnd-title">Application submitted to Fast Credit</div>
             <div class="tf-pnd-sub">
-                We've received your payment notification. Our team will verify your transfer and activate your TravelFlex plan within <strong>2-4 business hours</strong>. Your e-ticket will be issued immediately after activation.
+                Fast Credit will contact you and provide an approval decision within <strong>24 hours</strong>. No down payment is due and no ticket will be issued until the application is approved.
             </div>
             @if($uniqueId)<div class="tf-pnd-ref">{{ $uniqueId }}</div>@endif
         </div>
@@ -236,9 +236,9 @@
                 <div class="pc-body" style="padding:14px 20px 4px;">
                     @foreach([
                         ['done','✓','Application Submitted','Your TravelFlex application, documents, and repayment plan have been received.'],
-                        ['current','2','Payment Verification','Verifying your down payment transfer. This usually takes 2-4 business hours.'],
-                        ['pending','3','Provider Review','After payment verification, your application package moves to the TravelFlex provider review queue.'],
-                        ['pending','4','Ticketing','Once approved, your ticket is issued or escalated for manual ticketing support.'],
+                        ['current','2','Fast Credit Review','Fast Credit will contact you and provide a decision within 24 hours.'],
+                        ['pending','3','Pay Down Payment','If approved, we will email you a secure payment link before the airline hold expires.'],
+                        ['pending','4','Ticketing','TravelWheel issues your ticket only after approval and verified down payment.'],
                     ] as [$cls,$num,$title,$sub])
                     <div class="tl-step">
                         <div class="tl-num {{ $cls }}">{{ $num }}</div>
@@ -259,7 +259,7 @@
                 <span style="font-size:24px;flex-shrink:0;">⏰</span>
                 <div>
                     <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:3px;">Booking Hold Expires</div>
-                    <div style="font-size:12.5px;color:#78350f;line-height:1.55;">Your seat reservation expires <strong>{{ $tktFmt }}</strong>@if($tktHours>0) ({{ $tktHours }}h remaining)@endif. Ensure payment clears before this time.</div>
+                    <div style="font-size:12.5px;color:#78350f;line-height:1.55;">Your held fare expires <strong>{{ $tktFmt }}</strong>@if($tktHours>0) ({{ $tktHours }}h remaining)@endif. If Fast Credit approves the application, payment must be completed before the secure deadline in your approval email.</div>
                 </div>
             </div>
             @endif
@@ -267,7 +267,7 @@
             {{-- Loan Summary Bar --}}
             <div class="loan-bar">
                 <div class="loan-bar-item"><div class="loan-bar-lbl">Ticket Cost</div><div class="loan-bar-val">{{ $fmt($total) }}</div></div>
-                <div class="loan-bar-item"><div class="loan-bar-lbl">Down Paid ({{ $downPercent }}%)</div><div class="loan-bar-val" style="color:#86efac;">{{ $fmt($downPayment) }}</div></div>
+                <div class="loan-bar-item"><div class="loan-bar-lbl">Down Payment ({{ $downPercent }}%)</div><div class="loan-bar-val" style="color:#86efac;">{{ $fmt($downPayment) }}</div></div>
                 <div class="loan-bar-item"><div class="loan-bar-lbl">Balance Due</div><div class="loan-bar-val">{{ $fmt($remainingBal) }}</div></div>
                 <div class="loan-bar-item"><div class="loan-bar-lbl">Grand Total</div><div class="loan-bar-val" style="color:#c4b5fd;">{{ $fmt($grandTotal) }}</div></div>
             </div>
@@ -411,7 +411,7 @@
                     <div class="dr"><span class="dr-lbl">Trip Type</span><span class="dr-val">{{ $tripLabel }}</span></div>
                     @if($isReturn && !empty($mf['returnDateLabel']))<div class="dr"><span class="dr-lbl">Return</span><span class="dr-val">{{ $mf['returnDateLabel'] }}</span></div>@endif
                     @if($uniqueId)<div class="dr"><span class="dr-lbl">Booking Ref</span><span class="dr-val mono">{{ $uniqueId }}</span></div>@endif
-                    <div class="dr"><span class="dr-lbl">Down Paid</span><span class="dr-val" style="color:var(--green);">{{ $fmt($downPayment) }} ({{ $downPercent }}%)</span></div>
+                    <div class="dr"><span class="dr-lbl">Down payment after approval</span><span class="dr-val" style="color:var(--green);">{{ $fmt($downPayment) }} ({{ $downPercent }}%)</span></div>
                     <div class="dr"><span class="dr-lbl">Balance</span><span class="dr-val">{{ $fmt($remainingBal) }}</span></div>
                     <div class="dr"><span class="dr-lbl">Repayment</span><span class="dr-val">{{ $repaymentPlan }}</span></div>
                     <div class="dr"><span class="dr-lbl">Status</span><span class="dr-val"><span class="status-badge status-pending" style="font-size:10px;">Pending</span></span></div>

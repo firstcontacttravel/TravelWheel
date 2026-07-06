@@ -3,6 +3,9 @@
     .fw-card-outer::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,25,70,.65) 0%,rgba(0,0,0,.4) 100%);pointer-events:none}
     .fw-card{position:relative;z-index:2;width:100%;max-width:1180px;margin:0 auto;background:#fff;border-radius:18px;padding:30px 32px 26px;box-shadow:0 20px 70px rgba(0,0,0,.22),0 4px 18px rgba(0,0,0,.1);box-sizing:border-box}
     .fw-tabs{display:flex;gap:6px;margin-bottom:22px;flex-wrap:wrap}
+    .fw-global-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .fw-global-cabin{position:relative;flex-shrink:0}
+    .fw-global-cabin select{height:34px;max-width:170px;padding:0 34px 0 14px;border:1.5px solid #bfdbfe;border-radius:999px;background-color:#fff;color:#1d4ed8;font-size:12px;font-weight:600;outline:none}
     .fw-tab{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:500;cursor:pointer;color:#6b7280;background:#f3f4f6;border:1.5px solid transparent;transition:all .2s;user-select:none;line-height:1;margin:0}
     .fw-tab:hover{background:#e5e7eb;color:#374151}
     .fw-tab.fw-active{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe;font-weight:600}
@@ -69,7 +72,7 @@
     .fw-cal-day.fw-empty{visibility:hidden;pointer-events:none}
     /* Responsive */
     @media(max-width:960px){.fw-card{padding:24px 20px 20px}.fw-row{flex-wrap:wrap;gap:8px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 calc(50% - 8px)!important;min-width:calc(50% - 8px)}.fw-swap{display:none!important}}
-    @media(max-width:580px){.fw-card-outer{padding:20px 14px}.fw-card{padding:20px 16px;border-radius:14px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 100%!important;min-width:100%}.fw-leg{flex-wrap:wrap}.fw-search-btn{width:100%;justify-content:center}.fw-search-row{margin-top:14px}.fw-tab{padding:7px 13px;font-size:12px}}
+    @media(max-width:580px){.fw-card-outer{padding:20px 14px}.fw-card{padding:20px 16px;border-radius:14px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 100%!important;min-width:100%}.fw-leg{flex-wrap:wrap}.fw-search-btn{width:100%;justify-content:center}.fw-search-row{margin-top:14px}.fw-tab{padding:7px 13px;font-size:12px}.fw-global-controls{width:100%;justify-content:flex-start}.fw-global-cabin{flex:1}.fw-global-cabin select{width:100%;max-width:none}}
     .upper-space{margin-top:30px;}
     @media(max-width:650px){.upper-space{margin-top:0px;}}
 </style>
@@ -115,7 +118,17 @@
             </div>
 
             {{-- Global passenger selector — visible only when Multi City is active --}}
-            <div x-show="trip === 'multi'" x-transition style="position:relative;flex-shrink:0;">
+            <div class="fw-global-controls" x-show="trip === 'multi'" x-transition>
+            <div class="fw-global-cabin">
+                <label class="sr-only" for="fw-multi-cabin">Cabin class</label>
+                <select id="fw-multi-cabin" class="fw-select" x-model="flightType" @change="syncMultiCabin()">
+                    <option value="Y">Economy</option>
+                    <option value="S">Premium Economy</option>
+                    <option value="C">Business</option>
+                    <option value="F">First Class</option>
+                </select>
+            </div>
+            <div style="position:relative;flex-shrink:0;">
                 <div
                     class="fw-tab fw-active"
                     style="cursor:pointer;gap:8px;padding:8px 14px;border-radius:999px;border-color:#bfdbfe;"
@@ -152,6 +165,7 @@
                     </div>
                     <button type="button" class="fw-pax-done" @click="paxOpen = false">Done</button>
                 </div>
+            </div>
             </div>
         </div>
 
@@ -464,21 +478,6 @@
                             </div>
                         </div>
 
-                        {{-- Leg Cabin --}}
-                        <div class="fw-field fw-field-12x">
-                            <div class="fw-label">Cabin</div>
-                            <select
-                                class="fw-input fw-select"
-                                :value="leg.cabin"
-                                @change="multiLegs[index].cabin = $event.target.value; multiLegs = [...multiLegs]"
-                            >
-                                <option value="Y">Economy</option>
-                                <option value="S">Prem. Economy</option>
-                                <option value="C">Business</option>
-                                <option value="F">First Class</option>
-                            </select>
-                        </div>
-
                         {{-- Remove button (only for legs beyond the first two) --}}
                         <button
                             x-show="index >= 2"
@@ -657,10 +656,14 @@ function flightWidget() {
             this.paxOpen = false;
         },
 
+        syncMultiCabin() {
+            this.multiLegs = this.multiLegs.map(leg => ({ ...leg, cabin: this.flightType }));
+        },
+
         // ── Multi-leg management ──
         addLeg() {
             this.multiLegs.push({
-                from: '', to: '', depart: '', cabin: 'Y',
+                from: '', to: '', depart: '', cabin: this.flightType,
                 fromResults: [], toResults: [],
                 fromFocus: false, toFocus: false,
                 calY: new Date().getFullYear(), calM: new Date().getMonth(),
@@ -835,6 +838,7 @@ function flightWidget() {
 
         search() {
             if (!this.validate()) return;
+            if (this.trip === 'multi') this.syncMultiCabin();
             document.getElementById('fw-form').submit();
         },
     };

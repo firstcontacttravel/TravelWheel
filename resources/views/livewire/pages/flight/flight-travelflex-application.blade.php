@@ -500,7 +500,7 @@
         </div>
 
         {{-- ── Hidden plan fields ── --}}
-        <div class="tfa-card">
+        <div class="tfa-card" style="display:none;" aria-hidden="true">
             <div class="tfa-section-title">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M7 15h2"/><path d="M12 15h5"/></svg>
                 Down Payment Method
@@ -511,7 +511,7 @@
             </div>
             <div class="tfa-pay-grid">
                 <label class="tfa-pay-card">
-                    <input type="radio" name="pay_method" value="gateway" {{ old('pay_method', $tfPlan['payment_method'] ?? 'gateway') === 'gateway' ? 'checked' : '' }}>
+                    <input type="radio" value="gateway" disabled>
                     <span class="tfa-pay-icon">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M7 15h2"/><path d="M12 15h5"/></svg>
                     </span>
@@ -522,7 +522,7 @@
                     <span class="tfa-pay-radio"></span>
                 </label>
                 <label class="tfa-pay-card">
-                    <input type="radio" name="pay_method" value="bank_transfer" {{ old('pay_method', $tfPlan['payment_method'] ?? '') === 'bank_transfer' ? 'checked' : '' }}>
+                    <input type="radio" value="bank_transfer" disabled>
                     <span class="tfa-pay-icon">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-6 9 6"/><path d="M5 10v9"/><path d="M19 10v9"/><path d="M3 19h18"/></svg>
                     </span>
@@ -533,7 +533,6 @@
                     <span class="tfa-pay-radio"></span>
                 </label>
             </div>
-            @error('pay_method') <span class="tfa-error" style="display:block;margin-top:10px;">{{ $message }}</span> @enderror
         </div>
 
         <div class="tfa-btn-row">
@@ -543,7 +542,7 @@
             </a>
             <button type="submit" class="tfa-btn-primary" id="tfa-submit">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                Submit Application &amp; Continue
+                Submit for Fast Credit Review
             </button>
         </div>
     </form>

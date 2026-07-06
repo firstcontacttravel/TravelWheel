@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Country;
 use App\Models\VisaProduct;
+use App\Models\VisaDestination;
+use App\Models\VisaApplication;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -97,6 +99,81 @@ class VisaDiscoveryTest extends TestCase
     public function test_loading_page_requires_a_pending_search(): void
     {
         $this->get(route('visa.search.loading'))->assertRedirect(route('air.visa'));
+    }
+
+    public function test_nigerian_business_visa_only_appears_for_foreign_passports_travelling_to_nigeria(): void
+    {
+        $canada = Country::query()->create(['alpha2' => 'CA', 'name' => 'Canada']);
+        $nigeria = Country::query()->create(['alpha2' => 'NG', 'name' => 'Nigeria']);
+        $ireland = Country::query()->create(['alpha2' => 'IE', 'name' => 'Ireland']);
+        $businessVisa = $this->additionalProduct($nigeria, 'voa', 'Nigerian Business Visa');
+        $businessVisa->update(['eligibility_mode' => 'all']);
+        $staleWrongDestination = $this->additionalProduct($ireland, 'voa', 'Incorrect Ireland business visa');
+        $staleWrongDestination->update(['eligibility_mode' => 'all']);
+
+        $foreignToNigeria = app(\App\Services\VisaDiscoveryService::class)->search($canada, $nigeria, null, ['adult' => 1, 'child' => 0, 'infant' => 0]);
+        $foreignElsewhere = app(\App\Services\VisaDiscoveryService::class)->search($canada, $ireland, null, ['adult' => 1, 'child' => 0, 'infant' => 0]);
+        $nigerianToNigeria = app(\App\Services\VisaDiscoveryService::class)->search($nigeria, $nigeria, null, ['adult' => 1, 'child' => 0, 'infant' => 0]);
+
+        $this->assertTrue($foreignToNigeria->contains('id', $businessVisa->id));
+        $this->assertFalse($foreignElsewhere->contains('id', $staleWrongDestination->id));
+        $this->assertFalse($nigerianToNigeria->contains('id', $businessVisa->id));
+    }
+
+    public function test_minor_parent_requirements_only_appear_when_the_search_includes_a_minor(): void
+    {
+        [$nationality, $destination, $product] = $this->catalogueProduct('standard', 'Family visa');
+        $product->requirements()->create([
+            'name' => "Father's data page",
+            'category' => 'passport',
+            'scope' => 'traveler',
+            'requirement_state' => 'conditional',
+            'conditions' => ['applicant_type' => 'minor_nigerian'],
+        ]);
+
+        $adultOnly = app(\App\Services\VisaDiscoveryService::class)
+            ->search($nationality, $destination, null, ['adult' => 1, 'child' => 0, 'infant' => 0])
+            ->firstWhere('id', $product->id);
+        $withChild = app(\App\Services\VisaDiscoveryService::class)
+            ->search($nationality, $destination, null, ['adult' => 1, 'child' => 1, 'infant' => 0])
+            ->firstWhere('id', $product->id);
+
+        $this->assertNotContains("Father's data page", array_column($adultOnly['requirements'], 'name'));
+        $this->assertContains("Father's data page", array_column($withChild['requirements'], 'name'));
+    }
+
+    public function test_regional_destination_can_be_searched_directly_and_through_a_member_country(): void
+    {
+        $nationality = Country::query()->create(['alpha2' => 'NG', 'name' => 'Nigeria']);
+        $france = Country::query()->create(['alpha2' => 'FR', 'name' => 'France']);
+        $region = VisaDestination::query()->create(['name' => 'Schengen Area', 'slug' => 'schengen-area', 'is_active' => true]);
+        $region->countries()->attach($france);
+        $product = VisaProduct::query()->create([
+            'visa_destination_id' => $region->id,
+            'name' => 'Schengen Tourist Visa',
+            'slug' => 'schengen-tourist-visa',
+            'family' => 'standard',
+            'category' => 'tourist',
+            'entry_type' => 'multiple',
+            'publication_status' => 'published',
+            'published_at' => now(),
+        ]);
+
+        $direct = app(\App\Services\VisaDiscoveryService::class)->search($nationality, $region, null, ['adult' => 1, 'child' => 0, 'infant' => 0]);
+        $throughMember = app(\App\Services\VisaDiscoveryService::class)->search($nationality, $france, null, ['adult' => 1, 'child' => 0, 'infant' => 0]);
+
+        $this->assertTrue($direct->contains('id', $product->id));
+        $this->assertTrue($throughMember->contains('id', $product->id));
+
+        $search = $this->validSearch($nationality, $france, ['destination_ref' => 'region:'.$region->id]);
+        unset($search['destination_id']);
+        $this->post(route('visa.search'), $search)->assertRedirect(route('visa.search.loading'));
+        $this->get(route('visa.search.run'))->assertRedirect(route('visa.results'));
+        $this->get(route('visa.results'))->assertOk()->assertSee('Schengen Tourist Visa')->assertSee('Schengen Area');
+        $this->post(route('visa.applications.start'), ['visa_product_id' => $product->id])->assertRedirect();
+        $application = VisaApplication::query()->latest('id')->firstOrFail();
+        $this->assertSame($region->id, $application->visa_destination_id);
+        $this->assertNull($application->destination_country_id);
     }
 
     private function catalogueProduct(string $family, string $name): array

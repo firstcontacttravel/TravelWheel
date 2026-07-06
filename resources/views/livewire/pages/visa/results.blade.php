@@ -3,6 +3,8 @@
     @php
         $travelerTotal = array_sum($searchParams['travelers'] ?? []);
         $eligibleCount = collect($results)->whereIn('eligibility.status', ['eligible', 'conditionally_eligible'])->count();
+        $visaTypeLabels = ['tourist'=>'Tourist or visitor','business'=>'Business','study'=>'Study or student','work'=>'Work or employment','transit'=>'Transit','family'=>'Family, spouse or dependant','medical'=>'Medical treatment','conference'=>'Conference or event','cultural_sports'=>'Cultural or sports','official_diplomatic'=>'Official or diplomatic','religious'=>'Religious or pilgrimage','journalist_media'=>'Journalist or media','crew'=>'Crew member','settlement_residence'=>'Settlement or residence','other'=>'Other'];
+        $entryTypeLabels = ['single'=>'Single entry','double'=>'Two entries','multiple'=>'Multiple entry','transit'=>'Airport transit','other'=>'Other'];
     @endphp
 
     <header class="vr-topbar">
@@ -32,7 +34,7 @@
                 <article class="vr-card {{ $canApply ? '' : 'vr-card--disabled' }}">
                     <div class="vr-card__head">
                         <div class="vr-stamp"><img src="{{ asset('assets/Visa 70.png') }}" alt=""></div>
-                        <div><span class="vr-family">{{ $result['family'] === 'voa' ? 'Visa on arrival' : 'Standard visa' }}</span><h2>{{ $result['name'] }}</h2><p>{{ str($result['category'])->headline() }} · {{ str($result['entry_type'])->headline() }} entry</p></div>
+                        <div><span class="vr-family">{{ $result['family'] === 'voa' ? 'Nigerian Business Visa' : 'Standard visa' }}</span><h2>{{ $result['name'] }}</h2><p>Visa type: {{ $visaTypeLabels[$result['category']] ?? str($result['category'])->headline() }} · Entry: {{ $entryTypeLabels[$result['entry_type']] ?? str($result['entry_type'])->headline() }}</p></div>
                         <span class="vr-status vr-status--{{ $status }}">{{ str($status)->replace('_',' ')->headline() }}</span>
                     </div>
                     <div class="vr-card__body">

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TravelFlexApplications\Schemas;
 
+use App\Support\Admin\FlightBookingPresentation;
 use App\Support\Admin\TravelFlexPresentation;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Html;
@@ -23,8 +24,11 @@ class TravelFlexApplicationInfolist
                         TextEntry::make('booking_ref')->copyable()->placeholder('-'),
                         TextEntry::make('unique_id')->label('UniqueID')->copyable()->placeholder('-'),
                         TextEntry::make('application_status')->badge(),
+                        TextEntry::make('financing_status')->label('Fast Credit decision')->badge(),
                         TextEntry::make('provider_status')->badge(),
                         TextEntry::make('payment_status')->badge(),
+                        TextEntry::make('deposit_status')->badge(),
+                        TextEntry::make('approval_expires_at')->dateTime()->placeholder('-'),
                         TextEntry::make('provider_email_sent_at')->dateTime()->placeholder('-'),
                         TextEntry::make('reviewer.name')->label('Reviewed by')->placeholder('-'),
                         TextEntry::make('reviewed_at')->dateTime()->placeholder('-'),
@@ -52,6 +56,15 @@ class TravelFlexApplicationInfolist
                 Section::make('Repayment Plan')
                     ->schema([
                         Html::make(fn ($record) => TravelFlexPresentation::plan($record))->columnSpanFull(),
+                    ]),
+
+                Section::make('Flight Itinerary')
+                    ->description('Complete held itinerary captured when the customer submitted the TravelFlex application.')
+                    ->schema([
+                        Html::make(fn ($record) => FlightBookingPresentation::flight(
+                            $record->booking?->flight_snapshot ?: $record->booking?->itinerary_snapshot
+                        ))
+                            ->columnSpanFull(),
                     ]),
 
                 Section::make('Documents')

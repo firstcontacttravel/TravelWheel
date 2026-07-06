@@ -94,11 +94,15 @@
     .fw-cabin-option{display:block;width:100%;border:0;background:transparent;text-align:left;color:#111!important;font-size:14px;font-weight:500;line-height:17px;padding:0 0 7px;cursor:pointer;font-family:'Open Sans',var(--font-primary),Arial,sans-serif}
     .fw-cabin-option:last-child{padding-bottom:0}
     .fw-cabin-option:hover{color:#303191!important}
+    .fw-multi-controls{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+    .fw-multi-cabin{position:relative;flex-shrink:0}
+    .fw-multi-cabin-trigger{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;border:1.5px solid #303191;border-radius:999px;background:#fff;color:#303191;font-size:12px;font-weight:600;cursor:pointer}
+    .fw-multi-cabin .fw-cabin-dropdown{left:auto;right:0;top:calc(100% + 7px)}
     .fw-panel-transition{transform-origin:top center}
 
     /* Responsive */
     @media(max-width:1100px){.tw-product-tabs{display:grid;grid-template-columns:repeat(4,88px)}.fw-card{padding:24px 20px 20px}.fw-row{flex-wrap:wrap;gap:10px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 calc(50% - 10px)!important;min-width:calc(50% - 10px)}.fw-swap{display:none!important}.fw-ac-dropdown{width:min(360px,calc(100vw - 48px))}}
-    @media(max-width:640px){.tw-landing-hero{min-height:auto;padding:48px 14px 42px}.tw-hero-title{white-space:normal}.tw-hero-subtitle{margin-bottom:20px}.tw-product-tabs{width:100%;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px}.tw-product-tab{width:100%}.fw-card{padding:20px 16px;border-radius:14px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 100%!important;min-width:100%}.fw-leg{flex-wrap:wrap}.fw-search-btn{width:100%;justify-content:center;height:56px;font-size:var(--tw-text-base)}.fw-search-row{margin-top:14px}.fw-tab{padding:8px 11px;font-size:12px}}
+    @media(max-width:640px){.tw-landing-hero{min-height:auto;padding:48px 14px 42px}.tw-hero-title{white-space:normal}.tw-hero-subtitle{margin-bottom:20px}.tw-product-tabs{width:100%;grid-template-columns:repeat(2,1fr);gap:10px;padding:12px}.tw-product-tab{width:100%}.fw-card{padding:20px 16px;border-radius:14px}.fw-field,.fw-field-2x,.fw-field-15x,.fw-field-12x{flex:1 1 100%!important;min-width:100%}.fw-leg{flex-wrap:wrap}.fw-search-btn{width:100%;justify-content:center;height:56px;font-size:var(--tw-text-base)}.fw-search-row{margin-top:14px}.fw-tab{padding:8px 11px;font-size:12px}.fw-multi-controls{width:100%;justify-content:flex-start}.fw-multi-cabin{flex:1}.fw-multi-cabin-trigger{width:100%;justify-content:space-between}}
     main.navbarmain.upper-space{margin-top:113px!important}
     @media(max-width:650px){body > div > section.navbarmain{padding-top:0!important}main.navbarmain.upper-space{margin-top:104px!important;padding-top:0!important}}
 </style>
@@ -143,8 +147,22 @@
                 </button>
             </div>
 
+            <div class="fw-multi-controls" x-show="trip === 'multi'" x-transition>
+            <div class="fw-multi-cabin">
+                <button type="button" class="fw-multi-cabin-trigger" @click.stop="cabinOpen = !cabinOpen; paxOpen = false">
+                    <span x-text="cabinLabel(flightType)"></span>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+                <div class="fw-cabin-dropdown" :class="{ 'fw-open': cabinOpen }" @click.stop>
+                    <button type="button" class="fw-cabin-option" @click="setSharedCabin('Y')">Economy</button>
+                    <button type="button" class="fw-cabin-option" @click="setSharedCabin('S')">Premium Economy</button>
+                    <button type="button" class="fw-cabin-option" @click="setSharedCabin('C')">Business</button>
+                    <button type="button" class="fw-cabin-option" @click="setSharedCabin('F')">First Class</button>
+                </div>
+            </div>
+
             {{-- Global passenger selector for Multi City --}}
-            <div x-show="trip === 'multi'" x-transition style="position:relative;flex-shrink:0;">
+            <div style="position:relative;flex-shrink:0;">
                 <div class="fw-tab fw-active" style="cursor:pointer;gap:8px;padding:8px 14px;border-radius:999px;border-color:#bfdbfe;" @click.stop="paxOpen = !paxOpen">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     <span x-text="(adults + childs + kids) + ' Passenger' + (adults + childs + kids > 1 ? 's' : '')"></span>
@@ -178,6 +196,7 @@
                     <div x-show="errors.passengers || totalPassengers() >= 9" x-transition class="fw-pax-limit" x-text="errors.passengers || 'Maximum 9 passengers per booking.'"></div>
                     <button type="button" class="fw-pax-done" @click="paxOpen = false">Done</button>
                 </div>
+            </div>
             </div>
         </div>
 
@@ -459,17 +478,6 @@
                             </div>
                         </div>
 
-                        <div class="fw-field fw-field-12x fw-cabin-field">
-                            <div class="fw-label">Cabin</div>
-                            <button type="button" class="fw-input fw-select" @click.stop="toggleLegCabin(index)" x-text="cabinLabel(leg.cabin)"></button>
-                            <div class="fw-cabin-dropdown" :class="{ 'fw-open': leg.cabinOpen }" @click.stop>
-                                <button type="button" class="fw-cabin-option" @click="setLegCabin(index, 'Y')">Economy</button>
-                                <button type="button" class="fw-cabin-option" @click="setLegCabin(index, 'S')">Premium Economy</button>
-                                <button type="button" class="fw-cabin-option" @click="setLegCabin(index, 'C')">Business</button>
-                                <button type="button" class="fw-cabin-option" @click="setLegCabin(index, 'F')">First Class</button>
-                            </div>
-                        </div>
-
                         <button x-show="index >= 2" type="button" class="fw-remove-btn" @click="removeLeg(index)">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         </button>
@@ -536,7 +544,7 @@ function flightWidget() {
             from: leg.from || '',
             to: leg.to || '',
             depart: leg.depart || '',
-            cabin: leg.cabin || defaults.flightType || 'Y',
+            cabin: defaults.flightType || 'Y',
             cabinOpen:false,
             fromResults:[],
             toResults:[],
@@ -696,14 +704,10 @@ function flightWidget() {
         cabinLabel(value) {
             return ({ Y: 'Economy', S: 'Premium Economy', C: 'Business', F: 'First Class' })[value] || 'Economy';
         },
-        toggleLegCabin(index) {
-            this.multiLegs = this.multiLegs.map((leg, i) => ({ ...leg, cabinOpen: i === index ? !leg.cabinOpen : false }));
+        setSharedCabin(value) {
+            this.flightType = value;
             this.cabinOpen = false;
-        },
-        setLegCabin(index, value) {
-            const leg = { ...this.multiLegs[index], cabin: value, cabinOpen: false };
-            this.multiLegs[index] = leg;
-            this.multiLegs = [...this.multiLegs];
+            this.multiLegs = this.multiLegs.map(leg => ({ ...leg, cabin: value, cabinOpen: false }));
         },
         totalPassengers() { return this.adults + this.childs + this.kids; },
         addPassenger(type) {
@@ -717,7 +721,7 @@ function flightWidget() {
         },
         addLeg() {
             this.multiLegs.push({
-                from:'', to:'', depart:'', cabin:'Y', cabinOpen:false,
+                from:'', to:'', depart:'', cabin:this.flightType, cabinOpen:false,
                 fromResults:[], toResults:[],
                 fromFocus:false, toFocus:false,
                 calY: new Date().getFullYear(), calM: new Date().getMonth(),
@@ -998,6 +1002,9 @@ function flightWidget() {
 
         search() {
             if (!this.validate()) return;
+            if (this.trip === 'multi') {
+                this.multiLegs = this.multiLegs.map(leg => ({ ...leg, cabin: this.flightType, cabinOpen: false }));
+            }
             document.getElementById('fw-form').submit();
         },
     };

@@ -6,6 +6,7 @@ use App\Livewire\Pages\Visa\ApplicationWizard;
 use App\Models\Country;
 use App\Models\VisaApplication;
 use App\Models\VisaProduct;
+use App\Services\VisaFormWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -129,11 +130,12 @@ class VisaApplicationWizardTest extends TestCase
             ->post(route('visa.applications.start'), ['visa_product_id' => $product->id]);
         $application = VisaApplication::query()->firstOrFail();
         $child = $application->travelers()->where('traveler_type', 'child')->firstOrFail();
+        $documentStep = $this->stepNumber($application, 'documents');
 
         session()->put("visa_application_access.{$application->reference}", true);
         Livewire::test(ApplicationWizard::class, ['application' => $application])
             ->set("travelers.{$child->id}.applicant_type", 'minor_nigerian')
-            ->set('step', 6)
+            ->set('step', $documentStep)
             ->assertSee("Father's data page")
             ->assertDontSee('Foreign parent CERPAC')
             ->assertDontSee('Company CAC');
@@ -146,17 +148,18 @@ class VisaApplicationWizardTest extends TestCase
         $product->requirements()->create(['optional_service_code' => $service->code, 'name' => 'Insurance information form', 'category' => 'supporting_document', 'scope' => 'application', 'requirement_state' => 'required']);
         $this->withSession(['visaSearchParamsStore' => $search, 'visaResultsStore' => [$result]])->post(route('visa.applications.start'), ['visa_product_id' => $product->id]);
         $application = VisaApplication::query()->firstOrFail();
+        $documentStep = $this->stepNumber($application, 'documents');
         session()->put("visa_application_access.{$application->reference}", true);
 
         Livewire::test(ApplicationWizard::class, ['application' => $application])
             ->assertSeeInOrder(['Services', 'Documents'])
-            ->set('step', 6)
+            ->set('step', $documentStep)
             ->assertDontSee('Insurance information form')
             ->set("serviceSelections.{$service->id}", true)
             ->assertSee('Insurance information form');
     }
 
-    public function test_application_without_additional_questions_can_continue_to_services(): void
+    public function test_empty_question_and_service_steps_are_automatically_omitted(): void
     {
         [$product, $search, $result] = $this->catalogue();
         $this->withSession(['visaSearchParamsStore' => $search, 'visaResultsStore' => [$result]])
@@ -165,11 +168,9 @@ class VisaApplicationWizardTest extends TestCase
         session()->put("visa_application_access.{$application->reference}", true);
 
         Livewire::test(ApplicationWizard::class, ['application' => $application])
-            ->set('step', 4)
-            ->call('next')
-            ->assertHasNoErrors()
-            ->assertSet('step', 5)
-            ->assertSee('TravelWheel services');
+            ->assertDontSee('Questions')
+            ->assertDontSee('Services')
+            ->assertSee('Documents');
     }
 
     public function test_document_upload_can_be_validated_stored_and_advanced_to_review(): void
@@ -184,13 +185,15 @@ class VisaApplicationWizardTest extends TestCase
         session()->put("visa_application_access.{$application->reference}", true);
         $requirement = $product->requirements()->firstOrFail();
         $traveler = $application->travelers->first();
+        $documentStep = $this->stepNumber($application, 'documents');
+        $reviewStep = $this->stepNumber($application, 'review');
 
         Livewire::test(ApplicationWizard::class, ['application' => $application])
-            ->set('step', 6)
+            ->set('step', $documentStep)
             ->set("uploads.{$requirement->id}_{$traveler->id}", UploadedFile::fake()->create('passport.pdf', 100, 'application/pdf'))
             ->call('next')
             ->assertHasNoErrors()
-            ->assertSet('step', 7);
+            ->assertSet('step', $reviewStep);
 
         $this->assertDatabaseHas('visa_application_documents', [
             'visa_application_id' => $application->id,
@@ -226,6 +229,42 @@ class VisaApplicationWizardTest extends TestCase
             ->assertSee('selected', false);
     }
 
+    public function test_field_selection_and_automatic_steps_are_snapshotted_for_the_application(): void
+    {
+        [$product, $search, $result] = $this->catalogue();
+        $question = $product->questions()->create(['key' => 'host_name', 'section' => 'host', 'label' => 'Host full name', 'input_type' => 'text', 'scope' => 'application', 'is_required' => true, 'is_active' => true]);
+        $configuration = [
+            'traveler_fields' => ['first_name', 'last_name'],
+            'passport_fields' => ['passport_number'],
+        ];
+        $product->update(['form_configuration' => $configuration]);
+
+        $this->withSession(['visaSearchParamsStore' => $search, 'visaResultsStore' => [$result]])
+            ->post(route('visa.applications.start'), ['visa_product_id' => $product->id]);
+        $application = VisaApplication::query()->firstOrFail();
+        $product->update(['form_configuration' => app(VisaFormWorkflow::class)->defaults()]);
+        session()->put("visa_application_access.{$application->reference}", true);
+
+        Livewire::test(ApplicationWizard::class, ['application' => $application])
+            ->assertSee('Questions')
+            ->assertDontSee('Services')
+            ->set('step', 2)
+            ->assertSee('First name')
+            ->assertDontSee('Home address')
+            ->set('step', 3)
+            ->assertSee('Passport number')
+            ->assertDontSee('Passport type')
+            ->set('step', 4)
+            ->assertSee('Host full name');
+
+        $snapshot = $application->fresh()->form_configuration;
+        $this->assertSame($configuration['traveler_fields'], $snapshot['traveler_fields']);
+        $this->assertSame($configuration['passport_fields'], $snapshot['passport_fields']);
+        $this->assertTrue($snapshot['steps']['hasQuestions']);
+        $this->assertFalse($snapshot['steps']['hasServices']);
+        $this->assertTrue($snapshot['steps']['hasDocuments']);
+    }
+
     private function catalogue(): array
     {
         $nationality = Country::query()->create(['alpha2' => 'GH', 'name' => 'Ghana']);
@@ -238,5 +277,12 @@ class VisaApplicationWizardTest extends TestCase
         $result = ['id' => $product->id, 'eligibility' => ['status' => 'eligible']];
 
         return [$product->fresh(), $search, $result, $processing];
+    }
+
+    private function stepNumber(VisaApplication $application, string $key): int
+    {
+        $index = collect(app(VisaFormWorkflow::class)->applicationFlow($application->form_configuration))->search(fn (array $step) => $step['key'] === $key);
+
+        return $index + 1;
     }
 }

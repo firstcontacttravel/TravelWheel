@@ -13,11 +13,20 @@ class VisaQuotationService
 {
     public function create(VisaApplication $application): VisaQuote
     {
-        if ($application->completed_step < 7 || ! $application->declaration_accepted) {
+        $application->load(['product.fees', 'product.processingOptions', 'product.optionalServices', 'product.questions', 'product.requirements', 'travelers', 'serviceSelections']);
+        $flow = app(VisaFormWorkflow::class)->applicationFlow(
+            $application->form_configuration,
+            $application->product?->questions->where('is_active', true)->isNotEmpty() ?? false,
+            $application->product?->optionalServices->where('is_active', true)->isNotEmpty() ?? false,
+            $application->product?->requirements->where('is_active', true)->isNotEmpty() ?? false,
+        );
+        $requiredCompletedStep = count($flow) - 1;
+        $requiresDeclaration = collect($flow)->contains('key', 'review');
+
+        if ($application->completed_step < $requiredCompletedStep || ($requiresDeclaration && ! $application->declaration_accepted)) {
             throw ValidationException::withMessages(['quote' => 'Complete the application and accept the declaration before requesting a quote.']);
         }
 
-        $application->load(['product.fees', 'product.processingOptions', 'product.optionalServices', 'travelers', 'serviceSelections']);
         $product = $application->product;
         abort_unless($product && $product->newQuery()->whereKey($product->id)->currentlyPublished()->exists(), 422, 'This visa product is no longer available.');
 

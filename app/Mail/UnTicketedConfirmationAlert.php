@@ -17,7 +17,7 @@ class UnTicketedConfirmationAlert extends Mailable
     public function envelope()
     {
         return new \Illuminate\Mail\Mailables\Envelope(
-            subject: '⚠️ ALERT: Booking Confirmed but Not Ticketed — ' . $this->alertData['uniqueId'],
+            subject: 'ALERT: Booking Confirmed but Not Ticketed - ' . $this->alertData['uniqueId'],
         );
     }
 

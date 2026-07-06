@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class VisaApplication extends Model
 {
-    protected $fillable = ['reference', 'resume_token_hash', 'visa_product_id', 'visa_processing_option_id', 'product_version', 'status', 'assigned_to', 'assigned_at', 'decision_date', 'decision_reference', 'issued_at', 'visa_valid_from', 'visa_valid_until', 'no_document_reason', 'current_step', 'completed_step', 'nationality_country_id', 'residence_country_id', 'destination_country_id', 'arrival_date', 'departure_date', 'adult_count', 'child_count', 'infant_count', 'contact_email', 'declaration_accepted', 'declaration_accepted_at', 'search_snapshot', 'product_snapshot', 'last_activity_at', 'expires_at'];
+    protected $fillable = ['reference', 'resume_token_hash', 'visa_product_id', 'visa_processing_option_id', 'product_version', 'status', 'assigned_to', 'assigned_at', 'decision_date', 'decision_reference', 'issued_at', 'visa_valid_from', 'visa_valid_until', 'no_document_reason', 'current_step', 'completed_step', 'nationality_country_id', 'residence_country_id', 'destination_country_id', 'visa_destination_id', 'arrival_date', 'departure_date', 'adult_count', 'child_count', 'infant_count', 'contact_email', 'declaration_accepted', 'declaration_accepted_at', 'search_snapshot', 'product_snapshot', 'form_configuration', 'last_activity_at', 'expires_at'];
 
     protected function casts(): array
     {
-        return ['arrival_date' => 'date', 'departure_date' => 'date', 'assigned_at' => 'datetime', 'decision_date' => 'date', 'issued_at' => 'datetime', 'visa_valid_from' => 'date', 'visa_valid_until' => 'date', 'declaration_accepted' => 'boolean', 'declaration_accepted_at' => 'datetime', 'search_snapshot' => 'array', 'product_snapshot' => 'array', 'last_activity_at' => 'datetime', 'expires_at' => 'datetime'];
+        return ['arrival_date' => 'date', 'departure_date' => 'date', 'assigned_at' => 'datetime', 'decision_date' => 'date', 'issued_at' => 'datetime', 'visa_valid_from' => 'date', 'visa_valid_until' => 'date', 'declaration_accepted' => 'boolean', 'declaration_accepted_at' => 'datetime', 'search_snapshot' => 'array', 'product_snapshot' => 'array', 'form_configuration' => 'array', 'last_activity_at' => 'datetime', 'expires_at' => 'datetime'];
     }
 
     public function product(): BelongsTo
@@ -23,6 +23,11 @@ class VisaApplication extends Model
     public function processingOption(): BelongsTo
     {
         return $this->belongsTo(VisaProcessingOption::class, 'visa_processing_option_id');
+    }
+
+    public function destination(): BelongsTo
+    {
+        return $this->belongsTo(VisaDestination::class, 'visa_destination_id');
     }
 
     public function travelers(): HasMany

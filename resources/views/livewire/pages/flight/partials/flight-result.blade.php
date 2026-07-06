@@ -1535,21 +1535,33 @@
         padding-right: 0 !important;
     }
     .sr-card-expanded .sr-card-meta-clean {
-        top: 204px;
-        bottom: auto;
+        position: static;
+        width: calc(100% + 223px);
+        margin-top: 9px;
+        padding: 9px 0 12px;
         z-index: 2;
     }
+    .sr-card-expanded:not(.sr-card-round):not(.sr-card-multi) .sr-card-meta-clean {
+        margin-top: 40px;
+    }
     .sr-card-expanded .sr-card-footer {
-        top: 212px;
+        position: relative;
+        right: auto;
         bottom: auto;
+        min-height: 24px;
+        margin: -32px 0 0;
+        padding: 0 24px 12px;
         z-index: 3;
+    }
+    .sr-card-expanded .sr-card-body {
+        padding-bottom: 12px !important;
     }
 
     /* Focused Figma itinerary details and fare rules replica */
     .sr-detail-panel {
         width: 835px;
         max-width: 100%;
-        margin-top: 112px;
+        margin-top: 0;
         border: 1px solid #b3b3b3;
         border-top: 0;
         border-radius: 0 0 10px 10px;
@@ -1594,10 +1606,35 @@
     .sr-detail-tab:first-child.active::after { left: 32px; }
     .sr-detail-tab:nth-child(2).active::after { left: 0; }
     .sr-detail-body {
-        min-height: 361px;
+        min-height: 0;
         padding: 13px 17px 15px;
         background: #fff;
     }
+    .sr-multi-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        align-items: start;
+    }
+    .sr-multi-detail-leg {
+        min-width: 0;
+        padding: 11px;
+        border: 1px solid #e6e8ee;
+        border-radius: 8px;
+        background: #fbfcfe;
+    }
+    .sr-multi-detail-grid .sr-detail-leg-head { min-height: 24px; margin-bottom: 9px; }
+    .sr-multi-detail-grid .sr-detail-leg-title { max-width: calc(100% - 82px); }
+    .sr-multi-detail-grid .sr-detail-seg {
+        width: 100%;
+        min-height: 0;
+        padding: 10px 11px;
+        background: #fff;
+    }
+    .sr-multi-detail-grid .sr-detail-seg-airline { margin-bottom: 11px; }
+    .sr-multi-detail-grid .sr-detail-seg-route { margin-bottom: 7px; }
+    .sr-multi-detail-grid .sr-detail-seg-meta { row-gap: 3px; }
+    .sr-multi-detail-grid .sr-detail-layover { margin-top: 7px !important; margin-bottom: 7px; }
     .sr-detail-cols {
         position: relative;
         display: grid;
@@ -2054,10 +2091,25 @@
         .sr-card-body { padding: 0 14px 12px !important; }
         .sr-card-body > div:first-child { position: static; display: flex !important; justify-content: flex-start; padding-right: 0; margin: 0 0 10px !important; }
         .sr-card-footer { position: static; padding: 9px 14px 12px; }
+        .sr-card-expanded .sr-card-footer {
+            position: static;
+            min-height: 0;
+            margin: 0;
+            padding: 9px 14px 12px;
+        }
         .sr-card-head .sr-book-btn { grid-column: 1 / -1; }
         .sr-depart-return { flex-direction: column; gap: 14px; }
         .sr-dr-col + .sr-dr-col { border-left: none; border-top: 1px dashed var(--gray-200); padding-left: 0; margin-left: 0; padding-top: 12px; }
         .sr-card-meta-clean { position: static; padding: 10px 0 0; margin-top: 10px; flex-wrap: wrap; border-top-color: #e5e7eb; }
+        .sr-card-expanded .sr-card-meta-clean {
+            position: static;
+            width: auto;
+            margin-top: 10px;
+            padding: 10px 0 0;
+        }
+        .sr-card-expanded:not(.sr-card-round):not(.sr-card-multi) .sr-card-meta-clean {
+            margin-top: 10px;
+        }
         .sr-card-actions .sr-book-btn,
         .sr-installment-btn { width: 100%; margin-left: 0; }
         .sr-seg-line { min-width: 0; }
@@ -2106,6 +2158,7 @@
         .sr-seg-line { min-width: 88px; padding-left: 8px; padding-right: 8px; }
         .sr-seg-time { font-size: 18px; }
         .sr-detail-cols { grid-template-columns: 1fr !important; }
+        .sr-multi-detail-grid { grid-template-columns: 1fr; gap: 12px; }
         .sr-modify-head { padding: 12px 16px; }
         .sr-modify-body { padding: 16px; }
     }
@@ -2119,6 +2172,9 @@
     /* Multi-city card grid */
     .sr-card.sr-card-multi .sr-card-body {
         padding-bottom: 62px !important;
+    }
+    .sr-card.sr-card-multi.sr-card-expanded .sr-card-body {
+        padding-bottom: 12px !important;
     }
     .sr-card.sr-card-multi .sr-card-body > div:first-child {
         position: static;
@@ -2777,7 +2833,11 @@
 
             {{-- ══ Flight Cards ══ --}}
             <template x-for="(flight, fi) in paginatedFlights" :key="flight.id">
-                <div class="sr-card" :class="{ 'sr-card-expanded': expandedId === flight.id, 'sr-card-multi': flight.multiLegs && flight.multiLegs.length > 0 }" :style="'animation-delay:' + (fi * 60) + 'ms'">
+                <div class="sr-card" :class="{
+                    'sr-card-expanded': expandedId === flight.id,
+                    'sr-card-multi': flight.multiLegs && flight.multiLegs.length > 0,
+                    'sr-card-round': flight.returnSegments && flight.returnSegments.length > 0
+                }" :style="'animation-delay:' + (fi * 60) + 'ms'">
 
                     {{-- Card Head --}}
                     <div class="sr-card-head">
@@ -2922,7 +2982,7 @@
                         <div class="sr-card-meta-item sr-card-meta-seat">
                             <span class="sr-icon-mask sr-icon-cabin" aria-hidden="true"></span>
                             <span>Cabin Bag:</span>
-                            <strong x-text="flight.fareBreakdown[0]?.cabinBaggage[0] || '-'"></strong>
+                            <strong x-text="cabinBagLabel(flight.fareBreakdown[0]?.cabinBaggage[0])"></strong>
                         </div>
                         <span class="sr-card-meta-sep"></span>
                         <div class="sr-card-meta-item">
@@ -2949,7 +3009,7 @@
                             <div class="sr-tooltip">🎒
                                 <span class="sr-meta-label" style="font-size:12px; color:#6b7280;">Cabin:</span>
                             
-                                <span class="sr-meta-value" style="font-size:12px; font-weight:600; color:#374151;" x-text="flight.fareBreakdown[0]?.cabinBaggage[0] || '—'"></span>
+                                <span class="sr-meta-value" style="font-size:12px; font-weight:600; color:#374151;" x-text="cabinBagLabel(flight.fareBreakdown[0]?.cabinBaggage[0])"></span>
                                 <div class="sr-tooltip-text">1 standard cabin bag (7kg Hand Bag) allowed — check fare rules for details.</div>
                             </div>
                         </div>
@@ -3064,7 +3124,7 @@
                                                         </div>
                                                         <div class="sr-detail-seg-meta">
                                                             <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Baggage</span><span class="sr-detail-meta-val" x-text="flight.fareBreakdown[0]?.baggage[0]||'—'"></span></div>
-                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Cabin bag</span><span class="sr-detail-meta-val" x-text="flight.fareBreakdown[0]?.cabinBaggage[0]||'—'"></span></div>
+                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Cabin bag</span><span class="sr-detail-meta-val" x-text="cabinBagLabel(flight.fareBreakdown[0]?.cabinBaggage[0])"></span></div>
                                                             <div class="sr-detail-meta-item" x-show="seg.equipment"><span class="sr-detail-meta-label">Aircraft</span><span class="sr-detail-meta-val" x-text="seg.equipment"></span></div>
                                                             <div class="sr-detail-meta-item" x-show="seg.resBookCode"><span class="sr-detail-meta-label">Class</span><span class="sr-detail-meta-val" x-text="seg.resBookCode"></span></div>
                                                             <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Seats</span><span class="sr-detail-meta-val" :style="seg.seatsLeft<=5?'color:#dc2626':''" x-text="seg.seatsLeft+' remaining'"></span></div>
@@ -3132,10 +3192,10 @@
                         
                                 {{-- ── MULTI-CITY detail — stacked legs ── --}}
                                 <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
-                                    <div style="display:flex;flex-direction:column;gap:20px;">
+                                    <div class="sr-multi-detail-grid">
                         
                                         <template x-for="(leg, li) in flight.multiLegs" :key="'det-leg-'+li">
-                                            <div>
+                                            <div class="sr-multi-detail-leg">
                                                 {{-- Leg heading --}}
                                                 <div class="sr-detail-leg-head">
                                                     <span class="sr-detail-leg-title"
@@ -3190,7 +3250,7 @@
                                                                 <div class="sr-detail-meta-item">
                                                                     <span class="sr-detail-meta-label">Cabin bag</span>
                                                                     <span class="sr-detail-meta-val"
-                                                                        x-text="flight.fareBreakdown[0]?.cabinBaggage[li] || flight.fareBreakdown[0]?.cabinBaggage[0] || '—'"></span>
+                                                                        x-text="cabinBagLabel(flight.fareBreakdown[0]?.cabinBaggage[li] || flight.fareBreakdown[0]?.cabinBaggage[0])"></span>
                                                                 </div>
                                                                 <div class="sr-detail-meta-item" x-show="seg.equipment">
                                                                     <span class="sr-detail-meta-label">Aircraft</span>
@@ -3234,7 +3294,7 @@
                                         <div class="sr-fare-rule-row">
                                             <span class="sr-fare-rule-icon">💼</span>
                                             <span class="sr-fare-rule-label">Cabin Bag</span>
-                                            <span class="sr-fare-rule-val" x-text="fb.cabinBaggage[0] || '—'"></span>
+                                            <span class="sr-fare-rule-val" x-text="cabinBagLabel(fb.cabinBaggage[0])"></span>
                                         </div>
                                         <div class="sr-fare-rule-row">
                                             <span class="sr-fare-rule-icon" x-text="fb.refundAllowed?'✅':'❌'"></span>
@@ -3367,6 +3427,11 @@
 
             expandedId: null,
             activeTab:  {},
+
+            cabinBagLabel(value) {
+                const label = String(value || '').trim();
+                return label.toUpperCase() === 'SB' ? '7KG' : (label || '—');
+            },
 
             timeSlots: [
                 { value: 'morning',   label: 'Morning',   range: '12:00AM–11:59AM' },

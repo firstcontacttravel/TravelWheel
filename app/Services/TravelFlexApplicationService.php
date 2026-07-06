@@ -72,7 +72,7 @@ class TravelFlexApplicationService
         }
 
         $application->update([
-            'payment_status' => $booking->payment_status,
+            'payment_status' => $booking->payment_status === 'partially_paid' ? 'paid' : $booking->payment_status,
             'payment_method' => $booking->payment_method ?: $application->payment_method,
         ]);
 

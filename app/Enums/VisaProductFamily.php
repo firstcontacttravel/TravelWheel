@@ -9,6 +9,6 @@ enum VisaProductFamily: string
 
     public static function options(): array
     {
-        return ['standard' => 'Standard visa', 'voa' => 'Visa on arrival'];
+        return ['standard' => 'Standard visa', 'voa' => 'Nigerian Business Visa'];
     }
 }

@@ -1449,6 +1449,7 @@
     // Helper: outbound currency symbol (extra services may use AED or local)
     $esSym = fn($code) => match($code) { 'NGN' => '₦', 'USD' => '$', 'AED' => 'AED ', default => $code . ' ' };
     $esFmt = fn($svc) => ($esSym($svc['ServiceCost']['CurrencyCode'] ?? '') . number_format((float)($svc['ServiceCost']['Amount'] ?? 0), 2));
+    $isTravelFlexCheckout = session('bookingIntent', 'booking') === 'travelflex';
 @endphp
 
     <div class="bk-wrap"
@@ -1504,27 +1505,31 @@
                     </div>
                     <div class="bk-connector {{ $step > 1 ? 'done' : '' }}"></div>
                     <div class="bk-step">
-                        <div class="bk-step-dot {{ $step >= 2 ? 'active' : 'pending' }}">2</div>
+                        <div class="bk-step-dot {{ $step > 2 ? 'done' : ($step === 2 ? 'active' : 'pending') }}">
+                            @if($step > 2)
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            @else 2 @endif
+                        </div>
                         <div>
                             <div class="bk-step-label {{ $step === 2 ? 'active' : '' }}">Trip Customisation</div>
-                            <div class="bk-step-sub">Seats &amp; extras</div>
+                            <div class="bk-step-sub">Baggage &amp; meals</div>
                         </div>
                     </div>
-                    <div class="bk-connector"></div>
+                    <div class="bk-connector {{ $step > 2 ? 'done' : '' }}"></div>
                     <div class="bk-step">
-                        <div class="bk-step-dot pending">3</div>
+                        <div class="bk-step-dot {{ $step === 3 ? 'active' : 'pending' }}">3</div>
                         <div>
-                            <div class="bk-step-label">Overview &amp; Payment</div>
-                            <div class="bk-step-sub">Review &amp; pay</div>
+                            <div class="bk-step-label {{ $step === 3 ? 'active' : '' }}">Review &amp; Continue</div>
+                            <div class="bk-step-sub">{{ $isTravelFlexCheckout ? 'Continue to TravelFlex' : 'Review & pay' }}</div>
                         </div>
                     </div>
                 </div>
 
                 {{-- ════════ STEP 1 ════════ --}}
-                @if($step === 1)
+                @if(in_array($step, [1, 2], true))
 
                     {{-- ── 1. Flight Itinerary (accordion, open by default) ── --}}
-                    <div class="bk-acc" x-data="{ open: true }">
+                    <div class="bk-acc" x-data="{ open: false }">
                         @php
                             $routeStopCount = $flight['stops'] ?? max(0, count($segments) - 1);
                             $routeDuration = $flight['totalTimeLabel'] ?? $flight['durationLabel'] ?? '';
@@ -1859,6 +1864,7 @@
                     </div>
 
                     {{-- ── 2. Extra Services (Baggage + Meals) ── --}}
+                    @if($step === 2)
                     @if(!empty($baggageOutbound) || !empty($baggageInbound) || !empty($mealOutbound) || !empty($mealInbound))
                     <div class="bk-acc" x-data="{ open: true }">
                         <div class="bk-acc-head" :class="{ open }" @click="open = !open">
@@ -2172,6 +2178,22 @@
                     @endif
 
                     {{-- ── 4. Passenger Count ── --}}
+                    <div class="bk-actions">
+                        <button class="bk-btn-ghost" wire:click="back">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                            Traveller Info
+                        </button>
+                        <button class="bk-btn-next" wire:click="proceed" wire:loading.attr="disabled" wire:target="proceed">
+                            <span wire:loading.remove wire:target="proceed" style="display:inline-flex;align-items:center;gap:7px;color:#fff;">
+                                Review Booking
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            </span>
+                            <span wire:loading wire:target="proceed">Updating…</span>
+                        </button>
+                    </div>
+                    @endif
+
+                    @if($step === 1)
                     <div class="bk-acc" x-data="{ open: true }">
                         <div class="bk-acc-head" :class="{ open }" @click="open = !open">
                             <div class="bk-acc-icon">
@@ -2483,14 +2505,19 @@
 
         
 
-                @endif {{-- /STEP 1 --}}
+                    @endif {{-- /STEP 1 TRAVELLER DETAILS --}}
+                @endif {{-- /STEPS 1 AND 2 --}}
 
                 {{-- ════════ STEP 2 ════════ --}}
-                @if($step === 2)
+                @if($step === 3)
 
                     <div class="bk-notice info" style="margin-bottom:4px;">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                        <span>Review all details carefully before payment. Name corrections after ticketing may incur fees.</span>
+                        <span>
+                            {{ $isTravelFlexCheckout
+                                ? 'Review all details carefully before continuing to TravelFlex. No payment is due at this step.'
+                                : 'Review all details carefully before payment. Name corrections after ticketing may incur fees.' }}
+                        </span>
                     </div>
 
                     {{-- Review accordion --}}
@@ -2501,7 +2528,11 @@
                             </div>
                             <div>
                                 <div class="bk-acc-title">Booking Summary</div>
-                                <div class="bk-acc-sub">Confirm all details are correct before paying</div>
+                                <div class="bk-acc-sub">
+                                    {{ $isTravelFlexCheckout
+                                        ? 'Confirm all details before starting your TravelFlex application'
+                                        : 'Confirm all details are correct before paying' }}
+                                </div>
                             </div>
                             <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
@@ -2554,7 +2585,7 @@
                                     @endforeach
                                     <div class="bk-review-row">
                                             <span class="bk-review-label">Refund</span>
-                                            <span class="bk-review-val" style="color:{{ $flight['isRefundable'] ? 'var(--green)' : 'var(--red)' }}">{{  $flight['isRefundable'] ? 'Allowed' : 'Not allowed' }}</span>
+                                            <span class="bk-review-val" style="color:{{ !empty($flight['isRefundable']) ? 'var(--green)' : 'var(--red)' }}">{{ !empty($flight['isRefundable']) ? 'Allowed' : 'Not allowed' }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -2609,8 +2640,13 @@
                             Edit Details
                         </button>
                         <button class="bk-btn-pay" @click="submitForm()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                            Confirm &amp; Pay {{ $fmt($this->getTotalPrice()) }}
+                            @if($isTravelFlexCheckout)
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+                                Continue to TravelFlex
+                            @else
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                                Confirm &amp; Pay {{ $fmt($this->getTotalPrice()) }}
+                            @endif
                         </button>
                     </div>
 
@@ -2626,7 +2662,11 @@
                 <div class="bk-cart">
                     <div class="bk-cart-head">
                         <div class="bk-cart-title">Booking Summary</div>
-                        <div class="bk-cart-subtitle">Fare, route and extras reviewed before payment</div>
+                        <div class="bk-cart-subtitle">
+                            {{ $isTravelFlexCheckout
+                                ? 'Fare, route and extras for your TravelFlex application'
+                                : 'Fare, route and extras reviewed before payment' }}
+                        </div>
                     </div>
                     <div class="bk-cart-body">
                         <div class="bk-cart-section">

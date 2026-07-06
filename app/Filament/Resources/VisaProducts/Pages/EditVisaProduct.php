@@ -5,6 +5,7 @@ namespace App\Filament\Resources\VisaProducts\Pages;
 use App\Enums\VisaPublicationStatus;
 use App\Filament\Resources\VisaProducts\VisaProductResource;
 use App\Services\VisaCataloguePublicationService;
+use App\Services\VisaFormWorkflow;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Notifications\Notification;
@@ -14,6 +15,13 @@ use Illuminate\Validation\ValidationException;
 class EditVisaProduct extends EditRecord
 {
     protected static string $resource = VisaProductResource::class;
+
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['form_configuration'] = app(VisaFormWorkflow::class)->normalize($data['form_configuration'] ?? null);
+
+        return $data;
+    }
 
     protected function getHeaderActions(): array
     {

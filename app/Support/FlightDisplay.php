@@ -65,6 +65,22 @@ class FlightDisplay
             ->toArray();
     }
 
+    public static function cabinBaggageValues(mixed $values): array
+    {
+        return collect(is_array($values) ? $values : [$values])
+            ->map(fn ($value): string => self::cabinBaggageLabel($value))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    public static function cabinBaggageLabel(mixed $value): string
+    {
+        $label = trim((string) $value);
+
+        return strtoupper($label) === 'SB' ? '7KG' : $label;
+    }
+
     private static function first(array $data, array $keys, string $default = ''): string
     {
         foreach ($keys as $key) {

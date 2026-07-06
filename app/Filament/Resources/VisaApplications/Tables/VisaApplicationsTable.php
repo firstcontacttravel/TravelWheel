@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\VisaApplication;
 use App\Services\VisaApplicationTransitionService;
 use App\Services\VisaOperationsService;
+use App\Services\VisaVendorDispatchService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
@@ -25,7 +26,7 @@ class VisaApplicationsTable
 {
     public static function configure(Table $table): Table
     {
-        return $table->heading('Visa application queue')->description('One operational queue for standard visa and VOA applications.')
+        return $table->heading('Visa application queue')->description('One operational queue for standard visas and Nigerian Business Visa applications.')
             ->defaultSort('created_at', 'desc')->defaultPaginationPageOption(25)->persistSearchInSession()->persistFiltersInSession()->striped()
             ->columns([
                 TextColumn::make('reference')->copyable()->searchable()->weight('bold')->description(fn (VisaApplication $record) => $record->contact_email ?: 'No contact email'),
@@ -45,7 +46,7 @@ class VisaApplicationsTable
                 SelectFilter::make('payment_status')->options(['paid' => 'Paid', 'pending' => 'Pending', 'failed' => 'Failed'])->query(fn (Builder $query, array $data) => filled($data['value'] ?? null) ? $query->whereHas('payments', fn ($q) => $q->where('status', $data['value'])) : $query),
                 Filter::make('created_at')->form([DatePicker::make('from'), DatePicker::make('until')])->query(fn (Builder $query, array $data) => $query->when($data['from'] ?? null, fn ($q, $date) => $q->whereDate('created_at', '>=', $date))->when($data['until'] ?? null, fn ($q, $date) => $q->whereDate('created_at', '<=', $date))),
             ])
-            ->recordActions([ViewAction::make()->label('Review'), ActionGroup::make([self::assignAction(), self::requestDocumentAction(), self::transitionAction()])->icon('heroicon-o-ellipsis-horizontal')]);
+            ->recordActions([ViewAction::make()->label('Review'), ActionGroup::make([self::assignAction(), self::sendToVendorAction(), self::requestDocumentAction(), self::transitionAction()])->icon('heroicon-o-ellipsis-horizontal')]);
     }
 
     public static function assignAction(): Action
@@ -64,6 +65,29 @@ class VisaApplicationsTable
             app(VisaOperationsService::class)->addNote($record, auth()->user(), $data['body']);
             Notification::make()->title('Internal note added')->success()->send();
         });
+    }
+
+    public static function sendToVendorAction(): Action
+    {
+        return Action::make('sendToVendor')
+            ->label('Send to vendor')
+            ->icon('heroicon-o-paper-airplane')
+            ->color('info')
+            ->visible(fn () => auth()->user()?->canOperateVisas() ?? false)
+            ->disabled(fn (VisaApplication $record) => ! $record->product?->vendor?->is_active)
+            ->tooltip(fn (VisaApplication $record) => $record->product?->vendor?->is_active
+                ? 'Email the complete application and uploaded files to '.$record->product->vendor->name.'.'
+                : 'Assign an active vendor to this visa product first.')
+            ->requiresConfirmation()
+            ->modalHeading('Send application to vendor?')
+            ->modalDescription(fn (VisaApplication $record) => $record->product?->vendor
+                ? 'This will email the application details and all available uploads to '.$record->product->vendor->email.'.'
+                : 'Assign an active vendor to this visa product before sending.')
+            ->modalSubmitActionLabel('Queue vendor email')
+            ->action(function (VisaApplication $record): void {
+                app(VisaVendorDispatchService::class)->send($record, auth()->user());
+                Notification::make()->title('Application queued for vendor')->body('The email will be delivered by the queue worker.')->success()->send();
+            });
     }
 
     public static function requestDocumentAction(): Action

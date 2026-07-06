@@ -33,6 +33,21 @@ class VisaPricingPaymentTest extends TestCase
         $this->assertSame('20000.00', $authority->checkout_total);
     }
 
+    public function test_quote_readiness_uses_the_automatic_snapshotted_workflow(): void
+    {
+        $application = $this->application();
+        $configuration = [
+            'traveler_fields' => [],
+            'passport_fields' => [],
+            'steps' => ['hasQuestions' => false, 'hasServices' => false, 'hasDocuments' => false],
+        ];
+        $application->update(['form_configuration' => $configuration, 'current_step' => 3, 'completed_step' => 2, 'declaration_accepted' => true, 'declaration_accepted_at' => now()]);
+
+        $quote = app(VisaQuotationService::class)->create($application->fresh());
+
+        $this->assertSame('active', $quote->status);
+    }
+
     public function test_unchanged_quote_is_idempotent_and_price_change_supersedes_it(): void
     {
         $application = $this->application();

@@ -107,7 +107,7 @@
                 <div class="tfb-card-title">Submit Transfer Reference</div>
                 <form class="tfb-form" method="POST" action="{{ route('flights.travelflex.bank-transfer') }}">
                     @csrf
-                    <input class="tfb-input" type="text" name="payment_reference" placeholder="Transaction ref, depositor name, or bank narration" value="{{ old('payment_reference') }}">
+                    <input class="tfb-input" type="text" name="payment_reference" required minlength="3" maxlength="100" placeholder="Transaction ref, depositor name, or bank narration" value="{{ old('payment_reference') }}">
                     @error('payment_reference') <div style="font-size:12px;color:#dc2626;">{{ $message }}</div> @enderror
                     <button class="tfb-btn" type="submit">I Have Made This Transfer</button>
                 </form>

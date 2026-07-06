@@ -44,9 +44,9 @@ Route::get('/air/flight-s', FlightPage::class)->name('air.flight-s');
 // Route::post('/air/flight/search', [FlightPage::class, 'search'])->name('flights.search');
 // Route::post('/air/flight/select', [FlightSearchController::class, 'select'])->name('flights.select');
 
-Route::post('/flights/search', [FlightController::class, 'search'])->name('flights.search');
+Route::post('/flights/search', [FlightController::class, 'search'])->middleware('throttle:12,1')->name('flights.search');
 Route::get('/flights/search/loading', [FlightController::class, 'loading'])->name('flights.search.loading');
-Route::get('/flights/search/run', [FlightController::class, 'runPendingSearch'])->name('flights.search.run');
+Route::get('/flights/search/run', [FlightController::class, 'runPendingSearch'])->middleware('throttle:12,1')->name('flights.search.run');
 
 // Route::post('/flights/select', [FlightController::class, 'select'])->name('flights.select');
 
@@ -132,9 +132,7 @@ Route::get('/air/support', function () { /* ... */
 
 Route::get('/admin/travelflex-applications/{application}/documents/{key}', function (\App\Models\TravelFlexApplication $application, string $key) {
     $user = auth()->user();
-    $adminEmails = collect(explode(',', (string) env('ADMIN_EMAILS', '')))
-        ->map(fn (string $email): string => strtolower(trim($email)))
-        ->filter();
+    $adminEmails = collect(config('travelwheel.admin_emails', []));
 
     abort_unless($user && ($user->is_admin || $adminEmails->contains(strtolower($user->email))), 403);
 
@@ -153,41 +151,43 @@ Route::get('/admin/reports/export/{report}', AdminReportExportController::class)
 // Flight routes
 
 Route::post('/flights/select', [FlightBookingController::class, 'select'])
-    ->name('flights.select');
+    ->middleware('throttle:20,1')->name('flights.select');
 
 Route::get('/flights/booking', FlightBooking::class)->name('flights.booking');
 
 Route::post('/flights/book', [FlightBookingController::class, 'book'])
-    ->name('flights.book');
+    ->middleware('throttle:10,1')->name('flights.book');
 Route::get('/flights/payment/gateway', [FlightBookingController::class, 'paymentGateway'])->name('flights.payment.gateway');
-Route::post('/flights/payment/gateway/process', [FlightBookingController::class, 'processGatewayPayment'])->name('flights.payment.gateway.process');
+Route::post('/flights/payment/gateway/process', [FlightBookingController::class, 'processGatewayPayment'])->middleware('throttle:10,1')->name('flights.payment.gateway.process');
 
 // Non-LCC: 3-option payment page (booking already on hold)
 Route::get('/flights/payment/options', [FlightBookingController::class, 'paymentOptions'])->name('flights.payment.options');
 Route::get('/flights/payment/options/resume/{bookingRef}', [FlightBookingController::class, 'resumePaymentOptions'])
-    ->name('flights.payment.options.resume');
+    ->middleware('signed')->name('flights.payment.options.resume');
 
 // Non-LCC: Bank transfer — user clicks "I have paid"
 Route::post('/flights/payment/bank-transfer', [FlightBookingController::class, 'bankTransferNotify'])->name('flights.payment.bank-transfer');
 
 // Non-LCC: Gateway on payment options → ticket_order
-Route::post('/flights/payment/gateway-ticket', [FlightBookingController::class, 'processTicketPayment'])->name('flights.payment.gateway-ticket');
+Route::post('/flights/payment/gateway-ticket', [FlightBookingController::class, 'processTicketPayment'])->middleware('throttle:10,1')->name('flights.payment.gateway-ticket');
 
 // Pending page (bank transfer awaiting verification)
 Route::get('/flights/pending', [FlightBookingController::class, 'pending'])->name('flights.pending');
 
 // Final confirmation (WebFare confirmed OR Non-LCC ticketed)
 Route::get('/flights/confirmation', [FlightBookingController::class, 'confirmation'])->name('flights.confirmation');
-// COMMENTED OUT - Seerbit integration disabled for simulated payments
-Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerbitCallback'])->name('payments.seerbit.callback');
-Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->name('payments.seerbit.webhook');
+Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerbitCallback'])->middleware('throttle:30,1')->name('payments.seerbit.callback');
+Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->middleware('throttle:60,1')->name('payments.seerbit.webhook');
 Route::get('/flights/travelflex', [FlightBookingController::class, 'travelFlex'])->name('flights.travelflex');
 Route::post('/flights/travelflex/application', [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application');
 Route::get('/flights/travelflex/application', [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application.get');
-Route::post('/flights/travelflex/submit-application', [FlightBookingController::class, 'travelFlexSubmitApplication'])->name('flights.travelflex.submit-application');
-Route::get('/flights/travelflex/gateway-process', [FlightBookingController::class, 'travelFlexGatewayProcess'])->name('flights.travelflex.gateway-process');
+Route::post('/flights/travelflex/submit-application', [FlightBookingController::class, 'travelFlexSubmitApplication'])->middleware('throttle:5,1')->name('flights.travelflex.submit-application');
 Route::post('/flights/travelflex/bank-transfer', [FlightBookingController::class, 'travelFlexBankTransfer'])->name('flights.travelflex.bank-transfer');
 Route::get('/flights/travelflex/bank-transfer-form', [FlightBookingController::class, 'travelFlexBankTransferForm'])->name('flights.travelflex.bank-transfer-form');
 Route::get('/flights/travelflex/pending', [FlightBookingController::class, 'travelFlexPending'])->name('flights.travelflex.pending');
+Route::get('/flights/travelflex/applications/{application}/approved', [FlightBookingController::class, 'travelFlexApproved'])
+    ->middleware('signed')->name('flights.travelflex.approved');
+Route::post('/flights/travelflex/approved/payment', [FlightBookingController::class, 'travelFlexApprovedPayment'])
+    ->name('flights.travelflex.approved.payment');
 Route::get('/flights/travelflex/confirmation', [FlightBookingController::class, 'travelFlexConfirmation'])->name('flights.travelflex.confirmation');
 // Route::get('/flights/booking', \App\Livewire\Pages\FlightBooking::class)->name('flights.booking');

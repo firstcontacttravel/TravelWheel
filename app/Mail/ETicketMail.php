@@ -39,7 +39,9 @@ class ETicketMail extends Mailable
             with: array_merge($viewData, [
                 'booking' => $this->booking,
                 'bookingRef' => $this->booking->booking_ref,
-                'isTicketed' => strtoupper($this->tripDetails['TicketStatus'] ?? '') === 'TICKETED',
+                'isTicketed' => strtoupper($this->tripDetails['TicketStatus'] ?? '') === 'TICKETED'
+                    || $this->booking->isTicketed()
+                    || $this->booking->ticket_ordered,
                 'tripDetails' => $this->tripDetails,
             ]),
         );

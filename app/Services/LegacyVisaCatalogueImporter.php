@@ -116,32 +116,32 @@ class LegacyVisaCatalogueImporter
 
     private function importVoa(): int
     {
-        if (Schema::hasTable('voa')) {
-            return $this->importDestinationVoaProducts();
-        }
-
-        if (! Schema::hasTable('voas')) {
+        if (! Schema::hasTable('voa') && ! Schema::hasTable('voas')) {
             return 0;
         }
 
         $nigeria = $this->nigeriaCountry();
-        $eligible = DB::table('voas')->orderBy('id')->get()
-            ->map(function ($row) {
-                $row->matched_country = Country::query()->whereKey($row->from_country_id)->where('is_active', true)->first();
-                $row->single_entry_fee = $row->visa_fee;
+        $eligible = Schema::hasTable('voa')
+            ? $this->singularVoaRows()
+            : DB::table('voas')->orderBy('id')->get()
+                ->map(function ($row) {
+                    $row->matched_country = Country::query()->whereKey($row->from_country_id)->where('is_active', true)->first();
+                    $row->single_entry_fee = $row->visa_fee;
 
-                return $row;
-            })
-            ->filter(fn ($row) => $row->matched_country);
+                    return $row;
+                })
+                ->filter(fn ($row) => $row->matched_country && $row->matched_country->alpha2 !== 'NG');
         if (! $nigeria || $eligible->isEmpty()) {
             return 0;
         }
 
+        VisaProduct::query()->where('slug', 'like', 'legacy-voa-%')->update(['publication_status' => 'archived']);
+        VisaProduct::query()->where('slug', 'legacy-nigeria-visa-on-arrival')->update(['publication_status' => 'archived']);
         $product = VisaProduct::query()->updateOrCreate(
-            ['slug' => 'legacy-nigeria-visa-on-arrival'],
+            ['slug' => 'legacy-nigeria-business-visa'],
             [
                 'destination_country_id' => $nigeria->id,
-                'name' => 'Nigeria Visa on Arrival',
+                'name' => 'Nigerian Business Visa',
                 'family' => 'voa',
                 'category' => 'business',
                 'entry_type' => 'single',
@@ -149,7 +149,7 @@ class LegacyVisaCatalogueImporter
                 'eligibility_mode' => 'rules',
                 'validity_days' => 30,
                 'maximum_stay_days' => 30,
-                'summary' => 'Visa on Arrival pre-approval assistance for eligible travelers visiting Nigeria.',
+                'summary' => 'Business visa pre-approval and application assistance for eligible foreign passport holders travelling to Nigeria.',
                 'processing_disclaimer' => 'Processing time is an estimate and begins after all required documents are accepted.',
                 'issuance_disclaimer' => 'Final admission and visa issuance remain subject to Nigerian immigration approval.',
                 'published_at' => now(),
@@ -163,14 +163,14 @@ class LegacyVisaCatalogueImporter
             $product->eligibilityRules()->create([
                 'rule_type' => 'include_country',
                 'country_id' => $row->matched_country->id,
-                'public_message' => 'Visa on Arrival is available for this nationality.',
+                'public_message' => 'Nigerian Business Visa is available for this nationality.',
                 'sort_order' => $index,
                 'is_active' => true,
             ]);
-            $this->fee($product, $processing->id, 'Single-entry Visa on Arrival fee', 'visa', 'all', 'USD', $row->single_entry_fee, false, $index, 'per_traveler', ['nationality_country_id' => $row->matched_country->id]);
+            $this->fee($product, $processing->id, 'Nigerian Business Visa fee', 'visa', 'all', 'USD', $row->single_entry_fee, false, $index, 'per_traveler', ['nationality_country_id' => $row->matched_country->id]);
         }
 
-        if (Schema::hasTable('voa_fees')) {
+        if (! Schema::hasTable('voa') && Schema::hasTable('voa_fees')) {
             foreach (DB::table('voa_fees')->orderBy('id')->get() as $index => $fee) {
                 foreach ($eligible as $nationalityIndex => $nationality) {
                     $amount = $nationality->is_african_country ? $fee->amount_african : $fee->amount_non_african;
@@ -199,55 +199,7 @@ class LegacyVisaCatalogueImporter
                 ]);
             }
         }
-
-        return 1;
-    }
-
-    private function importDestinationVoaProducts(): int
-    {
-        $nigeria = $this->nigeriaCountry();
-        $destinations = $this->singularVoaRows();
-        if (! $nigeria || $destinations->isEmpty()) {
-            return 0;
-        }
-
-        // Earlier singular-table imports incorrectly treated every row as a nationality for one Nigeria-bound product.
-        VisaProduct::query()->where('slug', 'legacy-nigeria-visa-on-arrival')->update(['publication_status' => 'archived']);
-
-        foreach ($destinations as $row) {
-            /** @var Country $destination */
-            $destination = $row->matched_country;
-            $product = VisaProduct::query()->updateOrCreate(
-                ['slug' => 'legacy-voa-'.Str::lower($destination->alpha2)],
-                [
-                    'destination_country_id' => $destination->id,
-                    'name' => $destination->name.' Visa on Arrival',
-                    'family' => 'voa',
-                    'category' => 'tourist',
-                    'entry_type' => 'single',
-                    'publication_status' => 'published',
-                    'eligibility_mode' => 'rules',
-                    'summary' => 'Visa on Arrival assistance for Nigerian passport holders travelling to '.$destination->name.'.',
-                    'processing_disclaimer' => 'Processing and entry requirements remain subject to the destination immigration authority.',
-                    'issuance_disclaimer' => 'Final admission and visa issuance are controlled by the destination immigration authority.',
-                    'published_at' => now(),
-                ]
-            );
-
-            $this->replaceRelations($product);
-            $processing = $product->processingOptions()->create([
-                'name' => 'Standard',
-                'minimum_business_days' => 1,
-                'maximum_business_days' => 3,
-                'is_active' => true,
-            ]);
-            $product->eligibilityRules()->create([
-                'rule_type' => 'include_country',
-                'country_id' => $nigeria->id,
-                'public_message' => 'Visa on Arrival is available for Nigerian passport holders.',
-                'is_active' => true,
-            ]);
-            $this->fee($product, $processing->id, 'Single-entry Visa on Arrival fee', 'visa', 'all', 'USD', $row->single_entry_fee, false, 0, 'per_traveler', ['nationality_country_id' => $nigeria->id]);
+        if (! $product->requirements()->exists()) {
             $product->requirements()->create([
                 'name' => 'Passport bio-data page',
                 'category' => 'passport',
@@ -258,7 +210,7 @@ class LegacyVisaCatalogueImporter
             ]);
         }
 
-        return $destinations->count();
+        return 1;
     }
 
     private function singularVoaRows(): \Illuminate\Support\Collection

@@ -73,7 +73,12 @@ class SeerbitPaymentService
                 'status' => $response->status(),
             ]);
 
-            return ['ok' => false, 'raw' => $data, 'message' => 'Payment verification failed.'];
+            return [
+                'ok' => false,
+                'query_succeeded' => false,
+                'raw' => $data,
+                'message' => 'Payment verification is temporarily unavailable.',
+            ];
         }
 
         $gatewayCode = (string) (
@@ -102,6 +107,7 @@ class SeerbitPaymentService
 
         return [
             'ok' => $gatewayCode === '00' || strcasecmp($gatewayMessage, 'Successful') === 0,
+            'query_succeeded' => true,
             'gateway_code' => $gatewayCode,
             'gateway_message' => $gatewayMessage,
             'amount' => $amount === null ? null : (float) str_replace(',', '', (string) $amount),

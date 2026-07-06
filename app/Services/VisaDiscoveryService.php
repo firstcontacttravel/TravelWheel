@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Country;
 use App\Models\VisaProduct;
+use App\Models\VisaDestination;
 use Illuminate\Support\Collection;
 
 class VisaDiscoveryService
@@ -13,13 +14,26 @@ class VisaDiscoveryService
         private readonly VisaFeeEstimateService $fees,
     ) {}
 
-    public function search(Country $nationality, Country $destination, ?Country $residence, array $travelers, array $context = []): Collection
+    public function search(Country $nationality, Country|VisaDestination $destination, ?Country $residence, array $travelers, array $context = []): Collection
     {
+        $isCountry = $destination instanceof Country;
+
         return VisaProduct::query()
             ->currentlyPublished()
-            ->where('destination_country_id', $destination->id)
+            ->where(function ($query) use ($destination, $isCountry): void {
+                if ($isCountry) {
+                    $query->where('destination_country_id', $destination->id)
+                        ->orWhereHas('destination.countries', fn ($countries) => $countries->whereKey($destination->id));
+
+                    return;
+                }
+
+                $query->where('visa_destination_id', $destination->id);
+            })
+            ->when(! $isCountry || $destination->alpha2 !== 'NG' || $nationality->alpha2 === 'NG', fn ($query) => $query->where('family', '!=', 'voa'))
             ->with([
                 'destinationCountry',
+                'destination',
                 'eligibilityRules.countryGroup.countries',
                 'processingOptions' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order'),
                 'fees' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order'),
@@ -42,11 +56,13 @@ class VisaDiscoveryService
                     'processing_disclaimer' => $product->processing_disclaimer,
                     'issuance_disclaimer' => $product->issuance_disclaimer,
                     'eligibility' => ['status' => $eligibility->status, 'messages' => $eligibility->messages],
-                    'requirements' => $product->requirements->map(fn ($requirement): array => [
-                        'name' => $requirement->name,
-                        'state' => $requirement->requirement_state,
-                        'scope' => $requirement->scope,
-                    ])->values()->all(),
+                    'requirements' => $product->requirements
+                        ->filter(fn ($requirement): bool => $this->requirementMatchesTravelerMix($requirement->conditions ?? [], $travelers))
+                        ->map(fn ($requirement): array => [
+                            'name' => $requirement->name,
+                            'state' => $requirement->requirement_state,
+                            'scope' => $requirement->scope,
+                        ])->values()->all(),
                     'estimate' => $this->fees->estimate($product, $travelers, null, [
                         'nationality_country_id' => $nationality->id,
                     ]),
@@ -54,5 +70,25 @@ class VisaDiscoveryService
             })
             ->filter(fn (array $result): bool => in_array($result['eligibility']['status'], ['eligible', 'conditionally_eligible'], true))
             ->values();
+    }
+
+    private function requirementMatchesTravelerMix(array $conditions, array $travelers): bool
+    {
+        $applicantTypes = (array) ($conditions['applicant_type'] ?? []);
+
+        if ($applicantTypes === []) {
+            return true;
+        }
+
+        $hasAdult = (int) ($travelers['adult'] ?? 0) > 0;
+        $hasMinor = (int) ($travelers['child'] ?? 0) + (int) ($travelers['infant'] ?? 0) > 0;
+
+        return collect($applicantTypes)->contains(function (string $type) use ($hasAdult, $hasMinor): bool {
+            return match ($type) {
+                'minor_nigerian', 'minor_foreign' => $hasMinor,
+                'individual', 'company' => $hasAdult,
+                default => true,
+            };
+        });
     }
 }
