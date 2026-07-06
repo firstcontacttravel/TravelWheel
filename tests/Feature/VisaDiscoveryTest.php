@@ -68,6 +68,18 @@ class VisaDiscoveryTest extends TestCase
         $this->get(route('visa.results'))->assertSee('Published visa')->assertDontSee('Hidden draft');
     }
 
+    public function test_search_rejects_a_country_matching_the_passport_nationality(): void
+    {
+        $nigeria = Country::query()->create(['alpha2' => 'NG', 'name' => 'Nigeria']);
+        $this->additionalProduct($nigeria, 'voa', 'Nigerian Business Visa');
+
+        $this->from(route('air.visa'))->post(route('visa.search'), $this->validSearch($nigeria, $nigeria, [
+            'destination_ref' => 'country:'.$nigeria->id,
+        ]))->assertRedirect(route('air.visa'))->assertSessionHasErrors('destination_ref');
+
+        $this->assertFalse(session()->has('pendingVisaSearch'));
+    }
+
     public function test_ineligible_products_and_other_nationality_fees_are_not_returned(): void
     {
         [$nationality, $destination, $product] = $this->catalogueProduct('voa', 'Nigeria VOA');

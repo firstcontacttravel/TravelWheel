@@ -9,6 +9,7 @@ use App\Services\VisaFunnelService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class VisaSearchController extends Controller
@@ -19,6 +20,11 @@ class VisaSearchController extends Controller
             'infants.lte' => 'The number of infants cannot exceed the number of adults.',
         ]);
         [$destinationType, $destination] = $this->resolveDestination($validated);
+        if ($destinationType === 'country' && (int) $validated['nationality_id'] === (int) $destination->id) {
+            throw ValidationException::withMessages([
+                'destination_ref' => 'Your passport nationality and destination cannot be the same country.',
+            ]);
+        }
         $validated['destination_type'] = $destinationType;
         $validated['destination_id'] = $destinationType === 'country' ? $destination->id : null;
         $validated['visa_destination_id'] = $destinationType === 'region' ? $destination->id : null;

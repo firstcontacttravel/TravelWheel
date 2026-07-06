@@ -1,5 +1,5 @@
 <div class="vr-page">
-    <link rel="stylesheet" href="{{ asset('css/visa-flow.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/visa-flow.css') }}?v={{ filemtime(public_path('css/visa-flow.css')) }}">
     @php
         $travelerTotal = array_sum($searchParams['travelers'] ?? []);
         $eligibleCount = collect($results)->whereIn('eligibility.status', ['eligible', 'conditionally_eligible'])->count();
