@@ -59,6 +59,8 @@
     $totalInterest = (float) ($tfPlan['total_interest'] ?? 0);
     $schedule      = $tfPlan['schedule']                 ?? [];
     $remainingBal  = (float) ($tfPlan['remaining_balance'] ?? ($ticketCost - $downPayment));
+    $interestRatePercent = (float) ($tfPlan['interest_rate_percent'] ?? (config('travelwheel.travelflex_interest_rate', 0.04) * 100));
+    $interestRateLabel = rtrim(rtrim(number_format($interestRatePercent, 2), '0'), '.');
 
     // Live trip details (fetched by controller after ticketing)
     $tripDetails   = $tripDetails ?? [];
@@ -644,13 +646,13 @@
                     <div class="pc-icon icon-calendar" style="background:var(--purple-lt);color:var(--purple);"></div>
                     <div>
                         <div class="pc-title">Your Repayment Schedule</div>
-                        <div class="pc-sub">{{ count($schedule) }} instalment(s) · {{ $repaymentPlan }} · 5% interest per period</div>
+                        <div class="pc-sub">{{ count($schedule) }} instalment(s) · {{ $repaymentPlan }} · {{ $interestRateLabel }}% interest per period</div>
                     </div>
                 </div>
                 <div class="pc-body" style="padding:0;">
                     <table class="schedule-table">
                         <thead>
-                            <tr><th>#</th><th>Instalment</th><th>Due Date</th><th>Principal</th><th>Interest (5%)</th><th>Total Due</th><th>Status</th></tr>
+                            <tr><th>#</th><th>Instalment</th><th>Due Date</th><th>Principal</th><th>Interest ({{ $interestRateLabel }}%)</th><th>Total Due</th><th>Status</th></tr>
                         </thead>
                         <tbody>
                             @foreach($schedule as $i => $inst)

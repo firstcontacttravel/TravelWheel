@@ -1630,7 +1630,7 @@ class FlightBookingController extends Controller
 
         $downPayment = round($ticketCost * ($downPercent / 100), 2);
         $remainingBalance = round($ticketCost - $downPayment, 2);
-        $rate = 0.05;
+        $rate = (float) config('travelwheel.travelflex_interest_rate', 0.04);
         $proportions = [
             1 => [1.0],
             2 => [0.5, 0.5],
@@ -1675,6 +1675,8 @@ class FlightBookingController extends Controller
             'repayment_count' => count($schedule),
             'grand_total' => round($ticketCost + $totalInterest, 2),
             'total_interest' => $totalInterest,
+            'interest_rate' => $rate,
+            'interest_rate_percent' => round($rate * 100, 2),
             'schedule' => $schedule,
             'payment_method' => $paymentMethod,
             'normalized_at' => now()->toIso8601String(),

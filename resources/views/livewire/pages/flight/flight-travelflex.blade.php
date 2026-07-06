@@ -42,6 +42,8 @@
     $breakdown = $mappedFlight['fareBreakdown'] ?? [];
 
     $bankAccounts = config('travelwheel.travelflex_bank_accounts', []);
+    $travelFlexInterestRate = (float) config('travelwheel.travelflex_interest_rate', 0.04);
+    $travelFlexInterestPercent = rtrim(rtrim(number_format($travelFlexInterestRate * 100, 2), '0'), '.');
 
     // Add these lines to define $isReturn, $isMulti, $multiLegs, $tripLabel
     $mf = $mappedFlight;
@@ -405,7 +407,7 @@
             <div class="tf-hero-title">Pay for your flight in easy instalments</div>
             <div class="tf-hero-sub">
                 Secure your seat today with a 30% down payment. 
-                Pay the balance over your chosen repayment period at a fixed 5% interest rate. 
+                Pay the balance over your chosen repayment period at a fixed {{ $travelFlexInterestPercent }}% interest rate.
                 Provided by a licensed third-party lender.
             </div>
             <div class="tf-flow-pills">
@@ -477,7 +479,7 @@
                         <p>A minimum down payment of <strong>30%</strong> of the total ticket cost is required to initiate the plan. This down payment is <strong>non-refundable</strong> once the booking is confirmed, except where the airline cancels the flight. The down payment is used to secure your seat reservation with the airline.</p>
 
                         <h4>4. Interest Rate</h4>
-                        <p>A fixed interest rate of <strong>5% per repayment interval</strong> is applied to the outstanding balance. This rate is applied per instalment period (e.g., monthly or weekly), not per annum. You agree that the total cost of credit (including interest) will be disclosed to you before you confirm the plan.</p>
+                        <p>A fixed interest rate of <strong>{{ $travelFlexInterestPercent }}% per repayment interval</strong> is applied to the outstanding balance. This rate is applied per instalment period (e.g., monthly or weekly), not per annum. You agree that the total cost of credit (including interest) will be disclosed to you before you confirm the plan.</p>
 
                         <h4>5. Repayment Obligations</h4>
                         <p>You agree to make payments on or before the due dates specified in your repayment schedule. Late or missed payments may result in (a) cancellation of your flight booking, (b) forfeiture of amounts paid, (c) reporting to credit bureaus, and (d) legal action by the Lender to recover outstanding amounts.</p>
@@ -501,7 +503,7 @@
                     <div class="tf-agree-row" @click="toggleAgree()">
                         <input type="checkbox" id="tfAgree" :checked="agreed" @click.stop="toggleAgree()">
                         <label for="tfAgree" @click.prevent>
-                            I have read and agree to the TravelFlex Terms &amp; Conditions, including the loan agreement with the third-party Lender, the interest rate of 5% per repayment interval, and the non-refundable 30% down payment policy.
+                            I have read and agree to the TravelFlex Terms &amp; Conditions, including the loan agreement with the third-party Lender, the interest rate of {{ $travelFlexInterestPercent }}% per repayment interval, and the non-refundable 30% down payment policy.
                         </label>
                     </div>
 
@@ -609,7 +611,7 @@
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Ticket Cost</span><span class="tf-sum-val" x-text="formatCurrency(ticketCost)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Down Payment (<span x-text="downPercent"></span>%)</span><span class="tf-sum-val" x-text="formatCurrency(downPaymentAmount)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Remaining Balance</span><span class="tf-sum-val" x-text="formatCurrency(remainingBalance)"></span></div>
-                            <div class="tf-sum-row"><span class="tf-sum-lbl">Total Interest (5%/period)</span><span class="tf-sum-val" x-text="formatCurrency(totalInterest)"></span></div>
+                            <div class="tf-sum-row"><span class="tf-sum-lbl">Total Interest ({{ $travelFlexInterestPercent }}%/period)</span><span class="tf-sum-val" x-text="formatCurrency(totalInterest)"></span></div>
                         </div>
                         <div class="tf-total-row">
                             <span class="tf-total-lbl">Total Payable (All Instalments + Down)</span>
@@ -906,7 +908,7 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--gray-400)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    5% interest per repayment interval
+                    {{ $travelFlexInterestPercent }}% interest per repayment interval
                 </div>
             </div>
         </aside>
@@ -1018,7 +1020,7 @@ function travelFlex() {
             const parsed      = this.parseRepaymentLabel(this.repaymentPlan);
             const intervalDays= parsed.unitDays;
             const numPeriods  = parsed.count;
-            const RATE        = 0.05; // 5% per interval
+            const RATE        = {{ $travelFlexInterestRate }};
 
             // Instalment schedule proportions
             const proportions = {
