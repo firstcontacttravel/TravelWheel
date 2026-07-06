@@ -22,8 +22,7 @@ class VisaDiscoveryService
             ->currentlyPublished()
             ->where(function ($query) use ($destination, $isCountry): void {
                 if ($isCountry) {
-                    $query->where('destination_country_id', $destination->id)
-                        ->orWhereHas('destination.countries', fn ($countries) => $countries->whereKey($destination->id));
+                    $query->where('destination_country_id', $destination->id);
 
                     return;
                 }
@@ -33,7 +32,7 @@ class VisaDiscoveryService
             ->when(! $isCountry || $destination->alpha2 !== 'NG' || $nationality->alpha2 === 'NG', fn ($query) => $query->where('family', '!=', 'voa'))
             ->with([
                 'destinationCountry',
-                'destination',
+                'destination.countries',
                 'eligibilityRules.countryGroup.countries',
                 'processingOptions' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order'),
                 'fees' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order'),
@@ -55,6 +54,15 @@ class VisaDiscoveryService
                     'maximum_stay_days' => $product->maximum_stay_days,
                     'processing_disclaimer' => $product->processing_disclaimer,
                     'issuance_disclaimer' => $product->issuance_disclaimer,
+                    'regional_coverage' => $product->destination ? [
+                        'name' => $product->destination->name,
+                        'count' => $product->destination->countries->count(),
+                        'countries' => $product->destination->countries
+                            ->sortBy('name')
+                            ->pluck('name')
+                            ->values()
+                            ->all(),
+                    ] : null,
                     'eligibility' => ['status' => $eligibility->status, 'messages' => $eligibility->messages],
                     'requirements' => $product->requirements
                         ->filter(fn ($requirement): bool => $this->requirementMatchesTravelerMix($requirement->conditions ?? [], $travelers))

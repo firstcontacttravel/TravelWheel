@@ -142,12 +142,16 @@ class VisaDiscoveryTest extends TestCase
         $this->assertContains("Father's data page", array_column($withChild['requirements'], 'name'));
     }
 
-    public function test_regional_destination_can_be_searched_directly_and_through_a_member_country(): void
+    public function test_regional_destination_is_searched_directly_and_not_exposed_through_member_countries(): void
     {
         $nationality = Country::query()->create(['alpha2' => 'NG', 'name' => 'Nigeria']);
         $france = Country::query()->create(['alpha2' => 'FR', 'name' => 'France']);
+        $germany = Country::query()->create(['alpha2' => 'DE', 'name' => 'Germany']);
+        $italy = Country::query()->create(['alpha2' => 'IT', 'name' => 'Italy']);
+        $netherlands = Country::query()->create(['alpha2' => 'NL', 'name' => 'Netherlands']);
+        $spain = Country::query()->create(['alpha2' => 'ES', 'name' => 'Spain']);
         $region = VisaDestination::query()->create(['name' => 'Schengen Area', 'slug' => 'schengen-area', 'is_active' => true]);
-        $region->countries()->attach($france);
+        $region->countries()->attach([$france->id, $germany->id, $italy->id, $netherlands->id, $spain->id]);
         $product = VisaProduct::query()->create([
             'visa_destination_id' => $region->id,
             'name' => 'Schengen Tourist Visa',
@@ -163,17 +167,43 @@ class VisaDiscoveryTest extends TestCase
         $throughMember = app(\App\Services\VisaDiscoveryService::class)->search($nationality, $france, null, ['adult' => 1, 'child' => 0, 'infant' => 0]);
 
         $this->assertTrue($direct->contains('id', $product->id));
-        $this->assertTrue($throughMember->contains('id', $product->id));
+        $this->assertFalse($throughMember->contains('id', $product->id));
+        $regionalResult = $direct->firstWhere('id', $product->id);
+        $this->assertSame(5, $regionalResult['regional_coverage']['count']);
+        $this->assertSame(['France', 'Germany', 'Italy', 'Netherlands', 'Spain'], $regionalResult['regional_coverage']['countries']);
+        $this->get(route('air.visa'))
+            ->assertOk()
+            ->assertSee('value="region:'.$region->id.'"', false)
+            ->assertDontSee('value="country:'.$france->id.'"', false);
 
         $search = $this->validSearch($nationality, $france, ['destination_ref' => 'region:'.$region->id]);
         unset($search['destination_id']);
         $this->post(route('visa.search'), $search)->assertRedirect(route('visa.search.loading'));
         $this->get(route('visa.search.run'))->assertRedirect(route('visa.results'));
-        $this->get(route('visa.results'))->assertOk()->assertSee('Schengen Tourist Visa')->assertSee('Schengen Area');
+        $this->get(route('visa.results'))
+            ->assertOk()
+            ->assertSee('Schengen Tourist Visa')
+            ->assertSee('Schengen Area')
+            ->assertSee('Covers 5 countries')
+            ->assertSee('View all covered countries')
+            ->assertSee('Country coverage does not guarantee eligibility');
         $this->post(route('visa.applications.start'), ['visa_product_id' => $product->id])->assertRedirect();
         $application = VisaApplication::query()->latest('id')->firstOrFail();
         $this->assertSame($region->id, $application->visa_destination_id);
         $this->assertNull($application->destination_country_id);
+    }
+
+    public function test_destination_widget_lists_only_countries_with_currently_published_products(): void
+    {
+        $canada = Country::query()->create(['alpha2' => 'CA', 'name' => 'Canada']);
+        $ireland = Country::query()->create(['alpha2' => 'IE', 'name' => 'Ireland']);
+        $this->additionalProduct($canada, 'standard', 'Canada visitor visa');
+        $this->additionalProduct($ireland, 'standard', 'Ireland draft visa', false);
+
+        $this->get(route('air.visa'))
+            ->assertOk()
+            ->assertSee('value="country:'.$canada->id.'"', false)
+            ->assertDontSee('value="country:'.$ireland->id.'"', false);
     }
 
     private function catalogueProduct(string $family, string $name): array

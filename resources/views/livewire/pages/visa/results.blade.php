@@ -40,6 +40,30 @@
                     <div class="vr-card__body">
                         <div class="vr-facts"><div><span>Processing</span><strong>{{ $processing ? $processing['minimum_business_days'].'–'.$processing['maximum_business_days'].' business days' : 'Confirm with TravelWheel' }}</strong></div><div><span>Validity</span><strong>{{ $result['validity_days'] ? $result['validity_days'].' days' : 'Product-specific' }}</strong></div><div><span>Maximum stay</span><strong>{{ $result['maximum_stay_days'] ? $result['maximum_stay_days'].' days' : 'Confirm before applying' }}</strong></div></div>
                         @if($result['summary'])<p class="vr-summary">{{ $result['summary'] }}</p>@endif
+                        @if(! empty($result['regional_coverage']))
+                            @php
+                                $coverage = $result['regional_coverage'];
+                                $coveragePreview = collect($coverage['countries'])->take(4);
+                            @endphp
+                            <section class="vr-coverage" aria-label="Countries covered by this regional visa">
+                                <div class="vr-coverage__heading">
+                                    <span class="vr-coverage__icon" aria-hidden="true">&#9678;</span>
+                                    <div>
+                                        <strong>Covers {{ $coverage['count'] }} {{ $coverage['count'] === 1 ? 'country' : 'countries' }}</strong>
+                                        @if($coverage['count'] > 0)
+                                            <span>{{ $coveragePreview->join(', ') }}@if($coverage['count'] > 4), and {{ $coverage['count'] - 4 }} more @endif</span>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if($coverage['count'] > 4)
+                                    <details class="vr-coverage__details">
+                                        <summary>View all covered countries</summary>
+                                        <ul>@foreach($coverage['countries'] as $country)<li>{{ $country }}</li>@endforeach</ul>
+                                    </details>
+                                @endif
+                                <p>Country coverage does not guarantee eligibility or entry permission. Final approval remains with the relevant authorities.</p>
+                            </section>
+                        @endif
                         @foreach($result['eligibility']['messages'] as $message)<div class="vr-message">{{ $message }}</div>@endforeach
                         <details class="vr-requirements"><summary>View {{ count($result['requirements']) }} requirements</summary><ul>@foreach($result['requirements'] as $requirement)<li><span>{{ $requirement['name'] }}</span><small>{{ str($requirement['state'])->headline() }}</small></li>@endforeach</ul></details>
                     </div>
