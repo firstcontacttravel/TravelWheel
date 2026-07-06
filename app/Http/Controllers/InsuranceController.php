@@ -29,11 +29,6 @@ class InsuranceController extends Controller
         return $data['access_token'];
     }
 
-    public function insurance()
-    {
-        return view('air.insurance.insurance');
-    }
-
     public function makeRequestQuote(Request $request)
     {
         $dataform = $request->all();
@@ -93,7 +88,7 @@ class InsuranceController extends Controller
                 'requestdate'     => $data['DateTimeAdded'] ?? now(),
             ]);
 
-            return view('air.insurance.insuranceQuote', compact('data', 'quote'));
+            return redirect()->route('air.insurance.quote.show', ['qid' => $quote->id]);
 
         } catch (RequestException $e) {
             Log::error('Sanla quote error: ' . $e->getMessage());
@@ -157,7 +152,15 @@ class InsuranceController extends Controller
 
     public function callbackSeerbit(Request $request)
     {
-        $paymentReference = $request->query('paymentReference');
+        // SeerBit's hosted checkout redirects back with `reference` in some modes,
+        // not just `paymentReference` — check both (see ProtocolController::callbackSeerbit).
+        $paymentReference = $request->query('paymentReference')
+            ?? $request->input('paymentReference')
+            ?? $request->query('reference')
+            ?? $request->input('reference')
+            ?? $request->query('payRef')
+            ?? $request->input('payRef');
+
         if (!$paymentReference) {
             return redirect()->route('air.insurance')->with('error', 'Payment reference missing.');
         }

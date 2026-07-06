@@ -19,6 +19,16 @@ use App\Livewire\Pages\FlightBooking;
 use App\Livewire\Pages\FlightIndex;
 use App\Livewire\Pages\FlightPage;
 use App\Livewire\Pages\HomePage;
+use App\Livewire\Pages\Protocol\Protocol as ProtocolPage;
+use App\Livewire\Pages\Protocol\ProtocolInternationalPlans;
+use App\Livewire\Pages\Protocol\ProtocolPlans;
+use App\Livewire\Pages\Lounge\Lounge as LoungePage;
+use App\Livewire\Pages\Lounge\LoungeResults;
+use App\Livewire\Pages\Lounge\LoungePlan;
+use App\Livewire\Pages\Insurance\Insurance as InsurancePage;
+use App\Livewire\Pages\Insurance\InsuranceQuote as InsuranceQuotePage;
+use App\Livewire\Pages\AirCargo\AirCargo as AirCargoPage;
+use App\Livewire\Pages\AirCargo\AirCargoCreate;
 use App\Livewire\Pages\Visa\ApplicationWizard as VisaApplicationWizard;
 use App\Livewire\Pages\Visa\Discovery as VisaDiscovery;
 use App\Livewire\Pages\Visa\Results as VisaResults;
@@ -53,10 +63,11 @@ Route::get('/flights/search/run', [FlightController::class, 'runPendingSearch'])
 Route::get('/air/hotel', function () { /* ... */
 })->name('air.hotel');
 // Protocol routes
-Route::get('/air/protocol', [ProtocolController::class, 'protocol'])->name('air.protocol');
+
+Route::get('/air/protocol', ProtocolPage::class)->name('air.protocol');
 Route::post('/air/protocol/plan', [ProtocolController::class, 'protocolPlan'])->name('air.protocolplan');
-Route::get('/air/protocol/plans/{id}', [ProtocolController::class, 'protocolPlans'])->name('air.protocolplans');
-Route::get('/air/protocol/plans-intl/{id}', [ProtocolController::class, 'protocolPlansI'])->name('air.protocolplansI');
+Route::get('/air/protocol/plans/{id}', ProtocolPlans::class)->name('air.protocolplans');
+Route::get('/air/protocol/plans-intl/{id}', ProtocolInternationalPlans::class)->name('air.protocolplansI');
 Route::get('/air/protocol/form/{plan}', [ProtocolController::class, 'protocolForm'])->name('air.protocolForm');
 Route::post('/air/protocol/checkout', [ProtocolController::class, 'protocol_checkout'])->name('air.protocol_checkout');
 Route::post('/air/protocol/purchase', [ProtocolController::class, 'makePurchase'])->name('air.protocolmakePurchase');
@@ -66,9 +77,10 @@ Route::get('/air/protocol/generate/{trans_id}', [ProtocolController::class, 'gen
 Route::get('/air/protocol/success', [ProtocolController::class, 'protocol_success'])->name('air.protocol_success');
 
 // Lounge routes
-Route::get('/air/lounge', [LoungeController::class, 'lounge'])->name('air.lounge');
+Route::get('/air/lounge', LoungePage::class)->name('air.lounge');
 Route::post('/air/lounge/search', [LoungeController::class, 'lounges'])->name('air.lounges');
-Route::get('/air/lounge/plans/{id}', [LoungeController::class, 'loungePlan'])->name('air.loungeplans');
+Route::get('/air/lounge/results', LoungeResults::class)->name('air.lounges.results');
+Route::get('/air/lounge/plans/{id}', LoungePlan::class)->name('air.loungeplans');
 Route::get('/air/lounge/booking/{id}', [LoungeController::class, 'loungeBooking'])->name('air.loungebooking');
 Route::post('/air/lounge/checkout', [LoungeController::class, 'loungecheckout'])->name('air.loungecheckout');
 Route::post('/air/lounge/purchase', [LoungeController::class, 'makePurchase'])->name('air.lounge.purchase');
@@ -77,8 +89,9 @@ Route::get('/air/lounge/payment/{trans_id}', [LoungeController::class, 'lounge_p
 Route::get('/air/lounge/generate/{trans_id}', [LoungeController::class, 'generateLoungePass'])->name('air.lounge_generate');
 Route::get('/air/lounge/success', [LoungeController::class, 'lounge_success'])->name('air.lounge_success');
 // Insurance (Sanla/Allianz) routes
-Route::get('/air/insurance', [InsuranceController::class, 'insurance'])->name('air.insurance');
+Route::get('/air/insurance', InsurancePage::class)->name('air.insurance');
 Route::post('/air/insurance/quote', [InsuranceController::class, 'makeRequestQuote'])->name('air.insurance.quote');
+Route::get('/air/insurance/quote/{qid}', InsuranceQuotePage::class)->name('air.insurance.quote.show');
 Route::get('/air/insurance/request', [InsuranceController::class, 'insuranceRequest'])->name('air.insurance.request');
 Route::post('/air/insurance/purchase', [InsuranceController::class, 'insurancePurchase'])->name('air.insurance.purchase');
 Route::post('/air/insurance/pay', [InsuranceController::class, 'makeRequestPurchase'])->name('air.insurance.pay');
@@ -120,8 +133,8 @@ Route::middleware('auth')->prefix('admin/visa-documents')->name('admin.visa.docu
     Route::get('/issued/{document}', [AdminVisaDocumentController::class, 'issued'])->name('issued');
 });
 // Air Cargo routes
-Route::get('/air/cargo', [AirCargoController::class, 'airCargo'])->name('air.cargo');
-Route::get('/air/cargo/international', [AirCargoController::class, 'airCargoInternational'])->name('air.cargo.international');
+Route::get('/air/cargo', AirCargoPage::class)->name('air.cargo');
+Route::get('/air/cargo/international', AirCargoCreate::class)->name('air.cargo.international');
 Route::post('/air/cargo/shipping-price', [AirCargoController::class, 'getShippingPrice'])->name('air.cargo.shipping-price');
 Route::get('/air/cargo/zones', [AirCargoController::class, 'getShippingZones'])->name('air.cargo.zones');
 Route::post('/air/cargo/create', [AirCargoController::class, 'airCargoPost'])->name('air.cargo.post');

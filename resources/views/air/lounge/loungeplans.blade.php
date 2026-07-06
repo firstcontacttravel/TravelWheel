@@ -1,60 +1,57 @@
 @component('layouts.app', ['title' => 'Lounge Details - TravelWheel'])
+@include('air.lounge.partials.lounge-ui')
 
-<section class="shadow-sm">
-    <div class="container-fluid p-5">
+<section class="lounge-page">
+    <div class="lounge-wrap">
         @foreach($lounges as $lounge)
-        <div class="row single-package mb-5">
-            <div class="col-sm-6 p-4">
-                <div id="carouselLounge{{ $lounge->id }}" class="carousel slide" data-bs-ride="carousel">
-                    <div class="carousel-inner">
-                        <div class="carousel-item active">
-                            <img src="{{ asset('assets/lounge/' . $lounge->pics1) }}" class="d-block w-100" alt="">
+            @php $airport = $lounge->airport == 1 ? 'International' : 'Local'; @endphp
+            <div class="lounge-hero">
+                <div class="lounge-hero-main" style="padding:0; overflow:hidden;">
+                    <div id="carouselLounge{{ $lounge->id }}" class="carousel slide" data-bs-ride="carousel">
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <img src="{{ asset('assets/lounge/' . $lounge->pics1) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('assets/lounge/' . $lounge->pics2) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('assets/lounge/' . $lounge->pics3) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                            </div>
                         </div>
-                        <div class="carousel-item">
-                            <img src="{{ asset('assets/lounge/' . $lounge->pics2) }}" class="d-block w-100" alt="">
-                        </div>
-                        <div class="carousel-item">
-                            <img src="{{ asset('assets/lounge/' . $lounge->pics3) }}" class="d-block w-100" alt="">
-                        </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#carouselLounge{{ $lounge->id }}" data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#carouselLounge{{ $lounge->id }}" data-bs-slide="next">
+                            <span class="carousel-control-next-icon"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
                     </div>
-                    <button class="carousel-control-prev" type="button" data-bs-target="#carouselLounge{{ $lounge->id }}" data-bs-slide="prev">
-                        <span class="carousel-control-prev-icon"></span>
-                        <span class="visually-hidden">Previous</span>
-                    </button>
-                    <button class="carousel-control-next" type="button" data-bs-target="#carouselLounge{{ $lounge->id }}" data-bs-slide="next">
-                        <span class="carousel-control-next-icon"></span>
-                        <span class="visually-hidden">Next</span>
-                    </button>
                 </div>
-            </div>
-            <div class="col-sm-6 p-4">
-                <div class="col-12 p-3">
-                    <h3>{{ $lounge->brand_name }}</h3>
-                    <div class="protocol">
-                        <h6><i class="fa-solid fa-location-dot" style="color:green"></i> Location</h6>
-                        <span class="text-muted" style="font-size:14px;">{{ $lounge->description }}</span>
-                    </div>
-                    <div class="protocol pt-3">
-                        <h6><i class="fas fa-life-ring" style="color:green"></i> Facilities</h6>
-                        <ul class="list-unstyled">
-                            <li class="pb-1"><i class="fas fa-wifi" style="color:green"></i> {{ $lounge->facilities1 }}</li>
-                            <li class="pb-1"><i class="fas fa-hamburger" style="color:green"></i> {{ $lounge->facilities2 }}</li>
-                            <li class="pb-1"><i class="fas fa-couch" style="color:green"></i> {{ $lounge->facilities3 }}</li>
-                            <li class="pb-1"><i class="fas fa-newspaper" style="color:green"></i> {{ $lounge->facilities4 }}</li>
-                            <li class="pb-1"><i class="fas fa-concierge-bell" style="color:green"></i> {{ $lounge->facilities5 }}</li>
-                        </ul>
-                        <div class="row">
-                            <div class="col-6 text-end">
-                                <p><sup>₦</sup>{{ number_format($lounge->priceA) }}<span>/Passenger</span></p>
-                            </div>
-                            <div class="col-6 text-start">
-                                <a href="{{ route('air.loungebooking', ['id' => $lounge->id]) }}" class="btn btn-pry">Proceed</a>
-                            </div>
-                        </div>
+
+                <div class="lounge-panel">
+                    <h1 class="lounge-title">{{ $lounge->brand_name }}</h1>
+                    <div class="lounge-kicker"><x-ph-icon name="map-pin" /> {{ $airport }} Airport</div>
+                    <p class="lounge-copy">{{ $lounge->description }}</p>
+
+                    <div class="lounge-panel-title mt-4"><x-ph-icon name="lifebuoy" /> Facilities</div>
+                    <ul class="lounge-list">
+                        <li><x-ph-icon name="wifi-high" /> {{ $lounge->facilities1 }}</li>
+                        <li><x-ph-icon name="hamburger" /> {{ $lounge->facilities2 }}</li>
+                        <li><x-ph-icon name="couch" /> {{ $lounge->facilities3 }}</li>
+                        <li><x-ph-icon name="newspaper" /> {{ $lounge->facilities4 }}</li>
+                        <li><x-ph-icon name="bell" /> {{ $lounge->facilities5 }}</li>
+                    </ul>
+
+                    <div class="lounge-total-row mt-4" style="align-items:center;">
+                        <p class="lounge-price" style="margin:0;"><sup>₦</sup>{{ number_format($lounge->priceA) }} <small>/ Passenger</small></p>
+                        <a href="{{ route('air.loungebooking', ['id' => $lounge->id]) }}" class="lounge-btn">
+                            Proceed <x-ph-icon name="arrow-right" />
+                        </a>
                     </div>
                 </div>
             </div>
-        </div>
         @endforeach
     </div>
 </section>

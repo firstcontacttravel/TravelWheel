@@ -1,91 +1,46 @@
 @component('layouts.app', ['title' => 'Protocol Payment - TravelWheel'])
-<style>
-    .input-control {
-        display: block; width: 100%; padding: .175rem .25rem; font-size: 1rem;
-        font-weight: 400; line-height: 1.5; color: #212529; background-color: #fff;
-        border-top-style: hidden; border-right-style: hidden; border-left-style: hidden;
-        border-bottom: 1px solid #ced4da; -webkit-appearance: none; -moz-appearance: none;
-        appearance: none; transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
-    }
-    .no-outline:focus { outline: none; }
-</style>
+@include('air.protocol.partials.protocol-ui')
 
-<section class="shadow-sm py-4">
-    <div class="container">
-        <div class="row pt-3 pb-2">
-            <div class="col-sm-6 p-3">
-                <h3><img src="{{ asset('assets/img/pp.png') }}" class="me-2" style="width:30px;" alt="protocol"> Airport Protocol Service</h3>
-            </div>
+@php
+    $package = $protocols->package == '2' ? 'Regular' : 'VIP';
+    $formattedValue = number_format($protocols->amount);
+    $trans_id = $protocols->trans_id;
+@endphp
+
+<section class="protocol-page">
+    <div class="protocol-wrap">
+        <div class="protocol-steps">
+            <span class="protocol-step"><x-ph-icon name="map-pin" /> Select airport</span>
+            <span class="protocol-step"><x-ph-icon name="tag" /> Choose plan</span>
+            <span class="protocol-step"><x-ph-icon name="identification-card" /> Add details</span>
+            <span class="protocol-step protocol-step-active"><x-ph-icon name="check-circle" /> Confirmed</span>
         </div>
 
-        <div class="row shadow p-4 mb-5">
-            <div class="col-sm-4">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0" style="color:rgba(13,156,83,1);">Payment Details</h5>
-                    </div>
-                    @php
-                        $package = $protocols->package == '2' ? 'Regular' : 'VIP';
-                        $formattedValue = number_format($protocols->amount);
-                        $trans_id = $protocols->trans_id;
-                    @endphp
-                    <div class="card-body text-center p-4">
-                        <img src="{{ asset('assets/img/77suc.gif') }}" class="w-auto mb-3" alt="Success" style="max-height:100px;">
-                        <h5>Payment Successful</h5>
-                        <small class="d-block mb-1">The sum of ₦{{ $formattedValue }} has been made for Protocol Service ({{ $package }}).</small>
-                        <small class="d-block mb-3"><b>Please continue to generate your service pass.</b></small>
-                        <a href="{{ route('air.protocol_generate', ['trans_id' => $trans_id]) }}" class="btn btn-success" id="generate-pass-link">
-                            Generate Pass
-                        </a>
-                    </div>
-                </div>
+        <div class="protocol-payment-grid">
+            <div class="protocol-success" style="max-width:none;">
+                <div class="protocol-success-icon "><x-ph-icon name="check" /></div><br>
+                <div class="protocol-kicker justify-content-center"><x-ph-icon name="shield-check" /> Payment Successful</div>
+                <h1 class="protocol-title">Your protocol service is confirmed</h1>
+                <p class="protocol-copy">
+                    The sum of ₦{{ $formattedValue }} has been received for Protocol Service ({{ $package }}).
+                </p>
+                <a href="{{ route('air.protocol_generate', ['trans_id' => $trans_id]) }}" class="protocol-btn mt-4" id="generate-pass-link">
+                    Generate Pass <x-ph-icon name="download-simple" />
+                </a>
             </div>
 
-            <div class="col-md-8">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0" style="color:rgba(13,156,83,1);">Protocol Service Details</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row mt-2">
-                            <div class="col-sm-4 mb-2">
-                                <label class="form-label">Location</label>
-                                <input type="text" disabled class="input-control no-outline" value="{{ $protocols->state }}">
-                            </div>
-                            <div class="col-sm-4 mb-2">
-                                <label class="form-label">Airport</label>
-                                <input type="text" disabled class="input-control no-outline" value="{{ $protocols->airport }}">
-                            </div>
-                            <div class="col-sm-4 mb-2">
-                                <label class="form-label">Travel Date</label>
-                                <input type="text" disabled class="input-control no-outline" value="{{ $protocols->travel_date?->format('d M Y') }}">
-                            </div>
-                            <div class="col-sm-4 mb-2">
-                                <label class="form-label">{{ $protocols->service_type }} Time</label>
-                                <input type="text" disabled class="input-control no-outline" value="{{ $protocols->d_time }}">
-                            </div>
-                            <div class="col-sm-4 mb-2">
-                                <label class="form-label">Airline</label>
-                                <input type="text" disabled class="input-control no-outline" value="{{ $protocols->airline }}">
-                            </div>
-                            <div class="col-sm-4 mb-2">
-                                <label class="form-label">No. of Passengers</label>
-                                <input type="text" disabled class="input-control no-outline" value="{{ $protocols->passenger }}">
-                            </div>
-                            <div class="col-sm-4 mb-2">
-                                <label class="form-label">Phone Number</label>
-                                <input type="text" disabled class="input-control no-outline" value="{{ $protocols->phone }}">
-                            </div>
-                            <div class="col-sm-4 mb-2">
-                                <label class="form-label">Email</label>
-                                <input type="text" disabled class="input-control no-outline" value="{{ $protocols->email }}">
-                            </div>
-                            <div class="col-sm-4 mb-2">
-                                <label class="form-label">Optional Request</label>
-                                <input type="text" disabled class="input-control no-outline" value="{{ $protocols->optional_request }}">
-                            </div>
-                        </div>
-                    </div>
+            <div class="protocol-panel">
+                <div class="protocol-section-title"><x-ph-icon name="list-magnifying-glass" /> Service Details</div>
+                <div class="protocol-detail-grid" style="grid-template-rows:2fr;">
+                    <div class="protocol-detail"><span>Location</span><strong>{{ $protocols->state }}</strong></div>
+                    <div class="protocol-detail"><span>Airport</span><strong>{{ $protocols->airport }}</strong></div>
+                    <div class="protocol-detail"><span>Travel Date</span><strong>{{ $protocols->travel_date?->format('d M Y') }}</strong></div>
+                    <div class="protocol-detail"><span>{{ $protocols->service_type }} Time</span><strong>{{ $protocols->d_time }}</strong></div>
+                    <div class="protocol-detail"><span>Airline</span><strong>{{ $protocols->airline }}</strong></div>
+                    <div class="protocol-detail"><span>Passengers</span><strong>{{ $protocols->passenger }}</strong></div>
+                    <div class="protocol-detail"><span>Phone</span><strong>{{ $protocols->phone }}</strong></div>
+                    <div class="protocol-detail"><span>Email</span><strong>{{ $protocols->email }}</strong></div>
+                    <div class="protocol-detail"><span>Optional Request</span><strong>{{ $protocols->optional_request }}</strong></div>
                 </div>
             </div>
         </div>

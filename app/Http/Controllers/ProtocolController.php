@@ -170,7 +170,16 @@ class ProtocolController extends Controller
 
     public function callbackSeerbit(Request $request)
     {
-        $paymentReference = $request->query('paymentReference') ?? $request->input('paymentReference');
+        // SeerBit's hosted checkout redirects back with `reference` (confirmed against the
+        // working SeerbitNormalizer integration elsewhere in the codebase), not `paymentReference`.
+        // Our own initializePayment() call also echoes `paymentReference`/`payref` in some modes,
+        // so all variants are checked here.
+        $paymentReference = $request->query('paymentReference')
+            ?? $request->input('paymentReference')
+            ?? $request->query('reference')
+            ?? $request->input('reference')
+            ?? $request->query('payRef')
+            ?? $request->input('payRef');
 
         if (! $paymentReference) {
             return redirect()->route('air.protocol')->with('error', 'Payment reference missing.');

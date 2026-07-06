@@ -31,7 +31,10 @@ class AirCargoController extends Controller
 
     public function getShippingPrice(Request $request)
     {
-        $zone = ShippingZone::where('zone_name', $request->input('zone'))->first();
+        // The country dropdowns send a zone key like "zone_2" (from each option's
+        // data-category attribute), while shipping_zones.zone_name is stored as "Zone 2".
+        $zoneNumber = preg_replace('/\D+/', '', (string) $request->input('zone'));
+        $zone = ShippingZone::where('zone_name', 'Zone ' . $zoneNumber)->first();
         if (!$zone) {
             return response()->json(['message' => 'Invalid zone provided'], 400);
         }
@@ -168,13 +171,15 @@ class AirCargoController extends Controller
         $reference = 'ACG' . strtoupper(bin2hex(random_bytes(6)));
         $seerbit   = app(SeerbitPaymentService::class);
         $result    = $seerbit->initializePayment([
-            'amount'             => $data['total_price'],
+            'amount'             => (string) $data['total_price'],
+            'currency'           => 'NGN',
             'callbackUrl'        => route('air.cargo.callback'),
             'email'              => $dataform['email'],
-            'client_name'        => $dataform['fullname'],
+            'fullName'           => $dataform['fullname'],
+            'mobileNumber'       => $dataform['phone_no'] ?? '',
             'paymentReference'   => $reference,
             'productDescription' => 'Air Cargo Shipment',
-            'productId'          => $reference,
+            'productId'          => 'ACG' . $reference,
         ]);
 
         return redirect()->away($result['redirect_link']);
@@ -182,11 +187,25 @@ class AirCargoController extends Controller
 
     public function callbackSeerbit(Request $request)
     {
-        $paymentReference = $request->input('paymentReference');
-        $shipData         = Session::get('shipData');
+        // SeerBit's hosted checkout redirects back with `reference` (confirmed against the
+        // working SeerbitNormalizer integration elsewhere in the codebase), not `paymentReference`.
+        // Our own initializePayment() call also echoes `paymentReference`/`payref` in some modes,
+        // so all variants are checked here.
+        $paymentReference = $request->query('paymentReference')
+            ?? $request->input('paymentReference')
+            ?? $request->query('reference')
+            ?? $request->input('reference')
+            ?? $request->query('payRef')
+            ?? $request->input('payRef');
+
+        $shipData = Session::get('shipData');
 
         if (!$shipData) {
             return redirect()->route('air.cargo.success');
+        }
+
+        if (! $paymentReference) {
+            return redirect()->route('air.cargo')->with('error', 'Payment reference missing.');
         }
 
         $seerbit = app(SeerbitPaymentService::class);

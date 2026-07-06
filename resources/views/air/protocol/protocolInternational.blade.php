@@ -1,5 +1,5 @@
 @component('layouts.app', ['title' => 'Protocol Plans (International) - TravelWheel'])
-<style>.hidden{display:none;}</style>
+<style>.protocol-hide{display:none;}</style>
 
 <section class="shadow-sm py-4">
     <div class="container">
@@ -51,7 +51,7 @@
                     $plan1 = '1';
                     $plan2 = '2';
                 @endphp
-                <div class="hidden" id="departure">
+                <div class="protocol-hide" id="departure">
                     <div class="row">
                         <div class="col-sm-6">
                             <div class="card p-3 mb-3 shadow-sm">
@@ -92,7 +92,7 @@
                     </div>
                 </div>
 
-                <div class="hidden" id="arrival">
+                <div class="protocol-hide" id="arrival">
                     <div class="row">
                         <div class="col-sm-6">
                             <div class="card p-3 mb-3 shadow-sm">

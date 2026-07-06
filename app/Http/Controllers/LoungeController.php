@@ -13,11 +13,6 @@ use Illuminate\Support\Facades\Session;
 
 class LoungeController extends Controller
 {
-    public function lounge()
-    {
-        return view('air.lounge.lounge');
-    }
-
     public function lounges(Request $request)
     {
         $data = $request->all();
@@ -45,20 +40,11 @@ class LoungeController extends Controller
             return back()->with('error', 'Invalid airport selection');
         }
 
-        $query = Lounge::where('location', $location)->where('airport', $airportType);
-        if ($terminal) {
-            $query->where('terminal', $terminal);
-        }
-
-        $lounges = $query->latest()->get();
-
-        return view('air.lounge.lounges', compact('lounges'));
-    }
-
-    public function loungePlan($id)
-    {
-        $lounges = Lounge::where('id', $id)->get();
-        return view('air.lounge.loungeplans', compact('lounges'));
+        return redirect()->route('air.lounges.results', array_filter([
+            'state'    => $location,
+            'airport'  => $airportType,
+            'terminal' => $terminal,
+        ]));
     }
 
     public function loungeBooking($id)
@@ -115,7 +101,15 @@ class LoungeController extends Controller
 
     public function callbackSeerbit(Request $request)
     {
-        $paymentReference = $request->query('paymentReference') ?? $request->input('paymentReference');
+        // SeerBit's hosted checkout redirects back with `reference` in some modes,
+        // not just `paymentReference` — check both (see ProtocolController::callbackSeerbit).
+        $paymentReference = $request->query('paymentReference')
+            ?? $request->input('paymentReference')
+            ?? $request->query('reference')
+            ?? $request->input('reference')
+            ?? $request->query('payRef')
+            ?? $request->input('payRef');
+
         if (!$paymentReference) {
             return redirect()->route('air.lounge')->with('error', 'Payment reference missing.');
         }

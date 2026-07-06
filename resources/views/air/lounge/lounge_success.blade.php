@@ -1,29 +1,24 @@
 @component('layouts.app', ['title' => 'Lounge Booking Successful - TravelWheel'])
+@include('air.lounge.partials.lounge-ui')
 
-<section class="shadow-sm py-5">
-    <div class="container">
-        <div class="row">
-            <div class="col-sm-3"></div>
-            <div class="col-sm-6 pt-3 pb-5">
-                <div class="p-3 text-center">
-                    <img src="{{ asset('assets/img/77suc.gif') }}" class="w-auto mb-3" alt="Success" style="max-height:120px;">
-                    <h4>Purchase Successful!</h4>
-                    <p>You have successfully booked a lounge. Please check your inbox (or spam/junk) for the email provided — your Lounge Pass will be sent there.</p>
+<section class="lounge-page">
+    <div class="lounge-wrap">
+        <div class="lounge-success">
+            <div class="lounge-success-icon"><x-ph-icon name="check" /></div>
+            <div class="lounge-kicker justify-content-center"><x-ph-icon name="shield-check" /> Booking Successful</div>
+            <h1 class="lounge-title">Lounge service booked</h1>
+            <p class="lounge-copy">
+                Your booking has been completed. Please check your inbox, spam, or junk folder for the email address provided — your Lounge Pass will be sent there.
+            </p>
 
-                    @if(session('message'))
-                        <div class="alert alert-info">{{ session('message') }}</div>
-                    @endif
+            @if(session('message'))
+                <div class="alert alert-info mt-3">{{ session('message') }}</div>
+            @endif
 
-                    <div class="row justify-content-center mt-3">
-                        <div class="col-auto">
-                            <a href="{{ route('air.lounge') }}" class="btn btn-primary">Back to Lounge</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm-3"></div>
+            <a href="{{ route('air.lounge') }}" class="lounge-btn mt-4">
+                Book Another Lounge <x-ph-icon name="arrow-right" />
+            </a>
         </div>
     </div>
 </section>
-
 @endcomponent
