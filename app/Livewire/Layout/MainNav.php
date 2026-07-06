@@ -13,12 +13,12 @@ class MainNav extends Component
             'icon' => 'Flight 70.png',
             'route' => 'air.flight'
         ],
-        [
-            'name' => 'Hotel',
-            'subtitle' => 'Booking',
-            'icon' => 'Hotel 70.png',
-            'route' => 'air.hotel'
-        ],
+        // [
+        //     'name' => 'Hotel',
+        //     'subtitle' => 'Booking',
+        //     'icon' => 'Hotel 70.png',
+        //     'route' => 'air.hotel'
+        // ],
         [
             'name' => 'Airport',
             'subtitle' => 'Protocol',
