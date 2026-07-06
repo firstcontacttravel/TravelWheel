@@ -118,6 +118,10 @@ class VisaDiscoveryTest extends TestCase
         $this->assertTrue($foreignToNigeria->contains('id', $businessVisa->id));
         $this->assertFalse($foreignElsewhere->contains('id', $staleWrongDestination->id));
         $this->assertFalse($nigerianToNigeria->contains('id', $businessVisa->id));
+        $this->get(route('air.visa'))
+            ->assertOk()
+            ->assertSee('value="country:'.$nigeria->id.'"', false)
+            ->assertDontSee('value="country:'.$ireland->id.'"', false);
     }
 
     public function test_minor_parent_requirements_only_appear_when_the_search_includes_a_minor(): void

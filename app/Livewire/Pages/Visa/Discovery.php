@@ -15,7 +15,17 @@ class Discovery extends Component
             'destinationCountries' => Country::query()
                 ->where('is_active', true)
                 ->whereNotNull('alpha2')
-                ->whereHas('visaProducts', fn ($query) => $query->currentlyPublished())
+                ->where(function ($query): void {
+                    $query->whereHas('visaProducts', fn ($products) => $products
+                        ->currentlyPublished()
+                        ->where('family', '!=', 'voa'))
+                        ->orWhere(function ($nigeria): void {
+                            $nigeria->where('alpha2', 'NG')
+                                ->whereHas('visaProducts', fn ($products) => $products
+                                    ->currentlyPublished()
+                                    ->where('family', 'voa'));
+                        });
+                })
                 ->orderBy('name')
                 ->get(['id', 'name', 'alpha2']),
             'regionalDestinations' => VisaDestination::query()->where('is_active', true)->whereHas('products', fn ($query) => $query->currentlyPublished())->orderBy('name')->get(['id', 'name']),
