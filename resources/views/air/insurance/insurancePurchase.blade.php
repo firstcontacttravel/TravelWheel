@@ -38,19 +38,19 @@
 
                     <div class="row">
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Surname</label>
+                            <label class="form-label">Surname <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="surname" placeholder="Surname" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Middle Name</label>
+                            <label class="form-label">Middle Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="middlename" placeholder="Middle name">
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">First Name</label>
+                            <label class="form-label">First Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="firstname" placeholder="First name" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Gender</label>
+                            <label class="form-label">Gender <span class="text-danger">*</span></label>
                             <select class="form-select" name="gender" required>
                                 <option value="">-- Select Gender --</option>
                                 <option value="1">Male</option>
@@ -58,13 +58,13 @@
                             </select>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Title</label>
+                            <label class="form-label">Title <span class="text-danger">*</span></label>
                             <select class="form-select" name="title" required>
                                 @include('air.insurance._title_options')
                             </select>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Date of Birth</label>
+                            <label class="form-label">Date of Birth <span class="text-danger">*</span></label>
                             @php
                                 try {
                                     $formattedDob = \Carbon\Carbon::parse($quote->dob)->format('Y-m-d');
@@ -75,41 +75,41 @@
                             <input class="form-control" type="date" name="dob" value="{{ $formattedDob }}" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Email Address</label>
+                            <label class="form-label">Email Address <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="email" value="{{ $quote->email }}" placeholder="Email" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Phone Number</label>
+                            <label class="form-label">Phone Number <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="phone_no" value="{{ $quote->phone_no }}" placeholder="Phone number" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">State of Residence</label>
+                            <label class="form-label">State of Residence <span class="text-danger">*</span></label>
                             <select class="form-select" name="state" required>
                                 @include('air.insurance._state_options')
                             </select>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Address</label>
+                            <label class="form-label">Address <span class="text-danger">*</span></label>
                             <input class="form-control" type="text" name="address" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Zip Code</label>
+                            <label class="form-label">Zip Code <span class="text-danger">*</span></label>
                             <input class="form-control" type="text" name="zipcode" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Passport No.</label>
+                            <label class="form-label">Passport No. <span class="text-danger">*</span></label>
                             <input class="form-control" type="text" name="passport_no" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Occupation</label>
+                            <label class="form-label">Occupation <span class="text-danger">*</span></label>
                             <input class="form-control" type="text" name="ocupation" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Nationality</label>
+                            <label class="form-label">Nationality <span class="text-danger">*</span></label>
                             <input class="form-control" type="text" name="nationalty" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Marital Status</label>
+                            <label class="form-label">Marital Status <span class="text-danger">*</span></label>
                             <select class="form-select" name="marital_status" required>
                                 <option value="">-- Marital Status --</option>
                                 <option value="1">Single</option>

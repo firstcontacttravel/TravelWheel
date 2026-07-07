@@ -85,7 +85,7 @@ class ProtocolController extends Controller
 
         $price = $plan == '1' ? $protocol->price1 : $protocol->price2;
 
-        return view('air.protocol.protocolForm', compact('data', 'price'));
+        return view('air.protocol.protocolForm', compact('data', 'price', 'plan'));
     }
 
     public function protocol_checkout(Request $request)

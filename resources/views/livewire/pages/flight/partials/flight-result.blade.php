@@ -1314,7 +1314,7 @@
     .sr-card-body > div:first-child {
         position: absolute;
         top: 25px;
-        left: 452px;
+        right: 223px;
         z-index: 2;
         display: block !important;
         margin: 0 !important;
@@ -1391,6 +1391,7 @@
     }
     .sr-seg {
         min-width: 93px;
+        gap: 6px;
     }
     .sr-seg:first-child {
         align-items: flex-start;
@@ -1638,8 +1639,8 @@
     .sr-detail-cols {
         position: relative;
         display: grid;
-        grid-template-columns: 357px 357px;
-        gap: 80px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 40px;
         align-items: start;
     }
     .sr-detail-cols::before {
@@ -1647,12 +1648,13 @@
         position: absolute;
         top: 12px;
         bottom: 10px;
-        left: 400px;
+        left: 50%;
         width: 1px;
         background: #a6a6a6;
     }
     .sr-detail-col {
-        width: 357px;
+        width: 100%;
+        min-width: 0;
         gap: 0;
     }
     .sr-detail-leg-head {
@@ -1692,7 +1694,7 @@
     .sr-detail-leg-badge.inbound { background: #ddffe9; color: #009933; }
     .sr-detail-leg-badge.connecting { background: #f7f7ff; color: #303191; }
     .sr-detail-seg {
-        width: 357px;
+        width: 100%;
         min-height: 131px;
         margin: 0;
         padding: 9px 13px 10px;
@@ -2044,6 +2046,7 @@
         .sr-fare-options { gap: 10px; }
         .sr-fare-option { padding: 13px 14px; }
         .sr-fare-option-price { font-size: 18px; }
+        .sr-seg-line { min-width: 0; }
     }
     @media (max-width: 860px) {
         .sr-page { grid-template-columns: 1fr; padding: 12px 10px 32px; gap: 12px; }

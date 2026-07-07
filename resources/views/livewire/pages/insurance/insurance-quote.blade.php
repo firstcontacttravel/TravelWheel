@@ -7,6 +7,7 @@
     $planBenefits = $isSchengen
         ? ['Schengen visa compliant cover', 'Emergency medical & evacuation', 'Trip cancellation support', 'Baggage delay/loss cover']
         : ['Worldwide medical cover', 'Emergency medical & evacuation', 'Trip cancellation support', 'Baggage delay/loss cover'];
+    $benefitsImage = $isSchengen ? 'Benefits2.jpg' : 'Benefits1.jpg';
 @endphp
 
 <section class="insurance-page">
@@ -27,6 +28,7 @@
                     from {{ \Carbon\Carbon::parse($quote->coverBegins)->format('d M Y') }}
                     to {{ \Carbon\Carbon::parse($quote->coverEnds)->format('d M Y') }}.
                 </p>
+                <img src="{{ asset('assets/image/' . $benefitsImage) }}" class="insurance-benefits-img" alt="{{ $planLabel }} benefits">
                 <ul class="insurance-list insurance-list-row">
                     @foreach($planBenefits as $benefit)
                         <li><x-ph-icon name="check-circle" /> {{ $benefit }}</li>
@@ -35,6 +37,7 @@
             </div>
 
             <div class="insurance-plan-simple">
+                <img src="{{ asset('assets/img/allianz.png') }}" class="insurance-partner-logo" alt="Allianz">
                 <span class="insurance-chip"><x-ph-icon name="shield-check" /> {{ $planLabel }}</span>
                 <p class="insurance-price"><sup>₦</sup>{{ $formattedAmount }}</p>
                 <a href="{{ route('air.insurance.request', ['qid' => $quote->id]) }}" class="insurance-btn w-100">

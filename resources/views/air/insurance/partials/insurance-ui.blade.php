@@ -68,6 +68,13 @@
         margin: 0;
     }
 
+    .insurance-benefits-img {
+        display: block;
+        width: 100%;
+        border-radius: 8px;
+        margin: 16px 0;
+    }
+
     .insurance-stat-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -238,8 +245,15 @@
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        justify-content: center;
+        justify-content: flex-start;
         gap: 10px;
+    }
+
+    .insurance-plan-simple .insurance-partner-logo {
+        max-width: 120px;
+        max-height: 40px;
+        object-fit: contain;
+        margin-bottom: 4px;
     }
 
     .insurance-plan-simple .insurance-price {

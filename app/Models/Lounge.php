@@ -15,6 +15,7 @@ class Lounge extends Model
         'phone_no',
         'location',
         'airport',
+        'service',
         'terminal',
         'description',
         'facilities1',

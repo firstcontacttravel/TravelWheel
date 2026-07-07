@@ -1,6 +1,30 @@
 @component('layouts.app', ['title' => 'Protocol Booking Form - TravelWheel'])
 @include('air.protocol.partials.protocol-ui')
 
+@php
+    $isInternational = $data['airport'] === 'International Airport';
+    $showDeparture = $data['service'] === 'Departure';
+    $showArrival = $data['service'] === 'Arrival';
+
+    if ($isInternational) {
+        if ($showArrival) {
+            $formBenefits = ['Meet and greet', 'Exclusive baggage handling', 'Escort to the arrival lobby', 'Coordinate passenger to pre-arranged transportation', 'Other relevant airport protocol service'];
+            $formPlanLabel = 'VIP';
+        } elseif ($plan == '2') {
+            $formBenefits = ['Meet and greet', 'Exclusive baggage handling', 'No queuing', 'Stress-free check-in process', 'Other relevant airport protocol service'];
+            $formPlanLabel = 'Regular';
+        } else {
+            $formBenefits = ['Meet and greet', 'Exclusive baggage handling', 'Fast-tracking check-in process', 'No queuing', 'Stress-free check-in process', 'Escort through boarding gate', 'Other relevant airport protocol service'];
+            $formPlanLabel = 'VIP';
+        }
+    } else {
+        $formBenefits = $showDeparture
+            ? ['Meet and greet', 'Exclusive baggage handling', 'Fast-tracking check-in process', 'No queuing', 'Pre check-in process', 'Other relevant airport protocol service']
+            : ['Meet and greet', 'Exclusive baggage handling', 'Escort to the arrival lobby', 'Coordinate passenger to pre-arranged transportation', 'Other relevant airport protocol service'];
+        $formPlanLabel = null;
+    }
+@endphp
+
 <section class="protocol-page">
     <div class="protocol-wrap">
         <div class="protocol-steps">
@@ -16,7 +40,7 @@
                     <div class="protocol-kicker"><x-ph-icon name="clipboard-text" /> Booking Details</div>
                     <h1 class="protocol-title">{{ $data['service'] }} protocol request</h1>
                     <p class="protocol-copy">
-                        Complete your flight and contact details. Your total updates automatically from the number of passengers.
+                        Complete your flight and contact details. 
                     </p>
                 </div>
 
@@ -28,13 +52,16 @@
                         <div class="protocol-detail"><span>Segment</span><strong>{{ $data['service'] }}</strong></div>
                     </div>
                     
-                    <div class="protocol-panel-title mt-4"><x-ph-icon name="sparkle" /> What Your Service Covers</div>
+                    <div class="protocol-panel-title mt-4">
+                        <x-ph-icon name="sparkle" /> What Your Service Covers
+                        @if($formPlanLabel)
+                            <span class="protocol-chip">{{ $formPlanLabel }}</span>
+                        @endif
+                    </div>
                     <ul class="protocol-list">
-                        <li><x-ph-icon name="check-circle" /> Meet and greet.</li>
-                        <li><x-ph-icon name="check-circle" /> Exclusive baggage handling.</li>
-                        <li><x-ph-icon name="check-circle" /> Queue reduction and fast-tracking assistance.</li>
-                        <li><x-ph-icon name="check-circle" /> Stress-free check-in or arrival support.</li>
-                        <li><x-ph-icon name="plus-circle" /> Optional pick-up, drop-off, or police escort request.</li>
+                        @foreach($formBenefits as $benefit)
+                            <li><x-ph-icon name="check-circle" /> {{ $benefit }}</li>
+                        @endforeach
                     </ul>
                     <div class="protocol-note">A protocol boarding pass is generated after successful payment.</div>
                 

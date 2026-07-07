@@ -43,6 +43,15 @@
                         </select>
                     </label>
 
+                    <label class="vw-field" for="serviceSelect">
+                        <span>Service segment</span>
+                        <select id="serviceSelect" name="service" required>
+                            <option value="">-- Select segment --</option>
+                            <option value="Departure">Departure</option>
+                            <option value="Arrival">Arrival</option>
+                        </select>
+                    </label>
+
                     <label class="vw-field lounge-hide" id="airport1" for="airportSelect1">
                         <span>Airports In Abuja</span>
                         <select class="form-select" id="airportSelect1" name="airports">
@@ -66,41 +75,6 @@
                         <select class="form-select" id="airportSelect3" name="airports2">
                             <option value="">-- Choose Airport --</option>
                             <option value="1">International Airport</option>
-                        </select>
-                    </label>
-
-                    <label class="vw-field lounge-hide" id="airlineDiv" for="airlineselect1">
-                        <span>Select Airline (for terminal routing)</span>
-                        <select class="form-select" id="airlineselect1" name="airline">
-                            <option value="">-- Choose Airline --</option>
-                            <option value="1">AIR COTE D'IVOIRE</option>
-                            <option value="2">ARIK AIR</option>
-                            <option value="1">ASKY AIRLINES</option>
-                            <option value="1">AFRICA WORLD AIRLINE    </option>   
-                            <option value="2">AIR FRANCE</option>
-                            <option value="1">AIR PEACE</option>   
-                            <option value="1">ANGOLA AIR</option>   
-                            <option value="2">AIR NAMIBIA</option>
-                            <option value="2">BRITISH AIRWAYS</option>
-                            <option value="2">DELTA AIRLINES</option>
-                            <option value="2">Egypt Airline</option>
-                            <option value="2">Emirates Airlines</option>
-                            <option value="2">ETHIOPIAN AIRLINES</option>
-                            <option value="2">ETIHAD AIRWAYS</option>
-                            <option value="2">KENYA AIRWAYS</option>
-                            <option value="1">KLM</option>
-                            <option value="2">LUFTHANSA</option>
-                            <option value="1">QATAR AIRWAYS</option>
-                            <option value="1">ROYAL AIR MAROC</option>
-                            <option value="2">RWANDA AIR</option>
-                            <option value="1">SOUTH AFRICAN AIRWAYS</option>
-                            <option value="2">TURKISH AIRLINE</option>
-                            <option value="1">VIRGIN ATLANTIC</option>
-                            <option value="2">TAP PORTUGAL</option>
-                            <option value="2">AFRICAN WORLD AIRLINES</option>
-                            <option value="2">MID AFRICA AIRLINES</option>
-                            <option value="2">SAUDI ARABIAN AIRLINE</option>
-                            <option value="OTHERS">OTHERS</option>                                   
                         </select>
                     </label>
                 </div>
@@ -153,30 +127,24 @@
         const airport2      = document.getElementById('airport2');
         const airport3      = document.getElementById('airport3');
         const airportSelect2 = document.getElementById('airportSelect2');
-        const airlineDiv    = document.getElementById('airlineDiv');
 
         stateselect.addEventListener('change', function () {
             airport1.classList.add('lounge-hide');
             airport2.classList.add('lounge-hide');
             airport3.classList.add('lounge-hide');
-            airlineDiv.classList.add('lounge-hide');
             if (this.value === 'Abuja') airport1.classList.remove('lounge-hide');
             else if (this.value === 'Lagos') airport2.classList.remove('lounge-hide');
             else if (this.value === 'Kano') airport3.classList.remove('lounge-hide');
         });
 
-        airportSelect2.addEventListener('change', function () {
-            airlineDiv.classList.toggle('lounge-hide', this.value !== '1');
-        });
-
         document.getElementById('bookingForm').addEventListener('submit', function (e) {
             let valid = true;
             if (!stateselect.value) valid = false;
+            if (!document.getElementById('serviceSelect').value) valid = false;
 
             if (stateselect.value === 'Abuja' && !document.getElementById('airportSelect1').value) valid = false;
             if (stateselect.value === 'Lagos' && !airportSelect2.value) valid = false;
             if (stateselect.value === 'Kano' && !document.getElementById('airportSelect3').value) valid = false;
-            if (stateselect.value === 'Lagos' && airportSelect2.value === '1' && !document.getElementById('airlineselect1').value) valid = false;
 
             if (!valid) e.preventDefault();
         });

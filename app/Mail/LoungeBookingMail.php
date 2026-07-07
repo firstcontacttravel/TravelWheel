@@ -12,7 +12,7 @@ class LoungeBookingMail extends Mailable
 
     public function __construct(
         public string $fullname,
-        public string $email,
+        public string $trans_id,
     ) {}
 
     public function build(): static
@@ -22,7 +22,7 @@ class LoungeBookingMail extends Mailable
             ->markdown('emails.lounge-booking')
             ->with([
                 'fullname' => $this->fullname,
-                'email'    => $this->email,
+                'trans_id' => $this->trans_id,
             ]);
     }
 }

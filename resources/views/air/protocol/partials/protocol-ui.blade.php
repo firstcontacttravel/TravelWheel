@@ -13,9 +13,9 @@
 
     .protocol-hero {
         display: grid;
-        grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr);
+        grid-template-columns: minmax(0, .4fr) minmax(0, .6fr);
         gap: 24px;
-        align-items: stretch;
+        align-items: start;
         margin-bottom: 24px;
     }
 
@@ -34,6 +34,7 @@
         padding: 28px;
         position: relative;
         overflow: hidden;
+        min-width: 0;
     }
 
     .protocol-hero-main:before {
@@ -189,6 +190,7 @@
         gap: 10px;
         padding: 0;
         margin: 0;
+        min-width: 0;
         list-style: none;
     }
 
@@ -196,8 +198,10 @@
         display: flex;
         align-items: flex-start;
         gap: 10px;
+        min-width: 0;
         color: #53615a;
         line-height: 1.45;
+        overflow-wrap: break-word;
     }
 
     .protocol-list i {
@@ -205,6 +209,19 @@
         margin-top: 2px;
         font-size: 18px;
         flex: 0 0 auto;
+    }
+
+    .protocol-list-sm {
+        gap: 7px;
+    }
+
+    .protocol-list-sm li {
+        font-size: 12.5px;
+        line-height: 1.35;
+    }
+
+    .protocol-list-sm i {
+        font-size: 14px;
     }
 
     .protocol-note {
@@ -240,6 +257,7 @@
         align-items: flex-start;
         justify-content: center;
         gap: 10px;
+        min-width: 0;
     }
 
     .protocol-plan-simple .protocol-price {
@@ -252,20 +270,22 @@
     }
 
     .protocol-plans-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: stretch;
+        display: grid;
+        grid-template-columns: minmax(0, .4fr) minmax(0, .6fr);
+        align-items: start;
         gap: 20px;
         margin-bottom: 24px;
     }
 
-    .protocol-plans-row .protocol-hero-main {
-        flex: 1 1 320px;
+    .protocol-plans-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        min-width: 0;
     }
 
     .protocol-plans-row .protocol-plan-simple {
-        flex: 1 1 220px;
-        max-width: 260px;
+        flex: 1 1 200px;
     }
 
     .protocol-plan-grid {
@@ -600,35 +620,55 @@
 
     @media (max-width: 991px) {
         .protocol-hero,
+        .protocol-plans-row,
         .protocol-grid,
         .protocol-checkout-grid,
         .protocol-payment-grid,
         .protocol-widget-fields,
         .protocol-vw-fields {
-            grid-template-columns: 1fr;
+            grid-template-columns: minmax(0, 1fr);
         }
 
         .protocol-plan-grid,
         .protocol-detail-grid {
             grid-template-columns: 1fr;
         }
+
+        .protocol-plans-group {
+            flex-direction: column;
+        }
+
+        .protocol-plans-row .protocol-plan-simple {
+            max-width: none;
+        }
     }
 
     @media (max-width: 640px) {
+        .protocol-page {
+            margin-top: 24px;
+        }
+
+        main.navbarmain.upper-space {
+            margin-top: 24px !important;
+        }
+
         .protocol-wrap {
             padding: 18px 12px 40px;
+            overflow-x: hidden;
         }
 
         .protocol-hero-main,
         .protocol-panel,
         .protocol-plan,
+        .protocol-plan-simple,
         .protocol-summary,
         .protocol-success {
             padding: 18px;
+            min-width: 0;
         }
 
         .protocol-title {
-            font-size: 13px;
+            font-size: 18px;
         }
 
         .protocol-stat-grid {

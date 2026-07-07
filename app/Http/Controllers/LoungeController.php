@@ -17,13 +17,17 @@ class LoungeController extends Controller
     {
         $data = $request->all();
         $location = $data['state'] ?? null;
+        $service  = $data['service'] ?? null;
 
         if (!$location) {
             return back()->with('error', 'Invalid location selected');
         }
 
+        if (!in_array($service, ['Departure', 'Arrival'])) {
+            return back()->with('error', 'Invalid service segment selected');
+        }
+
         $airportType = null;
-        $terminal    = null;
 
         if ($location === 'Abuja') {
             $airportType = $data['airports'] ?? null;
@@ -31,20 +35,17 @@ class LoungeController extends Controller
             $airportType = $data['airports2'] ?? null;
         } elseif ($location === 'Lagos') {
             $airportType = $data['airports1'] ?? null;
-            if ($airportType == 1) {
-                $terminal = ($data['airline'] ?? null) == 1 ? 'New Terminal' : 'Old Terminal';
-            }
         }
 
         if (!in_array($airportType, [1, 2])) {
             return back()->with('error', 'Invalid airport selection');
         }
 
-        return redirect()->route('air.lounges.results', array_filter([
-            'state'    => $location,
-            'airport'  => $airportType,
-            'terminal' => $terminal,
-        ]));
+        return redirect()->route('air.lounges.results', [
+            'state'   => $location,
+            'airport' => $airportType,
+            'service' => $service,
+        ]);
     }
 
     public function loungeBooking($id)
@@ -156,7 +157,7 @@ class LoungeController extends Controller
         ]);
 
         Mail::to($dataform['email'] ?? '')->send(
-            new LoungeBookingMail($fullname, $dataform['email'] ?? '')
+            new LoungeBookingMail($fullname, $paymentReference)
         );
         Session::forget('lounge_checkout_form');
 
