@@ -78,9 +78,9 @@
                                             </td>
                                             <td style="padding:0 4px 8px;width:33.33%;">
                                                 <div style="background:#f8fafc;border:1px solid #e6eaf2;border-radius:12px;padding:14px;">
-                                                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;">Down payment</div>
+                                                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;">Planned down payment</div>
                                                     <div style="margin-top:6px;font-size:15px;font-weight:800;color:#111827;">{{ $money($downPayment, $currency) }}</div>
-                                                    <div style="margin-top:4px;font-size:12px;color:#6b7280;">{{ $loanPlan['down_percent'] ?? '-' }}% collected</div>
+                                                    <div style="margin-top:4px;font-size:12px;color:#6b7280;">{{ $loanPlan['down_percent'] ?? '-' }}% due after approval</div>
                                                 </div>
                                             </td>
                                             <td style="padding:0 0 8px 8px;width:33.33%;">

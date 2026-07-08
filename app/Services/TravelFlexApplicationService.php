@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class TravelFlexApplicationService
 {
@@ -25,7 +26,7 @@ class TravelFlexApplicationService
 
         $uploadPaths = collect($application->document_paths ?? [])
             ->mapWithKeys(fn (?string $path, string $key): array => [
-                $key => $path ? storage_path('app/' . $path) : null,
+                $key => $this->resolveDocumentPath($path),
             ])
             ->all();
 
@@ -174,5 +175,26 @@ class TravelFlexApplicationService
     {
         return data_get($application->applicant_details, 'email')
             ?: $application->booking?->contact_email;
+    }
+
+    private function resolveDocumentPath(?string $path): ?string
+    {
+        if (blank($path)) {
+            return null;
+        }
+
+        if (is_file($path)) {
+            return $path;
+        }
+
+        $localPath = Storage::disk('local')->path($path);
+
+        if (is_file($localPath)) {
+            return $localPath;
+        }
+
+        $legacyPath = storage_path('app/' . ltrim($path, '/\\'));
+
+        return is_file($legacyPath) ? $legacyPath : null;
     }
 }
