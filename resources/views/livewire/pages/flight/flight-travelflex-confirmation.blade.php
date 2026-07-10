@@ -1,8 +1,8 @@
-{{-- resources/views/livewire/pages/flight/flight-travelflex-confirmation.blade.php --}}
+﻿{{-- resources/views/livewire/pages/flight/flight-travelflex-confirmation.blade.php --}}
 @component('layouts.app', ['title' => 'TravelFlex - Plan Activated'])
 
 @php
-    // ── Core data ──────────────────────────────────────────────────────────────
+    // â”€â”€ Core data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     $dbBooking = $dbBooking ?? null;
     $bookingFlight = session('bookingFlight', []);
     $mf            = $flight ?? ($bookingFlight['flight'] ?? $bookingFlight);
@@ -15,7 +15,7 @@
     }
 
     $currency  = $mf['currency'] ?? $dbBooking?->currency ?? 'NGN';
-    $sym       = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
+    $sym = match($currency) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'GBP' => html_entity_decode('&pound;', ENT_QUOTES, 'UTF-8'), 'EUR' => html_entity_decode('&euro;', ENT_QUOTES, 'UTF-8'), default => $currency . ' ' };
     $fmt       = fn($v) => $sym . number_format((float)$v, 2);
 
     $segments  = $mf['segments']        ?? [];
@@ -30,7 +30,7 @@
     $finalDest = $isReturn && !empty($retSegs) ? $retSegs[count($retSegs)-1] : $lastSeg;
     $storedRoute = $dbBooking?->route ?? ($mf['route'] ?? '');
     if (empty($firstSeg) && $storedRoute) {
-        $parts = preg_split('/\s*(?:->|→|â†’|-)\s*/u', (string) $storedRoute);
+        $parts = preg_split('/\s*(?:->|→|Ã¢â€ â€™|-)\s*/u', (string) $storedRoute);
         $firstSeg = ['from' => trim($parts[0] ?? ''), 'fromCity' => ''];
         $finalDest = ['to' => trim($parts[count($parts) - 1] ?? ''), 'toCity' => ''];
     }
@@ -94,7 +94,7 @@
         }
     }
 
-    // ── UPDATE: Status detection ──
+    // â”€â”€ UPDATE: Status detection â”€â”€
     $ticketStatus = $tripDetails['TicketStatus'] ?? ($dbBooking?->ticket_ordered ? 'TICKETED' : 'PROCESSING');
     $bookingStatus = $tripDetails['BookingStatus'] ?? ($dbBooking?->booking_status ?? session('bookingStatus', 'Booked'));
     $isTicketed = strtoupper((string) $ticketStatus) === 'TICKETED'
@@ -103,7 +103,7 @@
         || session('ticketSuccess') === true;
     $isConfirmedOnly = strtoupper($bookingStatus) === 'CONFIRMED' && !$isTicketed;
 
-    // ── Extra Services ──────────────────────────────────────────────────────
+    // â”€â”€ Extra Services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     $extraServices = $dbBooking?->extra_services_snapshot ?? [];
     $extrasTotal   = 0.0;
     if (!empty($extraServices)) {
@@ -125,22 +125,22 @@
 @endphp
 
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
- @include('livewire.pages.flight.partials._shared_styles'); 
+ @include('livewire.pages.flight.partials._shared_styles');
  <style>
-    
-  
 
-    /* ── TravelFlex hero ── */
-    .tf-hero { 
+
+
+    /* â”€â”€ TravelFlex hero â”€â”€ */
+    .tf-hero {
         background: var(--navy); /* Direct navy color instead of var */
-        border-radius: 18px; 
-        padding: 32px 28px; 
-        margin-bottom: 24px; 
-        display: flex; 
-        align-items: flex-start; 
-        gap: 22px; 
-        position: relative; 
-        overflow: hidden; 
+        border-radius: 18px;
+        padding: 32px 28px;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: flex-start;
+        gap: 22px;
+        position: relative;
+        overflow: hidden;
     }
         .tf-hero::before { content:''; position:absolute; top:-80px; right:-80px; width:320px; height:320px; background:radial-gradient(circle,rgba(255,255,255,.12) 0%,transparent 70%); pointer-events:none; }
     .tf-hero-icon  { width:72px; height:72px; border-radius:50%; background:rgba(255,255,255,.15); display:flex; align-items:center; justify-content:center; font-size:34px; flex-shrink:0; position:relative; z-index:2; }
@@ -150,27 +150,27 @@
     .tf-hero-ref-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; opacity:.7; }
     .tf-hero-ref-val   { font-size:18px; font-weight:800; letter-spacing:.04em; }
 
-    /* ── Schedule table ── */
+    /* â”€â”€ Schedule table â”€â”€ */
     .schedule-table { width:100%; border-collapse:collapse; font-size:13px; }
     .schedule-table th { padding:9px 14px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--gray-400); background:var(--gray-50); border-bottom:1px solid var(--gray-200); }
     .schedule-table td { padding:12px 14px; border-bottom:1px solid var(--gray-100); vertical-align:middle; }
     .schedule-table tr:last-child td { border-bottom:none; }
     .schedule-table tr:nth-child(even) td { background:#fafbff; }
 
-    /* ── Loan summary bar ── */
+    /* â”€â”€ Loan summary bar â”€â”€ */
     .loan-bar { display:flex; align-items:stretch; gap:0; background:var(--navy); border-radius:12px; overflow:hidden; margin-bottom:0; }
     .loan-bar-item { flex:1; padding:14px 16px; border-right:1px solid rgba(255,255,255,.08); text-align:center; }
     .loan-bar-item:last-child { border-right:none; }
     .loan-bar-lbl { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:rgba(255,255,255,.55); margin-bottom:4px; }
     .loan-bar-val { font-size:16px; font-weight:800; color:#fff; font-family:var(--mono); }
 
-    /* ── Itin visual ── */
+    /* â”€â”€ Itin visual â”€â”€ */
     .itin-visual { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:16px 20px; background:var(--gray-50); border-bottom:1px solid var(--gray-100); flex-wrap:wrap; }
     .itin-iata { font-size:28px; font-weight:800; color:var(--navy); font-family:var(--mono); }
     .itin-city { font-size:11px; color:var(--gray-400); margin-top:2px; }
     .itin-line { flex:1; height:1px; background:var(--gray-300); max-width:80px; }
 
-    /* ── Upcoming badge ── */
+    /* â”€â”€ Upcoming badge â”€â”€ */
     .upcoming-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; font-size:10.5px; font-weight:700; background:var(--amber-lt); color:var(--amber); }
 </style>
 <style>
@@ -434,7 +434,7 @@
         </div>
     </div>
 
-    {{-- ── Hero ── --}}
+    {{-- â”€â”€ Hero â”€â”€ --}}
     <div class="tf-hero">
         <div class="tf-hero-icon"></div>
         <div style="position:relative;z-index:2;flex:1;">
@@ -442,7 +442,7 @@
                 {{ $isTicketed ? 'TravelFlex Plan Activated' : 'TravelFlex Plan Activated (Ticketing)' }}
             </div>
             <div class="tf-hero-title">
-                {{ $isTicketed ? 'Flight Booked & TravelFlex Plan Live!' : 'TravelFlex Activated — E-Ticket Processing' }}
+                {{ $isTicketed ? 'Flight Booked & TravelFlex Plan Live!' : 'TravelFlex Activated â€” E-Ticket Processing' }}
             </div>
             <div class="tf-hero-sub">
                 @if($isTicketed)
@@ -452,7 +452,7 @@
                 @else
                     Your TravelFlex plan is now active and your down payment has been processed. Your seat is confirmed.
                     Your e-ticket is being processed and will be emailed to <strong style="color:white;">{{ $contact['email'] ?? '' }}</strong>
-                    within 15–30 minutes. Your repayment schedule is locked in.
+                    within 15â€“30 minutes. Your repayment schedule is locked in.
                 @endif
             </div>
             @if($uniqueId)
@@ -479,7 +479,7 @@
     <div class="pg-grid">
         <div class="pg-main">
 
-            {{-- ── Loan Summary Bar ── --}}
+            {{-- â”€â”€ Loan Summary Bar â”€â”€ --}}
             <div class="loan-bar">
                 <div class="loan-bar-item">
                     <div class="loan-bar-lbl">Ticket Cost</div>
@@ -499,14 +499,14 @@
                 </div>
             </div>
 
-            {{-- ── UPDATE: Ticketing status alert ── --}}
+            {{-- â”€â”€ UPDATE: Ticketing status alert â”€â”€ --}}
             @if($isConfirmedOnly)
             <div class="notice amber" style="background:var(--amber-lt);border:1px solid var(--amber-md);border-radius:12px;margin-bottom:20px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="color:var(--amber);flex-shrink:0;"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
                 <div>
                     <div style="font-weight:700;color:var(--amber-dark);margin-bottom:3px;">E-Ticket Processing</div>
                     <div style="font-size:13px;color:var(--amber-dark);line-height:1.6;">
-                        Your booking is confirmed and your seat is reserved. Your e-ticket is being processed and will be emailed to <strong>{{ $contact['email'] ?? '' }}</strong> shortly (usually within 15–30 minutes).
+                        Your booking is confirmed and your seat is reserved. Your e-ticket is being processed and will be emailed to <strong>{{ $contact['email'] ?? '' }}</strong> shortly (usually within 15â€“30 minutes).
                         <br><br>
                         Your TravelFlex repayment schedule is active. Check your email (including spam folder) for your ticket. If you don't receive it within 1 hour, contact support with your booking reference.
                     </div>
@@ -514,7 +514,7 @@
             </div>
             @endif
 
-            {{-- ── Flight Itinerary ── --}}
+            {{-- â”€â”€ Flight Itinerary â”€â”€ --}}
             <div class="pc">
                 <div class="pc-head">
                     <div class="pc-icon itin-card-icon" style="background:var(--blue-lt);color:var(--blue);"></div>
@@ -579,7 +579,7 @@
                 @endif
             </div>
 
-            {{-- ── UPDATE: E-Tickets (conditional rendering) ── --}}
+            {{-- â”€â”€ UPDATE: E-Tickets (conditional rendering) â”€â”€ --}}
             @if($isTicketed && !empty($eticketMap))
             <div class="pc">
                 <div class="pc-head">
@@ -632,14 +632,14 @@
                         <div class="ticket-processing-icon" aria-hidden="true"></div>
                         <div style="font-size:13px;font-weight:600;color:var(--gray-500);">Your e-tickets are being processed</div>
                         <div style="font-size:12px;color:var(--gray-400);margin-top:6px;line-height:1.6;">
-                            This typically takes 15–30 minutes. Check your email at <strong>{{ $contact['email'] ?? 'your registered email' }}</strong> for updates.
+                            This typically takes 15â€“30 minutes. Check your email at <strong>{{ $contact['email'] ?? 'your registered email' }}</strong> for updates.
                         </div>
                     </div>
                 </div>
             </div>
             @endif
 
-            {{-- ── Repayment Schedule ── --}}
+            {{-- â”€â”€ Repayment Schedule â”€â”€ --}}
             @if(!empty($schedule))
             <div class="pc">
                 <div class="pc-head">
@@ -684,7 +684,7 @@
             </div>
             @endif
 
-            {{-- ── Passengers ── --}}
+            {{-- â”€â”€ Passengers â”€â”€ --}}
             @if(!empty($passengers))
             <div class="pc">
                 <div class="pc-head">
@@ -701,9 +701,9 @@
                                 <td style="color:var(--gray-400)">{{ $i+1 }}</td>
                                 <td><strong>{{ $pax['title']??'' }} {{ strtoupper($pax['first_name']??'') }} {{ strtoupper($pax['last_name']??'') }}</strong></td>
                                 <td><span class="pax-badge" style="background:{{$c[0]}};color:{{$c[1]}}">{{ match($pax['type']??'ADT'){'ADT'=>'Adult','CHD'=>'Child','INF'=>'Infant',default=>'Pax'} }}</span></td>
-                                <td>{{ !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '—' }}</td>
-                                <td>{{ $pax['nationality'] ?? '—' }}</td>
-                                <td style="font-family:var(--mono);font-size:12px;">{{ $pax['passport_no'] ?? '—' }}</td>
+                                <td>{{ !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : 'â€”' }}</td>
+                                <td>{{ $pax['nationality'] ?? 'â€”' }}</td>
+                                <td style="font-family:var(--mono);font-size:12px;">{{ $pax['passport_no'] ?? 'â€”' }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -712,7 +712,7 @@
             </div>
             @endif
 
-            {{-- ── Extra Services (TravelFlex) ── --}}
+            {{-- â”€â”€ Extra Services (TravelFlex) â”€â”€ --}}
             @if(!empty($extraServices['baggage']) || !empty($extraServices['meal']))
             <div class="pc">
                 <div class="pc-head">
@@ -762,12 +762,12 @@
             </div>
             @endif
 
-            {{-- ── UPDATE: Enhanced notices ── --}}
+            {{-- â”€â”€ UPDATE: Enhanced notices â”€â”€ --}}
             <div style="display:flex;flex-direction:column;gap:12px;">
                 <div class="notice purple">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     <span>
-                        <strong>Repayment Reminders:</strong> You will receive a reminder email 3 days before each instalment due date. 
+                        <strong>Repayment Reminders:</strong> You will receive a reminder email 3 days before each instalment due date.
                         Missing payments may result in booking cancellation and affect your credit record.
                     </span>
                 </div>
@@ -775,7 +775,7 @@
                 <div class="notice" style="background:var(--blue-lt);border:1px solid var(--blue-md);color:var(--blue);">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                     <span>
-                        <strong>E-Ticket Status:</strong> Your e-ticket is being issued and will arrive within 15–30 minutes. 
+                        <strong>E-Ticket Status:</strong> Your e-ticket is being issued and will arrive within 15â€“30 minutes.
                         Check your email regularly and look in the spam/promotions folder if needed.
                     </span>
                 </div>
@@ -795,7 +795,7 @@
             </div>
         </div>
 
-        {{-- ── RIGHT RAIL ── --}}
+        {{-- â”€â”€ RIGHT RAIL â”€â”€ --}}
         <aside class="pg-rail">
 
             {{-- TravelFlex Plan Card --}}

@@ -1,4 +1,4 @@
-<style>
+﻿<style>
     .tw-landing-hero{width:100%;min-height:670px;display:flex;align-items:flex-start;justify-content:center;padding:60px 24px 30px;background:url('{{ asset('assets/figma/landing/asset-03.jpeg') }}') center center/cover no-repeat;position:relative;box-sizing:border-box;overflow:visible}
     .tw-landing-hero::before{content:'';display:block!important;position:absolute;inset:0;background:linear-gradient(96deg,rgba(48,49,145,.92) 0%,rgba(48,49,145,.84) 34%,rgba(0,153,51,.72) 100%),rgba(0,0,0,.2);pointer-events:none}
     .tw-hero-inner{position:relative;z-index:2;width:100%;max-width:1306px;text-align:center}
@@ -118,7 +118,7 @@
         <p class="tw-hero-subtitle">Simplifying Access To Travel.</p>
 
         <div class="tw-product-tabs" aria-label="TravelWheel services">
-            <a class="tw-product-tab" href="{{ route('air.flight') }}"><img src="{{ asset('assets/Flight 70.png') }}" alt=""><span>Flights</span></a>
+            <a class="tw-product-tab" href="{{ url('/') }}"><img src="{{ asset('assets/Flight 70.png') }}" alt=""><span>Flights</span></a>
             <!-- <a class="tw-product-tab" href="{{ route('air.hotel') }}"><img src="{{ asset('assets/Hotel 70.png') }}" alt=""><span>Hotels</span></a> -->
             <a class="tw-product-tab" href="{{ route('air.lounge') }}"><img src="{{ asset('assets/Lounge 70.png') }}" alt=""><span>Lounge</span></a>
             <a class="tw-product-tab" href="{{ route('air.protocol') }}"><img src="{{ asset('assets/Protocol 70.png') }}" alt=""><span>Protocol</span></a>
@@ -694,7 +694,7 @@ function flightWidget() {
             this.multiLegs[index] = leg;
             this.multiLegs = [...this.multiLegs];
         },
-        
+
 
         // ------------------------------------------------------------
         //  MISC

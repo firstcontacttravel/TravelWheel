@@ -1,6 +1,6 @@
-<div>
+﻿<div>
     <link rel="stylesheet" href="{{ asset('css/visa-flow.css') }}">
-    
+
     @include('air.protocol.partials.protocol-ui')
 
     <section class="vw-hero">
@@ -13,7 +13,7 @@
             @endif
 
             <nav class="vw-product-tabs" aria-label="TravelWheel services">
-                <a href="{{ route('air.flight') }}"><img src="{{ asset('assets/Flight 70.png') }}" alt=""><span>Flights</span></a>
+                <a href="{{ url('/') }}"><img src="{{ asset('assets/Flight 70.png') }}" alt=""><span>Flights</span></a>
                 <!-- <a href="{{ route('air.hotel') }}"><img src="{{ asset('assets/Hotel 70.png') }}" alt=""><span>Hotels</span></a> -->
                 <a href="{{ route('air.lounge') }}"><img src="{{ asset('assets/Lounge 70.png') }}" alt=""><span>Lounge</span></a>
                 <a class="active" href="{{ route('air.protocol') }}" aria-current="page"><img src="{{ asset('assets/Protocol 70.png') }}" alt=""><span>Protocol</span></a>
@@ -165,4 +165,3 @@
         })();
     </script>
 </div>
-

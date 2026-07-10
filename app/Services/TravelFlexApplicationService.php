@@ -19,8 +19,15 @@ class TravelFlexApplicationService
     {
         $applicant = array_merge(
             $application->applicant_details ?? [],
+            ['applicant_type' => $application->applicant_type ?? data_get($application->applicant_details, 'applicant_type', 'individual')],
+            $application->identity_details ?? [],
             $application->employment_details ?? [],
         );
+        $applicant['bank_details'] = $application->bank_details ?? [];
+        $applicant['next_of_kin_details'] = $application->next_of_kin_details ?? [];
+        $applicant['company_details'] = $application->company_details ?? [];
+        $applicant['representative_details'] = $application->representative_details ?? [];
+        $applicant['agreement_acceptance'] = $application->agreement_acceptance ?? [];
 
         $flightInfo = $application->booking?->flight_snapshot ?? [];
 

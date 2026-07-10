@@ -27,7 +27,20 @@
     $grandTotal = (float) ($loanPlan['grand_total'] ?? $ticketCost);
     $downPayment = (float) ($loanPlan['down_payment'] ?? 0);
     $loanAmount = (float) ($loanPlan['loan_amount'] ?? $loanPlan['remaining_balance'] ?? max(0, $ticketCost - $downPayment));
-    $documents = [
+    $applicantType = $applicant['applicant_type'] ?? 'individual';
+    $documents = $applicantType === 'company' ? [
+        'representative_valid_id' => 'Representative valid ID',
+        'cac_status_report' => 'Status Report (Form CAC 1.1)',
+        'share_certificate' => 'Share Certificate',
+        'memart' => 'Memorandum and Articles of Association (MEMART)',
+        'register_of_members' => 'Register of Members',
+        'shareholders_agreement' => "Shareholders' Agreement",
+        'return_of_allotment' => 'Return of Allotment of Shares (Form CAC 2)',
+        'certificate_of_incorporation' => 'Certificate of Incorporation',
+        'board_resolution' => 'Board Resolution / Authorization Letter',
+        'company_bank_statement' => 'Company Bank Statement',
+        'tin_certificate' => 'TIN Certificate',
+    ] : [
         'valid_id' => 'Valid government ID',
         'passport_photo' => 'Passport photograph',
         'work_id_card' => 'Work ID card',
@@ -71,7 +84,7 @@
                                         <tr>
                                             <td style="padding:0 8px 8px 0;width:33.33%;">
                                                 <div style="background:#f8fafc;border:1px solid #e6eaf2;border-radius:12px;padding:14px;">
-                                                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;">Applicant</div>
+                                                    <div style="font-size:11px;color:#6b7280;text-transform:uppercase;font-weight:700;">{{ $applicantType === 'company' ? 'Representative' : 'Applicant' }}</div>
                                                     <div style="margin-top:6px;font-size:15px;font-weight:800;color:#111827;">{{ $applicant['full_name'] ?? '-' }}</div>
                                                     <div style="margin-top:4px;font-size:12px;color:#6b7280;">{{ $applicant['email'] ?? '-' }}</div>
                                                 </div>
@@ -109,15 +122,36 @@
                                             <td style="padding:0 22px 18px;">
                                                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                                     <tr><td style="{{ $cellLabel }}">Full name</td><td style="{{ $cellValue }}">{{ $applicant['full_name'] ?? '-' }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Applicant type</td><td style="{{ $cellValue }}">{{ $label($applicantType) }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Email</td><td style="{{ $cellValue }}">{{ $applicant['email'] ?? '-' }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Phone</td><td style="{{ $cellValue }}">{{ $applicant['phone_primary'] ?? '-' }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Home address</td><td style="{{ $cellValue }}">{{ $applicant['home_address'] ?? '-' }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">BVN</td><td style="{{ $cellValue }}">{{ $applicant['bvn'] ?? '-' }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">NIN</td><td style="{{ $cellValue }}">{{ $applicant['nin'] ?? '-' }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Passport</td><td style="{{ $cellValue }}">{{ $applicant['passport_number'] ?? '-' }}</td></tr>
                                                 </table>
                                             </td>
                                         </tr>
                                     </table>
                                 </td>
                                 <td valign="top" style="width:50%;padding-left:7px;">
+                                    @if($applicantType === 'company')
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="{{ $panel }}">
+                                        <tr><td style="padding:20px 22px 4px;font-size:16px;font-weight:800;">Company details</td></tr>
+                                        <tr>
+                                            <td style="padding:0 22px 18px;">
+                                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                                                    <tr><td style="{{ $cellLabel }}">Company</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'company_details.company_name', '-') }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">RC number</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'company_details.rc_number', '-') }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Company email</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'company_details.email', '-') }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Company phone</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'company_details.phone', '-') }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Sector</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'company_details.sector', '-') }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Representative role</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'representative_details.role', '-') }}</td></tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                    @else
                                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="{{ $panel }}">
                                         <tr><td style="padding:20px 22px 4px;font-size:16px;font-weight:800;">Employment details</td></tr>
                                         <tr>
@@ -126,11 +160,15 @@
                                                     <tr><td style="{{ $cellLabel }}">Employer</td><td style="{{ $cellValue }}">{{ $applicant['employer_name'] ?? '-' }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Occupation</td><td style="{{ $cellValue }}">{{ $applicant['occupation'] ?? '-' }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Staff number</td><td style="{{ $cellValue }}">{{ $applicant['staff_number'] ?? '-' }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Sector</td><td style="{{ $cellValue }}">{{ $label($applicant['sector'] ?? null) }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Monthly salary</td><td style="{{ $cellValue }}">{{ $money(data_get($applicant, 'bank_details.monthly_salary'), $currency) }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Salary bank</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'bank_details.bank_name', '-') }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Employer address</td><td style="{{ $cellValue }}">{{ $applicant['employer_address'] ?? '-' }}</td></tr>
                                                 </table>
                                             </td>
                                         </tr>
                                     </table>
+                                    @endif
                                 </td>
                             </tr>
                         </table>

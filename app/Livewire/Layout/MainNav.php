@@ -11,7 +11,7 @@ class MainNav extends Component
             'name' => 'Flight',
             'subtitle' => 'Request',
             'icon' => 'Flight 70.png',
-            'route' => 'air.flight'
+            'url' => '/'
         ],
         // [
         //     'name' => 'Hotel',

@@ -1,4 +1,4 @@
-@component('layouts.app', ['title' => 'TravelFlex - Bank Transfer'])
+﻿@component('layouts.app', ['title' => 'TravelFlex - Bank Transfer'])
 
 @php
     $bookingFlight = session('bookingFlight', []);
@@ -6,7 +6,7 @@
     $tfPlan = session('travelFlexPlan', []);
     $applicant = session('travelFlexApplicant', []);
     $currency = $flight['currency'] ?? 'NGN';
-    $sym = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency . ' ' };
+    $sym = match($currency) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'GBP' => html_entity_decode('&pound;', ENT_QUOTES, 'UTF-8'), 'EUR' => html_entity_decode('&euro;', ENT_QUOTES, 'UTF-8'), default => $currency . ' ' };
     $fmt = fn($v) => $sym . number_format((float) $v, 2);
     $segments = $flight['segments'] ?? [];
     $firstSeg = $segments[0] ?? [];

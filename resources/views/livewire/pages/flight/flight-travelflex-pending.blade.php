@@ -1,11 +1,11 @@
-{{-- resources/views/livewire/pages/flight/flight-travelflex-pending.blade.php --}}
+﻿{{-- resources/views/livewire/pages/flight/flight-travelflex-pending.blade.php --}}
 @component('layouts.app', ['title' => 'TravelFlex - Plan Pending Activation'])
 
 @php
     $bookingFlight = session('bookingFlight', []);
     $mf            = $bookingFlight['flight'] ?? $bookingFlight;
     $currency  = $mf['currency'] ?? 'NGN';
-    $sym       = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
+    $sym = match($currency) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'GBP' => html_entity_decode('&pound;', ENT_QUOTES, 'UTF-8'), 'EUR' => html_entity_decode('&euro;', ENT_QUOTES, 'UTF-8'), default => $currency . ' ' };
     $fmt       = fn($v) => $sym . number_format((float)$v, 2);
     $segments  = $mf['segments']       ?? [];
     $retSegs   = $mf['returnSegments'] ?? [];
@@ -46,7 +46,7 @@
         }
     }
 
-    // ── Extra Services ────────────────────────────────────────────────────────
+    // â”€â”€ Extra Services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     $dbId          = session('flightBookingDbId');
     $dbBooking     = $dbId ? \App\Models\FlightBooking::find($dbId) : null;
     $extraServices = $dbBooking?->extra_services_snapshot ?? [];
@@ -68,7 +68,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 @include('livewire.pages.flight.partials._shared_styles');
 <style>
-    
+
     .tf-pnd-hero { background:linear-gradient(135deg,#1e3a5f,var(--indigo),var(--purple)); border-radius:18px; padding:28px; margin-bottom:22px; color:#fff; display:flex; align-items:flex-start; gap:18px; }
     .tf-pnd-hero-icon { font-size:48px; flex-shrink:0; }
     .schedule-table { width:100%; border-collapse:collapse; font-size:12.5px; }
@@ -235,7 +235,7 @@
                 </div>
                 <div class="pc-body" style="padding:14px 20px 4px;">
                     @foreach([
-                        ['done','✓','Application Submitted','Your TravelFlex application, documents, and repayment plan have been received.'],
+                        ['done','âœ“','Application Submitted','Your TravelFlex application, documents, and repayment plan have been received.'],
                         ['current','2','Fast Credit Review','Fast Credit will contact you and provide a decision within 24 hours.'],
                         ['pending','3','Pay Down Payment','If approved, we will email you a secure payment link before the airline hold expires.'],
                         ['pending','4','Ticketing','TravelWheel issues your ticket only after approval and verified down payment.'],
@@ -256,7 +256,7 @@
             {{-- Deadline --}}
             @if($tktFmt)
             <div style="background:var(--amber-lt);border:1px solid #fed7aa;border-radius:12px;padding:14px 18px;display:flex;align-items:flex-start;gap:12px;">
-                <span style="font-size:24px;flex-shrink:0;">⏰</span>
+                <span style="font-size:24px;flex-shrink:0;">â°</span>
                 <div>
                     <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:3px;">Booking Hold Expires</div>
                     <div style="font-size:12.5px;color:#78350f;line-height:1.55;">Your held fare expires <strong>{{ $tktFmt }}</strong>@if($tktHours>0) ({{ $tktHours }}h remaining)@endif. If Fast Credit approves the application, payment must be completed before the secure deadline in your approval email.</div>
@@ -302,7 +302,7 @@
                             <tr>
                                 <td style="color:var(--gray-400);font-weight:700;">{{ $i+1 }}</td>
                                 <td><strong>{{ $inst['label'] ?? (($i+1).'. Payment') }}</strong></td>
-                                <td><span style="padding:2px 8px;background:var(--blue-lt);color:var(--blue);border-radius:999px;font-size:10.5px;font-weight:700;">{{ $inst['dueDate']??'—' }}</span></td>
+                                <td><span style="padding:2px 8px;background:var(--blue-lt);color:var(--blue);border-radius:999px;font-size:10.5px;font-weight:700;">{{ $inst['dueDate']??'â€”' }}</span></td>
                                 <td style="font-family:var(--mono);">{{ $fmt($inst['principal']??0) }}</td>
                                 <td style="font-family:var(--mono);color:var(--amber);">{{ $fmt($inst['interest']??0) }}</td>
                                 <td><strong style="font-family:var(--mono);color:var(--indigo);">{{ $fmt($inst['total']??0) }}</strong></td>
@@ -328,9 +328,9 @@
                                 <td style="color:var(--gray-400)">{{ $i+1 }}</td>
                                 <td><strong>{{ $pax['title']??'' }} {{ strtoupper($pax['first_name']??'') }} {{ strtoupper($pax['last_name']??'') }}</strong></td>
                                 <td><span class="pax-badge" style="background:{{$c[0]}};color:{{$c[1]}}">{{ match($pax['type']??'ADT'){'ADT'=>'Adult','CHD'=>'Child','INF'=>'Infant',default=>'Pax'} }}</span></td>
-                                <td>{{ !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '—' }}</td>
-                                <td>{{ $pax['nationality']??'—' }}</td>
-                                <td style="font-family:var(--mono);font-size:12px;">{{ $pax['passport_no']??'—' }}</td>
+                                <td>{{ !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : 'â€”' }}</td>
+                                <td>{{ $pax['nationality']??'â€”' }}</td>
+                                <td style="font-family:var(--mono);font-size:12px;">{{ $pax['passport_no']??'â€”' }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -339,7 +339,7 @@
             </div>
             @endif
 
-            {{-- ── Extra Services (TravelFlex) ── --}}
+            {{-- â”€â”€ Extra Services (TravelFlex) â”€â”€ --}}
             @if(!empty($extraServices['baggage']) || !empty($extraServices['meal']))
             <div class="pc">
                 <div class="pc-head">
@@ -422,7 +422,7 @@
                 <div style="font-size:13px;font-weight:800;color:var(--gray-900);margin-bottom:8px;">Need Help?</div>
                 <div style="font-size:12.5px;color:var(--gray-500);line-height:1.65;">
                     <a href="mailto:support@travelwheel.com" style="color:var(--blue);font-weight:600;">support@travelwheel.com</a><br>
-                    📞 <strong>+234 800 000 0000</strong><br>
+                    ðŸ“ž <strong>+234 800 000 0000</strong><br>
                     Quote: <strong style="font-family:var(--mono);color:var(--navy);">{{ $uniqueId }}</strong>
                 </div>
             </div>

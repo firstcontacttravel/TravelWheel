@@ -61,6 +61,17 @@ class TravelFlexApplicationMail extends Mailable
             'work_id_card'      => 'Work_ID_Card',
             'employment_letter' => 'Employment_Letter',
             'bank_statements'   => 'Bank_Statements',
+            'representative_valid_id' => 'Representative_Valid_ID',
+            'cac_status_report' => 'CAC_Status_Report_Form_CAC_1_1',
+            'share_certificate' => 'Share_Certificate',
+            'memart' => 'MEMART',
+            'register_of_members' => 'Register_Of_Members',
+            'shareholders_agreement' => 'Shareholders_Agreement',
+            'return_of_allotment' => 'Return_Of_Allotment_Form_CAC_2',
+            'certificate_of_incorporation' => 'Certificate_Of_Incorporation',
+            'board_resolution' => 'Board_Resolution_Authorization_Letter',
+            'company_bank_statement' => 'Company_Bank_Statement',
+            'tin_certificate' => 'TIN_Certificate',
         ];
 
         foreach ($this->uploadPaths as $key => $path) {

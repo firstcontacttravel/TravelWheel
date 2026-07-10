@@ -1,4 +1,4 @@
-<footer class="mt-10 footter">
+﻿<footer class="mt-10 footter">
     <section class="w-full bg-[var(--color-primary)]">
         <div class="flex flex-wrap p-3">
             <div class="w-full md:w-1/6 p-2 flex flex-col items-start">
@@ -26,7 +26,7 @@
             <div class="w-1/2 md:w-1/6 p-2">
                 <h4 class="text-white font-bold mb-2">Features</h4>
                 <ul>
-                    <li><a href="{{ route('air.flight') }}" class="text-white hover:text-[var(--color-secondary)]">Flight Tickets</a></li>
+                    <li><a href="{{ url('/') }}" class="text-white hover:text-[var(--color-secondary)]">Flight Tickets</a></li>
                     <li><a href="{{ route('air.hotel') }}" class="text-white hover:text-[var(--color-secondary)]">Hotel Bookings</a></li>
                     <li><a href="{{ route('air.protocol') }}" class="text-white hover:text-[var(--color-secondary)]">Protocol Service</a></li>
                     <li><a href="{{ route('air.lounge') }}" class="text-white hover:text-[var(--color-secondary)]">Airport Lounge</a></li>

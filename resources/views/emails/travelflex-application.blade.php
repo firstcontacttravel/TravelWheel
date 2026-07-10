@@ -1,9 +1,9 @@
-{{-- resources/views/emails/travelflex-application.blade.php --}}
+﻿{{-- resources/views/emails/travelflex-application.blade.php --}}
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>TravelFlex Loan Application — {{ $applicant['full_name'] ?? '' }}</title>
+<title>TravelFlex Loan Application â€” {{ $applicant['full_name'] ?? '' }}</title>
 <style>
     body{margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',sans-serif;font-size:14px;color:#0f172a}
     .wrap{max-width:650px;margin:28px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.09)}
@@ -35,9 +35,9 @@
 <body>
 <div class="wrap">
     <div class="header">
-        <div class="header-icon">📋</div>
+        <div class="header-icon">ðŸ“‹</div>
         <div class="header-title">TravelFlex Loan Application</div>
-        <div class="header-sub">New loan application received — please review and process</div>
+        <div class="header-sub">New loan application received â€” please review and process</div>
     </div>
     <div class="body">
 
@@ -48,46 +48,46 @@
         </div>
         @endif
 
-        {{-- ── Applicant Personal Info ── --}}
-        <h4>👤 Applicant Details</h4>
+        {{-- â”€â”€ Applicant Personal Info â”€â”€ --}}
+        <h4>ðŸ‘¤ Applicant Details</h4>
         <table>
-            <tr><td>Full Name</td><td>{{ $applicant['full_name'] ?? '—' }}</td></tr>
-            <tr><td>Email Address</td><td>{{ $applicant['email'] ?? '—' }}</td></tr>
-            <tr><td>Home Address</td><td>{{ $applicant['home_address'] ?? '—' }}</td></tr>
-            <tr><td>BVN</td><td>{{ $applicant['bvn'] ?? '—' }}</td></tr>
+            <tr><td>Full Name</td><td>{{ $applicant['full_name'] ?? 'â€”' }}</td></tr>
+            <tr><td>Email Address</td><td>{{ $applicant['email'] ?? 'â€”' }}</td></tr>
+            <tr><td>Home Address</td><td>{{ $applicant['home_address'] ?? 'â€”' }}</td></tr>
+            <tr><td>BVN</td><td>{{ $applicant['bvn'] ?? 'â€”' }}</td></tr>
         </table>
 
-        {{-- ── Employment Info ── --}}
-        <h4>💼 Employment Details</h4>
+        {{-- â”€â”€ Employment Info â”€â”€ --}}
+        <h4>ðŸ’¼ Employment Details</h4>
         <table>
-            <tr><td>Employer Company</td><td>{{ $applicant['employer_name'] ?? '—' }}</td></tr>
-            <tr><td>Employer Address</td><td>{{ $applicant['employer_address'] ?? '—' }}</td></tr>
-            <tr><td>Occupation</td><td>{{ $applicant['occupation'] ?? '—' }}</td></tr>
-            <tr><td>Job Description</td><td>{{ $applicant['job_description'] ?? '—' }}</td></tr>
-            <tr><td>Staff Number</td><td>{{ $applicant['staff_number'] ?? '—' }}</td></tr>
+            <tr><td>Employer Company</td><td>{{ $applicant['employer_name'] ?? 'â€”' }}</td></tr>
+            <tr><td>Employer Address</td><td>{{ $applicant['employer_address'] ?? 'â€”' }}</td></tr>
+            <tr><td>Occupation</td><td>{{ $applicant['occupation'] ?? 'â€”' }}</td></tr>
+            <tr><td>Job Description</td><td>{{ $applicant['job_description'] ?? 'â€”' }}</td></tr>
+            <tr><td>Staff Number</td><td>{{ $applicant['staff_number'] ?? 'â€”' }}</td></tr>
         </table>
 
-        {{-- ── Flight Details ── --}}
-        <h4>✈️ Flight Details</h4>
+        {{-- â”€â”€ Flight Details â”€â”€ --}}
+        <h4>âœˆï¸ Flight Details</h4>
         @php
             $segs     = $flightInfo['segments'] ?? [];
             $firstSeg = $segs[0] ?? [];
             $lastSeg  = !empty($segs) ? $segs[count($segs)-1] : [];
             $currency = $flightInfo['currency'] ?? 'NGN';
-            $sym      = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
+    $sym = match($currency) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'GBP' => html_entity_decode('&pound;', ENT_QUOTES, 'UTF-8'), 'EUR' => html_entity_decode('&euro;', ENT_QUOTES, 'UTF-8'), default => $currency . ' ' };
             $cabinLabel = \App\Support\FlightDisplay::cabin($flightInfo ?? []);
         @endphp
         <table>
             <tr><td>Route</td><td>{{ ($firstSeg['from']??'') }} → {{ ($lastSeg['to']??'') }}</td></tr>
-            <tr><td>Travel Date</td><td>{{ $firstSeg['departDate'] ?? '—' }}</td></tr>
-            <tr><td>Airline</td><td>{{ $flightInfo['airline'] ?? '—' }}</td></tr>
+            <tr><td>Travel Date</td><td>{{ $firstSeg['departDate'] ?? 'â€”' }}</td></tr>
+            <tr><td>Airline</td><td>{{ $flightInfo['airline'] ?? 'â€”' }}</td></tr>
             <tr><td>Cabin</td><td>{{ $cabinLabel }}</td></tr>
-            <tr><td>Fare Type</td><td><span class="badge badge-blue">{{ $flightInfo['fareType'] ?? '—' }}</span></td></tr>
+            <tr><td>Fare Type</td><td><span class="badge badge-blue">{{ $flightInfo['fareType'] ?? 'â€”' }}</span></td></tr>
             <tr><td>Refundable</td><td><span class="badge {{ ($flightInfo['isRefundable']??false) ? 'badge-green' : 'badge-amber' }}">{{ ($flightInfo['isRefundable']??false) ? 'Yes' : 'No' }}</span></td></tr>
             <tr><td>Ticket Cost</td><td><strong>{{ $sym }}{{ number_format((float)($flightInfo['price']??0), 2) }}</strong></td></tr>
         </table>
 
-        {{-- ── Extra Services ── --}}
+        {{-- â”€â”€ Extra Services â”€â”€ --}}
         @php
             $extraServices = $flightInfo['extra_services_snapshot'] ?? [];
             $extrasTotal   = 0.0;
@@ -105,14 +105,14 @@
             }
         @endphp
         @if(!empty($extraServices['baggage']) || !empty($extraServices['meal']))
-        <h4>🎁 Extra Services</h4>
+        <h4>ðŸŽ Extra Services</h4>
         <table class="schedule-table">
             <thead><tr><th>Service Type</th><th>Description</th><th>Details</th><th>Price</th></tr></thead>
             <tbody>
                 @if(!empty($extraServices['baggage']))
                     @foreach($extraServices['baggage'] as $bag)
                     <tr>
-                        <td>🧳 Baggage</td>
+                        <td>ðŸ§³ Baggage</td>
                         <td>{{ $bag['description'] ?? '' }}</td>
                         <td style="font-size:11px;">{{ ucfirst($bag['direction'] ?? '') }} · Qty: {{ $bag['quantity'] ?? 1 }}</td>
                         <td><strong>{{ $sym }}{{ number_format((float)($bag['line_total'] ?? 0), 2) }}</strong></td>
@@ -122,7 +122,7 @@
                 @if(!empty($extraServices['meal']))
                     @foreach($extraServices['meal'] as $meal)
                     <tr>
-                        <td>🍽️ Meal</td>
+                        <td>ðŸ½ï¸ Meal</td>
                         <td>{{ $meal['description'] ?? '' }}</td>
                         <td style="font-size:11px;">{{ ucfirst($meal['direction'] ?? '') }} · Segment {{ ($meal['segment'] ?? 0) + 1 }}</td>
                         <td><strong>{{ $sym }}{{ number_format((float)($meal['unit_price'] ?? 0), 2) }}</strong></td>
@@ -139,8 +139,8 @@
         </table>
         @endif
 
-        {{-- ── Loan Details ── --}}
-        <h4>💰 Loan Details</h4>
+        {{-- â”€â”€ Loan Details â”€â”€ --}}
+        <h4>ðŸ’° Loan Details</h4>
         <table>
             <tr><td>Flight Cost</td><td><strong>{{ $sym }}{{ number_format((float)($flightInfo['price']??0), 2) }}</strong></td></tr>
             @if($extrasTotal > 0)<tr><td>Extra Services</td><td><strong>{{ $sym }}{{ number_format($extrasTotal, 2) }}</strong></td></tr>@endif
@@ -152,14 +152,14 @@
             <tr><td>Total Loan Amount</td><td><strong style="color:#7c3aed;">{{ $sym }}{{ number_format($loanAmount, 2) }}</strong></td></tr>
             <tr><td>Down Payment</td><td>{{ $sym }}{{ number_format((float)($loanPlan['down_payment']??0), 2) }} ({{ $loanPlan['down_percent']??30 }}%)</td></tr>
             <tr><td>Total Payable</td><td>{{ $sym }}{{ number_format((float)($loanPlan['grand_total'] ?? ($ticketCost + (float)($loanPlan['total_interest'] ?? 0))), 2) }}</td></tr>
-            <tr><td>Repayment Plan</td><td>{{ $loanPlan['repayment_plan'] ?? '—' }}</td></tr>
+            <tr><td>Repayment Plan</td><td>{{ $loanPlan['repayment_plan'] ?? 'â€”' }}</td></tr>
             <tr><td>Total Interest</td><td>{{ $sym }}{{ number_format((float)($loanPlan['total_interest']??0), 2) }}</td></tr>
-            <tr><td>Payment Method</td><td>{{ ucfirst($loanPlan['payment_method'] ?? '—') }}</td></tr>
+            <tr><td>Payment Method</td><td>{{ ucfirst($loanPlan['payment_method'] ?? 'â€”') }}</td></tr>
         </table>
 
-        {{-- ── Repayment Schedule ── --}}
+        {{-- â”€â”€ Repayment Schedule â”€â”€ --}}
         @if(!empty($loanPlan['schedule']))
-        <h4>📅 Repayment Schedule</h4>
+        <h4>ðŸ“… Repayment Schedule</h4>
         <table class="schedule-table">
             <thead><tr><th>#</th><th>Instalment</th><th>Due Date</th><th>Principal</th><th>Interest</th><th>Total</th></tr></thead>
             <tbody>
@@ -167,7 +167,7 @@
                 <tr>
                     <td>{{ $i+1 }}</td>
                     <td>{{ $inst['label'] ?? ($i+1).'. Payment' }}</td>
-                    <td>{{ $inst['dueDate'] ?? '—' }}</td>
+                    <td>{{ $inst['dueDate'] ?? 'â€”' }}</td>
                     <td>{{ $sym }}{{ number_format((float)($inst['principal']??0), 2) }}</td>
                     <td>{{ $sym }}{{ number_format((float)($inst['interest']??0), 2) }}</td>
                     <td><strong>{{ $sym }}{{ number_format((float)($inst['total']??0), 2) }}</strong></td>
@@ -177,8 +177,8 @@
         </table>
         @endif
 
-        {{-- ── Documents Notice ── --}}
-        <h4>📎 Attached Documents</h4>
+        {{-- â”€â”€ Documents Notice â”€â”€ --}}
+        <h4>ðŸ“Ž Attached Documents</h4>
         <p style="font-size:13px;color:#64748b;line-height:1.6;">
             The following documents have been attached to this email:
             Valid Government-Issued ID, Passport Photograph, Work ID Card, Employment Letter, and 6-Month Bank Statement.
@@ -186,7 +186,7 @@
         </p>
 
         <div class="warning-box">
-            ⚠️ <strong>Action Required:</strong> Please review this application, verify all documents, and process the loan approval within 24 business hours. 
+            âš ï¸ <strong>Action Required:</strong> Please review this application, verify all documents, and process the loan approval within 24 business hours.
             Contact the applicant at <strong>{{ $applicant['email'] ?? '' }}</strong> with your decision.
         </div>
     </div>

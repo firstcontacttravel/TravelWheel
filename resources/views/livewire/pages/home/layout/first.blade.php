@@ -1,23 +1,23 @@
-<style>
+﻿<style>
     .img-W {
         width: 40px;
     }
-   
+
     @media only screen and (max-width: 600px) {
         .proTab {
             display: none;
         }
     }
-    
+
     .slides {
         padding-top: var(--space-20);
     }
-    
+
     .btn-service {
         font-size: var(--text-xs);
         color: white;
     }
-    
+
     .h7 {
         font-size: var(--text-lg);
         font-weight: var(--font-black);
@@ -35,7 +35,7 @@
             <div class="row p-3 p-md-4">
                 <div class="col-6 col-sm-4 col-md-2 mb-3">
                     <h6 class="h7">Flight Tickets</h6>
-                    <a href="{{route('air.flight')}}" class="btn btn-sm btn-pry shadow-sm" role="button">
+                    <a href="{{url('/')}}" class="btn btn-sm btn-pry shadow-sm" role="button">
                         <button class="btn btn-service btn-sm">Book Tickets</button>
                     </a>
                 </div>
@@ -70,6 +70,6 @@
                     </a>
                 </div>
             </div>
-        </div> 
+        </div>
     </div>
 </section>

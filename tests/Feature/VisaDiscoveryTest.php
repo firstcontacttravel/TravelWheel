@@ -130,10 +130,17 @@ class VisaDiscoveryTest extends TestCase
         $this->assertTrue($foreignToNigeria->contains('id', $businessVisa->id));
         $this->assertFalse($foreignElsewhere->contains('id', $staleWrongDestination->id));
         $this->assertFalse($nigerianToNigeria->contains('id', $businessVisa->id));
-        $this->get(route('air.visa'))
+
+        $this->get(route('air.visa'))->assertOk();
+
+        $this->getJson(route('visa.destinations', ['nationality_id' => $canada->id]))
             ->assertOk()
-            ->assertSee('value="country:'.$nigeria->id.'"', false)
-            ->assertDontSee('value="country:'.$ireland->id.'"', false);
+            ->assertJsonFragment(['ref' => 'country:'.$nigeria->id])
+            ->assertJsonMissing(['ref' => 'country:'.$ireland->id]);
+
+        $this->getJson(route('visa.destinations', ['nationality_id' => $nigeria->id]))
+            ->assertOk()
+            ->assertJsonMissing(['ref' => 'country:'.$nigeria->id]);
     }
 
     public function test_minor_parent_requirements_only_appear_when_the_search_includes_a_minor(): void
@@ -187,10 +194,10 @@ class VisaDiscoveryTest extends TestCase
         $regionalResult = $direct->firstWhere('id', $product->id);
         $this->assertSame(5, $regionalResult['regional_coverage']['count']);
         $this->assertSame(['France', 'Germany', 'Italy', 'Netherlands', 'Spain'], $regionalResult['regional_coverage']['countries']);
-        $this->get(route('air.visa'))
+        $this->getJson(route('visa.destinations', ['nationality_id' => $nationality->id]))
             ->assertOk()
-            ->assertSee('value="region:'.$region->id.'"', false)
-            ->assertDontSee('value="country:'.$france->id.'"', false);
+            ->assertJsonFragment(['ref' => 'region:'.$region->id])
+            ->assertJsonMissing(['ref' => 'country:'.$france->id]);
 
         $search = $this->validSearch($nationality, $france, ['destination_ref' => 'region:'.$region->id]);
         unset($search['destination_id']);
@@ -216,10 +223,50 @@ class VisaDiscoveryTest extends TestCase
         $this->additionalProduct($canada, 'standard', 'Canada visitor visa');
         $this->additionalProduct($ireland, 'standard', 'Ireland draft visa', false);
 
-        $this->get(route('air.visa'))
+        $nigeria = Country::query()->create(['alpha2' => 'NG', 'name' => 'Nigeria']);
+
+        $this->get(route('air.visa'))->assertOk();
+
+        $this->getJson(route('visa.destinations', ['nationality_id' => $nigeria->id]))
             ->assertOk()
-            ->assertSee('value="country:'.$canada->id.'"', false)
-            ->assertDontSee('value="country:'.$ireland->id.'"', false);
+            ->assertJsonFragment(['ref' => 'country:'.$canada->id])
+            ->assertJsonMissing(['ref' => 'country:'.$ireland->id]);
+    }
+
+    public function test_destination_endpoint_filters_destinations_by_selected_passport_nationality(): void
+    {
+        $nigeria = Country::query()->create(['alpha2' => 'NG', 'name' => 'Nigeria']);
+        $ghana = Country::query()->create(['alpha2' => 'GH', 'name' => 'Ghana']);
+        $morocco = Country::query()->create(['alpha2' => 'MA', 'name' => 'Morocco']);
+        $ireland = Country::query()->create(['alpha2' => 'IE', 'name' => 'Ireland']);
+        $canada = Country::query()->create(['alpha2' => 'CA', 'name' => 'Canada']);
+
+        $irelandVisa = $this->additionalProduct($ireland, 'standard', 'Ireland Study Visa');
+        $irelandVisa->update(['eligibility_mode' => 'all']);
+
+        $canadaVisa = $this->additionalProduct($canada, 'standard', 'Canada Visitor Visa');
+        $canadaVisa->update(['eligibility_mode' => 'rules']);
+        $canadaVisa->eligibilityRules()->create(['rule_type' => 'include_country', 'country_id' => $ghana->id]);
+
+        $businessVisa = $this->additionalProduct($nigeria, 'voa', 'Nigerian Business Visa');
+        $businessVisa->update(['eligibility_mode' => 'rules']);
+        $businessVisa->eligibilityRules()->create(['rule_type' => 'include_country', 'country_id' => $morocco->id]);
+
+        $this->getJson(route('visa.destinations', ['nationality_id' => $morocco->id]))
+            ->assertOk()
+            ->assertJsonFragment(['ref' => 'country:'.$ireland->id])
+            ->assertJsonFragment(['ref' => 'country:'.$nigeria->id])
+            ->assertJsonMissing(['ref' => 'country:'.$canada->id]);
+
+        $this->getJson(route('visa.destinations', ['nationality_id' => $ghana->id]))
+            ->assertOk()
+            ->assertJsonFragment(['ref' => 'country:'.$ireland->id])
+            ->assertJsonFragment(['ref' => 'country:'.$canada->id])
+            ->assertJsonMissing(['ref' => 'country:'.$nigeria->id]);
+
+        $this->from(route('air.visa'))->post(route('visa.search'), $this->validSearch($ghana, $nigeria, [
+            'destination_ref' => 'country:'.$nigeria->id,
+        ]))->assertRedirect(route('air.visa'))->assertSessionHasErrors('destination_ref');
     }
 
     private function catalogueProduct(string $family, string $name): array
