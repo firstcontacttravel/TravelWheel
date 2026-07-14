@@ -57,6 +57,9 @@
     }
     $grandTotal    = (float) ($tfPlan['grand_total']    ?? 0);
     $totalInterest = (float) ($tfPlan['total_interest'] ?? 0);
+    $administrationFee = (float) ($tfPlan['administration_fee'] ?? 0);
+    $insuranceFee = (float) ($tfPlan['insurance_fee'] ?? 0);
+    $upfrontPaymentTotal = (float) ($tfPlan['upfront_payment_total'] ?? ($downPayment + $administrationFee + $insuranceFee));
     $schedule      = $tfPlan['schedule']                 ?? [];
     $remainingBal  = (float) ($tfPlan['remaining_balance'] ?? ($ticketCost - $downPayment));
     $interestRatePercent = (float) ($tfPlan['interest_rate_percent'] ?? (config('travelwheel.travelflex_interest_rate', 0.04) * 100));
@@ -442,7 +445,7 @@
                 {{ $isTicketed ? 'TravelFlex Plan Activated' : 'TravelFlex Plan Activated (Ticketing)' }}
             </div>
             <div class="tf-hero-title">
-                {{ $isTicketed ? 'Flight Booked & TravelFlex Plan Live!' : 'TravelFlex Activated â€” E-Ticket Processing' }}
+                {{ $isTicketed ? 'Flight Booked & TravelFlex Plan Live!' : 'TravelFlex Activated - E-Ticket Processing' }}
             </div>
             <div class="tf-hero-sub">
                 @if($isTicketed)
@@ -452,7 +455,7 @@
                 @else
                     Your TravelFlex plan is now active and your down payment has been processed. Your seat is confirmed.
                     Your e-ticket is being processed and will be emailed to <strong style="color:white;">{{ $contact['email'] ?? '' }}</strong>
-                    within 15â€“30 minutes. Your repayment schedule is locked in.
+                    within 15-30 minutes. Your repayment schedule is locked in.
                 @endif
             </div>
             @if($uniqueId)
@@ -486,8 +489,8 @@
                     <div class="loan-bar-val">{{ $fmt($total) }}</div>
                 </div>
                 <div class="loan-bar-item">
-                    <div class="loan-bar-lbl">Down Paid ({{ $downPercent }}%)</div>
-                    <div class="loan-bar-val" style="color:#86efac;">{{ $fmt($downPayment) }}</div>
+                    <div class="loan-bar-lbl">Upfront Paid</div>
+                    <div class="loan-bar-val" style="color:#86efac;">{{ $fmt($upfrontPaymentTotal) }}</div>
                 </div>
                 <div class="loan-bar-item">
                     <div class="loan-bar-lbl">Balance Due</div>
@@ -506,7 +509,7 @@
                 <div>
                     <div style="font-weight:700;color:var(--amber-dark);margin-bottom:3px;">E-Ticket Processing</div>
                     <div style="font-size:13px;color:var(--amber-dark);line-height:1.6;">
-                        Your booking is confirmed and your seat is reserved. Your e-ticket is being processed and will be emailed to <strong>{{ $contact['email'] ?? '' }}</strong> shortly (usually within 15â€“30 minutes).
+                        Your booking is confirmed and your seat is reserved. Your e-ticket is being processed and will be emailed to <strong>{{ $contact['email'] ?? '' }}</strong> shortly (usually within 15-30 minutes).
                         <br><br>
                         Your TravelFlex repayment schedule is active. Check your email (including spam folder) for your ticket. If you don't receive it within 1 hour, contact support with your booking reference.
                     </div>
@@ -520,7 +523,7 @@
                     <div class="pc-icon itin-card-icon" style="background:var(--blue-lt);color:var(--blue);"></div>
                     <div>
                         <div class="pc-title">Flight Itinerary</div>
-                        <div class="pc-sub">{{ $tripLabel }} · {{ $cabinLabel }} · {{ $displayAirline ?: '-' }}</div>
+                        <div class="pc-sub">{{ $tripLabel }} &middot; {{ $cabinLabel }} &middot; {{ $displayAirline ?: '-' }}</div>
                     </div>
                 </div>
 
@@ -632,7 +635,7 @@
                         <div class="ticket-processing-icon" aria-hidden="true"></div>
                         <div style="font-size:13px;font-weight:600;color:var(--gray-500);">Your e-tickets are being processed</div>
                         <div style="font-size:12px;color:var(--gray-400);margin-top:6px;line-height:1.6;">
-                            This typically takes 15â€“30 minutes. Check your email at <strong>{{ $contact['email'] ?? 'your registered email' }}</strong> for updates.
+                            This typically takes 15-30 minutes. Check your email at <strong>{{ $contact['email'] ?? 'your registered email' }}</strong> for updates.
                         </div>
                     </div>
                 </div>
@@ -646,7 +649,7 @@
                     <div class="pc-icon icon-calendar" style="background:var(--purple-lt);color:var(--purple);"></div>
                     <div>
                         <div class="pc-title">Your Repayment Schedule</div>
-                        <div class="pc-sub">{{ count($schedule) }} instalment(s) · {{ $repaymentPlan }} · {{ $interestRateLabel }}% interest per period</div>
+                        <div class="pc-sub">{{ count($schedule) }} instalment(s) &middot; {{ $repaymentPlan }} &middot; {{ $interestRateLabel }}% interest per period</div>
                     </div>
                 </div>
                 <div class="pc-body" style="padding:0;">
@@ -701,9 +704,9 @@
                                 <td style="color:var(--gray-400)">{{ $i+1 }}</td>
                                 <td><strong>{{ $pax['title']??'' }} {{ strtoupper($pax['first_name']??'') }} {{ strtoupper($pax['last_name']??'') }}</strong></td>
                                 <td><span class="pax-badge" style="background:{{$c[0]}};color:{{$c[1]}}">{{ match($pax['type']??'ADT'){'ADT'=>'Adult','CHD'=>'Child','INF'=>'Infant',default=>'Pax'} }}</span></td>
-                                <td>{{ !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : 'â€”' }}</td>
-                                <td>{{ $pax['nationality'] ?? 'â€”' }}</td>
-                                <td style="font-family:var(--mono);font-size:12px;">{{ $pax['passport_no'] ?? 'â€”' }}</td>
+                                <td>{{ !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '-' }}</td>
+                                <td>{{ $pax['nationality'] ?? '-' }}</td>
+                                <td style="font-family:var(--mono);font-size:12px;">{{ $pax['passport_no'] ?? '-' }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -732,7 +735,7 @@
                                     <td><strong style="color:#059669;">Extra Baggage</strong></td>
                                     <td>
                                         {{ $baggage['description'] ?? '' }}
-                                        <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($baggage['direction'] ?? '') }} · Qty: {{ $baggage['quantity'] ?? 1 }}</span>
+                                        <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($baggage['direction'] ?? '') }} &middot; Qty: {{ $baggage['quantity'] ?? 1 }}</span>
                                     </td>
                                     <td style="font-weight:700;color:#0f172a;">{{ $sym }}{{ number_format((float)($baggage['line_total'] ?? 0), 2) }}</td>
                                 </tr>
@@ -744,7 +747,7 @@
                                     <td><strong style="color:#d97706;">Meal</strong></td>
                                     <td>
                                         {{ $meal['description'] ?? '' }}
-                                        <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($meal['direction'] ?? '') }} · Segment {{ ($meal['segment'] ?? 0) + 1 }}</span>
+                                        <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($meal['direction'] ?? '') }} &middot; Segment {{ ($meal['segment'] ?? 0) + 1 }}</span>
                                     </td>
                                     <td style="font-weight:700;color:#0f172a;">{{ $sym }}{{ number_format((float)($meal['unit_price'] ?? 0), 2) }}</td>
                                 </tr>
@@ -775,7 +778,7 @@
                 <div class="notice" style="background:var(--blue-lt);border:1px solid var(--blue-md);color:var(--blue);">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                     <span>
-                        <strong>E-Ticket Status:</strong> Your e-ticket is being issued and will arrive within 15â€“30 minutes.
+                        <strong>E-Ticket Status:</strong> Your e-ticket is being issued and will arrive within 15-30 minutes.
                         Check your email regularly and look in the spam/promotions folder if needed.
                     </span>
                 </div>
@@ -807,6 +810,8 @@
                 <div class="pc-body-tight">
                     <div class="fare-row"><span class="fare-lbl">Ticket Cost</span><span class="fare-val">{{ $fmt($ticketCost) }}</span></div>
                     <div class="fare-row"><span class="fare-lbl">Down Paid ({{ $downPercent }}%)</span><span class="fare-val" style="color:var(--green);">{{ $fmt($downPayment) }}</span></div>
+                    <div class="fare-row"><span class="fare-lbl">Administration Fee</span><span class="fare-val">{{ $fmt($administrationFee) }}</span></div>
+                    <div class="fare-row"><span class="fare-lbl">Insurance Fee</span><span class="fare-val">{{ $fmt($insuranceFee) }}</span></div>
                     <div class="fare-row"><span class="fare-lbl">Balance</span><span class="fare-val">{{ $fmt($remainingBal) }}</span></div>
                     <div class="fare-row"><span class="fare-lbl">Total Interest</span><span class="fare-val" style="color:var(--amber);">{{ $fmt($totalInterest) }}</span></div>
                 </div>

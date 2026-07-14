@@ -105,6 +105,9 @@ class TravelFlexPresentation
         $html = '<div class="space-y-4">';
         $html .= self::definitionGrid([
             'Down payment' => self::money($application->down_payment),
+            'Administration fee' => self::money(data_get($plan, 'administration_fee')),
+            'Insurance fee' => self::money(data_get($plan, 'insurance_fee')),
+            'Due after approval' => self::money(data_get($plan, 'upfront_payment_total')),
             'Down percent' => $application->down_percent ? $application->down_percent . '%' : null,
             'Grand total' => self::money($application->grand_total),
             'Total interest' => self::money($application->total_interest),

@@ -2,6 +2,8 @@
 
 return [
     'travelflex_interest_rate' => (float) env('TRAVELFLEX_INTEREST_RATE', 0.04),
+    'travelflex_administration_fee_rate' => (float) env('TRAVELFLEX_ADMINISTRATION_FEE_RATE', 0.01),
+    'travelflex_insurance_fee_rate' => (float) env('TRAVELFLEX_INSURANCE_FEE_RATE', 0.015),
     'admin_emails' => array_values(array_filter(array_map(
         static fn (string $email): string => strtolower(trim($email)),
         explode(',', (string) env('ADMIN_EMAILS', '')),

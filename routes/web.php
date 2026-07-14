@@ -193,6 +193,7 @@ Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerb
 Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->middleware('throttle:60,1')->name('payments.seerbit.webhook');
 Route::get('/flights/travelflex', [FlightBookingController::class, 'travelFlex'])->name('flights.travelflex');
 Route::post('/flights/travelflex/application', [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application');
+Route::get('/flights/travelflex/fastcredit', [FlightBookingController::class, 'travelFlexFastCreditRedirect'])->name('flights.travelflex.fastcredit');
 Route::get('/flights/travelflex/application', [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application.get');
 Route::post('/flights/travelflex/submit-application', [FlightBookingController::class, 'travelFlexSubmitApplication'])->middleware('throttle:5,1')->name('flights.travelflex.submit-application');
 Route::post('/flights/travelflex/bank-transfer', [FlightBookingController::class, 'travelFlexBankTransfer'])->name('flights.travelflex.bank-transfer');

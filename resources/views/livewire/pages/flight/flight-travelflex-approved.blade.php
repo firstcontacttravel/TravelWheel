@@ -7,6 +7,7 @@
     $first = $segments[0] ?? [];
     $last = $segments ? $segments[array_key_last($segments)] : [];
     $bankTransferAvailable = config('travelwheel.travelflex_bank_accounts', []) !== [];
+    $upfrontPaymentTotal = (float) ($plan['upfront_payment_total'] ?? (($plan['down_payment'] ?? $application->down_payment) + ($plan['administration_fee'] ?? 0) + ($plan['insurance_fee'] ?? 0)));
 @endphp
 <style>
     body{background:#f6f7fb}main.navbarmain.upper-space:has(.tfa-payment-page){margin-top:113px!important;padding-top:0!important}.tfa-wrap{max-width:980px;margin:0 auto;padding:34px 18px 70px;font-family:var(--font-primary,Arial,sans-serif);color:#101828}.tfa-hero{background:#fff;border:1px solid #e4e7ec;border-top:4px solid #049a63;padding:28px;border-radius:8px}.tfa-kicker{font-size:12px;font-weight:800;color:#049a63;text-transform:uppercase}.tfa-title{font-size:30px;font-weight:800;margin-top:7px}.tfa-copy{color:#667085;line-height:1.65;margin-top:8px}.tfa-grid{display:grid;grid-template-columns:1.3fr .7fr;gap:18px;margin-top:18px}.tfa-card{background:#fff;border:1px solid #e4e7ec;border-radius:8px;padding:22px}.tfa-row{display:flex;justify-content:space-between;gap:20px;padding:11px 0;border-bottom:1px solid #eef1f5}.tfa-row:last-child{border:0}.tfa-row span{color:#667085}.tfa-row strong{text-align:right}.tfa-alert{margin-top:16px;padding:13px 15px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:7px}.tfa-options{display:grid;gap:10px;margin-top:14px}.tfa-option{display:flex;gap:12px;align-items:flex-start;border:1px solid #dfe3ea;border-radius:7px;padding:15px;cursor:pointer}.tfa-option:has(input:checked){border-color:#39328f;background:#f7f7ff}.tfa-option input{margin-top:3px}.tfa-option strong{display:block}.tfa-option small{display:block;color:#667085;margin-top:3px;line-height:1.5}.tfa-submit{width:100%;margin-top:14px;border:0;border-radius:7px;padding:14px;background:#39328f;color:#fff;font-weight:800;cursor:pointer}@media(max-width:700px){main.navbarmain.upper-space:has(.tfa-payment-page){margin-top:104px!important}.tfa-grid{grid-template-columns:1fr}.tfa-title{font-size:24px}.tfa-wrap{padding:18px 12px 56px}.tfa-hero,.tfa-card{padding:18px}.tfa-row{gap:12px}}
@@ -26,7 +27,10 @@
             <div class="tfa-row"><span>Airline</span><strong>{{ $flight['airline'] ?? $booking->airline ?? '-' }}</strong></div>
             <div class="tfa-row"><span>Booking reference</span><strong>{{ $booking->booking_ref }}</strong></div>
             <div class="tfa-row"><span>Ticket cost</span><strong>{{ $money($plan['ticket_cost'] ?? $booking->total_price) }}</strong></div>
-            <div class="tfa-row"><span>Down payment</span><strong style="color:#049a63">{{ $money($plan['down_payment'] ?? $application->down_payment) }}</strong></div>
+            <div class="tfa-row"><span>Down payment</span><strong>{{ $money($plan['down_payment'] ?? $application->down_payment) }}</strong></div>
+            <div class="tfa-row"><span>Administration fee</span><strong>{{ $money($plan['administration_fee'] ?? 0) }}</strong></div>
+            <div class="tfa-row"><span>Insurance fee</span><strong>{{ $money($plan['insurance_fee'] ?? 0) }}</strong></div>
+            <div class="tfa-row"><span>Due after approval</span><strong style="color:#049a63">{{ $money($upfrontPaymentTotal) }}</strong></div>
             <div class="tfa-row"><span>Financed amount</span><strong>{{ $money($plan['loan_amount'] ?? $plan['remaining_balance'] ?? 0) }}</strong></div>
             <div class="tfa-row"><span>Repayment plan</span><strong>{{ $plan['repayment_plan'] ?? '-' }}</strong></div>
         </section>

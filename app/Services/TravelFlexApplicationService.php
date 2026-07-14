@@ -45,6 +45,7 @@ class TravelFlexApplicationService
                 $flightInfo,
                 $uploadPaths,
                 $application->booking_ref ?: $application->unique_id ?: '',
+                $application,
             ));
 
         $application->update([

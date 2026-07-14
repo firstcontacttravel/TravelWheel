@@ -44,6 +44,10 @@
     $bankAccounts = config('travelwheel.travelflex_bank_accounts', []);
     $travelFlexInterestRate = (float) config('travelwheel.travelflex_interest_rate', 0.04);
     $travelFlexInterestPercent = rtrim(rtrim(number_format($travelFlexInterestRate * 100, 2), '0'), '.');
+    $travelFlexAdministrationFeeRate = (float) config('travelwheel.travelflex_administration_fee_rate', 0.01);
+    $travelFlexAdministrationFeePercent = rtrim(rtrim(number_format($travelFlexAdministrationFeeRate * 100, 2), '0'), '.');
+    $travelFlexInsuranceFeeRate = (float) config('travelwheel.travelflex_insurance_fee_rate', 0.015);
+    $travelFlexInsuranceFeePercent = rtrim(rtrim(number_format($travelFlexInsuranceFeeRate * 100, 2), '0'), '.');
 
     // Add these lines to define $isReturn, $isMulti, $multiLegs, $tripLabel
     $mf = $mappedFlight;
@@ -468,42 +472,12 @@
                         <span>Please read this agreement carefully before proceeding. You must agree to all terms to use TravelFlex.</span>
                     </div>
 
-                    <div class="tf-disclaimer-box">
-                        <h4>1. Fast Credit Loan Product</h4>
-                        <p>TravelFlex is facilitated by Travelwheel Limited in partnership with Fast Credit Finance Company Limited. By proceeding, you acknowledge that the financing decision, loan terms, document verification, and repayment enforcement belong to Fast Credit. Travelwheel acts as the travel booking and application facilitator.</p>
-
-                        <h4>2. Loan Disbursement</h4>
-                        <p>If approved, Fast Credit may make the loan amount available by direct payment to Travelwheel or the designated travel provider for the selected travel package. Approval is subject to document review, credit checks, fund availability, and applicable CBN regulations.</p>
-
-                        <h4>3. Interest, Fees & Insurance</h4>
-                        <p>Fast Credit may charge interest at <strong>4% per month</strong> on the loan amount. Fast Credit may also deduct or capitalize applicable charges including <strong>1.5% insurance</strong> on the approved loan amount and a <strong>1% management fee</strong>, subject to Fast Credit's final approval terms.</p>
-
-                        <h4>4. Down Payment & Ticketing</h4>
-                        <p>No down payment is collected before Fast Credit review. If Fast Credit approves the application, Travelwheel will send a secure payment step for the required down payment before ticketing. Ticket issuance is subject to approval, fare availability, and verified payment.</p>
-
-                        <h4>5. Repayment Authorization</h4>
-                        <p>For individual applications, you authorize Fast Credit to verify employment and salary details and, where applicable, deduct monthly instalments from salary or recover outstanding amounts from unpaid wages, terminal benefits, gratuity, or other remuneration due to you. For company applications, the authorized representative confirms authority to submit the application and company documents.</p>
-
-                        <h4>6. Credit Bureau & Data Sharing Consent</h4>
-                        <p>You authorize Travelwheel to share your application, travel package, uploaded documents, and contact details with Fast Credit. You also authorize Fast Credit to access, verify, and register details of the conduct of your loan account with credit bureaus and relevant verification providers.</p>
-
-                        <h4>7. Other Loan Obligations</h4>
-                        <p>You declare that the information submitted is accurate and, for individual payroll-backed applications, that you do not have undisclosed pending loan obligations that would affect repayment. Fast Credit may require that you do not obtain another payroll-deductible loan without written consent during the loan period.</p>
-
-                        <h4>8. Default & Recovery</h4>
-                        <p>If repayment is missed or the agreement is breached, Fast Credit may recover outstanding amounts, apply permitted penalty interest, extend the loan tenor to accommodate skipped payments, and pursue recovery by all lawful means. Fast Credit may also use repayments first for recovery/legal costs, then charges, interest, and principal.</p>
-
-                        <h4>9. Approval Not Guaranteed</h4>
-                        <p>Submission does not guarantee loan approval. Fast Credit reserves the right to review and verify all documents and is not bound to grant the loan request.</p>
-
-                        <h4>10. Acknowledgement</h4>
-                        <p>By ticking the checkbox below and clicking "I Agree & Continue", you confirm that you have read, understood, and agree to the Fast Credit loan terms, repayment authorization, data sharing consent, credit bureau consent, and document verification requirements.</p>
-                    </div>
+                    @include('livewire.pages.flight.partials.fastcredit-agreement', ['class' => 'tf-disclaimer-box'])
 
                     <div class="tf-agree-row" @click="toggleAgree()">
                         <input type="checkbox" id="tfAgree" :checked="agreed" @click.stop="toggleAgree()">
                         <label for="tfAgree" @click.prevent>
-                            I have read and agree to the Fast Credit loan terms, including document verification, credit bureau consent, repayment authorization, applicable interest/fees, and default recovery terms.
+                            I confirm that I have read, understood and agreed to the above terms and conditions.
                         </label>
                     </div>
 
@@ -611,10 +585,12 @@
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Ticket Cost</span><span class="tf-sum-val" x-text="formatCurrency(ticketCost)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Down Payment (<span x-text="downPercent"></span>%)</span><span class="tf-sum-val" x-text="formatCurrency(downPaymentAmount)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Remaining Balance</span><span class="tf-sum-val" x-text="formatCurrency(remainingBalance)"></span></div>
+                            <div class="tf-sum-row"><span class="tf-sum-lbl">Administration Fee ({{ $travelFlexAdministrationFeePercent }}%)</span><span class="tf-sum-val" x-text="formatCurrency(administrationFee)"></span></div>
+                            <div class="tf-sum-row"><span class="tf-sum-lbl">Insurance Fee ({{ $travelFlexInsuranceFeePercent }}%)</span><span class="tf-sum-val" x-text="formatCurrency(insuranceFee)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Total Interest ({{ $travelFlexInterestPercent }}%/period)</span><span class="tf-sum-val" x-text="formatCurrency(totalInterest)"></span></div>
                         </div>
                         <div class="tf-total-row">
-                            <span class="tf-total-lbl">Total Payable (All Instalments + Down)</span>
+                            <span class="tf-total-lbl">Total Payable (Down + Fees + Instalments)</span>
                             <span class="tf-total-val" x-text="formatCurrency(grandTotal)"></span>
                         </div>
                     </div>
@@ -643,12 +619,12 @@
 
                     <div class="tf-downpay-box">
                         <div>
-                            <div class="tf-downpay-label">Down Payment Due Now</div>
-                            <div class="tf-downpay-sub">Paid once after your application details are submitted</div>
+                            <div class="tf-downpay-label">Due After Approval</div>
+                            <div class="tf-downpay-sub">Down payment plus Fast Credit administration and insurance fees</div>
                         </div>
                         <div>
-                            <div class="tf-downpay-value" x-text="formatCurrency(downPaymentAmount)"></div>
-                            <div style="font-size:11px;color:var(--tf-green);text-align:right;" x-text="downPercent + '% of ' + formatCurrency(ticketCost)"></div>
+                            <div class="tf-downpay-value" x-text="formatCurrency(upfrontPaymentTotal)"></div>
+                            <div style="font-size:11px;color:var(--tf-green);text-align:right;" x-text="formatCurrency(downPaymentAmount) + ' down + fees'"></div>
                         </div>
                     </div>
 
@@ -717,7 +693,7 @@
                         <div class="tf-pay-option-body">
                             <div class="tf-notice warn" style="margin-top:12px">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                <span>Transfer exactly <strong x-text="formatCurrency(downPaymentAmount)"></strong>. Your plan will be activated once payment is verified (2-4 hrs).</span>
+                                <span>Transfer exactly <strong x-text="formatCurrency(upfrontPaymentTotal)"></strong>. Your plan will be activated once payment is verified (2-4 hrs).</span>
                             </div>
                             @foreach($bankAccounts as $acct)
                             <div class="tf-bank-card">
@@ -768,7 +744,7 @@
                                 <input type="hidden" name="repayment_plan" :value="repaymentPlan" x-bind:value="repaymentPlan">
                                 <button type="submit" class="tf-btn-pay" id="tf-gw-btn">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                                    Pay <span x-text="formatCurrency(downPaymentAmount)" style="margin:0 4px;"></span> Down Payment Now
+                                    Pay <span x-text="formatCurrency(upfrontPaymentTotal)" style="margin:0 4px;"></span> Now
                                 </button>
                             </form>
                         </div>
@@ -933,6 +909,9 @@ function travelFlex() {
         downPercent:       30,
         downPaymentAmount: 0,
         remainingBalance:  0,
+        administrationFee: 0,
+        insuranceFee: 0,
+        upfrontPaymentTotal: 0,
         repaymentPlan:     '',
         lastPlan:          '',
         repaymentOptions:  [],
@@ -988,6 +967,9 @@ function travelFlex() {
         onDownPercentChange() {
             this.downPaymentAmount = this.ticketCost * (this.downPercent / 100);
             this.remainingBalance  = this.ticketCost - this.downPaymentAmount;
+            this.administrationFee = Math.round((this.remainingBalance * {{ $travelFlexAdministrationFeeRate }}) * 100) / 100;
+            this.insuranceFee = Math.round((this.remainingBalance * {{ $travelFlexInsuranceFeeRate }}) * 100) / 100;
+            this.upfrontPaymentTotal = Math.round((this.downPaymentAmount + this.administrationFee + this.insuranceFee) * 100) / 100;
             this.calculated = false; // force recalculate
         },
 
@@ -1053,7 +1035,7 @@ function travelFlex() {
             });
 
             this.totalInterest = Math.round(totalInterest * 100) / 100;
-            this.grandTotal    = Math.round((this.ticketCost + this.totalInterest) * 100) / 100;
+            this.grandTotal    = Math.round((this.ticketCost + this.totalInterest + this.administrationFee + this.insuranceFee) * 100) / 100;
             this.lastPlan      = this.repaymentPlan;
             this.calculated    = true;
             this.setProgress(60);

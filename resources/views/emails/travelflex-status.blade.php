@@ -51,6 +51,9 @@
     <tr>
         <td style="padding:20px 30px 0;">
             <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;font-size:13px;">
+                @php($plan = $application->repayment_plan ?? [])
+                @php($upfrontPaymentTotal = (float) ($plan['upfront_payment_total'] ?? ((float) $application->down_payment + (float) ($plan['administration_fee'] ?? 0) + (float) ($plan['insurance_fee'] ?? 0))))
+                <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f4;color:{{ $muted }};">Due after approval</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef0f4;font-weight:800;">{{ $money($upfrontPaymentTotal) }}</td></tr>
                 <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f4;color:{{ $muted }};">Down payment</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef0f4;font-weight:800;">{{ $money($application->down_payment) }}</td></tr>
                 <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f4;color:{{ $muted }};">Total payable</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef0f4;font-weight:800;">{{ $money($application->grand_total) }}</td></tr>
                 <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f4;color:{{ $muted }};">Payment status</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef0f4;font-weight:800;">{{ str((string) $application->payment_status)->replace('_', ' ')->headline() }}</td></tr>

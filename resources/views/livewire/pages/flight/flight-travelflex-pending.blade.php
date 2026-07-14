@@ -29,6 +29,9 @@
     $repaymentPlan = $tfPlan['repayment_plan']          ?? '';
     $grandTotal    = (float)($tfPlan['grand_total']    ?? 0);
     $totalInterest = (float)($tfPlan['total_interest'] ?? 0);
+    $administrationFee = (float)($tfPlan['administration_fee'] ?? 0);
+    $insuranceFee = (float)($tfPlan['insurance_fee'] ?? 0);
+    $upfrontPaymentTotal = (float)($tfPlan['upfront_payment_total'] ?? ($downPayment + $administrationFee + $insuranceFee));
     $schedule      = $tfPlan['schedule']               ?? [];
     $ticketCost    = (float) ($tfPlan['ticket_cost'] ?? $total);
     $remainingBal  = (float) ($tfPlan['loan_amount'] ?? $tfPlan['remaining_balance'] ?? max(0, $ticketCost - $downPayment));
@@ -40,13 +43,13 @@
         foreach ($multiLegs as $li => $leg) {
             $routeLines[] = [
                 'label' => 'Leg ' . ($li + 1),
-                'route' => ($leg['from'] ?? '') . ' → ' . ($leg['to'] ?? ''),
+                'route' => ($leg['from'] ?? '') . ' -> ' . ($leg['to'] ?? ''),
                 'date'  => $leg['departDateLabel'] ?? '',
             ];
         }
     }
 
-    // â”€â”€ Extra Services â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Extra Services
     $dbId          = session('flightBookingDbId');
     $dbBooking     = $dbId ? \App\Models\FlightBooking::find($dbId) : null;
     $extraServices = $dbBooking?->extra_services_snapshot ?? [];
@@ -136,6 +139,26 @@
         background:currentColor;
         -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='m3 7 9 6 9-6'/%3E%3Cpath d='M8 21h8'/%3E%3C/svg%3E") center/contain no-repeat;
         mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='m3 7 9 6 9-6'/%3E%3Cpath d='M8 21h8'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
+    .tf-pnd-alert-icon {
+        width:24px;
+        height:24px;
+        flex-shrink:0;
+        color:#92400e;
+        background:currentColor;
+        -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='13' r='8'/%3E%3Cpath d='M12 9v4l2.5 1.5'/%3E%3Cpath d='M5 3 2 6'/%3E%3Cpath d='m22 6-3-3'/%3E%3C/svg%3E") center/contain no-repeat;
+        mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='13' r='8'/%3E%3Cpath d='M12 9v4l2.5 1.5'/%3E%3Cpath d='M5 3 2 6'/%3E%3Cpath d='m22 6-3-3'/%3E%3C/svg%3E") center/contain no-repeat;
+    }
+    .tf-pnd-phone-icon {
+        width:14px;
+        height:14px;
+        display:inline-block;
+        vertical-align:-2px;
+        margin-right:5px;
+        color:var(--tf-muted);
+        background:currentColor;
+        -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.91.33 1.8.63 2.65a2 2 0 0 1-.45 2.11L8 9.91a16 16 0 0 0 6 6l1.43-1.29a2 2 0 0 1 2.11-.45c.85.3 1.74.51 2.65.63A2 2 0 0 1 22 16.92Z'/%3E%3C/svg%3E") center/contain no-repeat;
+        mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.91.33 1.8.63 2.65a2 2 0 0 1-.45 2.11L8 9.91a16 16 0 0 0 6 6l1.43-1.29a2 2 0 0 1 2.11-.45c.85.3 1.74.51 2.65.63A2 2 0 0 1 22 16.92Z'/%3E%3C/svg%3E") center/contain no-repeat;
     }
     .tf-pnd-kicker {
         display:inline-flex;
@@ -235,7 +258,7 @@
                 </div>
                 <div class="pc-body" style="padding:14px 20px 4px;">
                     @foreach([
-                        ['done','âœ“','Application Submitted','Your TravelFlex application, documents, and repayment plan have been received.'],
+                        ['done','1','Application Submitted','Your TravelFlex application, documents, and repayment plan have been received.'],
                         ['current','2','Fast Credit Review','Fast Credit will contact you and provide a decision within 24 hours.'],
                         ['pending','3','Pay Down Payment','If approved, we will email you a secure payment link before the airline hold expires.'],
                         ['pending','4','Ticketing','TravelWheel issues your ticket only after approval and verified down payment.'],
@@ -256,7 +279,7 @@
             {{-- Deadline --}}
             @if($tktFmt)
             <div style="background:var(--amber-lt);border:1px solid #fed7aa;border-radius:12px;padding:14px 18px;display:flex;align-items:flex-start;gap:12px;">
-                <span style="font-size:24px;flex-shrink:0;">â°</span>
+                <span class="tf-pnd-alert-icon" aria-hidden="true"></span>
                 <div>
                     <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:3px;">Booking Hold Expires</div>
                     <div style="font-size:12.5px;color:#78350f;line-height:1.55;">Your held fare expires <strong>{{ $tktFmt }}</strong>@if($tktHours>0) ({{ $tktHours }}h remaining)@endif. If Fast Credit approves the application, payment must be completed before the secure deadline in your approval email.</div>
@@ -268,6 +291,7 @@
             <div class="loan-bar">
                 <div class="loan-bar-item"><div class="loan-bar-lbl">Ticket Cost</div><div class="loan-bar-val">{{ $fmt($total) }}</div></div>
                 <div class="loan-bar-item"><div class="loan-bar-lbl">Down Payment ({{ $downPercent }}%)</div><div class="loan-bar-val" style="color:#86efac;">{{ $fmt($downPayment) }}</div></div>
+                <div class="loan-bar-item"><div class="loan-bar-lbl">Fees</div><div class="loan-bar-val">{{ $fmt($administrationFee + $insuranceFee) }}</div></div>
                 <div class="loan-bar-item"><div class="loan-bar-lbl">Balance Due</div><div class="loan-bar-val">{{ $fmt($remainingBal) }}</div></div>
                 <div class="loan-bar-item"><div class="loan-bar-lbl">Grand Total</div><div class="loan-bar-val" style="color:#c4b5fd;">{{ $fmt($grandTotal) }}</div></div>
             </div>
@@ -276,7 +300,7 @@
             <div class="pc">
                 <div class="pc-head">
                     <div class="pc-icon itin-card-icon" style="background:var(--blue-lt);color:var(--blue);"></div>
-                    <div><div class="pc-title">Flight Itinerary</div><div class="pc-sub">{{ $tripLabel }} · {{ $cabinLabel }} · {{ $mf['airline']??'' }}</div></div>
+                    <div><div class="pc-title">Flight Itinerary</div><div class="pc-sub">{{ $tripLabel }} &middot; {{ $cabinLabel }} &middot; {{ $mf['airline']??'' }}</div></div>
                 </div>
                 @if(!$isMulti)
                 @include('livewire.pages.flight.partials._render_leg', ['legSegs'=>$segments,'legLabel'=>'Outbound','legBadgeClass'=>'outbound','legLayovers'=>$mf['layoverDurations']??[],'legStops'=>$mf['stops']??max(0,count($segments)-1),'legDuration'=>$mf['totalTimeLabel']??'','legDate'=>$mf['departDateLabel']??'','breakdown'=>$breakdown,'equipMap'=>$equipMap,'tripDetails'=>[]])
@@ -292,7 +316,7 @@
             <div class="pc">
                 <div class="pc-head">
                     <div class="pc-icon icon-calendar" style="background:var(--purple-lt);color:var(--purple);"></div>
-                    <div><div class="pc-title">Your Repayment Schedule</div><div class="pc-sub">{{ count($schedule) }} instalment(s) · {{ $repaymentPlan }}</div></div>
+                    <div><div class="pc-title">Your Repayment Schedule</div><div class="pc-sub">{{ count($schedule) }} instalment(s) &middot; {{ $repaymentPlan }}</div></div>
                 </div>
                 <div class="pc-body" style="padding:0;">
                     <table class="schedule-table">
@@ -302,7 +326,7 @@
                             <tr>
                                 <td style="color:var(--gray-400);font-weight:700;">{{ $i+1 }}</td>
                                 <td><strong>{{ $inst['label'] ?? (($i+1).'. Payment') }}</strong></td>
-                                <td><span style="padding:2px 8px;background:var(--blue-lt);color:var(--blue);border-radius:999px;font-size:10.5px;font-weight:700;">{{ $inst['dueDate']??'â€”' }}</span></td>
+                                <td><span style="padding:2px 8px;background:var(--blue-lt);color:var(--blue);border-radius:999px;font-size:10.5px;font-weight:700;">{{ $inst['dueDate'] ?? '-' }}</span></td>
                                 <td style="font-family:var(--mono);">{{ $fmt($inst['principal']??0) }}</td>
                                 <td style="font-family:var(--mono);color:var(--amber);">{{ $fmt($inst['interest']??0) }}</td>
                                 <td><strong style="font-family:var(--mono);color:var(--indigo);">{{ $fmt($inst['total']??0) }}</strong></td>
@@ -328,9 +352,9 @@
                                 <td style="color:var(--gray-400)">{{ $i+1 }}</td>
                                 <td><strong>{{ $pax['title']??'' }} {{ strtoupper($pax['first_name']??'') }} {{ strtoupper($pax['last_name']??'') }}</strong></td>
                                 <td><span class="pax-badge" style="background:{{$c[0]}};color:{{$c[1]}}">{{ match($pax['type']??'ADT'){'ADT'=>'Adult','CHD'=>'Child','INF'=>'Infant',default=>'Pax'} }}</span></td>
-                                <td>{{ !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : 'â€”' }}</td>
-                                <td>{{ $pax['nationality']??'â€”' }}</td>
-                                <td style="font-family:var(--mono);font-size:12px;">{{ $pax['passport_no']??'â€”' }}</td>
+                                <td>{{ !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '-' }}</td>
+                                <td>{{ $pax['nationality'] ?? '-' }}</td>
+                                <td style="font-family:var(--mono);font-size:12px;">{{ $pax['passport_no'] ?? '-' }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -339,7 +363,7 @@
             </div>
             @endif
 
-            {{-- â”€â”€ Extra Services (TravelFlex) â”€â”€ --}}
+            {{-- Extra Services (TravelFlex) --}}
             @if(!empty($extraServices['baggage']) || !empty($extraServices['meal']))
             <div class="pc">
                 <div class="pc-head">
@@ -359,7 +383,7 @@
                                     <td><strong style="color:#059669;">Extra Baggage</strong></td>
                                     <td>
                                         {{ $baggage['description'] ?? '' }}
-                                        <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($baggage['direction'] ?? '') }} · Qty: {{ $baggage['quantity'] ?? 1 }}</span>
+                                        <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($baggage['direction'] ?? '') }} &middot; Qty: {{ $baggage['quantity'] ?? 1 }}</span>
                                     </td>
                                     <td style="font-weight:700;color:#0f172a;">{{ $sym }}{{ number_format((float)($baggage['line_total'] ?? 0), 2) }}</td>
                                 </tr>
@@ -371,7 +395,7 @@
                                     <td><strong style="color:#d97706;">Meal</strong></td>
                                     <td>
                                         {{ $meal['description'] ?? '' }}
-                                        <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($meal['direction'] ?? '') }} · Segment {{ ($meal['segment'] ?? 0) + 1 }}</span>
+                                        <span style="font-size:11px;color:var(--gray-400);display:block;margin-top:2px;">{{ ucfirst($meal['direction'] ?? '') }} &middot; Segment {{ ($meal['segment'] ?? 0) + 1 }}</span>
                                     </td>
                                     <td style="font-weight:700;color:#0f172a;">{{ $sym }}{{ number_format((float)($meal['unit_price'] ?? 0), 2) }}</td>
                                 </tr>
@@ -407,11 +431,13 @@
                     <div style="font-size:15px;font-weight:800;color:#fff;">TravelFlex Summary</div>
                 </div>
                 <div class="pc-body">
-                    <div class="dr"><span class="dr-lbl">Route</span><span class="dr-val">@if($isMulti)@foreach($routeLines as $line)<div>{{ $line['route'] }}</div>@endforeach @else {{ ($firstSeg['from']??'') }} → {{ ($finalDest['to']??'') }} @endif</span></div>
+                    <div class="dr"><span class="dr-lbl">Route</span><span class="dr-val">@if($isMulti)@foreach($routeLines as $line)<div>{{ $line['route'] }}</div>@endforeach @else {{ ($firstSeg['from']??'') }} -> {{ ($finalDest['to']??'') }} @endif</span></div>
                     <div class="dr"><span class="dr-lbl">Trip Type</span><span class="dr-val">{{ $tripLabel }}</span></div>
                     @if($isReturn && !empty($mf['returnDateLabel']))<div class="dr"><span class="dr-lbl">Return</span><span class="dr-val">{{ $mf['returnDateLabel'] }}</span></div>@endif
                     @if($uniqueId)<div class="dr"><span class="dr-lbl">Booking Ref</span><span class="dr-val mono">{{ $uniqueId }}</span></div>@endif
-                    <div class="dr"><span class="dr-lbl">Down payment after approval</span><span class="dr-val" style="color:var(--green);">{{ $fmt($downPayment) }} ({{ $downPercent }}%)</span></div>
+                    <div class="dr"><span class="dr-lbl">Due after approval</span><span class="dr-val" style="color:var(--green);">{{ $fmt($upfrontPaymentTotal) }}</span></div>
+                    <div class="dr"><span class="dr-lbl">Down payment</span><span class="dr-val">{{ $fmt($downPayment) }} ({{ $downPercent }}%)</span></div>
+                    <div class="dr"><span class="dr-lbl">Admin + insurance</span><span class="dr-val">{{ $fmt($administrationFee + $insuranceFee) }}</span></div>
                     <div class="dr"><span class="dr-lbl">Balance</span><span class="dr-val">{{ $fmt($remainingBal) }}</span></div>
                     <div class="dr"><span class="dr-lbl">Repayment</span><span class="dr-val">{{ $repaymentPlan }}</span></div>
                     <div class="dr"><span class="dr-lbl">Status</span><span class="dr-val"><span class="status-badge status-pending" style="font-size:10px;">Pending</span></span></div>
@@ -422,7 +448,7 @@
                 <div style="font-size:13px;font-weight:800;color:var(--gray-900);margin-bottom:8px;">Need Help?</div>
                 <div style="font-size:12.5px;color:var(--gray-500);line-height:1.65;">
                     <a href="mailto:support@travelwheel.com" style="color:var(--blue);font-weight:600;">support@travelwheel.com</a><br>
-                    ðŸ“ž <strong>+234 800 000 0000</strong><br>
+                    <span class="tf-pnd-phone-icon" aria-hidden="true"></span><strong>+234 800 000 0000</strong><br>
                     Quote: <strong style="font-family:var(--mono);color:var(--navy);">{{ $uniqueId }}</strong>
                 </div>
             </div>

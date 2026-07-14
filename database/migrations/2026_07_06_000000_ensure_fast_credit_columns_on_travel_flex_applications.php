@@ -43,13 +43,13 @@ return new class extends Migration
     {
         Schema::table('travel_flex_applications', function (Blueprint $table): void {
             foreach ([
-                'applicant_type',
-                'identity_details',
-                'bank_details',
-                'next_of_kin_details',
-                'company_details',
-                'representative_details',
                 'agreement_acceptance',
+                'representative_details',
+                'company_details',
+                'next_of_kin_details',
+                'bank_details',
+                'identity_details',
+                'applicant_type',
             ] as $column) {
                 if (Schema::hasColumn('travel_flex_applications', $column)) {
                     $table->dropColumn($column);

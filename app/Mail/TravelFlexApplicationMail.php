@@ -7,6 +7,8 @@ namespace App\Mail;
 
 use App\Mail\Concerns\AttachesItineraryPdf;
 use App\Models\FlightBooking;
+use App\Models\TravelFlexApplication;
+use App\Services\TravelFlexApplicationPdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
@@ -31,6 +33,7 @@ class TravelFlexApplicationMail extends Mailable
         public array  $flightInfo,
         public array  $uploadPaths,
         public string $bookingRef = '',
+        public ?TravelFlexApplication $application = null,
     ) {}
 
     public function envelope(): Envelope
@@ -80,6 +83,16 @@ class TravelFlexApplicationMail extends Mailable
                 $attachments[] = Attachment::fromPath($path)
                     ->as(($labels[$key] ?? $key) . '_' . $this->bookingRef . '.' . $ext);
             }
+        }
+
+        if ($this->application) {
+            $pdfBytes = app(TravelFlexApplicationPdfService::class)->generate($this->application);
+            $reference = $this->bookingRef ?: ($this->application->booking_ref ?: $this->application->unique_id ?: 'application');
+
+            $attachments[] = Attachment::fromData(
+                fn () => $pdfBytes,
+                'TravelFlex_Application_' . preg_replace('/[^A-Za-z0-9_-]+/', '_', $reference) . '.pdf'
+            )->withMime('application/pdf');
         }
 
         $booking = FlightBooking::query()

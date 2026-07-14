@@ -489,7 +489,9 @@ class FlightBookingController extends Controller
                 $travelFlexIneligibleReason = $travelFlexEligibility['reason'];
                 session()->forget('bookingIntent');
             } elseif ($fareType === 'webfare') {
-                return redirect()->route('flights.travelflex');
+                session(['travelFlexRedirectTarget' => 'plan']);
+
+                return redirect()->route('flights.travelflex.fastcredit');
             }
         }
 
@@ -543,7 +545,9 @@ class FlightBookingController extends Controller
         if (session('bookingIntent') === 'travelflex') {
             $travelFlexEligibility = $this->_travelFlexEligibility($mappedFlight);
             if ($travelFlexEligibility['eligible']) {
-                return redirect()->route('flights.travelflex');
+                session(['travelFlexRedirectTarget' => 'plan']);
+
+                return redirect()->route('flights.travelflex.fastcredit');
             }
 
             session()->forget('bookingIntent');
@@ -1550,7 +1554,7 @@ class FlightBookingController extends Controller
                 (string) data_get($tfPlan, 'repayment_plan', '1 month'),
                 (string) data_get($tfPlan, 'payment_method', 'gateway'),
             );
-            $amount = round((float) data_get($tfPlan, 'down_payment', 0), 2);
+            $amount = round((float) data_get($tfPlan, 'upfront_payment_total', data_get($tfPlan, 'down_payment', 0)), 2);
             session(['travelFlexPlan' => $tfPlan]);
 
             return $amount;
@@ -1631,6 +1635,12 @@ class FlightBookingController extends Controller
         $downPayment = round($ticketCost * ($downPercent / 100), 2);
         $remainingBalance = round($ticketCost - $downPayment, 2);
         $rate = (float) config('travelwheel.travelflex_interest_rate', 0.04);
+        $administrationFeeRate = (float) config('travelwheel.travelflex_administration_fee_rate', 0.01);
+        $insuranceFeeRate = (float) config('travelwheel.travelflex_insurance_fee_rate', 0.015);
+        $administrationFee = round($remainingBalance * $administrationFeeRate, 2);
+        $insuranceFee = round($remainingBalance * $insuranceFeeRate, 2);
+        $upfrontFeeTotal = round($administrationFee + $insuranceFee, 2);
+        $upfrontPaymentTotal = round($downPayment + $upfrontFeeTotal, 2);
         $proportions = [
             1 => [1.0],
             2 => [0.5, 0.5],
@@ -1667,13 +1677,21 @@ class FlightBookingController extends Controller
         return [
             'ticket_cost' => $ticketCost,
             'down_payment' => $downPayment,
+            'administration_fee' => $administrationFee,
+            'administration_fee_rate' => $administrationFeeRate,
+            'administration_fee_percent' => round($administrationFeeRate * 100, 2),
+            'insurance_fee' => $insuranceFee,
+            'insurance_fee_rate' => $insuranceFeeRate,
+            'insurance_fee_percent' => round($insuranceFeeRate * 100, 2),
+            'upfront_fee_total' => $upfrontFeeTotal,
+            'upfront_payment_total' => $upfrontPaymentTotal,
             'down_percent' => $downPercent,
             'loan_amount' => $remainingBalance,
             'remaining_balance' => $remainingBalance,
             'repayment_plan' => $repaymentPlan,
             'repayment_interval_days' => $parsed['unit_days'],
             'repayment_count' => count($schedule),
-            'grand_total' => round($ticketCost + $totalInterest, 2),
+            'grand_total' => round($ticketCost + $totalInterest + $upfrontFeeTotal, 2),
             'total_interest' => $totalInterest,
             'interest_rate' => $rate,
             'interest_rate_percent' => round($rate * 100, 2),
@@ -2559,6 +2577,9 @@ class FlightBookingController extends Controller
                 (string) $request->input('repayment_plan'),
                 (string) data_get(session('travelFlexPlan', []), 'payment_method', 'gateway'),
             )]);
+            session(['travelFlexRedirectTarget' => 'application']);
+
+            return redirect()->route('flights.travelflex.fastcredit');
         }
  
         if (! session()->has('travelFlexPlan')) {
@@ -2566,6 +2587,23 @@ class FlightBookingController extends Controller
         }
  
         return view('livewire.pages.flight.flight-travelflex-application');
+    }
+
+    public function travelFlexFastCreditRedirect()
+    {
+        $target = session('travelFlexRedirectTarget', session()->has('travelFlexPlan') ? 'application' : 'plan');
+
+        if ($target === 'application' && ! session()->has('travelFlexPlan')) {
+            return redirect()->route('flights.travelflex');
+        }
+
+        if (! session()->has('bookingFlight')) {
+            return redirect()->route('air.flight-s')->withErrors(['error' => 'Session expired.']);
+        }
+
+        return view('livewire.pages.flight.flight-travelflex-fastcredit', [
+            'target' => $target,
+        ]);
     }
  
     // =========================================================================
@@ -2575,24 +2613,25 @@ class FlightBookingController extends Controller
     {
         $validated = $request->validate([
             'applicant_type'    => 'required|in:individual,company',
-            'full_name'         => 'required|string|max:200',
             'home_address'      => 'required|string|max:500',
             'email'             => 'required|email',
             'phone_primary'     => 'required|string|max:30',
             'phone_secondary'   => 'nullable|string|max:30',
+            'home_address_place_id' => 'nullable|string|max:255',
+            'employer_address_place_id' => 'nullable|string|max:255',
+            'next_of_kin_address_place_id' => 'nullable|string|max:255',
+            'company_address_place_id' => 'nullable|string|max:255',
             'bvn'               => 'required_if:applicant_type,individual|nullable|string|size:11|regex:/^\d{11}$/',
             'nin'               => 'required_if:applicant_type,individual|nullable|string|max:20',
-            'title'             => 'required_if:applicant_type,individual|nullable|string|max:30',
-            'surname'           => 'required_if:applicant_type,individual|nullable|string|max:100',
-            'first_name'        => 'required_if:applicant_type,individual|nullable|string|max:100',
+            'title'             => 'required|string|max:30',
+            'surname'           => 'required|string|max:100',
+            'first_name'        => 'required|string|max:100',
             'other_name'        => 'nullable|string|max:120',
             'marital_status'    => 'required_if:applicant_type,individual|nullable|in:single,married,divorced,separated',
             'gender'            => 'required_if:applicant_type,individual|nullable|in:female,male',
             'date_of_birth'     => 'required_if:applicant_type,individual|nullable|date|before:today',
             'passport_number'   => 'required_if:applicant_type,individual|nullable|string|max:50',
             'passport_expiry_date' => 'required_if:applicant_type,individual|nullable|date|after:today',
-            'government_id_number' => 'nullable|string|max:80',
-            'office_id_number'  => 'nullable|string|max:80',
             'employer_name'     => 'required_if:applicant_type,individual|nullable|string|max:200',
             'employer_address'  => 'required_if:applicant_type,individual|nullable|string|max:500',
             'occupation'        => 'required_if:applicant_type,individual|nullable|string|max:150',
@@ -2628,6 +2667,7 @@ class FlightBookingController extends Controller
             'loan_purpose'      => 'nullable|string|max:500',
             'fast_credit_agreement' => 'accepted',
             'digital_signature' => 'required|string|max:200',
+            'digital_signature_image' => ['required', 'string', 'regex:/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/'],
             'valid_id'          => 'required_if:applicant_type,individual|file|mimes:jpg,jpeg,png,pdf|max:5120',
             'passport_photo'    => 'required_if:applicant_type,individual|file|mimes:jpg,jpeg,png|max:5120',
             'work_id_card'      => 'required_if:applicant_type,individual|file|mimes:jpg,jpeg,png,pdf|max:5120',
@@ -2651,6 +2691,8 @@ class FlightBookingController extends Controller
         ]);
  
         // ── Store uploaded documents ──────────────────────────────────────────
+        $fullName = $this->_travelFlexFullName($validated);
+
         $docKeys = $validated['applicant_type'] === 'company'
             ? ['representative_valid_id', 'cac_status_report', 'share_certificate', 'memart', 'register_of_members', 'shareholders_agreement', 'return_of_allotment', 'certificate_of_incorporation', 'board_resolution', 'company_bank_statement', 'tin_certificate']
             : ['valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements'];
@@ -2682,11 +2724,12 @@ class FlightBookingController extends Controller
  
         $applicant = [
             'applicant_type'    => $validated['applicant_type'],
-            'full_name'        => $validated['full_name'],
+            'full_name'        => $fullName,
             'email'            => $validated['email'],
             'home_address'     => $validated['home_address'],
             'phone_primary'    => $validated['phone_primary'],
             'phone_secondary'  => $validated['phone_secondary'] ?? null,
+            'home_address_place_id' => $validated['home_address_place_id'] ?? null,
             'bvn'              => $validated['bvn'] ?? null,
             'nin'              => $validated['nin'] ?? null,
             'title'            => $validated['title'] ?? null,
@@ -2698,8 +2741,6 @@ class FlightBookingController extends Controller
             'date_of_birth'    => $validated['date_of_birth'] ?? null,
             'passport_number'  => $validated['passport_number'] ?? null,
             'passport_expiry_date' => $validated['passport_expiry_date'] ?? null,
-            'government_id_number' => $validated['government_id_number'] ?? null,
-            'office_id_number' => $validated['office_id_number'] ?? null,
             'employer_name'    => $validated['employer_name'] ?? null,
             'employer_address' => $validated['employer_address'] ?? null,
             'occupation'       => $validated['occupation'] ?? null,
@@ -2848,9 +2889,20 @@ class FlightBookingController extends Controller
         return $this->_startSeerbitPayment('travelflex_down_payment');
     }
 
+    private function _travelFlexFullName(array $validated): string
+    {
+        return trim(collect([
+            $validated['title'] ?? null,
+            $validated['surname'] ?? null,
+            $validated['first_name'] ?? null,
+            $validated['other_name'] ?? null,
+        ])->filter(fn ($value) => filled($value))->implode(' '));
+    }
+
     private function _fastCreditApplicationPayload(array $validated, Request $request): array
     {
         $applicantType = $validated['applicant_type'];
+        $fullName = $this->_travelFlexFullName($validated);
 
         return [
             'applicant_type' => $applicantType,
@@ -2867,8 +2919,6 @@ class FlightBookingController extends Controller
                 'phone_secondary' => $validated['phone_secondary'] ?? null,
                 'passport_number' => $validated['passport_number'] ?? null,
                 'passport_expiry_date' => $validated['passport_expiry_date'] ?? null,
-                'government_id_number' => $validated['government_id_number'] ?? null,
-                'office_id_number' => $validated['office_id_number'] ?? null,
                 'social_media_platform' => $validated['social_media_platform'] ?? null,
                 'social_media_handle' => $validated['social_media_handle'] ?? null,
             ],
@@ -2880,6 +2930,7 @@ class FlightBookingController extends Controller
                 'staff_number' => $validated['staff_number'] ?? null,
                 'sector' => $validated['sector'] ?? null,
                 'ippis_number' => $validated['ippis_number'] ?? null,
+                'employer_address_place_id' => $validated['employer_address_place_id'] ?? null,
             ],
             'bank_details' => [
                 'monthly_salary' => $validated['monthly_salary'] ?? null,
@@ -2895,6 +2946,7 @@ class FlightBookingController extends Controller
                 'gender' => $validated['next_of_kin_gender'] ?? null,
                 'title' => $validated['next_of_kin_title'] ?? null,
                 'residential_address' => $validated['next_of_kin_address'] ?? null,
+                'residential_address_place_id' => $validated['next_of_kin_address_place_id'] ?? null,
                 'phone_primary' => $validated['next_of_kin_phone_primary'] ?? null,
                 'phone_secondary' => $validated['next_of_kin_phone_secondary'] ?? null,
                 'email' => $validated['next_of_kin_email'] ?? null,
@@ -2905,24 +2957,28 @@ class FlightBookingController extends Controller
                 'email' => $validated['company_email'] ?? null,
                 'phone' => $validated['company_phone'] ?? null,
                 'registered_address' => $validated['company_address'] ?? null,
+                'registered_address_place_id' => $validated['company_address_place_id'] ?? null,
                 'sector' => $validated['company_sector'] ?? null,
                 'bank_name' => $validated['company_bank_name'] ?? null,
                 'account_number' => $validated['company_account_number'] ?? null,
                 'loan_purpose' => $validated['loan_purpose'] ?? null,
             ],
             'representative_details' => [
-                'full_name' => $validated['full_name'],
+                'full_name' => $fullName,
                 'email' => $validated['email'],
                 'phone_primary' => $validated['phone_primary'],
                 'phone_secondary' => $validated['phone_secondary'] ?? null,
                 'role' => $validated['representative_role'] ?? null,
                 'residential_address' => $validated['home_address'],
+                'residential_address_place_id' => $validated['home_address_place_id'] ?? null,
             ],
             'agreement_acceptance' => [
                 'agreement' => 'fast_credit_loan_agreement',
                 'version' => '2026-07-09',
                 'accepted' => $request->boolean('fast_credit_agreement'),
                 'digital_signature' => $validated['digital_signature'],
+                'signature_image' => $validated['digital_signature_image'],
+                'signature_format' => 'image/png',
                 'accepted_at' => now()->toIso8601String(),
                 'ip_address' => $request->ip(),
                 'user_agent' => substr((string) $request->userAgent(), 0, 500),
