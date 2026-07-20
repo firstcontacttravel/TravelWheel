@@ -1,4 +1,4 @@
-
+﻿
 <div>{{-- Single Livewire root element --}}
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
@@ -32,19 +32,19 @@
     }
     body { font-family: var(--font); background: var(--gray-50); color: var(--gray-900); font-size: 14px; line-height: 1.5; margin-top: 120px; }
 
-    /* ── Layout ── */
+    /* â”€â”€ Layout â”€â”€ */
     .bk-wrap  { max-width: 1160px; margin: 0 auto; padding: 24px 16px 64px; }
     .bk-page  { display: grid; grid-template-columns: 1fr 340px; gap: 22px; align-items: start; }
     .bk-main  { display: flex; flex-direction: column; gap: 12px; }
     .bk-rail  { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 20px; }
 
-    /* ── Breadcrumb ── */
+    /* â”€â”€ Breadcrumb â”€â”€ */
     .bk-crumb { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--gray-400); margin-bottom: 18px; flex-wrap: wrap; }
     .bk-crumb a { color: var(--blue); text-decoration: none; font-weight: 600; }
     .bk-crumb a:hover { text-decoration: underline; }
     .bk-crumb-sep { color: var(--gray-300); }
 
-    /* ── Stepper ── */
+    /* â”€â”€ Stepper â”€â”€ */
     .bk-steps { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 14px 20px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 0; margin-bottom: 4px; }
     .bk-step  { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
     .bk-step-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
@@ -57,7 +57,7 @@
     .bk-connector  { flex: 1; height: 2px; background: var(--gray-200); margin: 0 12px; min-width: 20px; }
     .bk-connector.done { background: var(--green); }
 
-    /* ── Accordion card ── */
+    /* â”€â”€ Accordion card â”€â”€ */
     .bk-acc { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
     .bk-acc-head {
         display: flex; align-items: center; gap: 12px; padding: 15px 20px;
@@ -73,7 +73,7 @@
     .bk-acc-chevron.open { transform: rotate(180deg); }
     .bk-acc-body  { padding: 18px 20px; }
 
-    /* ── Notices ── */
+    /* â”€â”€ Notices â”€â”€ */
     .bk-notice { padding: 11px 14px; border-radius: 9px; font-size: 12.5px; display: flex; align-items: flex-start; gap: 9px; }
     .bk-notice svg { flex-shrink: 0; margin-top: 1px; }
     .bk-notice.info   { background: var(--blue-lt);  color: var(--blue);  border: 1px solid var(--blue-md); }
@@ -81,7 +81,7 @@
     .bk-notice.danger { background: var(--red-lt);   color: var(--red);   border: 1px solid #fca5a5; }
     .bk-notice.green  { background: var(--green-lt); color: var(--green); border: 1px solid #a7f3d0; }
 
-    /* ── Itinerary (Image 1 style) ── */
+    /* â”€â”€ Itinerary (Image 1 style) â”€â”€ */
     .bk-itin-leg { margin-bottom: 0; }
     .bk-itin-leg + .bk-itin-leg { border-top: 1px solid var(--gray-100); margin-top: 0; }
     .bk-itin-leg-head {
@@ -131,7 +131,7 @@
         border-radius: 8px; font-size: 11.5px; color: var(--amber); font-weight: 600;
     }
 
-    /* ── Extra bags banner ── */
+    /* â”€â”€ Extra bags banner â”€â”€ */
     .bk-bags-banner {
         display: flex; align-items: center; gap: 14px;
         padding: 14px 18px; background: #fff;
@@ -145,7 +145,7 @@
     .bk-bags-btn { padding: 7px 18px; border: 1.5px solid var(--blue); border-radius: 8px; background: #fff; color: var(--blue); font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: all .15s; flex-shrink: 0; }
     .bk-bags-btn:hover { background: var(--blue-lt); }
 
-    /* ── Passenger counter ── */
+    /* â”€â”€ Passenger counter â”€â”€ */
     .bk-pax-counter { display: flex; border: 1.5px solid var(--gray-200); border-radius: 10px; overflow: hidden; }
     .bk-pax-col     { flex: 1; padding: 14px 16px; border-right: 1px solid var(--gray-100); }
     .bk-pax-col:last-child { border-right: none; }
@@ -165,7 +165,7 @@
     .bk-pax-col-sub { font-size: 11px; color: #6b7280;}
     .bk-pax-ctr { display: flex; align-items: center;}
 
-    /* ── Passenger card / form ── */
+    /* â”€â”€ Passenger card / form â”€â”€ */
     .bk-pax-card { border: 1.5px solid var(--gray-200); border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
     .bk-pax-card:last-child { margin-bottom: 0; }
     .bk-pax-card-head {
@@ -229,11 +229,11 @@
     .bk-pp-chevron.open { transform: rotate(180deg); }
     .bk-pp-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px 15px; background: #fff; border-top: 1px solid var(--gray-100); }
 
-    /* ── Contact ── */
+    /* â”€â”€ Contact â”€â”€ */
     .bk-contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .bk-contact-full { grid-column: 3 / 3; }
 
-    /* ── Seat selection (Image 3 style) ── */
+    /* â”€â”€ Seat selection (Image 3 style) â”€â”€ */
     .bk-seat-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--gray-100); }
     .bk-seat-row:last-child { border-bottom: none; }
     .bk-seat-leg  { display: flex; align-items: center; gap: 8px; flex: 1; }
@@ -248,12 +248,12 @@
     .bk-seat-choose { padding: 6px 16px; border-radius: 7px; background: var(--blue); color: #fff; font-size: 12.5px; font-weight: 700; border: none; cursor: pointer; font-family: var(--font); transition: background .15s; }
     .bk-seat-choose:hover { background: #1e40af; }
 
-    /* ── T&C bar ── */
+    /* â”€â”€ T&C bar â”€â”€ */
     .bk-terms-bar { display: flex; align-items: center; gap: 10px; padding: 12px 0 0; font-size: 12.5px; color: var(--gray-500); }
     .bk-terms-bar a { color: var(--blue); font-weight: 600; }
     .bk-terms-bar input { width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer; }
 
-    /* ── Action buttons ── */
+    /* â”€â”€ Action buttons â”€â”€ */
     .bk-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px; }
     .bk-btn-ghost { padding: 0 22px; height: 46px; background: #fff; border: 1.5px solid var(--gray-200); border-radius: 10px; font-size: 13.5px; font-weight: 700; color: var(--gray-700); cursor: pointer; font-family: var(--font); transition: all .15s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
     .bk-btn-ghost:hover { background: var(--gray-50); border-color: var(--gray-400); }
@@ -263,7 +263,7 @@
     .bk-btn-pay { padding: 0 28px; height: 52px; background: #f97316; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 800; cursor: pointer; font-family: var(--font); box-shadow: 0 4px 16px rgba(249,115,22,.35); transition: all .2s; display: inline-flex; align-items: center; gap: 9px; }
     .bk-btn-pay:hover { background: #ea6c0a; transform: translateY(-1px); }
 
-    /* ── RIGHT RAIL: My Cart ── */
+    /* â”€â”€ RIGHT RAIL: My Cart â”€â”€ */
     .bk-cart { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
     .bk-cart-head { background: var(--navy); padding: 14px 18px; }
     .bk-cart-title { font-size: 15px; font-weight: 800; color: #fff; }
@@ -300,14 +300,14 @@
     .bk-promo-btn { padding: 0 14px; height: 38px; background: var(--navy); color: #fff; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: background .15s; }
     .bk-promo-btn:hover { background: #0f2460; }
 
-    /* ── Fare detail panel (tax breakdown) ── */
+    /* â”€â”€ Fare detail panel (tax breakdown) â”€â”€ */
     .bk-tax-detail { padding-left: 10px; border-left: 2px solid var(--blue-md); margin: 4px 0 6px; }
     .bk-tax-row    { display: flex; align-items: center; justify-content: space-between; padding: 2px 0; font-size: 11.5px; }
     .bk-tax-lbl    { color: var(--gray-500); }
     .bk-tax-code   { font-size: 10px; opacity: .5; margin-left: 4px; }
     .bk-tax-val    { font-family: var(--mono); font-size: 11px; color: var(--gray-700); }
 
-    /* ── Review step ── */
+    /* â”€â”€ Review step â”€â”€ */
     .bk-review-section { margin-bottom: 20px; }
     .bk-review-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); padding-bottom: 8px; border-bottom: 1px solid var(--gray-100); margin-bottom: 10px; }
     .bk-review-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--gray-100); gap: 16px; font-size: 13px; }
@@ -1183,7 +1183,7 @@
         border-top: 1px solid var(--gray-100);
     }
 
-    /* ── Responsive ── */
+    /* â”€â”€ Responsive â”€â”€ */
     @media (max-width: 900px) { .bk-page { grid-template-columns: 1fr; } .bk-rail { position: static; } }
     @media (max-width: 580px) {
         .bk-wrap { padding: 10px 10px 48px; }
@@ -1319,7 +1319,7 @@
 </style>
 
 @php
-    // ── Core session data ──
+    // â”€â”€ Core session data â”€â”€
     $flight        = session('bookingFlight') ?? [];
     $mappedFlight  = $flight['flight'] ?? $flight;
     $sessionId     = session('bookingSessionId') ?? null;
@@ -1327,7 +1327,7 @@
     $fareRulesData = session('fareRules') ?? [];
     $extraServices = session('extraServices') ?? [];
 
-    // ── Parse revalidate data (raw from API) ──
+    // â”€â”€ Parse revalidate data (raw from API) â”€â”€
     $revalidate    = $flight['revalidate'] ?? [];
     $fareItinerary = $revalidate['AirRevalidateResponse']['AirRevalidateResult']['FareItineraries']['FareItinerary'] ?? [];
     $airFareInfo   = $fareItinerary['AirItineraryFareInfo'] ?? [];
@@ -1335,23 +1335,23 @@
     $itinTotals    = $airFareInfo['ItinTotalFares'] ?? [];
     $originDest    = $fareItinerary['OriginDestinationOptions'] ?? [];
 
-    // ── Parse Extra Services ──
+    // â”€â”€ Parse Extra Services â”€â”€
     $esResult      = $extraServices['ExtraServicesResponse']['ExtraServicesResult']['ExtraServicesData'] ?? [];
     $dynBaggage    = $esResult['DynamicBaggage'] ?? [];
     $dynMeal       = $esResult['DynamicMeal'] ?? [];
     $dynSeat       = $esResult['DynamicSeat'] ?? [];
 
-    // ── Parse Fare Rules ──
+    // â”€â”€ Parse Fare Rules â”€â”€
     $fareRulesResult  = $fareRulesData['FareRules1_1Response']['FareRules1_1Result'] ?? [];
     $baggageInfos     = $fareRulesResult['BaggageInfos'] ?? [];
     $fareRulesList    = $fareRulesResult['FareRules'] ?? [];
 
-    // ── Existing mapped fields (keep your existing ones) ──
+    // â”€â”€ Existing mapped fields (keep your existing ones) â”€â”€
     $cabinMap = ['Y' => 'Economy', 'S' => 'Premium Economy', 'C' => 'Business', 'F' => 'First Class'];
     $cabin    = $cabinMap[$searchParams['flight_type'] ?? 'Y'] ?? 'Economy';
 
     $currency = $mappedFlight['currency'] ?? ($itinTotals['TotalFare']['CurrencyCode'] ?? 'NGN');
-    $sym      = $currency === 'NGN' ? '₦' : ($currency === 'USD' ? '$' : $currency . ' ');
+    $sym      = $currency === 'NGN' ? html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8') : ($currency === 'USD' ? '$' : $currency . ' ');
     $fmt      = fn($v) => $sym . number_format((float) $v, 2);
 
     $segments  = $flight['segments'] ?? ($mappedFlight['segments'] ?? []);
@@ -1411,7 +1411,7 @@
         }
     }
 
-    // ── Parse DynamicBaggage for outbound/inbound options ──
+    // â”€â”€ Parse DynamicBaggage for outbound/inbound options â”€â”€
     if ($isMulti && !empty($multiLegs)) {
         $allLegs = [];
         foreach ($multiLegs as $li => $leg) {
@@ -1419,7 +1419,7 @@
             if (!empty($legSegs)) {
                 $allLegs[] = [
                     'label' => 'Leg ' . ($li + 1),
-                    'route' => ($legSegs[0]['from'] ?? '') . ' â†’ ' . ($legSegs[count($legSegs)-1]['to'] ?? ''),
+                    'route' => ($legSegs[0]['from'] ?? '') . ' -> ' . ($legSegs[count($legSegs)-1]['to'] ?? ''),
                     'type' => 'multi',
                     'logo' => $legSegs[0]['airlineLogo'] ?? '',
                 ];
@@ -1436,7 +1436,7 @@
         if ($behavior === 'PER_PAX_INBOUND')   $baggageInbound  = $services;
     }
 
-    // ── Parse DynamicMeal for outbound/inbound ──
+    // â”€â”€ Parse DynamicMeal for outbound/inbound â”€â”€
     $mealOutbound = [];
     $mealInbound  = [];
     foreach ($dynMeal as $meal) {
@@ -1447,7 +1447,7 @@
     }
 
     // Helper: outbound currency symbol (extra services may use AED or local)
-    $esSym = fn($code) => match($code) { 'NGN' => '₦', 'USD' => '$', 'AED' => 'AED ', default => $code . ' ' };
+    $esSym = fn($code) => match($code) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'AED' => 'AED ', default => $code . ' ' };
     $esFmt = fn($svc) => ($esSym($svc['ServiceCost']['CurrencyCode'] ?? '') . number_format((float)($svc['ServiceCost']['Amount'] ?? 0), 2));
     $isTravelFlexCheckout = session('bookingIntent', 'booking') === 'travelflex';
 @endphp
@@ -1462,9 +1462,9 @@
         {{-- Breadcrumb --}}
         <div class="bk-crumb">
             <a href="{{ route('home') }}">Home</a>
-            <span class="bk-crumb-sep">›</span>
+            <span class="bk-crumb-sep">&rsaquo;</span>
             <a href="{{ route('air.flight-s') }}">Flight Results</a>
-            <span class="bk-crumb-sep">›</span>
+            <span class="bk-crumb-sep">&rsaquo;</span>
             <span>Complete Booking</span>
         </div>
         @if($errors->any())
@@ -1487,7 +1487,7 @@
 
         <div class="bk-page">
 
-            {{-- ══════════════ MAIN COLUMN ══════════════ --}}
+            {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â• MAIN COLUMN â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
             <div class="bk-main">
 
                 {{-- Stepper --}}
@@ -1525,10 +1525,10 @@
                     </div>
                 </div>
 
-                {{-- ════════ STEP 1 ════════ --}}
+                {{-- â•â•â•â•â•â•â•â• STEP 1 â•â•â•â•â•â•â•â• --}}
                 @if(in_array($step, [1, 2], true))
 
-                    {{-- ── 1. Flight Itinerary (accordion, open by default) ── --}}
+                    {{-- â”€â”€ 1. Flight Itinerary (accordion, open by default) â”€â”€ --}}
                     <div class="bk-acc" x-data="{ open: false }">
                         @php
                             $routeStopCount = $flight['stops'] ?? max(0, count($segments) - 1);
@@ -1574,7 +1574,7 @@
 
                         <div x-show="open" x-transition>
                             @if(!$isMulti)
-                                {{-- ── Outbound leg ── --}}
+                                {{-- â”€â”€ Outbound leg â”€â”€ --}}
                                 @php
                                     $outStopCount = $flight['stops'] ?? max(0, count($segments) - 1);
                                     $outDuration  = $flight['totalTimeLabel'] ?? $flight['durationLabel'] ?? '';
@@ -1607,8 +1607,8 @@
                                                 @php
                                                     $equip   = $seg['equipment'] ?? '';
                                                     $equipLbl= $equipMap[$equip] ?? $equip;
-                                                    $bagStr  = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 23kg';
-                                                    $cabinBag= implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 7kg';
+                                                    $bagStr  = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 23kg';
+                                                    $cabinBag= implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 7kg';
                                                 @endphp
 
                                                 @if($si > 0 && !empty($flight['layoverDurations'][$si - 1]))
@@ -1681,7 +1681,7 @@
                                 </div>
                             @endif
 
-                            {{-- ── Return leg ── --}}
+                            {{-- â”€â”€ Return leg â”€â”€ --}}
                             @if($isReturn && count($retSegs) > 0)
                                 @php
                                     $retFirst    = $retSegs[0];
@@ -1717,8 +1717,8 @@
                                                 @php
                                                     $equip    = $seg['equipment'] ?? '';
                                                     $equipLbl = $equipMap[$equip] ?? $equip;
-                                                    $bagStr   = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 23kg';
-                                                    $cabinBag = implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 × 7kg';
+                                                    $bagStr   = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 23kg';
+                                                    $cabinBag = implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 7kg';
                                                 @endphp
 
                                                 @if($si > 0 && !empty($flight['returnLayoverDurations'][$si-1]))
@@ -1863,7 +1863,7 @@
                         </div>
                     </div>
 
-                    {{-- ── 2. Extra Services (Baggage + Meals) ── --}}
+                    {{-- â”€â”€ 2. Extra Services (Baggage + Meals) â”€â”€ --}}
                     @if($step === 2)
                     @if(!empty($baggageOutbound) || !empty($baggageInbound) || !empty($mealOutbound) || !empty($mealInbound))
                     <div class="bk-acc" x-data="{ open: true }">
@@ -1879,23 +1879,23 @@
                         </div>
                         <div x-show="open" x-transition>
                             <div class="bk-acc-body" style="padding-top:0;">
-                        
-                                {{-- ── EXTRA BAGGAGE ── --}}
+
+                                {{-- â”€â”€ EXTRA BAGGAGE â”€â”€ --}}
                                 @if(!empty($baggageOutbound) || !empty($baggageInbound))
                                 <div style="padding:14px 0 10px;border-bottom:1px solid var(--gray-100);">
-                        
+
                                     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
                                         <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span>
                                         Extra Check-in Baggage
                                     </div>
-                        
+
                                     @foreach([['outbound', $baggageOutbound], ['inbound', $baggageInbound]] as [$dir, $bagOpts])
                                     @if(!empty($bagOpts))
                                     <div style="margin-bottom:14px;">
                                         <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">
                                             {{ ucfirst($dir) }}
                                         </div>
-                        
+
                                         <div style="display:flex;flex-direction:column;gap:8px;">
                                             @foreach($bagOpts as $svc)
                                             @php
@@ -1903,15 +1903,15 @@
                                                 $maxQty = (int) ($svc['MaximumQuantity'] ?? 3);
                                                 $price  = (float) ($svc['ServiceCost']['Amount'] ?? 0);
                                                 $curr   = $svc['ServiceCost']['CurrencyCode'] ?? 'USD';
-                                                $sym    = match($curr) { 'NGN' => '₦', 'USD' => '$', 'AED' => 'AED ', default => $curr . ' ' };
+                                                $sym    = match($curr) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'AED' => 'AED ', default => $curr . ' ' };
                                                 $currentQty = (int) ($selectedBaggage[$dir][$svcId] ?? 0);
                                             @endphp
-                        
+
                                             <div style="display:flex;align-items:center;gap:14px;padding:11px 14px;
                                                         border:1.5px solid {{ $currentQty > 0 ? 'var(--blue)' : 'var(--gray-200)' }};
                                                         border-radius:10px;background:{{ $currentQty > 0 ? 'var(--blue-lt)' : '#fff' }};
                                                         transition:all .2s;">
-                        
+
                                                 {{-- Description --}}
                                                 <div style="flex:1;">
                                                     <div style="font-size:13px;font-weight:700;color:var(--gray-900);">
@@ -1921,7 +1921,7 @@
                                                         {{ $svc['FareDescription'] ?? 'per passenger' }}
                                                     </div>
                                                 </div>
-                        
+
                                                 {{-- Price --}}
                                                 <div style="font-size:13px;font-weight:800;color:var(--blue);
                                                             white-space:nowrap;font-family:var(--mono);min-width:70px;text-align:right;">
@@ -1930,7 +1930,7 @@
                                                         per bag
                                                     </div>
                                                 </div>
-                        
+
                                                 {{-- Quantity stepper --}}
                                                 <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
                                                     <button type="button"
@@ -1940,14 +1940,14 @@
                                                             {{ $currentQty === 0 ? 'opacity:.35;cursor:not-allowed;' : '' }}"
                                                         wire:click="$set('selectedBaggage.{{ $dir }}.{{ $svcId }}', {{ max(0, $currentQty - 1) }})"
                                                         {{ $currentQty === 0 ? 'disabled' : '' }}>
-                                                        −
+                                                        -
                                                     </button>
-                        
+
                                                     <span style="font-size:16px;font-weight:800;color:var(--gray-900);
                                                                 min-width:20px;text-align:center;">
                                                         {{ $currentQty }}
                                                     </span>
-                        
+
                                                     <button type="button"
                                                         style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--gray-200);
                                                             background:#fff;font-size:16px;color:var(--gray-700);cursor:pointer;
@@ -1958,7 +1958,7 @@
                                                         +
                                                     </button>
                                                 </div>
-                        
+
                                                 {{-- Line total --}}
                                                 @if($currentQty > 0)
                                                 <div style="font-size:12px;font-weight:800;color:var(--green);
@@ -1966,7 +1966,7 @@
                                                     = {{ $sym }}{{ number_format($price * $currentQty, 2) }}
                                                 </div>
                                                 @endif
-                        
+
                                                 {{-- Hidden input for form submission --}}
                                                 @if($currentQty > 0)
                                                 <input type="hidden"
@@ -1981,67 +1981,67 @@
                                     @endforeach
                                 </div>
                                 @endif
-                        
-                                {{-- ── MEALS ── --}}
+
+                                {{-- â”€â”€ MEALS â”€â”€ --}}
                                 @if(!empty($mealOutbound) || !empty($mealInbound))
                                 <div style="padding-top:14px;">
-                        
+
                                     <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
                                         <span class="bk-mini-icon bk-icon-meal" aria-hidden="true"></span>
                                         Meal Preferences
                                     </div>
-                        
+
                                     @foreach([['outbound', $mealOutbound], ['inbound', $mealInbound]] as [$dir, $mealSegs])
                                     @if(!empty($mealSegs))
                                     <div style="margin-bottom:14px;">
                                         <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">
                                             {{ ucfirst($dir) }}
                                         </div>
-                        
+
                                         @foreach($mealSegs as $si => $segMeals)
                                         <div style="margin-bottom:10px;">
                                             <div style="font-size:10.5px;font-weight:700;color:var(--gray-400);
                                                         text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
                                                 Segment {{ $si + 1 }}
                                             </div>
-                        
+
                                             <div style="display:flex;flex-direction:column;gap:7px;">
                                                 @foreach($segMeals as $svc)
                                                 @php
                                                     $svcId    = $svc['ServiceId'];
                                                     $price    = (float) ($svc['ServiceCost']['Amount'] ?? 0);
                                                     $curr     = $svc['ServiceCost']['CurrencyCode'] ?? 'AED';
-                                                    $sym      = match($curr) { 'NGN' => '₦', 'USD' => '$', 'AED' => 'AED ', default => $curr . ' ' };
+                                                $sym    = match($curr) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'AED' => 'AED ', default => $curr . ' ' };
                                                     $isChecked = !empty($selectedMeals[$dir][$si][$svcId]);
                                                 @endphp
-                        
+
                                                 <label style="display:flex;align-items:center;gap:12px;padding:10px 14px;
                                                             border:1.5px solid {{ $isChecked ? 'var(--amber)' : 'var(--gray-200)' }};
                                                             border-radius:10px;cursor:pointer;
                                                             background:{{ $isChecked ? 'var(--amber-lt)' : '#fff' }};
                                                             transition:all .2s;">
-                        
+
                                                     <input type="checkbox"
                                                         wire:model.live="selectedMeals.{{ $dir }}.{{ $si }}.{{ $svcId }}"
                                                         style="width:16px;height:16px;accent-color:var(--amber);
                                                                 cursor:pointer;flex-shrink:0;">
-                        
+
                                                     <div style="flex:1;">
                                                         <div style="font-size:12.5px;font-weight:700;color:var(--gray-900);">
                                                             {{ $svc['Description'] }}
                                                         </div>
                                                     </div>
-                        
+
                                                     <div style="font-size:12.5px;font-weight:800;
                                                                 color:{{ $isChecked ? 'var(--amber)' : 'var(--gray-500)' }};
                                                                 white-space:nowrap;font-family:var(--mono);">
                                                         +{{ $sym }}{{ number_format($price, 2) }}
                                                     </div>
-                        
+
                                                     @if($isChecked)
                                                     <span style="font-size:11px;font-weight:700;color:var(--amber);white-space:nowrap;">Added</span>
                                                     @endif
-                        
+
                                                     {{-- Hidden input for form submission --}}
                                                     @if($isChecked)
                                                     <input type="hidden"
@@ -2058,8 +2058,8 @@
                                     @endforeach
                                 </div>
                                 @endif
-                        
-                                {{-- ── LIVE EXTRAS SUMMARY (shows only when something selected) ── --}}
+
+                                {{-- â”€â”€ LIVE EXTRAS SUMMARY (shows only when something selected) â”€â”€ --}}
                                 @if($extrasTotal > 0)
                                 <div style="margin-top:14px;padding:12px 16px;background:var(--green-lt);
                                             border:1.5px solid #a7f3d0;border-radius:10px;
@@ -2072,7 +2072,7 @@
                                     </span>
                                 </div>
                                 @endif
-                        
+
                             </div>
                         </div>
                     </div>
@@ -2088,7 +2088,7 @@
                     </div>
                     @endif
 
-                    {{-- ── Fare Rules (from BaggageInfos + FareRules) ── --}}
+                    {{-- â”€â”€ Fare Rules (from BaggageInfos + FareRules) â”€â”€ --}}
                     @if(!empty($baggageInfos) || !empty($fareRulesList))
                     <div class="bk-acc" x-data="{ open: false }">
                         <div class="bk-acc-head" :class="{ open }" @click="open = !open">
@@ -2122,14 +2122,14 @@
                                                     @php $b = $bagInfo['BaggageInfo'] ?? $bagInfo; @endphp
                                                     <tr style="{{ $bi % 2 === 0 ? '' : 'background:var(--gray-50);' }}">
                                                         <td style="padding:10px 14px;font-weight:700;color:var(--blue);font-family:var(--mono);border-bottom:1px solid var(--gray-100);">
-                                                            {{ $b['FlightNo'] ?? '—' }}
+                                                            {{ $b['FlightNo'] ?? '-' }}
                                                         </td>
                                                         <td style="padding:10px 14px;color:var(--gray-700);font-weight:600;border-bottom:1px solid var(--gray-100);">
                                                             {{ $b['Departure'] ?? '' }} → {{ $b['Arrival'] ?? '' }}
                                                         </td>
                                                         <td style="padding:10px 14px;border-bottom:1px solid var(--gray-100);">
                                                             <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--green-lt);color:var(--green);border-radius:999px;font-size:11.5px;font-weight:700;">
-                                                                <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span> {{ $b['Baggage'] ?? '—' }}
+                                                                <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span> {{ $b['Baggage'] ?? '-' }}
                                                             </span>
                                                         </td>
                                                     </tr>
@@ -2177,7 +2177,7 @@
                     </div>
                     @endif
 
-                    {{-- ── 4. Passenger Count ── --}}
+                    {{-- â”€â”€ 4. Passenger Count â”€â”€ --}}
                     <div class="bk-actions">
                         <button class="bk-btn-ghost" wire:click="back">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -2188,7 +2188,7 @@
                                 Review Booking
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                             </span>
-                            <span wire:loading wire:target="proceed">Updating…</span>
+                            <span wire:loading wire:target="proceed">Updating...</span>
                         </button>
                     </div>
                     @endif
@@ -2208,7 +2208,7 @@
                         <div x-show="open" x-transition>
                             <div class="bk-acc-body">
                                 <div>
-                                    <div class="bk-pax-counter"> 
+                                    <div class="bk-pax-counter">
                                         <div class="bk-pax-col">
                                             <div class="bk-pax-info">
                                                 <div>
@@ -2225,7 +2225,7 @@
                                             <div class="bk-pax-info">
                                                 <div>
                                                     <div class="bk-pax-col-label">Children</div>
-                                                    <div class="bk-pax-col-sub">2–12 years</div>
+                                                    <div class="bk-pax-col-sub">2-12 years</div>
                                                 </div>
 
                                                 <div class="bk-pax-ctr">
@@ -2246,7 +2246,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="bk-total-bar">
                                     <span class="bk-total-label" style="display:inline-flex;align-items:center;gap:7px;"><span class="bk-inline-icon bk-icon-users" aria-hidden="true"></span> Total passengers</span>
                                     <span class="bk-total-val">{{ $this->getTotalPassengers() }} passenger{{ $this->getTotalPassengers() > 1 ? 's' : '' }}</span>
@@ -2256,7 +2256,7 @@
                         </div>
                     </div>
 
-                    {{-- ── 5. Traveller Details (accordion, one card per passenger) ── --}}
+                    {{-- â”€â”€ 5. Traveller Details (accordion, one card per passenger) â”€â”€ --}}
                     <div class="bk-acc" x-data="{ open: true }">
                         <div class="bk-acc-head" :class="{ open }" @click="open = !open">
                             <div class="bk-acc-icon">
@@ -2273,7 +2273,7 @@
 
                                 @foreach($this->passengers as $i => $pax)
                                     @php
-                                        $typeLabel  = match($pax['type']) { 'ADT' => 'Adult (18 yrs+)', 'CHD' => 'Child (2–12 yrs)', 'INF' => 'Infant (under 2)', default => 'Passenger' };
+                                        $typeLabel  = match($pax['type']) { 'ADT' => 'Adult (18 yrs+)', 'CHD' => 'Child (2-12 yrs)', 'INF' => 'Infant (under 2)', default => 'Passenger' };
                                         $badgeClass = strtolower($pax['type']);
                                         $showPp     = !empty($pax['show_passport']);
                                         $hasPpData  = !empty($pax['passport_no']);
@@ -2311,7 +2311,7 @@
                                                 <div class="bk-field">
                                                     <label class="bk-label">Title <span class="bk-req">*</span></label>
                                                     <select class="bk-select" wire:model="passengers.{{ $i }}.title">
-                                                        <option value="">–</option>
+                                                        <option value="">-</option>
                                                         @foreach($titleOptions as $t)
                                                             <option value="{{ $t }}">{{ $t }}</option>
                                                         @endforeach
@@ -2325,7 +2325,7 @@
                                                         wire:model.blur="passengers.{{ $i }}.last_name">
                                                     @error("passengers.{$i}.last_name") <span class="bk-error">{{ $message }}</span> @enderror
                                                 </div>
-                                            
+
                                                 <div class="bk-field">
                                                     <label class="bk-label">First Name <span class="bk-req">*</span></label>
                                                     <input class="bk-input" type="text" placeholder="First Name"
@@ -2345,7 +2345,7 @@
                                                         wire:model.blur="passengers.{{ $i }}.dob"
                                                         placeholder="yyyy-mm-dd"
                                                         max="{{ now()->subDay()->format('Y-m-d') }}">
-                                                    @if($pax['type'] === 'CHD') <span class="bk-hint">Must be 2–12 years old at travel</span>
+                                                    @if($pax['type'] === 'CHD') <span class="bk-hint">Must be 2-12 years old at travel</span>
                                                     @elseif($pax['type'] === 'INF') <span class="bk-hint">Must be under 2 at travel</span> @endif
                                                     @error("passengers.{$i}.dob") <span class="bk-error">{{ $message }}</span> @enderror
                                                 </div>
@@ -2410,12 +2410,12 @@
                                                     <label class="bk-label">Frequent Flyer Number</label>
                                                     <input class="bk-input" type="text" placeholder="e.g. BA12345678"
                                                         wire:model.blur="passengers.{{ $i }}.frequent_flyer_number">
-                                                    <span class="bk-hint">Optional — enter your airline loyalty number</span>
+                                                    <span class="bk-hint">Optional - enter your airline loyalty number</span>
                                                     @error("passengers.{$i}.frequent_flyer_number") <span class="bk-error">{{ $message }}</span> @enderror
                                                 </div>
                                             </div>
-                                                
-                                                
+
+
                                         </div>
                                     </div>
                                 @endforeach
@@ -2424,7 +2424,7 @@
                         </div>
                     </div>
 
-                    {{-- ── 6. Contact Details (accordion) ── --}}
+                    {{-- â”€â”€ 6. Contact Details (accordion) â”€â”€ --}}
                     <div class="bk-acc" x-data="{ open: true }">
                         <div class="bk-acc-head" :class="{ open }" @click="open = !open">
                             <div class="bk-acc-icon">
@@ -2451,7 +2451,7 @@
                                             wire:model.blur="contactEmailConfirm">
                                         @error('contactEmailConfirm') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
-                                </div> 
+                                </div>
                                 <div class="bk-contact-grid bk-phone-grid" style="margin-top:15px;">
                                     <div class="bk-field">
                                         <label class="bk-label">Mobile Number <span class="bk-req">*</span></label>
@@ -2470,7 +2470,7 @@
                                         <span class="bk-hint">Local area code</span>
                                         @error('contactAreaCode') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
-                                    
+
                                     <div class="bk-field bk-contact-full" style="display:none;">
                                         <label class="bk-label">Mobile No <span class="bk-req"></span></label>
                                         <input class="bk-input" type="tel" placeholder="+234 800 000 0000"
@@ -2478,13 +2478,13 @@
                                         <span class="bk-hint">without country code · e.g. 800 000 0000</span>
                                         @error('contactPhone') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
-                                    
+
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                
+
                     {{-- Actions --}}
                     <div class="bk-actions">
                         <a href="{{ route('air.flight-s') }}" class="bk-btn-ghost">
@@ -2499,16 +2499,16 @@
                                 Continue
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                             </span>
-                            <span wire:loading wire:target="proceed">Validating…</span>
+                            <span wire:loading wire:target="proceed">Validating...</span>
                         </button>
                     </div>
 
-        
+
 
                     @endif {{-- /STEP 1 TRAVELLER DETAILS --}}
                 @endif {{-- /STEPS 1 AND 2 --}}
 
-                {{-- ════════ STEP 2 ════════ --}}
+                {{-- â•â•â•â•â•â•â•â• STEP 2 â•â•â•â•â•â•â•â• --}}
                 @if($step === 3)
 
                     <div class="bk-notice info" style="margin-bottom:4px;">
@@ -2544,7 +2544,7 @@
                                     @foreach($this->passengers as $i => $pax)
                                         @php
                                             $ptLabel = match($pax['type']) { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Pax' };
-                                            $dobStr  = !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '—';
+                                            $dobStr  = !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '-';
                                             $natName = $this->nationalities[$pax['nationality']] ?? $pax['nationality'];
                                         @endphp
                                         <div class="bk-review-row">
@@ -2574,7 +2574,7 @@
                                     @foreach($breakdown as $fb)
                                         @php
                                             $ptl    = match($fb['passengerType'] ?? '') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' };
-                                            $bagStr = implode(' / ', array_unique(array_filter((array)($fb['baggage'] ?? []), fn($v) => $v !== ''))) ?: '—';
+                                            $bagStr = implode(' / ', array_unique(array_filter((array)($fb['baggage'] ?? []), fn($v) => $v !== ''))) ?: '-';
                                             $refund = !empty($fb['refundAllowed']);
                                             $change = !empty($fb['changeAllowed']);
                                         @endphp
@@ -2611,7 +2611,7 @@
                         @endforeach
                         @endforeach
 
-                        {{-- ── Extra Services (baggage) ── --}}
+                        {{-- â”€â”€ Extra Services (baggage) â”€â”€ --}}
                         @foreach($selectedBaggage as $direction => $items)
                             @foreach($items as $svcId => $qty)
                                 @if($qty > 0)
@@ -2620,7 +2620,7 @@
                             @endforeach
                         @endforeach
 
-                        {{-- ── Extra Services (meals) ── --}}
+                        {{-- â”€â”€ Extra Services (meals) â”€â”€ --}}
                         @foreach($selectedMeals as $direction => $segments)
                             @foreach($segments as $segmentIndex => $items)
                                 @foreach($items as $svcId => $checked)
@@ -2632,7 +2632,7 @@
                         @endforeach
                     </form>
 
-                
+
 
                     <div class="bk-actions">
                         <button class="bk-btn-ghost" wire:click="back">
@@ -2655,7 +2655,7 @@
             </div>{{-- /bk-main --}}
 
 
-            {{-- ══════════════ RIGHT RAIL: MY CART ══════════════ --}}
+            {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â• RIGHT RAIL: MY CART â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
             <aside class="bk-rail">
 
                 {{-- My Cart --}}
@@ -2707,11 +2707,11 @@
                     </div>
 
                     {{-- Fare summary using real revalidate data --}}
-                    
+
 
                     <div class="bk-fare-section">
                         <div class="bk-fare-title">Flight Fare Summary</div>
-                    
+
                         @foreach($breakdown as $fb)
                         @php
                             $ptCode  = $fb['passengerType'] ?? ($fb['PassengerTypeQuantity']['Code'] ?? 'ADT');
@@ -2722,7 +2722,7 @@
                             $taxes   = $fb['taxes'] ?? ($paxFare['Taxes'] ?? []);
                             $serviceTax  = (float)($fb['serviceTax']  ?? ($paxFare['ServiceTax']['Amount']  ?? 0));
                             $surcharges  = (float)($fb['surcharges']  ?? ($paxFare['Surcharges']['Amount']  ?? 0));
-                    
+
                             $taxGroups = [];
                             foreach ($taxes as $tax) {
                                 $code = $tax['TaxCode'] ?? 'OtherTaxes';
@@ -2734,11 +2734,11 @@
                             $preferredTaxTotal = $serviceTax > 0
                                 ? $serviceTax + $surcharges
                                 : ($hasNegativeTaxLine ? 0.0 : max($rawTaxBreakdownTotal + $surcharges, 0));
-                    
+
                             if ($rawTotalPaxFare <= 0) { $totalPaxFare = $base + $preferredTaxTotal; }
                             elseif ($rawTotalPaxFare < $base) { $totalPaxFare = $base + $rawTotalPaxFare; }
                             else { $totalPaxFare = $rawTotalPaxFare; }
-                    
+
                             $derivedTaxAmt = max($totalPaxFare - $base, 0);
                             if ($hasNegativeTaxLine || $rawTaxBreakdownTotal <= 0 || abs($preferredTaxTotal - $derivedTaxAmt) > 1) {
                                 $taxGroups   = $derivedTaxAmt > 0 ? ['OtherTaxes' => $derivedTaxAmt] : [];
@@ -2750,15 +2750,15 @@
                             $taxTotal  = $totalTaxAmt * $ptQty;
                             $bagArr = (array)($fb['baggage']      ?? ($fb['Baggage']      ?? []));
                             $cabArr = (array)($fb['cabinBaggage'] ?? ($fb['CabinBaggage'] ?? []));
-                            $bagStr = implode(', ', array_unique(array_filter($bagArr))) ?: '—';
-                            $cabStr = implode(', ', array_unique(array_filter($cabArr))) ?: '—';
+                            $bagStr = implode(', ', array_unique(array_filter($bagArr))) ?: '-';
+                            $cabStr = implode(', ', array_unique(array_filter($cabArr))) ?: '-';
                         @endphp
-                    
+
                         <div style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--gray-100);"
                             x-data="{ showTax: false }">
-                    
+
                             <div class="bk-fare-row" style="padding-bottom:4px;">
-                                <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">{{ $ptLabel }} × {{ $ptQty }}</span>
+                                <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">{{ $ptLabel }} x {{ $ptQty }}</span>
                                 <span class="bk-fare-val" style="font-weight:800;">{{ $fmt($totalPaxFare * $ptQty) }}</span>
                             </div>
                             <div class="bk-fare-row">
@@ -2771,7 +2771,7 @@
                                     <button type="button" @click="showTax = !showTax"
                                         style="background:none;border:none;color:var(--blue);cursor:pointer;
                                             font-size:11px;font-family:var(--font);padding:0;margin-left:4px;"
-                                        x-text="showTax ? '▲ hide' : '▼ breakdown'">
+                                        x-text="showTax ? 'Hide' : 'Breakdown'">
                                     </button>
                                 </span>
                                 <span class="bk-fare-val">{{ $fmt($taxTotal) }}</span>
@@ -2799,8 +2799,8 @@
                             </div>
                         </div>
                         @endforeach
-                    
-                        {{-- ── EXTRAS LINE — only shows when something selected ── --}}
+
+                        {{-- â”€â”€ EXTRAS LINE â€” only shows when something selected â”€â”€ --}}
                         @if($markupAmount > 0)
                         <div style="padding:10px 0;margin-bottom:10px;border-bottom:1px solid var(--gray-100);">
                             <div class="bk-fare-row">
@@ -2814,7 +2814,7 @@
                         <div style="padding:10px 0;border-bottom:1px solid var(--gray-100);">
                             <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;
                                         color:var(--gray-400);margin-bottom:8px;">Extras Added</div>
-                    
+
                             {{-- Baggage lines --}}
                             @foreach($selectedBaggage as $dir => $items)
                                 @foreach($items as $svcId => $qty)
@@ -2832,13 +2832,13 @@
                                         }
                                         $bagPrice = (float) ($matchedSvc['ServiceCost']['Amount'] ?? 0);
                                         $bagCurr  = $matchedSvc['ServiceCost']['CurrencyCode'] ?? 'USD';
-                                        $bagSym   = match($bagCurr) { 'NGN' => '₦', 'USD' => '$', 'AED' => 'AED ', default => $bagCurr . ' ' };
+                                        $bagSym   = match($bagCurr) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'AED' => 'AED ', default => $bagCurr . ' ' };
                                         $lineTotal = $bagPrice * (int)$qty;
                                     @endphp
                                     <div class="bk-fare-row" style="padding:3px 0;">
                                         <span class="bk-fare-lbl" style="font-size:11.5px;">
                                             <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span> {{ $matchedSvc['Description'] ?? 'Baggage' }}
-                                            <span style="color:var(--gray-400);font-size:10.5px;">× {{ $qty }} ({{ ucfirst($dir) }})</span>
+                                            <span style="color:var(--gray-400);font-size:10.5px;">x {{ $qty }} ({{ ucfirst($dir) }})</span>
                                         </span>
                                         <span class="bk-fare-val" style="color:var(--green);">
                                             +{{ $bagSym }}{{ number_format($lineTotal, 2) }}
@@ -2847,7 +2847,7 @@
                                     @endif
                                 @endforeach
                             @endforeach
-                    
+
                             {{-- Meal lines --}}
                             @foreach($selectedMeals as $dir => $segments)
                                 @foreach($segments as $si => $items)
@@ -2865,7 +2865,7 @@
                                             }
                                             $mealPrice = (float) ($matchedMeal['ServiceCost']['Amount'] ?? 0);
                                             $mealCurr  = $matchedMeal['ServiceCost']['CurrencyCode'] ?? 'AED';
-                                            $mealSym   = match($mealCurr) { 'NGN' => '₦', 'USD' => '$', 'AED' => 'AED ', default => $mealCurr . ' ' };
+                                            $mealSym   = match($mealCurr) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'AED' => 'AED ', default => $mealCurr . ' ' };
                                         @endphp
                                         <div class="bk-fare-row" style="padding:3px 0;">
                                             <span class="bk-fare-lbl" style="font-size:11.5px;">
@@ -2880,7 +2880,7 @@
                                     @endforeach
                                 @endforeach
                             @endforeach
-                    
+
                             {{-- Extras subtotal --}}
                             <div class="bk-fare-row" style="padding-top:6px;border-top:1px dashed var(--gray-200);margin-top:4px;">
                                 <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">Extras Subtotal</span>
@@ -2890,11 +2890,11 @@
                             </div>
                         </div>
                         @endif
-                    
+
                         @if($discount > 0)
                         <div class="bk-fare-row">
                             <span class="bk-fare-lbl bk-fare-disc">Discount</span>
-                            <span class="bk-fare-val bk-fare-disc">−{{ $fmt($discount) }}</span>
+                            <span class="bk-fare-val bk-fare-disc">-{{ $fmt($discount) }}</span>
                         </div>
                         @endif
                     </div>

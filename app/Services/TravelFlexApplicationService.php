@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class TravelFlexApplicationService
 {
@@ -18,14 +19,21 @@ class TravelFlexApplicationService
     {
         $applicant = array_merge(
             $application->applicant_details ?? [],
+            ['applicant_type' => $application->applicant_type ?? data_get($application->applicant_details, 'applicant_type', 'individual')],
+            $application->identity_details ?? [],
             $application->employment_details ?? [],
         );
+        $applicant['bank_details'] = $application->bank_details ?? [];
+        $applicant['next_of_kin_details'] = $application->next_of_kin_details ?? [];
+        $applicant['company_details'] = $application->company_details ?? [];
+        $applicant['representative_details'] = $application->representative_details ?? [];
+        $applicant['agreement_acceptance'] = $application->agreement_acceptance ?? [];
 
         $flightInfo = $application->booking?->flight_snapshot ?? [];
 
         $uploadPaths = collect($application->document_paths ?? [])
             ->mapWithKeys(fn (?string $path, string $key): array => [
-                $key => $path ? storage_path('app/' . $path) : null,
+                $key => $this->resolveDocumentPath($path),
             ])
             ->all();
 
@@ -37,6 +45,7 @@ class TravelFlexApplicationService
                 $flightInfo,
                 $uploadPaths,
                 $application->booking_ref ?: $application->unique_id ?: '',
+                $application,
             ));
 
         $application->update([
@@ -174,5 +183,26 @@ class TravelFlexApplicationService
     {
         return data_get($application->applicant_details, 'email')
             ?: $application->booking?->contact_email;
+    }
+
+    private function resolveDocumentPath(?string $path): ?string
+    {
+        if (blank($path)) {
+            return null;
+        }
+
+        if (is_file($path)) {
+            return $path;
+        }
+
+        $localPath = Storage::disk('local')->path($path);
+
+        if (is_file($localPath)) {
+            return $localPath;
+        }
+
+        $legacyPath = storage_path('app/' . ltrim($path, '/\\'));
+
+        return is_file($legacyPath) ? $legacyPath : null;
     }
 }

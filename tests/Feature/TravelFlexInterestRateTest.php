@@ -29,6 +29,9 @@ class TravelFlexInterestRateTest extends TestCase
         $this->assertSame(0.04, $plan['interest_rate']);
         $this->assertSame(4.0, $plan['interest_rate_percent']);
         $this->assertSame(2800.0, $plan['total_interest']);
-        $this->assertSame(102800.0, $plan['grand_total']);
+        $this->assertSame(700.0, $plan['administration_fee']);
+        $this->assertSame(1050.0, $plan['insurance_fee']);
+        $this->assertSame(31750.0, $plan['upfront_payment_total']);
+        $this->assertSame(104550.0, $plan['grand_total']);
     }
 }

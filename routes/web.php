@@ -18,7 +18,6 @@ use App\Http\Controllers\VisaPortalController;
 use App\Http\Controllers\VisaSearchController;
 use App\Http\Middleware\EnsureVisaProductEnabled;
 use App\Livewire\Pages\FlightBooking;
-use App\Livewire\Pages\FlightIndex;
 use App\Livewire\Pages\FlightPage;
 use App\Livewire\Pages\HomePage;
 use App\Livewire\Pages\Protocol\Protocol as ProtocolPage;
@@ -53,7 +52,7 @@ Route::get('/help', function () { /* ... */
 })->name('help');
 
 // Air routes
-Route::get('/air/flight', FlightIndex::class)->name('air.flight');
+Route::redirect('/air/flight', '/')->name('air.flight');
 Route::get('/air/flight-s', FlightPage::class)->name('air.flight-s');
 // Route::post('/air/flight/search', [FlightPage::class, 'search'])->name('flights.search');
 // Route::post('/air/flight/select', [FlightSearchController::class, 'select'])->name('flights.select');
@@ -108,6 +107,7 @@ Route::post('/air/insurance/leadway/quote', [LeadwayController::class, 'insuranc
 Route::post('/air/insurance/leadway/purchase', [LeadwayController::class, 'makePurchase'])->name('air.makePurchase');
 Route::middleware(EnsureVisaProductEnabled::class)->group(function () {
     Route::get('/air/visa', VisaDiscovery::class)->name('air.visa');
+    Route::get('/visas/destinations', [VisaSearchController::class, 'destinations'])->name('visa.destinations');
     Route::post('/visas/search', [VisaSearchController::class, 'search'])->name('visa.search');
     Route::get('/visas/search/loading', [VisaSearchController::class, 'loading'])->name('visa.search.loading');
     Route::get('/visas/search/run', [VisaSearchController::class, 'runPendingSearch'])->name('visa.search.run');
@@ -235,6 +235,7 @@ Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerb
 Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->middleware('throttle:60,1')->name('payments.seerbit.webhook');
 Route::get('/flights/travelflex', [FlightBookingController::class, 'travelFlex'])->name('flights.travelflex');
 Route::post('/flights/travelflex/application', [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application');
+Route::get('/flights/travelflex/fastcredit', [FlightBookingController::class, 'travelFlexFastCreditRedirect'])->name('flights.travelflex.fastcredit');
 Route::get('/flights/travelflex/application', [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application.get');
 Route::post('/flights/travelflex/submit-application', [FlightBookingController::class, 'travelFlexSubmitApplication'])->middleware('throttle:5,1')->name('flights.travelflex.submit-application');
 Route::post('/flights/travelflex/bank-transfer', [FlightBookingController::class, 'travelFlexBankTransfer'])->name('flights.travelflex.bank-transfer');

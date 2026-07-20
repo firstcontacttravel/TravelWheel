@@ -47,22 +47,55 @@ class TravelFlexPresentation
     public static function applicant(TravelFlexApplication $application): HtmlString
     {
         return self::card([
+            'Applicant type' => self::label($application->applicant_type),
             'Full name' => data_get($application->applicant_details, 'full_name'),
             'Email' => data_get($application->applicant_details, 'email'),
+            'Phone' => data_get($application->applicant_details, 'phone_primary'),
             'Home address' => data_get($application->applicant_details, 'home_address'),
             'BVN last four' => data_get($application->bvn_metadata, 'last_four'),
             'BVN captured' => data_get($application->bvn_metadata, 'captured_at'),
+            'NIN' => data_get($application->identity_details, 'nin'),
+            'Passport number' => data_get($application->identity_details, 'passport_number'),
+            'Passport expiry' => data_get($application->identity_details, 'passport_expiry_date'),
+            'Gender' => self::label(data_get($application->identity_details, 'gender')),
+            'Date of birth' => data_get($application->identity_details, 'date_of_birth'),
         ]);
     }
 
     public static function employment(TravelFlexApplication $application): HtmlString
     {
+        if (($application->applicant_type ?? 'individual') === 'company') {
+            return self::card([
+                'Company name' => data_get($application->company_details, 'company_name'),
+                'RC number' => data_get($application->company_details, 'rc_number'),
+                'Company email' => data_get($application->company_details, 'email'),
+                'Company phone' => data_get($application->company_details, 'phone'),
+                'Registered address' => data_get($application->company_details, 'registered_address'),
+                'Business sector' => data_get($application->company_details, 'sector'),
+                'Bank name' => data_get($application->company_details, 'bank_name'),
+                'Account number' => data_get($application->company_details, 'account_number'),
+                'Representative role' => data_get($application->representative_details, 'role'),
+                'Loan purpose' => data_get($application->company_details, 'loan_purpose'),
+                'Agreement signature' => data_get($application->agreement_acceptance, 'digital_signature'),
+                'Agreement accepted' => data_get($application->agreement_acceptance, 'accepted_at'),
+            ]);
+        }
+
         return self::card([
             'Employer' => data_get($application->employment_details, 'employer_name'),
             'Employer address' => data_get($application->employment_details, 'employer_address'),
             'Occupation' => data_get($application->employment_details, 'occupation'),
             'Staff number' => data_get($application->employment_details, 'staff_number'),
             'Job description' => data_get($application->employment_details, 'job_description'),
+            'Sector' => self::label(data_get($application->employment_details, 'sector')),
+            'IPPIS number' => data_get($application->employment_details, 'ippis_number'),
+            'Monthly salary' => self::money(data_get($application->bank_details, 'monthly_salary')),
+            'Salary account number' => data_get($application->bank_details, 'salary_account_number'),
+            'Bank name' => data_get($application->bank_details, 'bank_name'),
+            'Next of kin' => trim((string) data_get($application->next_of_kin_details, 'surname') . ' ' . (string) data_get($application->next_of_kin_details, 'first_name')),
+            'Next of kin phone' => data_get($application->next_of_kin_details, 'phone_primary'),
+            'Agreement signature' => data_get($application->agreement_acceptance, 'digital_signature'),
+            'Agreement accepted' => data_get($application->agreement_acceptance, 'accepted_at'),
         ]);
     }
 
@@ -72,6 +105,9 @@ class TravelFlexPresentation
         $html = '<div class="space-y-4">';
         $html .= self::definitionGrid([
             'Down payment' => self::money($application->down_payment),
+            'Administration fee' => self::money(data_get($plan, 'administration_fee')),
+            'Insurance fee' => self::money(data_get($plan, 'insurance_fee')),
+            'Due after approval' => self::money(data_get($plan, 'upfront_payment_total')),
             'Down percent' => $application->down_percent ? $application->down_percent . '%' : null,
             'Grand total' => self::money($application->grand_total),
             'Total interest' => self::money($application->total_interest),
@@ -109,31 +145,35 @@ class TravelFlexPresentation
             return self::empty('No documents stored.');
         }
 
-        $required = ['valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements'];
+        $required = self::requiredDocuments($application);
+        $documentKeys = self::documentKeys($application);
         $stored = collect($documents)->filter(fn ($path): bool => filled($path));
         $available = $stored->filter(fn ($path): bool => Storage::disk('local')->exists((string) $path));
+        $availableRequired = collect($required)->filter(fn (string $key): bool => filled($documents[$key] ?? null) && Storage::disk('local')->exists((string) $documents[$key]))->count();
 
         $html = '<div class="space-y-4">';
         $html .= '<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
         $html .= '<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">';
         $html .= '<div>';
         $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">Document package</div>';
-        $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e($available->count()) . ' of ' . e(count($required)) . ' required files available on local storage.</div>';
+        $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e($availableRequired) . ' of ' . e(count($required)) . ' required files available. ' . e($available->count()) . ' uploaded files stored in total.</div>';
         $html .= '</div>';
-        $html .= '<div class="inline-flex w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-200">' . e($available->count() === count($required) ? 'Complete' : 'Needs attention') . '</div>';
+        $html .= '<div class="inline-flex w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-200">' . e($availableRequired === count($required) ? 'Complete' : 'Needs attention') . '</div>';
         $html .= '</div></div>';
         $html .= '<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">';
 
-        foreach ($required as $key) {
+        foreach ($documentKeys as $key) {
             $path = $documents[$key] ?? null;
             $exists = $path && Storage::disk('local')->exists($path);
-            $html .= '<div class="flex min-h-40 flex-col rounded-lg border ' . ($exists ? 'border-gray-200' : 'border-danger-200') . ' bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
+            $isRequired = in_array($key, $required, true);
+            $html .= '<div class="flex min-h-40 flex-col rounded-lg border ' . ($exists || ! $isRequired ? 'border-gray-200' : 'border-danger-200') . ' bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
             $html .= '<div class="flex items-start justify-between gap-3">';
             $html .= '<div>';
             $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">' . e(self::documentLabel($key)) . '</div>';
             $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e(self::documentDescription($key)) . '</div>';
+            $html .= '<div class="mt-2 text-[11px] font-semibold ' . ($isRequired ? 'text-danger-700' : 'text-gray-500') . '">' . e($isRequired ? 'Required' : 'Recommended') . '</div>';
             $html .= '</div>';
-            $html .= '<span class="rounded-full px-2 py-1 text-[11px] font-semibold ' . ($exists ? 'bg-success-50 text-success-700' : 'bg-danger-50 text-danger-700') . '">' . e($exists ? 'Ready' : 'Missing') . '</span>';
+            $html .= '<span class="rounded-full px-2 py-1 text-[11px] font-semibold ' . ($exists ? 'bg-success-50 text-success-700' : ($isRequired ? 'bg-danger-50 text-danger-700' : 'bg-gray-100 text-gray-600')) . '">' . e($exists ? 'Ready' : ($isRequired ? 'Missing' : 'Not uploaded')) . '</span>';
             $html .= '</div>';
             $html .= '<div class="mt-4 rounded-lg bg-gray-50 p-3 text-xs text-gray-500 dark:bg-white/5 dark:text-gray-400">';
             $html .= $exists ? 'Uploaded document is available for secure review.' : 'Applicant has not provided this document.';
@@ -154,7 +194,7 @@ class TravelFlexPresentation
         $providerSent = $application->provider_status === 'sent';
         $providerFailed = $application->provider_status === 'failed';
         $documents = is_array($application->document_paths) ? $application->document_paths : [];
-        $required = ['valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements'];
+        $required = self::requiredDocuments($application);
         $documentsReady = collect($required)->every(fn (string $key): bool => filled($documents[$key] ?? null));
 
         $nextAction = match (true) {
@@ -286,6 +326,17 @@ class TravelFlexPresentation
             'work_id_card' => 'Work ID card',
             'employment_letter' => 'Employment letter',
             'bank_statements' => '6-month bank statement',
+            'representative_valid_id' => 'Representative valid ID',
+            'cac_status_report' => 'Status Report (Form CAC 1.1)',
+            'share_certificate' => 'Share Certificate',
+            'memart' => 'MEMART',
+            'register_of_members' => 'Register of Members',
+            'shareholders_agreement' => "Shareholders' Agreement",
+            'return_of_allotment' => 'Return of Allotment of Shares (Form CAC 2)',
+            'certificate_of_incorporation' => 'Certificate of Incorporation',
+            'board_resolution' => 'Board Resolution / Authorization Letter',
+            'company_bank_statement' => 'Company Bank Statement',
+            'tin_certificate' => 'TIN Certificate',
         ][$key] ?? str($key)->headline()->toString();
     }
 
@@ -297,7 +348,40 @@ class TravelFlexPresentation
             'work_id_card' => 'Employment identity proof',
             'employment_letter' => 'Employment confirmation document',
             'bank_statements' => 'Financial review document',
+            'representative_valid_id' => 'Identity document for the company representative',
+            'cac_status_report' => 'CAC status report or Form CAC 1.1',
+            'share_certificate' => 'Company share certificate',
+            'memart' => 'Memorandum and Articles of Association',
+            'register_of_members' => 'Company register of members',
+            'shareholders_agreement' => 'Company shareholders agreement',
+            'return_of_allotment' => 'CAC return of allotment of shares',
+            'certificate_of_incorporation' => 'Company registration certificate',
+            'board_resolution' => 'Board approval or authorization letter for the representative',
+            'company_bank_statement' => 'Recent company bank statement',
+            'tin_certificate' => 'Tax Identification Number certificate',
         ][$key] ?? 'Uploaded applicant document';
+    }
+
+    private static function documentKeys(TravelFlexApplication $application): array
+    {
+        if (($application->applicant_type ?? 'individual') !== 'company') {
+            return self::requiredDocuments($application);
+        }
+
+        return [
+            ...self::requiredDocuments($application),
+            'certificate_of_incorporation',
+            'board_resolution',
+            'company_bank_statement',
+            'tin_certificate',
+        ];
+    }
+
+    private static function requiredDocuments(TravelFlexApplication $application): array
+    {
+        return ($application->applicant_type ?? 'individual') === 'company'
+            ? ['representative_valid_id', 'cac_status_report', 'share_certificate', 'memart', 'register_of_members', 'shareholders_agreement', 'return_of_allotment']
+            : ['valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements'];
     }
 
     private static function fileSize(string $path): string

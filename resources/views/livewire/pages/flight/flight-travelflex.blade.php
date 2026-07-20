@@ -1,4 +1,4 @@
-{{-- resources/views/livewire/pages/flight/flight-travelflex.blade.php --}}
+﻿{{-- resources/views/livewire/pages/flight/flight-travelflex.blade.php --}}
 @component('layouts.app', ['title' => 'TravelFlex - Pay in Instalments'])
 
 @php
@@ -8,7 +8,7 @@
     $firstSeg       = $segments[0] ?? [];
     $lastSeg        = !empty($segments) ? $segments[count($segments)-1] : [];
     $currency       = $mappedFlight['currency'] ?? 'NGN';
-    $sym            = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
+    $sym = match($currency) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'GBP' => html_entity_decode('&pound;', ENT_QUOTES, 'UTF-8'), 'EUR' => html_entity_decode('&euro;', ENT_QUOTES, 'UTF-8'), default => $currency . ' ' };
     $selectedExtras = session('selectedExtras', []);
     $extrasTotal    = 0.0;
     foreach ($selectedExtras as $category) {
@@ -44,6 +44,10 @@
     $bankAccounts = config('travelwheel.travelflex_bank_accounts', []);
     $travelFlexInterestRate = (float) config('travelwheel.travelflex_interest_rate', 0.04);
     $travelFlexInterestPercent = rtrim(rtrim(number_format($travelFlexInterestRate * 100, 2), '0'), '.');
+    $travelFlexAdministrationFeeRate = (float) config('travelwheel.travelflex_administration_fee_rate', 0.01);
+    $travelFlexAdministrationFeePercent = rtrim(rtrim(number_format($travelFlexAdministrationFeeRate * 100, 2), '0'), '.');
+    $travelFlexInsuranceFeeRate = (float) config('travelwheel.travelflex_insurance_fee_rate', 0.015);
+    $travelFlexInsuranceFeePercent = rtrim(rtrim(number_format($travelFlexInsuranceFeeRate * 100, 2), '0'), '.');
 
     // Add these lines to define $isReturn, $isMulti, $multiLegs, $tripLabel
     $mf = $mappedFlight;
@@ -52,7 +56,7 @@
     $multiLegs  = $mf['multiLegs'] ?? [];
     $tripLabel  = $isReturn ? 'Round Trip' : ($isMulti ? 'Multi-City' : 'One Way');
     $returnDateLabel = $mf['returnDateLabel'] ?? '';
-    $tfRetDate  = $mf['returnDateLabel'] ?? '';  // ← ADD THIS LINE
+    $tfRetDate  = $mf['returnDateLabel'] ?? '';  // â† ADD THIS LINE
 @endphp
 
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -85,38 +89,38 @@
     }
     body { font-family: var(--font); background: var(--gray-50); color: var(--gray-900); font-size: 14px; margin-top: 110px; }
 
-    /* ── Layout ── */
+    /* â”€â”€ Layout â”€â”€ */
     .tf-outer { max-width: 1060px; margin: 0 auto; padding: 28px 16px 80px; }
     .tf-grid  { display: grid; grid-template-columns: 1fr 300px; gap: 22px; align-items: start; }
     .tf-main  { display: flex; flex-direction: column; gap: 0; }
 
-    /* ── Header gradient card ── */
+    /* â”€â”€ Header gradient card â”€â”€ */
     .tf-hero { background: linear-gradient(135deg, var(--tf-navy) 0%, #312e81 50%, var(--tf-indigo) 100%); border-radius: 16px; padding: 26px 28px; margin-bottom: 22px; color: #fff; position: relative; overflow: hidden; }
     .tf-hero::before { content: ''; position: absolute; top: -40px; right: -40px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(124,58,237,.35) 0%, transparent 70%); pointer-events: none; }
     .tf-hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(255,255,255,.15); color: white; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .05em; margin-bottom: 10px; }
     .tf-hero-title { font-size: 22px; font-weight: 800; margin-bottom: 6px; color: white; }
     .tf-hero-sub   { font-size: 13px; opacity: .85; line-height: 1.65; max-width: 480px; color: white; }
 
-    /* ── Progress ── */
+    /* â”€â”€ Progress â”€â”€ */
     .tf-progress-wrap { background: rgba(255,255,255,.12); border-radius: 999px; height: 6px; margin-top: 18px; overflow: hidden; }
     .tf-progress-bar  { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #a5b4fc, #fff); transition: width .45s cubic-bezier(.2,.9,.3,1); }
 
-    /* ── Step label ── */
+    /* â”€â”€ Step label â”€â”€ */
     .tf-step-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
     .tf-step-label span { width: 22px; height: 22px; border-radius: 50%; background: var(--tf-blue); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; }
 
-    /* ── Main card ── */
+    /* â”€â”€ Main card â”€â”€ */
     .tf-card { background: #fff; border: 1px solid var(--gray-200); border-radius: 14px; padding: 24px 24px; box-shadow: 0 2px 8px rgba(0,0,0,.06); margin-bottom: 0; }
     .tf-card + .tf-card { margin-top: 0; border-top: none; border-radius: 0 0 14px 14px; }
     .tf-step { display: none; }
     .tf-step.active { display: block; animation: tfFadeIn .3s ease both; }
     @keyframes tfFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-    /* ── Ineligible notice ── */
+    /* â”€â”€ Ineligible notice â”€â”€ */
     .tf-ineligible { background: var(--tf-amber-lt); border: 1px solid #fed7aa; border-radius: 12px; padding: 20px 22px; display: flex; align-items: flex-start; gap: 16px; }
     .tf-ineligible-icon { font-size: 32px; flex-shrink: 0; }
 
-    /* ── Disclaimer ── */
+    /* â”€â”€ Disclaimer â”€â”€ */
     .tf-disclaimer-box { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 10px; padding: 18px 20px; max-height: 360px; overflow-y: auto; font-size: 12.5px; line-height: 1.75; color: var(--gray-700); margin-bottom: 20px; }
     .tf-disclaimer-box h4 { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--gray-400); margin: 14px 0 6px; }
     .tf-disclaimer-box h4:first-child { margin-top: 0; }
@@ -125,7 +129,7 @@
     .tf-agree-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--tf-blue); flex-shrink: 0; margin-top: 1px; cursor: pointer; }
     .tf-agree-row label { font-size: 13px; font-weight: 600; color: var(--tf-blue); line-height: 1.5; cursor: pointer; }
 
-    /* ── Form fields ── */
+    /* â”€â”€ Form fields â”€â”€ */
     .tf-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
     .tf-field-full  { grid-column: 1 / -1; }
     .tf-field { display: flex; flex-direction: column; gap: 5px; }
@@ -142,7 +146,7 @@
     .tf-select:disabled { background-color: #eef2f7; color: var(--gray-500); cursor: not-allowed; }
     .tf-locked-badge { font-size: 10px; color: var(--gray-400); display: flex; align-items: center; gap: 4px; margin-top: 3px; }
 
-    /* ── Repayment plan cards ── */
+    /* â”€â”€ Repayment plan cards â”€â”€ */
     .tf-schedule { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
     .tf-installment { background: var(--tf-blue-lt); border: 1.5px solid var(--tf-blue-md); border-radius: 11px; padding: 14px 16px; }
     .tf-installment-head { font-size: 13px; font-weight: 800; color: var(--tf-navy); margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
@@ -152,7 +156,7 @@
     .tf-installment-body strong { color: var(--gray-900); }
     .tf-installment-total { font-size: 13px; font-weight: 800; color: var(--tf-indigo); margin-left: auto; }
 
-    /* ── Summary strips ── */
+    /* â”€â”€ Summary strips â”€â”€ */
     .tf-summary-strip { background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
     .tf-sum-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--gray-100); font-size: 13px; }
     .tf-sum-row:last-child { border-bottom: none; }
@@ -162,13 +166,13 @@
     .tf-total-lbl { font-size: 14px; font-weight: 800; color: #fff; }
     .tf-total-val { font-size: 22px; font-weight: 800; color: #fff; font-family: var(--mono); }
 
-    /* ── Down payment highlight ── */
+    /* â”€â”€ Down payment highlight â”€â”€ */
     .tf-downpay-box { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: var(--tf-green-lt); border: 1.5px solid #a7f3d0; border-radius: 12px; margin-bottom: 14px; }
     .tf-downpay-label { font-size: 13px; font-weight: 700; color: var(--tf-green); }
     .tf-downpay-value { font-size: 22px; font-weight: 800; color: var(--tf-green); font-family: var(--mono); }
     .tf-downpay-sub { font-size: 11px; color: var(--tf-green); opacity: .8; }
 
-    /* ── Payment option cards ── */
+    /* â”€â”€ Payment option cards â”€â”€ */
     .tf-pay-option { background: #fff; border: 2px solid var(--gray-200); border-radius: 12px; overflow: hidden; transition: border-color .2s; margin-bottom: 12px; }
     .tf-pay-option.active { border-color: var(--tf-blue); }
     .tf-pay-option-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px; cursor: pointer; user-select: none; }
@@ -193,7 +197,7 @@
     .tf-ref-input:focus { border-color: var(--tf-blue); background: #fff; }
     .tf-ref-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gray-400); margin-bottom: 5px; display: block; }
 
-    /* ── Buttons ── */
+    /* â”€â”€ Buttons â”€â”€ */
     .tf-btn-row { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
     .tf-btn-primary { height: 48px; padding: 0 28px; background: var(--tf-blue); color: #fff; border: none; border-radius: 11px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: var(--font); transition: all .15s; display: inline-flex; align-items: center; gap: 8px; }
     .tf-btn-primary:hover { background: #1e40af; transform: translateY(-1px); }
@@ -206,13 +210,13 @@
     .tf-btn-bank { width: 100%; height: 50px; background: var(--tf-navy); color: #fff; border: none; border-radius: 11px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: var(--font); display: flex; align-items: center; justify-content: center; gap: 9px; transition: background .15s; }
     .tf-btn-bank:hover { background: #0f2460; }
 
-    /* ── Notice ── */
+    /* â”€â”€ Notice â”€â”€ */
     .tf-notice { display: flex; align-items: flex-start; gap: 9px; padding: 11px 14px; border-radius: 9px; font-size: 12.5px; margin-bottom: 16px; }
     .tf-notice.info  { background: var(--tf-blue-lt); color: var(--tf-blue); border: 1px solid var(--tf-blue-md); }
     .tf-notice.warn  { background: var(--tf-amber-lt); color: var(--tf-amber); border: 1px solid #fed7aa; }
     .tf-notice.green { background: var(--tf-green-lt); color: var(--tf-green); border: 1px solid #a7f3d0; }
 
-    /* ── Right rail ── */
+    /* â”€â”€ Right rail â”€â”€ */
     .tf-rail-card { background: #fff; border: 1px solid var(--gray-200); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.07); position: sticky; top: 20px; }
     .tf-rail-head { padding: 14px 18px; background: linear-gradient(135deg, var(--tf-navy) 0%, var(--tf-indigo) 100%); }
     .tf-rail-title { font-size: 15px; font-weight: 800; color: #fff; }
@@ -397,7 +401,7 @@
 
 <div class="tf-outer">
 
-    {{-- ── Hero Header ── --}}
+    {{-- â”€â”€ Hero Header â”€â”€ --}}
     <div class="tf-hero">
         <div style="position:relative;z-index:2;">
             <div class="tf-hero-badge">
@@ -406,7 +410,7 @@
             </div>
             <div class="tf-hero-title">Pay for your flight in easy instalments</div>
             <div class="tf-hero-sub">
-                Secure your seat today with a 30% down payment. 
+                Secure your seat today with a 30% down payment.
                 Pay the balance over your chosen repayment period at a fixed {{ $travelFlexInterestPercent }}% interest rate.
                 Provided by a licensed third-party lender.
             </div>
@@ -430,7 +434,7 @@
     @endif
 
     @if(!$eligible)
-    {{-- ── Ineligibility Notice ── --}}
+    {{-- â”€â”€ Ineligibility Notice â”€â”€ --}}
     <div class="tf-ineligible" style="margin-bottom: 22px;">
         <div class="tf-ineligible-icon">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
@@ -455,10 +459,10 @@
 
     <div class="tf-grid" x-data="travelFlex()" x-init="init()">
 
-        {{-- ── Main Steps Column ── --}}
+        {{-- â”€â”€ Main Steps Column â”€â”€ --}}
         <div>
 
-            {{-- ══ STEP 0: DISCLAIMER ══ --}}
+            {{-- â•â• STEP 0: DISCLAIMER â•â• --}}
             <div :class="{ 'tf-step active': true }" x-show="step === 0" x-transition>
                 <div class="tf-card">
                     <div class="tf-step-label"><span>1</span> Legal Disclaimer &amp; Agreement</div>
@@ -468,42 +472,12 @@
                         <span>Please read this agreement carefully before proceeding. You must agree to all terms to use TravelFlex.</span>
                     </div>
 
-                    <div class="tf-disclaimer-box">
-                        <h4>1. Nature of the Product</h4>
-                        <p>TravelFlex is an instalment payment plan facilitated by Travelwheel Limited ("Travelwheel") in partnership with a licensed third-party financial institution ("the Lender"). By proceeding, you acknowledge that you are entering into a <strong>loan agreement</strong> with the Lender, not with Travelwheel. Travelwheel acts solely as a booking agent and facilitator.</p>
-
-                        <h4>2. Loan Agreement</h4>
-                        <p>The instalment plan constitutes a credit arrangement governed by the applicable consumer credit laws of the Federal Republic of Nigeria. The Lender will disburse the balance of your ticket cost to the airline on your behalf. You agree to repay the Lender the principal amount plus interest on the schedule agreed herein.</p>
-
-                        <h4>3. Down Payment & Non-Refundability</h4>
-                        <p>A minimum down payment of <strong>30%</strong> of the total ticket cost is required to initiate the plan. This down payment is <strong>non-refundable</strong> once the booking is confirmed, except where the airline cancels the flight. The down payment is used to secure your seat reservation with the airline.</p>
-
-                        <h4>4. Interest Rate</h4>
-                        <p>A fixed interest rate of <strong>{{ $travelFlexInterestPercent }}% per repayment interval</strong> is applied to the outstanding balance. This rate is applied per instalment period (e.g., monthly or weekly), not per annum. You agree that the total cost of credit (including interest) will be disclosed to you before you confirm the plan.</p>
-
-                        <h4>5. Repayment Obligations</h4>
-                        <p>You agree to make payments on or before the due dates specified in your repayment schedule. Late or missed payments may result in (a) cancellation of your flight booking, (b) forfeiture of amounts paid, (c) reporting to credit bureaus, and (d) legal action by the Lender to recover outstanding amounts.</p>
-
-                        <h4>6. Flight Booking & Ticketing</h4>
-                        <p>Your flight will be booked and held by Travelwheel upon receipt of the down payment. The e-ticket will be issued only after the down payment is confirmed. If you fail to complete subsequent instalments, Travelwheel reserves the right to cancel the booking and notify the Lender.</p>
-
-                        <h4>7. Eligibility Requirements</h4>
-                        <p>To qualify for TravelFlex, you must (a) be at least 18 years of age, (b) be a Nigerian resident with a valid BVN and NIN, (c) apply at least 14 days before your travel date, and (d) pass any credit checks conducted by the Lender. Travelwheel does not guarantee approval of the loan.</p>
-
-                        <h4>8. Privacy & Data Sharing</h4>
-                        <p>By proceeding, you consent to Travelwheel sharing your personal information (including name, contact details, passport information, BVN, and NIN) with the Lender solely for the purposes of this credit arrangement. Your data will be handled in accordance with the Nigeria Data Protection Regulation (NDPR).</p>
-
-                        <h4>9. Governing Law</h4>
-                        <p>This agreement is governed by the laws of the Federal Republic of Nigeria. Any disputes shall be subject to the exclusive jurisdiction of Nigerian courts.</p>
-
-                        <h4>10. Acknowledgement</h4>
-                        <p>By ticking the checkbox below and clicking "I Agree & Continue", you confirm that you have read, understood, and agree to be bound by all the terms above. You further confirm that you are entering this agreement voluntarily and of your own free will.</p>
-                    </div>
+                    @include('livewire.pages.flight.partials.fastcredit-agreement', ['class' => 'tf-disclaimer-box'])
 
                     <div class="tf-agree-row" @click="toggleAgree()">
                         <input type="checkbox" id="tfAgree" :checked="agreed" @click.stop="toggleAgree()">
                         <label for="tfAgree" @click.prevent>
-                            I have read and agree to the TravelFlex Terms &amp; Conditions, including the loan agreement with the third-party Lender, the interest rate of {{ $travelFlexInterestPercent }}% per repayment interval, and the non-refundable 30% down payment policy.
+                            I confirm that I have read, understood and agreed to the above terms and conditions.
                         </label>
                     </div>
 
@@ -520,7 +494,7 @@
                 </div>
             </div>
 
-            {{-- ══ STEP 1: CALCULATOR ══ --}}
+            {{-- â•â• STEP 1: CALCULATOR â•â• --}}
             <div x-show="step === 1" x-transition>
                 <div class="tf-card">
                     <div class="tf-step-label"><span>2</span> Payment Calculator</div>
@@ -611,10 +585,12 @@
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Ticket Cost</span><span class="tf-sum-val" x-text="formatCurrency(ticketCost)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Down Payment (<span x-text="downPercent"></span>%)</span><span class="tf-sum-val" x-text="formatCurrency(downPaymentAmount)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Remaining Balance</span><span class="tf-sum-val" x-text="formatCurrency(remainingBalance)"></span></div>
+                            <div class="tf-sum-row"><span class="tf-sum-lbl">Administration Fee ({{ $travelFlexAdministrationFeePercent }}%)</span><span class="tf-sum-val" x-text="formatCurrency(administrationFee)"></span></div>
+                            <div class="tf-sum-row"><span class="tf-sum-lbl">Insurance Fee ({{ $travelFlexInsuranceFeePercent }}%)</span><span class="tf-sum-val" x-text="formatCurrency(insuranceFee)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Total Interest ({{ $travelFlexInterestPercent }}%/period)</span><span class="tf-sum-val" x-text="formatCurrency(totalInterest)"></span></div>
                         </div>
                         <div class="tf-total-row">
-                            <span class="tf-total-lbl">Total Payable (All Instalments + Down)</span>
+                            <span class="tf-total-lbl">Total Payable (Down + Fees + Instalments)</span>
                             <span class="tf-total-val" x-text="formatCurrency(grandTotal)"></span>
                         </div>
                     </div>
@@ -636,19 +612,19 @@
                 </div>
             </div>
 
-            {{-- ══ STEP 2: PAY DOWN PAYMENT ══ --}}
+            {{-- â•â• STEP 2: PAY DOWN PAYMENT â•â• --}}
             <div x-show="step === 2" x-transition>
                 <div class="tf-card">
                     <div class="tf-step-label"><span>3</span> Review Plan &amp; Apply</div>
 
                     <div class="tf-downpay-box">
                         <div>
-                            <div class="tf-downpay-label">Down Payment Due Now</div>
-                            <div class="tf-downpay-sub">Paid once after your application details are submitted</div>
+                            <div class="tf-downpay-label">Due After Approval</div>
+                            <div class="tf-downpay-sub">Down payment plus Fast Credit administration and insurance fees</div>
                         </div>
                         <div>
-                            <div class="tf-downpay-value" x-text="formatCurrency(downPaymentAmount)"></div>
-                            <div style="font-size:11px;color:var(--tf-green);text-align:right;" x-text="downPercent + '% of ' + formatCurrency(ticketCost)"></div>
+                            <div class="tf-downpay-value" x-text="formatCurrency(upfrontPaymentTotal)"></div>
+                            <div style="font-size:11px;color:var(--tf-green);text-align:right;" x-text="formatCurrency(downPaymentAmount) + ' down + fees'"></div>
                         </div>
                     </div>
 
@@ -690,7 +666,7 @@
                         </div>
                     </div>
 
-                    {{-- ── Payment Option 1: Bank Transfer ── --}}
+                    {{-- â”€â”€ Payment Option 1: Bank Transfer â”€â”€ --}}
                     <form method="POST" action="{{ route('flights.travelflex.application') }}" id="tf-apply-form">
                         @csrf
                         <input type="hidden" name="down_percent" :value="downPercent" x-bind:value="downPercent">
@@ -717,7 +693,7 @@
                         <div class="tf-pay-option-body">
                             <div class="tf-notice warn" style="margin-top:12px">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                <span>Transfer exactly <strong x-text="formatCurrency(downPaymentAmount)"></strong>. Your plan will be activated once payment is verified (2-4 hrs).</span>
+                                <span>Transfer exactly <strong x-text="formatCurrency(upfrontPaymentTotal)"></strong>. Your plan will be activated once payment is verified (2-4 hrs).</span>
                             </div>
                             @foreach($bankAccounts as $acct)
                             <div class="tf-bank-card">
@@ -743,7 +719,7 @@
                         </div>
                     </div>
 
-                    {{-- ── Payment Option 2: Gateway ── --}}
+                    {{-- â”€â”€ Payment Option 2: Gateway â”€â”€ --}}
                     <div class="tf-pay-option" :class="{ active: payOption === 'gateway' }" @click="payOption = 'gateway'">
                         <div class="tf-pay-option-head">
                             <div class="tf-pay-radio"><div class="tf-pay-radio-dot"></div></div>
@@ -768,7 +744,7 @@
                                 <input type="hidden" name="repayment_plan" :value="repaymentPlan" x-bind:value="repaymentPlan">
                                 <button type="submit" class="tf-btn-pay" id="tf-gw-btn">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                                    Pay <span x-text="formatCurrency(downPaymentAmount)" style="margin:0 4px;"></span> Down Payment Now
+                                    Pay <span x-text="formatCurrency(upfrontPaymentTotal)" style="margin:0 4px;"></span> Now
                                 </button>
                             </form>
                         </div>
@@ -791,7 +767,7 @@
 
         </div>{{-- /tf-main --}}
 
-        {{-- ── Right Rail ── --}}
+        {{-- â”€â”€ Right Rail â”€â”€ --}}
         <aside>
             <div class="tf-rail-card">
                 <div class="tf-rail-head">
@@ -806,11 +782,11 @@
                         $tfOutFirst = $firstSeg ?? [];
                         $tfOutLast  = !empty($segments) ? $segments[count($segments)-1] : [];
                         $tfOutRoute = ($tfOutFirst['from']??'') . ' -> ' . ($tfOutLast['to']??'');
-                        
+
                         $tfRetFirst = ($mf['returnSegments'][0] ?? []);
                     $tfRetLast  = !empty($mf['returnSegments']) ? $mf['returnSegments'][count($mf['returnSegments'])-1] : [];
                     $tfRetRoute = ($tfRetFirst['from']??'') . ' -> ' . ($tfRetLast['to']??'');
-                    
+
                     $tfIsReturn = count($mf['returnSegments'] ?? []) > 0;
                     $tfIsMulti  = count($mf['multiLegs'] ?? []) > 0;
                     $tfTripLabel= $tfIsReturn ? 'Round Trip' : ($tfIsMulti ? 'Multi-City' : 'One Way');
@@ -825,7 +801,7 @@
                         }
                     }
                 @endphp
-                    
+
                     <div class="tf-rail-row">
                         <span class="tf-rail-lbl">Flight</span>
                         <span class="tf-rail-val" style="font-size:13px;font-weight:800;">
@@ -857,7 +833,7 @@
                         <span class="tf-rail-val" style="font-size:11.5px;">{{ $tfRetDate }}</span>
                     </div>
                     @endif
-                    
+
                     <div class="tf-rail-row">
                         <span class="tf-rail-lbl">Airline</span>
                         <span class="tf-rail-val">{{ $airline }}</span>
@@ -922,7 +898,7 @@
 <script>
 function travelFlex() {
     return {
-        // ── State ────────────────────────────────────────────────────────────
+        // â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         step:              0,
         agreed:            false,
         ticketCost:        {{ $totalPrice }},
@@ -933,6 +909,9 @@ function travelFlex() {
         downPercent:       30,
         downPaymentAmount: 0,
         remainingBalance:  0,
+        administrationFee: 0,
+        insuranceFee: 0,
+        upfrontPaymentTotal: 0,
         repaymentPlan:     '',
         lastPlan:          '',
         repaymentOptions:  [],
@@ -942,13 +921,13 @@ function travelFlex() {
         calculated:        false,
         payOption:         '',
 
-        // ── Init ─────────────────────────────────────────────────────────────
+        // â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         init() {
             this.buildRepaymentOptions();
             this.onDownPercentChange();
         },
 
-        // ── Helpers ───────────────────────────────────────────────────────────
+        // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         formatCurrency(val) {
             return this.sym + Number(val).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         },
@@ -965,7 +944,7 @@ function travelFlex() {
             this.setProgress(40);
         },
 
-        // ── Build repayment options based on days to departure ────────────────
+        // â”€â”€ Build repayment options based on days to departure â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         // Options available if (daysToDepart - 14) >= option.days
         buildRepaymentOptions() {
             const safedays = Math.max(0, this.daysToDepart - 14); // subtract the 14-day buffer
@@ -988,6 +967,9 @@ function travelFlex() {
         onDownPercentChange() {
             this.downPaymentAmount = this.ticketCost * (this.downPercent / 100);
             this.remainingBalance  = this.ticketCost - this.downPaymentAmount;
+            this.administrationFee = Math.round((this.remainingBalance * {{ $travelFlexAdministrationFeeRate }}) * 100) / 100;
+            this.insuranceFee = Math.round((this.remainingBalance * {{ $travelFlexInsuranceFeeRate }}) * 100) / 100;
+            this.upfrontPaymentTotal = Math.round((this.downPaymentAmount + this.administrationFee + this.insuranceFee) * 100) / 100;
             this.calculated = false; // force recalculate
         },
 
@@ -995,7 +977,7 @@ function travelFlex() {
             this.calculated = false;
         },
 
-        // ── Parse repayment label into interval days and instalment count ──────
+        // â”€â”€ Parse repayment label into interval days and instalment count â”€â”€â”€â”€â”€â”€
         parseRepaymentLabel(label) {
             label = (label || '').toString().trim().toLowerCase();
             let unitDays = 30, count = 1;
@@ -1011,7 +993,7 @@ function travelFlex() {
             return { count: 1, unitDays: 30 };
         },
 
-        // ── Main calculation ──────────────────────────────────────────────────
+        // â”€â”€ Main calculation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         calculate() {
             if (!this.repaymentPlan) return alert('Please select a repayment plan.');
 
@@ -1053,7 +1035,7 @@ function travelFlex() {
             });
 
             this.totalInterest = Math.round(totalInterest * 100) / 100;
-            this.grandTotal    = Math.round((this.ticketCost + this.totalInterest) * 100) / 100;
+            this.grandTotal    = Math.round((this.ticketCost + this.totalInterest + this.administrationFee + this.insuranceFee) * 100) / 100;
             this.lastPlan      = this.repaymentPlan;
             this.calculated    = true;
             this.setProgress(60);

@@ -1,17 +1,35 @@
-{{-- resources/views/livewire/pages/flight/flight-travelflex-application.blade.php --}}
+﻿{{-- resources/views/livewire/pages/flight/flight-travelflex-application.blade.php --}}
 @component('layouts.app', ['title' => 'TravelFlex - Loan Application'])
 
 @php
     $contact    = session('bookingContact', []);
     $passengers = session('bookingPassengers', []);
     $primary    = collect($passengers)->firstWhere('is_primary', true) ?? ($passengers[0] ?? []);
-    $prefillName  = trim(($primary['first_name'] ?? '') . ' ' . ($primary['last_name'] ?? ''));
+    $prefillTitle = $primary['title'] ?? '';
+    $prefillSurname = $primary['last_name'] ?? '';
+    $prefillFirstName = $primary['first_name'] ?? '';
+    $prefillOtherName = $primary['middle_name'] ?? ($primary['other_name'] ?? '');
+    $prefillGender = match (strtoupper((string) ($primary['gender'] ?? ''))) {
+        'F', 'FEMALE' => 'female',
+        'M', 'MALE' => 'male',
+        default => '',
+    };
+    $prefillDob = $primary['dob'] ?? '';
+    $prefillPassportNo = $primary['passport_no'] ?? '';
+    $prefillPassportExpiry = $primary['passport_exp'] ?? '';
+    $prefillName = trim(collect([$prefillTitle, $prefillSurname, $prefillFirstName, $prefillOtherName])->filter()->implode(' '));
     $prefillEmail = $contact['email'] ?? '';
+    $prefillPhone = $contact['phone'] ?? '';
 
     $tfPlan       = session('travelFlexPlan', []);
     $ticketCost   = (float) ($tfPlan['ticket_cost'] ?? 0);
     $downPayment  = (float) ($tfPlan['down_payment'] ?? 0);
     $loanAmount   = (float) ($tfPlan['loan_amount'] ?? $tfPlan['remaining_balance'] ?? max(0, $ticketCost - $downPayment));
+    $administrationFee = (float) ($tfPlan['administration_fee'] ?? 0);
+    $administrationFeePercent = (float) ($tfPlan['administration_fee_percent'] ?? 1);
+    $insuranceFee = (float) ($tfPlan['insurance_fee'] ?? 0);
+    $insuranceFeePercent = (float) ($tfPlan['insurance_fee_percent'] ?? 1.5);
+    $upfrontPaymentTotal = (float) ($tfPlan['upfront_payment_total'] ?? ($downPayment + $administrationFee + $insuranceFee));
     $repayPlan    = $tfPlan['repayment_plan'] ?? '';
 
     $flight       = session('bookingFlight.flight') ?? session('bookingFlight', []);
@@ -21,13 +39,26 @@
     $firstSeg     = $segments[0] ?? [];
     $lastSeg      = !empty($segments) ? $segments[count($segments)-1] : [];
     $currency     = $flight['currency'] ?? 'NGN';
-    $sym          = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
+    $sym          = match($currency) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'GBP' => html_entity_decode('&pound;', ENT_QUOTES, 'UTF-8'), 'EUR' => html_entity_decode('&euro;', ENT_QUOTES, 'UTF-8'), default => $currency.' ' };
     $fmt          = fn($v) => $sym . number_format((float)$v, 2);
     $errors       = $errors ?? new \Illuminate\Support\MessageBag();
+    $errorKeys    = collect($errors->keys());
+    $initialStep  = $errorKeys->intersect([
+        'employer_name', 'occupation', 'employer_address', 'job_description', 'staff_number', 'sector', 'ippis_number',
+        'monthly_salary', 'salary_account_number', 'bank_name', 'social_media_platform', 'social_media_handle',
+        'company_name', 'company_rc_number', 'company_email', 'company_phone', 'company_address', 'company_sector',
+        'representative_role', 'company_bank_name', 'company_account_number', 'loan_purpose', 'next_of_kin_surname',
+        'next_of_kin_first_name', 'next_of_kin_relationship', 'next_of_kin_address', 'next_of_kin_phone_primary',
+    ])->isNotEmpty() ? 2 : ($errorKeys->intersect([
+        'valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements',
+        'representative_valid_id', 'cac_status_report', 'share_certificate', 'memart', 'register_of_members',
+        'shareholders_agreement', 'return_of_allotment', 'certificate_of_incorporation', 'board_resolution',
+        'company_bank_statement', 'tin_certificate',
+    ])->isNotEmpty() ? 3 : ($errorKeys->intersect(['fast_credit_agreement', 'digital_signature', 'digital_signature_image'])->isNotEmpty() ? 4 : 1));
     $routeLines   = [];
     if ($isMulti) {
         foreach ($multiLegs as $leg) {
-            $routeLines[] = ($leg['from'] ?? '') . ' â†’ ' . ($leg['to'] ?? '');
+            $routeLines[] = ($leg['from'] ?? '') . ' → ' . ($leg['to'] ?? '');
         }
     }
 @endphp
@@ -257,6 +288,36 @@
     .tfa-btn-primary:hover { background: var(--tfa-brand-700); box-shadow: 0 12px 26px rgba(57,50,143,.2); }
     .tfa-btn-ghost { border: 1px solid var(--tfa-line); color: var(--tfa-muted); }
     .tfa-btn-ghost:hover { border-color: #cfd4df; color: var(--tfa-ink); background: var(--tfa-soft); }
+    [x-cloak] { display: none !important; }
+    .tfa-wizard {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+    .tfa-wizard-step {
+        border: 1px solid var(--tfa-line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 12px;
+        text-align: left;
+        color: var(--tfa-muted);
+        cursor: pointer;
+        transition: border-color .18s, box-shadow .18s, background .18s;
+    }
+    .tfa-wizard-step strong { display: block; color: var(--tfa-ink); font-size: 13px; margin-bottom: 2px; }
+    .tfa-wizard-step span { font-size: 11px; line-height: 1.35; }
+    .tfa-wizard-step.is-active { border-color: rgba(57,50,143,.55); box-shadow: 0 0 0 4px rgba(57,50,143,.08); background: #fbfbff; }
+    .tfa-step-help {
+        margin-bottom: 16px;
+        border: 1px solid rgba(57,50,143,.14);
+        border-radius: 8px;
+        background: #fbfbff;
+        padding: 12px 14px;
+        color: var(--tfa-muted);
+        font-size: 13px;
+        line-height: 1.5;
+    }
     .tfa-progress-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
     .tfa-progress-pill { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 6px 10px; border-radius: 999px; background: var(--tfa-soft); color: var(--tfa-muted); font-size: 12px; font-weight: 700; }
     .tfa-progress-pill strong { color: var(--tfa-brand); }
@@ -272,6 +333,66 @@
     .tfa-pay-card:has(input:checked) { background: #fff; border-color: rgba(57,50,143,.55); box-shadow: 0 0 0 4px rgba(57,50,143,.08); }
     .tfa-pay-card:has(input:checked) .tfa-pay-radio { border-color: var(--tfa-brand); background: var(--tfa-brand); }
     .tfa-pay-card:has(input:checked) .tfa-pay-radio::after { transform: scale(1); }
+    .tfa-signature-box {
+        border: 1px solid var(--tfa-line);
+        border-radius: 8px;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: inset 0 0 0 1px rgba(16,24,40,.015);
+    }
+    .tfa-signature-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        border-bottom: 1px solid #eef1f6;
+        background: #fbfcfe;
+    }
+    .tfa-signature-toolbar span { color: var(--tfa-muted); font-size: 12px; line-height: 1.4; }
+    .tfa-signature-clear {
+        border: 1px solid var(--tfa-line);
+        background: #fff;
+        color: var(--tfa-muted);
+        border-radius: 7px;
+        min-height: 34px;
+        padding: 0 12px;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        font-family: var(--font);
+    }
+    .tfa-signature-clear:hover { background: var(--tfa-soft); color: var(--tfa-ink); }
+    .tfa-signature-canvas {
+        display: block;
+        width: 100%;
+        height: 190px;
+        touch-action: none;
+        cursor: crosshair;
+        background:
+            linear-gradient(#fff, #fff) padding-box,
+            repeating-linear-gradient(0deg, transparent 0 38px, #f2f4f7 39px, transparent 40px);
+    }
+    .tfa-agreement-box {
+        max-height: 360px;
+        overflow: auto;
+        border: 1px solid var(--tfa-line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 16px;
+        color: var(--tfa-muted);
+        line-height: 1.6;
+        font-size: 12.5px;
+    }
+    .tfa-agreement-box h4 {
+        color: var(--tfa-ink);
+        font-size: 12px;
+        font-weight: 800;
+        margin: 14px 0 6px;
+    }
+    .tfa-agreement-box h4:first-child { margin-top: 0; }
+    .tfa-agreement-box p { margin: 0 0 8px; }
+    .pac-container { z-index: 99999; }
     @media(max-width:640px) {
         body { margin-top: 0; }
         .tfa-wrap { padding: 14px 12px 64px; }
@@ -280,6 +401,8 @@
         .tfa-doc-field, .tfa-doc-field.tfa-doc-wide { grid-column: 1; }
         .tfa-file-wrap { min-height: 154px; }
         .tfa-pay-grid { grid-template-columns: 1fr; }
+        .tfa-wizard { grid-template-columns: 1fr 1fr; }
+        .tfa-wizard-step { padding: 10px; }
         .tfa-btn-row { flex-direction: column; }
         .tfa-btn-row > * { width: 100%; justify-content: center; }
     }
@@ -322,8 +445,16 @@
             <div class="tfa-loan-val">{{ $fmt($loanAmount) }}</div>
         </div>
         <div class="tfa-loan-item">
-            <div class="tfa-loan-lbl">Down Payment</div>
-            <div class="tfa-loan-val">{{ $fmt($downPayment) }}</div>
+            <div class="tfa-loan-lbl">Due After Approval</div>
+            <div class="tfa-loan-val">{{ $fmt($upfrontPaymentTotal) }}</div>
+        </div>
+        <div class="tfa-loan-item">
+            <div class="tfa-loan-lbl">Admin Fee ({{ rtrim(rtrim(number_format($administrationFeePercent, 2), '0'), '.') }}%)</div>
+            <div class="tfa-loan-val">{{ $fmt($administrationFee) }}</div>
+        </div>
+        <div class="tfa-loan-item">
+            <div class="tfa-loan-lbl">Insurance ({{ rtrim(rtrim(number_format($insuranceFeePercent, 2), '0'), '.') }}%)</div>
+            <div class="tfa-loan-val">{{ $fmt($insuranceFee) }}</div>
         </div>
         <div class="tfa-loan-item">
             <div class="tfa-loan-lbl">Repayment Plan</div>
@@ -344,28 +475,83 @@
     @endif
 
     <form method="POST" action="{{ route('flights.travelflex.submit-application') }}"
-          enctype="multipart/form-data" id="tfa-form">
+          enctype="multipart/form-data" id="tfa-form"
+          x-data="{ applicantType: @js(old('applicant_type', 'individual')), step: @js($initialStep) }">
         @csrf
 
-        {{-- ── Section 1: Personal Information ── --}}
-        <div class="tfa-card">
+        <div class="tfa-wizard" aria-label="Application steps">
+            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 1 }" @click="step = 1">
+                <strong>1. Applicant</strong><span>Basic applicant and contact details</span>
+            </button>
+            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 2 }" @click="step = 2">
+                <strong>2. Profile</strong><span x-text="applicantType === 'company' ? 'Company and representative details' : 'Employment and next of kin'"></span>
+            </button>
+            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 3 }" @click="step = 3">
+                <strong>3. Documents</strong><span>Upload required supporting files</span>
+            </button>
+            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 4 }" @click="step = 4">
+                <strong>4. Agreement</strong><span>Review declaration and submit</span>
+            </button>
+        </div>
+
+        <div class="tfa-step-help">
+            Complete one section at a time. You can move between sections before submitting, and the final submit button only appears on the agreement step.
+        </div>
+
+        <div class="tfa-card" x-show="step === 1" x-cloak>
+            <div class="tfa-section-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18"/><path d="M3 12h18"/><path d="M3 17h18"/></svg>
+                Applicant Type
+            </div>
+            <div class="tfa-pay-grid">
+                <label class="tfa-pay-card">
+                    <input type="radio" name="applicant_type" value="individual" x-model="applicantType">
+                    <span><span class="tfa-pay-title">Individual</span><span class="tfa-pay-copy">Personal salary or payroll-backed Fast Credit application.</span></span>
+                    <span class="tfa-pay-radio"></span>
+                </label>
+                <label class="tfa-pay-card">
+                    <input type="radio" name="applicant_type" value="company" x-model="applicantType">
+                    <span><span class="tfa-pay-title">Business owner</span><span class="tfa-pay-copy">I own and manage the business applying for TravelFlex.</span></span>
+                    <span class="tfa-pay-radio"></span>
+                </label>
+            </div>
+            @error('applicant_type') <span class="tfa-error">{{ $message }}</span> @enderror
+        </div>
+
+        {{-- Section 1: Personal Information --}}
+        <div class="tfa-card" x-show="step === 1" x-cloak>
             <div class="tfa-section-title">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
                 Personal Information
             </div>
             <div class="tfa-grid">
-                <div class="tfa-field tfa-full">
-                    <div class="tfa-label">Full Name <span class="tfa-req">*</span></div>
-                    <input class="tfa-input {{ $errors->has('full_name') ? 'error' : '' }}"
-                           type="text" name="full_name" value="{{ old('full_name', $prefillName) }}"
-                           placeholder="Full legal name as on ID">
-                    @error('full_name') <span class="tfa-error">{{ $message }}</span> @enderror
+                <div class="tfa-field">
+                    <div class="tfa-label">Title <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('title') ? 'error' : '' }}" type="text" name="title" value="{{ old('title', $prefillTitle) }}" placeholder="Mr, Mrs, Ms, Dr">
+                    @error('title') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">Surname <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('surname') ? 'error' : '' }}" type="text" name="surname" value="{{ old('surname', $prefillSurname) }}" placeholder="Surname">
+                    @error('surname') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">First Name <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('first_name') ? 'error' : '' }}" type="text" name="first_name" value="{{ old('first_name', $prefillFirstName) }}" placeholder="First name">
+                    @error('first_name') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">Other Name</div>
+                    <input class="tfa-input {{ $errors->has('other_name') ? 'error' : '' }}" type="text" name="other_name" value="{{ old('other_name', $prefillOtherName) }}" placeholder="Other name">
+                    @error('other_name') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field tfa-full">
-                    <div class="tfa-label">Home Address <span class="tfa-req">*</span></div>
-                    <textarea class="tfa-textarea {{ $errors->has('home_address') ? 'error' : '' }}"
-                              name="home_address" placeholder="Full residential address including city and state"
-                              rows="2">{{ old('home_address') }}</textarea>
+                    <div class="tfa-label"><span x-text="applicantType === 'company' ? 'Representative Residential Address' : 'Residential Address'"></span> <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('home_address') ? 'error' : '' }}"
+                           type="text" name="home_address" value="{{ old('home_address') }}"
+                           placeholder="Start typing and select a precise address" autocomplete="off"
+                           data-google-address data-place-target="home_address_place_id">
+                    <input type="hidden" name="home_address_place_id" id="home_address_place_id" value="{{ old('home_address_place_id') }}">
                     @error('home_address') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field">
@@ -376,18 +562,67 @@
                     @error('email') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field">
-                    <div class="tfa-label">Bank Verification Number (BVN) <span class="tfa-req">*</span></div>
+                    <div class="tfa-label">Phone Number 1 <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('phone_primary') ? 'error' : '' }}" type="text" name="phone_primary" value="{{ old('phone_primary', $prefillPhone) }}" placeholder="+234...">
+                    @error('phone_primary') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">Phone Number 2</div>
+                    <input class="tfa-input {{ $errors->has('phone_secondary') ? 'error' : '' }}" type="text" name="phone_secondary" value="{{ old('phone_secondary') }}" placeholder="Optional alternate number">
+                    @error('phone_secondary') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">Bank Verification Number (BVN) <span class="tfa-req" x-show="applicantType === 'individual'">*</span></div>
                     <input class="tfa-input {{ $errors->has('bvn') ? 'error' : '' }}"
                            type="text" name="bvn" value="{{ old('bvn') }}"
                            maxlength="11" placeholder="11-digit BVN">
                     <div class="tfa-hint">Your BVN is used for credit verification only</div>
                     @error('bvn') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
+                <div class="tfa-field" x-show="applicantType === 'individual'">
+                    <div class="tfa-label">National Identification Number (NIN) <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('nin') ? 'error' : '' }}" type="text" name="nin" value="{{ old('nin') }}" placeholder="NIN">
+                    @error('nin') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field" x-show="applicantType === 'individual'">
+                    <div class="tfa-label">Marital Status <span class="tfa-req">*</span></div>
+                    <select class="tfa-input {{ $errors->has('marital_status') ? 'error' : '' }}" name="marital_status">
+                        <option value="">Select status</option>
+                        @foreach(['single' => 'Single', 'married' => 'Married', 'divorced' => 'Divorced', 'separated' => 'Separated'] as $value => $label)
+                            <option value="{{ $value }}" @selected(old('marital_status') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @error('marital_status') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field" x-show="applicantType === 'individual'">
+                    <div class="tfa-label">Gender <span class="tfa-req">*</span></div>
+                    <select class="tfa-input {{ $errors->has('gender') ? 'error' : '' }}" name="gender">
+                        <option value="">Select gender</option>
+                        <option value="female" @selected(old('gender', $prefillGender) === 'female')>Female</option>
+                        <option value="male" @selected(old('gender', $prefillGender) === 'male')>Male</option>
+                    </select>
+                    @error('gender') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field" x-show="applicantType === 'individual'">
+                    <div class="tfa-label">Date of Birth <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('date_of_birth') ? 'error' : '' }}" type="date" name="date_of_birth" value="{{ old('date_of_birth', $prefillDob) }}">
+                    @error('date_of_birth') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field" x-show="applicantType === 'individual'">
+                    <div class="tfa-label">Passport Number <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('passport_number') ? 'error' : '' }}" type="text" name="passport_number" value="{{ old('passport_number', $prefillPassportNo) }}">
+                    @error('passport_number') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field" x-show="applicantType === 'individual'">
+                    <div class="tfa-label">Passport Expiry Date <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('passport_expiry_date') ? 'error' : '' }}" type="date" name="passport_expiry_date" value="{{ old('passport_expiry_date', $prefillPassportExpiry) }}">
+                    @error('passport_expiry_date') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
             </div>
         </div>
 
-        {{-- ── Section 2: Employment Information ── --}}
-        <div class="tfa-card">
+        {{-- Section 2: Employment Information --}}
+        <div class="tfa-card" x-show="step === 2 && applicantType === 'individual'" x-cloak>
             <div class="tfa-section-title">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>
                 Employment Information
@@ -409,9 +644,11 @@
                 </div>
                 <div class="tfa-field tfa-full">
                     <div class="tfa-label">Employer Full Address <span class="tfa-req">*</span></div>
-                    <textarea class="tfa-textarea {{ $errors->has('employer_address') ? 'error' : '' }}"
-                              name="employer_address" placeholder="Full company address including city and state"
-                              rows="2">{{ old('employer_address') }}</textarea>
+                    <input class="tfa-input {{ $errors->has('employer_address') ? 'error' : '' }}"
+                           type="text" name="employer_address" value="{{ old('employer_address') }}"
+                           placeholder="Start typing and select employer address" autocomplete="off"
+                           data-google-address data-place-target="employer_address_place_id">
+                    <input type="hidden" name="employer_address_place_id" id="employer_address_place_id" value="{{ old('employer_address_place_id') }}">
                     @error('employer_address') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field tfa-full">
@@ -429,6 +666,50 @@
                     @error('staff_number') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field">
+                    <div class="tfa-label">Sector <span class="tfa-req">*</span></div>
+                    <select class="tfa-input {{ $errors->has('sector') ? 'error' : '' }}" name="sector">
+                        <option value="">Select sector</option>
+                        <option value="private" @selected(old('sector') === 'private')>Private</option>
+                        <option value="public" @selected(old('sector') === 'public')>Public</option>
+                    </select>
+                    @error('sector') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">IPPIS Number <small>Public sector only</small></div>
+                    <input class="tfa-input {{ $errors->has('ippis_number') ? 'error' : '' }}" type="text" name="ippis_number" value="{{ old('ippis_number') }}" placeholder="IPPIS number">
+                    @error('ippis_number') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">Monthly Salary Amount <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('monthly_salary') ? 'error' : '' }}" type="number" min="0" step="0.01" name="monthly_salary" value="{{ old('monthly_salary') }}" placeholder="Monthly salary">
+                    @error('monthly_salary') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">Salary Account Number <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('salary_account_number') ? 'error' : '' }}" type="text" name="salary_account_number" value="{{ old('salary_account_number') }}" placeholder="Salary account number">
+                    @error('salary_account_number') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">Bank Name <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('bank_name') ? 'error' : '' }}" type="text" name="bank_name" value="{{ old('bank_name') }}" placeholder="Bank name">
+                    @error('bank_name') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">Social Media Platform</div>
+                    <select class="tfa-input {{ $errors->has('social_media_platform') ? 'error' : '' }}" name="social_media_platform">
+                        <option value="">Select platform</option>
+                        <option value="facebook" @selected(old('social_media_platform') === 'facebook')>Facebook</option>
+                        <option value="instagram" @selected(old('social_media_platform') === 'instagram')>Instagram</option>
+                        <option value="x" @selected(old('social_media_platform') === 'x')>X</option>
+                    </select>
+                    @error('social_media_platform') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">Social Media Handle</div>
+                    <input class="tfa-input {{ $errors->has('social_media_handle') ? 'error' : '' }}" type="text" name="social_media_handle" value="{{ old('social_media_handle') }}" placeholder="@handle">
+                    @error('social_media_handle') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
                     <div class="tfa-label">Loan Amount <span class="tfa-req">*</span></div>
                     <input class="tfa-input" type="text" name="loan_amount"
                            value="{{ $fmt($loanAmount) }}" readonly>
@@ -437,8 +718,39 @@
             </div>
         </div>
 
-        {{-- ── Section 3: Document Uploads ── --}}
-        <div class="tfa-card">
+        <div class="tfa-card" x-show="step === 2 && applicantType === 'company'" x-cloak>
+            <div class="tfa-section-title">Company Information</div>
+            <div class="tfa-grid">
+                @foreach([
+                    ['company_name', 'Company Name', 'text'], ['company_rc_number', 'RC Number', 'text'], ['company_email', 'Company Email', 'email'], ['company_phone', 'Company Phone', 'text'],
+                    ['company_sector', 'Business Sector', 'text'], ['representative_role', 'Representative Role', 'text'], ['company_bank_name', 'Company Bank Name', 'text'], ['company_account_number', 'Company Account Number', 'text'],
+                ] as [$name, $label, $type])
+                    <div class="tfa-field"><div class="tfa-label">{{ $label }} <span class="tfa-req">*</span></div><input class="tfa-input {{ $errors->has($name) ? 'error' : '' }}" type="{{ $type }}" name="{{ $name }}" value="{{ old($name) }}">@error($name) <span class="tfa-error">{{ $message }}</span> @enderror</div>
+                @endforeach
+                <div class="tfa-field tfa-full"><div class="tfa-label">Registered Office Address <span class="tfa-req">*</span></div><input class="tfa-input {{ $errors->has('company_address') ? 'error' : '' }}" type="text" name="company_address" value="{{ old('company_address') }}" placeholder="Start typing and select registered office address" autocomplete="off" data-google-address data-place-target="company_address_place_id"><input type="hidden" name="company_address_place_id" id="company_address_place_id" value="{{ old('company_address_place_id') }}">@error('company_address') <span class="tfa-error">{{ $message }}</span> @enderror</div>
+                <div class="tfa-field tfa-full"><div class="tfa-label">Loan Purpose / Travel Package</div><textarea class="tfa-textarea {{ $errors->has('loan_purpose') ? 'error' : '' }}" name="loan_purpose" rows="2">{{ old('loan_purpose') }}</textarea>@error('loan_purpose') <span class="tfa-error">{{ $message }}</span> @enderror</div>
+                <div class="tfa-field"><div class="tfa-label">Loan Amount</div><input class="tfa-input" type="text" value="{{ $fmt($loanAmount) }}" readonly></div>
+                <div class="tfa-field"><div class="tfa-label">Loan Tenure</div><input class="tfa-input" type="text" value="{{ $repayPlan }}" readonly></div>
+            </div>
+        </div>
+
+        <div class="tfa-card" x-show="step === 2 && applicantType === 'individual'" x-cloak>
+            <div class="tfa-section-title">Next of Kin</div>
+            <div class="tfa-grid">
+                @foreach([
+                    ['next_of_kin_surname', 'Surname', 'text', true], ['next_of_kin_first_name', 'First Name', 'text', true], ['next_of_kin_other_names', 'Other Names', 'text', false], ['next_of_kin_relationship', 'Relationship', 'text', true],
+                    ['next_of_kin_title', 'Title', 'text', false], ['next_of_kin_phone_primary', 'Phone Number 1', 'text', true], ['next_of_kin_phone_secondary', 'Phone Number 2', 'text', false], ['next_of_kin_email', 'Email Address', 'email', false],
+                ] as [$name, $label, $type, $required])
+                    <div class="tfa-field"><div class="tfa-label">{{ $label }} @if($required)<span class="tfa-req">*</span>@endif</div><input class="tfa-input {{ $errors->has($name) ? 'error' : '' }}" type="{{ $type }}" name="{{ $name }}" value="{{ old($name) }}">@error($name) <span class="tfa-error">{{ $message }}</span> @enderror</div>
+                @endforeach
+                <div class="tfa-field"><div class="tfa-label">Date of Birth</div><input class="tfa-input {{ $errors->has('next_of_kin_date_of_birth') ? 'error' : '' }}" type="date" name="next_of_kin_date_of_birth" value="{{ old('next_of_kin_date_of_birth') }}">@error('next_of_kin_date_of_birth') <span class="tfa-error">{{ $message }}</span> @enderror</div>
+                <div class="tfa-field"><div class="tfa-label">Gender</div><select class="tfa-input {{ $errors->has('next_of_kin_gender') ? 'error' : '' }}" name="next_of_kin_gender"><option value="">Select gender</option><option value="female" @selected(old('next_of_kin_gender') === 'female')>Female</option><option value="male" @selected(old('next_of_kin_gender') === 'male')>Male</option></select>@error('next_of_kin_gender') <span class="tfa-error">{{ $message }}</span> @enderror</div>
+                <div class="tfa-field tfa-full"><div class="tfa-label">Residential Address <span class="tfa-req">*</span></div><input class="tfa-input {{ $errors->has('next_of_kin_address') ? 'error' : '' }}" type="text" name="next_of_kin_address" value="{{ old('next_of_kin_address') }}" placeholder="Start typing and select next of kin address" autocomplete="off" data-google-address data-place-target="next_of_kin_address_place_id"><input type="hidden" name="next_of_kin_address_place_id" id="next_of_kin_address_place_id" value="{{ old('next_of_kin_address_place_id') }}">@error('next_of_kin_address') <span class="tfa-error">{{ $message }}</span> @enderror</div>
+            </div>
+        </div>
+
+        {{-- Section 3: Document Uploads --}}
+        <div class="tfa-card" x-show="step === 3" x-cloak>
             <div class="tfa-section-title">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M9 15h6"/><path d="M9 18h4"/></svg>
                 Required Documents
@@ -462,7 +774,7 @@
                 @endphp
 
                 @foreach($docs as $doc)
-                <div class="tfa-field tfa-doc-field {{ in_array($doc['name'], ['bank_statements', 'employment_letter']) ? 'tfa-doc-wide' : '' }}">
+                <div class="tfa-field tfa-doc-field {{ in_array($doc['name'], ['bank_statements', 'employment_letter']) ? 'tfa-doc-wide' : '' }}" x-show="applicantType === 'individual'">
                     <div class="tfa-label">{{ $doc['label'] }} @if($doc['required'])<span class="tfa-req">*</span>@endif</div>
                     <label class="tfa-file-wrap {{ $errors->has($doc['name']) ? 'border-red-400' : '' }}" for="{{ $doc['name'] }}">
                         <span class="tfa-file-label">
@@ -496,10 +808,44 @@
                 </div>
                 @endforeach
 
+                @php
+                $companyDocs = [
+                    ['name' => 'representative_valid_id', 'label' => 'Representative Valid ID', 'hint' => 'Government-issued ID for the authorized representative', 'required' => true],
+                    ['name' => 'cac_status_report', 'label' => 'Status Report (Form CAC 1.1)', 'hint' => 'Current CAC status report', 'required' => true],
+                    ['name' => 'share_certificate', 'label' => 'Share Certificate', 'hint' => 'Company share certificate', 'required' => true],
+                    ['name' => 'memart', 'label' => 'Memorandum and Articles of Association (MEMART)', 'hint' => 'Company MEMART document', 'required' => true],
+                    ['name' => 'register_of_members', 'label' => 'Register of Members', 'hint' => 'Current register of members', 'required' => true],
+                    ['name' => 'shareholders_agreement', 'label' => "Shareholders' Agreement", 'hint' => 'Executed shareholder agreement', 'required' => true],
+                    ['name' => 'return_of_allotment', 'label' => 'Return of Allotment of Shares (Form CAC 2)', 'hint' => 'CAC Form 2 return of allotment', 'required' => true],
+                    ['name' => 'certificate_of_incorporation', 'label' => 'Certificate of Incorporation', 'hint' => 'Recommended company registration certificate', 'required' => false],
+                    ['name' => 'board_resolution', 'label' => 'Board Resolution / Authorization Letter', 'hint' => 'Recommended authorization for the representative', 'required' => false],
+                    ['name' => 'company_bank_statement', 'label' => 'Company Bank Statement', 'hint' => 'Recommended recent company bank statement', 'required' => false],
+                    ['name' => 'tin_certificate', 'label' => 'Tax Identification Number / TIN Certificate', 'hint' => 'Recommended tax registration certificate', 'required' => false],
+                ];
+                @endphp
+
+                @foreach($companyDocs as $doc)
+                <div class="tfa-field tfa-doc-field tfa-doc-wide" x-show="applicantType === 'company'">
+                    <div class="tfa-label">{{ $doc['label'] }} @if($doc['required'])<span class="tfa-req">*</span>@else <span class="tfa-hint">Recommended</span>@endif</div>
+                    <label class="tfa-file-wrap {{ $errors->has($doc['name']) ? 'border-red-400' : '' }}" for="{{ $doc['name'] }}">
+                        <span class="tfa-file-label">
+                            <span class="tfa-file-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+                            </span>
+                            <span>Click to upload <strong>{{ $doc['label'] }}</strong></span>
+                            <span style="font-size:11px;color:var(--gray-400)">{{ $doc['hint'] }}</span>
+                        </span>
+                        <input type="file" id="{{ $doc['name'] }}" name="{{ $doc['name'] }}" accept=".jpg,.jpeg,.png,.pdf" onchange="showFileName(this, '{{ $doc['name'] }}_name')">
+                        <div class="tfa-file-name" id="{{ $doc['name'] }}_name"></div>
+                    </label>
+                    @error($doc['name']) <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                @endforeach
+
             </div>
         </div>
 
-        {{-- ── Hidden plan fields ── --}}
+        {{-- Hidden plan fields --}}
         <div class="tfa-card" style="display:none;" aria-hidden="true">
             <div class="tfa-section-title">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M7 15h2"/><path d="M12 15h5"/></svg>
@@ -535,12 +881,53 @@
             </div>
         </div>
 
+        <div class="tfa-card" x-show="step === 4" x-cloak>
+            <div class="tfa-section-title">
+                Fast Credit Agreement & Declaration
+            </div>
+            @include('livewire.pages.flight.partials.fastcredit-agreement', ['class' => 'tfa-agreement-box'])
+            <div class="tfa-grid">
+                <div class="tfa-field tfa-full">
+                    <label class="tf-agree-row" style="margin:0;">
+                        <input type="checkbox" name="fast_credit_agreement" value="1" @checked(old('fast_credit_agreement'))>
+                        <span>I confirm that I have read, understood and agreed to the above terms and conditions. I also authorize my employer to deduct monthly instalments as per the agreement shown over leaf from my salary until the loan has been fully paid and to recover any outstanding instalments against my terminal dues in the event of termination of employment before the loan is fully recovered.</span>
+                    </label>
+                    @error('fast_credit_agreement') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field tfa-full">
+                    <div class="tfa-label">Signer Name <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('digital_signature') ? 'error' : '' }}" type="text" name="digital_signature" value="{{ old('digital_signature', $prefillName) }}" placeholder="Full name of the person signing">
+                    @error('digital_signature') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field tfa-full">
+                    <div class="tfa-label">Draw Signature <span class="tfa-req">*</span></div>
+                    <div class="tfa-signature-box {{ $errors->has('digital_signature_image') ? 'error' : '' }}">
+                        <div class="tfa-signature-toolbar">
+                            <span>Use your mouse, trackpad, or finger to sign inside the box.</span>
+                            <button type="button" class="tfa-signature-clear" id="tfa-signature-clear">Clear</button>
+                        </div>
+                        <canvas id="tfa-signature-pad" class="tfa-signature-canvas"></canvas>
+                    </div>
+                    <input type="hidden" name="digital_signature_image" id="tfa-signature-image" value="{{ old('digital_signature_image') }}">
+                    <div class="tfa-hint">Your signature, signer name, timestamp, IP address, and device details will be stored with the application acceptance record.</div>
+                    @error('digital_signature_image') <span class="tfa-error">{{ $message }}</span> @enderror
+                    <span class="tfa-error" id="tfa-signature-error" style="display:none;">Please draw your signature before submitting.</span>
+                </div>
+            </div>
+        </div>
+
         <div class="tfa-btn-row">
-            <a href="{{ route('flights.travelflex') }}" class="tfa-btn-ghost">
+            <a href="{{ route('flights.travelflex') }}" class="tfa-btn-ghost" x-show="step === 1">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                 Back
             </a>
-            <button type="submit" class="tfa-btn-primary" id="tfa-submit">
+            <button type="button" class="tfa-btn-ghost" x-show="step > 1" @click="step = Math.max(1, step - 1)">
+                Previous section
+            </button>
+            <button type="button" class="tfa-btn-primary" x-show="step < 4" @click="step = Math.min(4, step + 1)">
+                Continue
+            </button>
+            <button type="submit" class="tfa-btn-primary" id="tfa-submit" x-show="step === 4" x-cloak>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
                 Submit for Fast Credit Review
             </button>
@@ -563,11 +950,171 @@
             input.closest('.tfa-file-wrap')?.classList.remove('has-file');
         }
     }
-    document.getElementById('tfa-form')?.addEventListener('submit', function() {
+    const signatureCanvas = document.getElementById('tfa-signature-pad');
+    const signatureInput = document.getElementById('tfa-signature-image');
+    const signatureError = document.getElementById('tfa-signature-error');
+    let signatureHasInk = Boolean(signatureInput?.value);
+    let signatureDrawing = false;
+    let signatureContext = null;
+    let signatureRatio = 1;
+    let signatureCssWidth = 0;
+    let signatureCssHeight = 0;
+
+    function configureSignatureContext() {
+        if (!signatureContext) return;
+        signatureContext.setTransform(signatureRatio, 0, 0, signatureRatio, 0, 0);
+        signatureContext.lineWidth = 2.4;
+        signatureContext.lineCap = 'round';
+        signatureContext.lineJoin = 'round';
+        signatureContext.strokeStyle = '#101828';
+    }
+    window.initTravelFlexAddressAutocomplete = function() {
+        if (!window.google?.maps?.places) return;
+
+        document.querySelectorAll('[data-google-address]').forEach(function(input) {
+            if (input.dataset.googleReady === '1') return;
+            input.dataset.googleReady = '1';
+
+            const autocomplete = new google.maps.places.Autocomplete(input, {
+                fields: ['formatted_address', 'place_id'],
+                types: ['address'],
+                componentRestrictions: { country: 'ng' },
+            });
+            let selectedValue = input.value;
+
+            autocomplete.addListener('place_changed', function() {
+                const place = autocomplete.getPlace();
+                if (place.formatted_address) {
+                    input.value = place.formatted_address;
+                    selectedValue = place.formatted_address;
+                }
+
+                const target = document.getElementById(input.dataset.placeTarget);
+                if (target) {
+                    target.value = place.place_id || '';
+                }
+            });
+
+            input.addEventListener('input', function() {
+                if (input.value === selectedValue) return;
+                const target = document.getElementById(input.dataset.placeTarget);
+                if (target) {
+                    target.value = '';
+                }
+            });
+        });
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        window.initTravelFlexAddressAutocomplete();
+    });
+
+    function resizeSignatureCanvas(force = false) {
+        if (!signatureCanvas) return false;
+        const previous = signatureInput?.value || '';
+        const rect = signatureCanvas.getBoundingClientRect();
+
+        if (rect.width < 20 || rect.height < 20) {
+            return false;
+        }
+
+        signatureRatio = Math.max(window.devicePixelRatio || 1, 1);
+        signatureCssWidth = rect.width;
+        signatureCssHeight = rect.height;
+
+        const nextWidth = Math.floor(rect.width * signatureRatio);
+        const nextHeight = Math.floor(rect.height * signatureRatio);
+        if (!force && signatureCanvas.width === nextWidth && signatureCanvas.height === nextHeight && signatureContext) {
+            return true;
+        }
+
+        signatureCanvas.width = nextWidth;
+        signatureCanvas.height = nextHeight;
+        signatureContext = signatureCanvas.getContext('2d');
+        configureSignatureContext();
+
+        if (previous) {
+            const image = new Image();
+            image.onload = function() {
+                signatureContext.drawImage(image, 0, 0, signatureCssWidth, signatureCssHeight);
+            };
+            image.src = previous;
+        }
+
+        return true;
+    }
+
+    function signaturePoint(event) {
+        const rect = signatureCanvas.getBoundingClientRect();
+        return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    }
+
+    function startSignature(event) {
+        if (!resizeSignatureCanvas()) return;
+        event.preventDefault();
+        signatureCanvas.setPointerCapture?.(event.pointerId);
+        signatureDrawing = true;
+        signatureHasInk = true;
+        const point = signaturePoint(event);
+        signatureContext.beginPath();
+        signatureContext.moveTo(point.x, point.y);
+        signatureContext.lineTo(point.x + 0.01, point.y + 0.01);
+        signatureContext.stroke();
+        signatureError.style.display = 'none';
+    }
+
+    function moveSignature(event) {
+        if (!signatureDrawing || !signatureContext) return;
+        event.preventDefault();
+        const point = signaturePoint(event);
+        signatureContext.lineTo(point.x, point.y);
+        signatureContext.stroke();
+    }
+
+    function finishSignature(event) {
+        if (!signatureDrawing) return;
+        event?.preventDefault?.();
+        signatureDrawing = false;
+        if (!signatureHasInk) return;
+        signatureInput.value = signatureCanvas.toDataURL('image/png');
+    }
+
+    function clearSignature() {
+        if (!resizeSignatureCanvas(true) || !signatureContext || !signatureCanvas) return;
+        signatureContext.save();
+        signatureContext.setTransform(1, 0, 0, 1, 0, 0);
+        signatureContext.clearRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+        signatureContext.restore();
+        configureSignatureContext();
+        signatureHasInk = false;
+        signatureInput.value = '';
+    }
+
+    if (signatureCanvas) {
+        window.addEventListener('resize', () => resizeSignatureCanvas(true));
+        signatureCanvas.addEventListener('pointerdown', startSignature);
+        signatureCanvas.addEventListener('pointermove', moveSignature);
+        signatureCanvas.addEventListener('pointerup', finishSignature);
+        signatureCanvas.addEventListener('pointercancel', finishSignature);
+        signatureCanvas.addEventListener('pointerleave', finishSignature);
+        document.getElementById('tfa-signature-clear')?.addEventListener('click', clearSignature);
+    }
+
+    document.getElementById('tfa-form')?.addEventListener('submit', function(event) {
+        if (signatureCanvas && (!signatureHasInk || !signatureInput.value)) {
+            event.preventDefault();
+            signatureError.style.display = 'block';
+            signatureCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
         const btn = document.getElementById('tfa-submit');
         if (!btn) return;
         btn.disabled = true;
         btn.textContent = 'Submitting application...';
     });
 </script>
+@if(config('services.google_maps.key'))
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&libraries=places&callback=initTravelFlexAddressAutocomplete" async defer></script>
+@endif
 @endcomponent

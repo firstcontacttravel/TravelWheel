@@ -19,7 +19,7 @@
                 <ul class="flex space-x-4 items-center">
                     @foreach($menuItems as $item)
                     <li>
-                        <a class="product-nav" href="{{ route($item['route']) }}">
+                        <a class="product-nav" href="{{ $item['url'] ?? route($item['route']) }}">
                             <div class="nav-content">
                                 <img src="{{ asset('assets/' . $item['icon']) }}" class="img-W1" alt="{{ $item['name'] }}">
                                 <div class="nav-text">
@@ -38,7 +38,7 @@
                 <ul class="flex flex-col space-y-4 p-4">
                     @foreach($menuItems as $item)
                     <li>
-                        <a class="product-nav" href="{{ route($item['route']) }}">
+                        <a class="product-nav" href="{{ $item['url'] ?? route($item['route']) }}">
                             <div class="nav-content">
                                 <img src="{{ asset('assets/' . $item['icon']) }}" class="img-W1" alt="{{ $item['name'] }}">
                                 <div class="nav-text">

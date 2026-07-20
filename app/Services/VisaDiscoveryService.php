@@ -14,6 +14,62 @@ class VisaDiscoveryService
         private readonly VisaFeeEstimateService $fees,
     ) {}
 
+    public function availableDestinationsForNationality(Country $nationality): array
+    {
+        $products = VisaProduct::query()
+            ->currentlyPublished()
+            ->with([
+                'destinationCountry:id,name,alpha2,is_active',
+                'destination:id,name,is_active',
+                'eligibilityRules.countryGroup.countries',
+            ])
+            ->get();
+
+        $countries = collect();
+        $regions = collect();
+
+        foreach ($products as $product) {
+            if (! $this->productIsAvailableForNationality($product, $nationality)) {
+                continue;
+            }
+
+            if ($product->destinationCountry) {
+                $countries->put($product->destinationCountry->id, [
+                    'id' => $product->destinationCountry->id,
+                    'name' => $product->destinationCountry->name,
+                    'alpha2' => $product->destinationCountry->alpha2,
+                    'ref' => 'country:'.$product->destinationCountry->id,
+                ]);
+
+                continue;
+            }
+
+            if ($product->destination) {
+                $regions->put($product->destination->id, [
+                    'id' => $product->destination->id,
+                    'name' => $product->destination->name,
+                    'ref' => 'region:'.$product->destination->id,
+                ]);
+            }
+        }
+
+        return [
+            'countries' => $countries->sortBy('name')->values(),
+            'regions' => $regions->sortBy('name')->values(),
+        ];
+    }
+
+    public function destinationIsAvailableForNationality(Country $nationality, Country|VisaDestination $destination): bool
+    {
+        $available = $this->availableDestinationsForNationality($nationality);
+        $ref = $destination instanceof Country
+            ? 'country:'.$destination->id
+            : 'region:'.$destination->id;
+
+        return $available['countries']->contains('ref', $ref)
+            || $available['regions']->contains('ref', $ref);
+    }
+
     public function search(Country $nationality, Country|VisaDestination $destination, ?Country $residence, array $travelers, array $context = []): Collection
     {
         $isCountry = $destination instanceof Country;
@@ -98,5 +154,32 @@ class VisaDiscoveryService
                 default => true,
             };
         });
+    }
+
+    private function productIsAvailableForNationality(VisaProduct $product, Country $nationality): bool
+    {
+        $destinationCountry = $product->destinationCountry;
+
+        if ($destinationCountry && ! $destinationCountry->is_active) {
+            return false;
+        }
+
+        if ($product->destination && ! $product->destination->is_active) {
+            return false;
+        }
+
+        if ($destinationCountry && $destinationCountry->id === $nationality->id) {
+            return false;
+        }
+
+        if ($product->family->value === 'voa') {
+            if (! $destinationCountry || $destinationCountry->alpha2 !== 'NG' || $nationality->alpha2 === 'NG') {
+                return false;
+            }
+        }
+
+        $eligibility = $this->eligibility->evaluate($product, $nationality);
+
+        return in_array($eligibility->status, ['eligible', 'conditionally_eligible'], true);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Country;
 use App\Models\VisaDestination;
 use App\Services\VisaDiscoveryService;
 use App\Services\VisaFunnelService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -14,17 +15,41 @@ use Illuminate\View\View;
 
 class VisaSearchController extends Controller
 {
-    public function search(Request $request, VisaFunnelService $funnel): RedirectResponse
+    public function destinations(Request $request, VisaDiscoveryService $discovery): JsonResponse
+    {
+        $validated = $request->validate([
+            'nationality_id' => ['required', Rule::exists('countries', 'id')->where('is_active', true)],
+        ]);
+
+        $nationality = Country::query()->where('is_active', true)->findOrFail($validated['nationality_id']);
+        $destinations = $discovery->availableDestinationsForNationality($nationality);
+
+        return response()->json([
+            'countries' => $destinations['countries']->values(),
+            'regions' => $destinations['regions']->values(),
+        ]);
+    }
+
+    public function search(Request $request, VisaFunnelService $funnel, VisaDiscoveryService $discovery): RedirectResponse
     {
         $validated = $request->validate($this->rules(), [
             'infants.lte' => 'The number of infants cannot exceed the number of adults.',
         ]);
         [$destinationType, $destination] = $this->resolveDestination($validated);
+        $nationality = Country::query()->where('is_active', true)->findOrFail($validated['nationality_id']);
+
         if ($destinationType === 'country' && (int) $validated['nationality_id'] === (int) $destination->id) {
             throw ValidationException::withMessages([
                 'destination_ref' => 'Your passport nationality and destination cannot be the same country.',
             ]);
         }
+
+        if (! $discovery->destinationIsAvailableForNationality($nationality, $destination)) {
+            throw ValidationException::withMessages([
+                'destination_ref' => 'This destination is not currently available for the selected passport nationality.',
+            ]);
+        }
+
         $validated['destination_type'] = $destinationType;
         $validated['destination_id'] = $destinationType === 'country' ? $destination->id : null;
         $validated['visa_destination_id'] = $destinationType === 'region' ? $destination->id : null;

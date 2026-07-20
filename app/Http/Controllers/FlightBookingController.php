@@ -489,7 +489,9 @@ class FlightBookingController extends Controller
                 $travelFlexIneligibleReason = $travelFlexEligibility['reason'];
                 session()->forget('bookingIntent');
             } elseif ($fareType === 'webfare') {
-                return redirect()->route('flights.travelflex');
+                session(['travelFlexRedirectTarget' => 'plan']);
+
+                return redirect()->route('flights.travelflex.fastcredit');
             }
         }
 
@@ -543,7 +545,9 @@ class FlightBookingController extends Controller
         if (session('bookingIntent') === 'travelflex') {
             $travelFlexEligibility = $this->_travelFlexEligibility($mappedFlight);
             if ($travelFlexEligibility['eligible']) {
-                return redirect()->route('flights.travelflex');
+                session(['travelFlexRedirectTarget' => 'plan']);
+
+                return redirect()->route('flights.travelflex.fastcredit');
             }
 
             session()->forget('bookingIntent');
@@ -1550,7 +1554,7 @@ class FlightBookingController extends Controller
                 (string) data_get($tfPlan, 'repayment_plan', '1 month'),
                 (string) data_get($tfPlan, 'payment_method', 'gateway'),
             );
-            $amount = round((float) data_get($tfPlan, 'down_payment', 0), 2);
+            $amount = round((float) data_get($tfPlan, 'upfront_payment_total', data_get($tfPlan, 'down_payment', 0)), 2);
             session(['travelFlexPlan' => $tfPlan]);
 
             return $amount;
@@ -1631,6 +1635,12 @@ class FlightBookingController extends Controller
         $downPayment = round($ticketCost * ($downPercent / 100), 2);
         $remainingBalance = round($ticketCost - $downPayment, 2);
         $rate = (float) config('travelwheel.travelflex_interest_rate', 0.04);
+        $administrationFeeRate = (float) config('travelwheel.travelflex_administration_fee_rate', 0.01);
+        $insuranceFeeRate = (float) config('travelwheel.travelflex_insurance_fee_rate', 0.015);
+        $administrationFee = round($remainingBalance * $administrationFeeRate, 2);
+        $insuranceFee = round($remainingBalance * $insuranceFeeRate, 2);
+        $upfrontFeeTotal = round($administrationFee + $insuranceFee, 2);
+        $upfrontPaymentTotal = round($downPayment + $upfrontFeeTotal, 2);
         $proportions = [
             1 => [1.0],
             2 => [0.5, 0.5],
@@ -1667,13 +1677,21 @@ class FlightBookingController extends Controller
         return [
             'ticket_cost' => $ticketCost,
             'down_payment' => $downPayment,
+            'administration_fee' => $administrationFee,
+            'administration_fee_rate' => $administrationFeeRate,
+            'administration_fee_percent' => round($administrationFeeRate * 100, 2),
+            'insurance_fee' => $insuranceFee,
+            'insurance_fee_rate' => $insuranceFeeRate,
+            'insurance_fee_percent' => round($insuranceFeeRate * 100, 2),
+            'upfront_fee_total' => $upfrontFeeTotal,
+            'upfront_payment_total' => $upfrontPaymentTotal,
             'down_percent' => $downPercent,
             'loan_amount' => $remainingBalance,
             'remaining_balance' => $remainingBalance,
             'repayment_plan' => $repaymentPlan,
             'repayment_interval_days' => $parsed['unit_days'],
             'repayment_count' => count($schedule),
-            'grand_total' => round($ticketCost + $totalInterest, 2),
+            'grand_total' => round($ticketCost + $totalInterest + $upfrontFeeTotal, 2),
             'total_interest' => $totalInterest,
             'interest_rate' => $rate,
             'interest_rate_percent' => round($rate * 100, 2),
@@ -2559,6 +2577,9 @@ class FlightBookingController extends Controller
                 (string) $request->input('repayment_plan'),
                 (string) data_get(session('travelFlexPlan', []), 'payment_method', 'gateway'),
             )]);
+            session(['travelFlexRedirectTarget' => 'application']);
+
+            return redirect()->route('flights.travelflex.fastcredit');
         }
  
         if (! session()->has('travelFlexPlan')) {
@@ -2567,6 +2588,23 @@ class FlightBookingController extends Controller
  
         return view('livewire.pages.flight.flight-travelflex-application');
     }
+
+    public function travelFlexFastCreditRedirect()
+    {
+        $target = session('travelFlexRedirectTarget', session()->has('travelFlexPlan') ? 'application' : 'plan');
+
+        if ($target === 'application' && ! session()->has('travelFlexPlan')) {
+            return redirect()->route('flights.travelflex');
+        }
+
+        if (! session()->has('bookingFlight')) {
+            return redirect()->route('air.flight-s')->withErrors(['error' => 'Session expired.']);
+        }
+
+        return view('livewire.pages.flight.flight-travelflex-fastcredit', [
+            'target' => $target,
+        ]);
+    }
  
     // =========================================================================
     //  travelFlexSubmitApplication() — Validate + upload docs + send emails + pay
@@ -2574,28 +2612,90 @@ class FlightBookingController extends Controller
     public function travelFlexSubmitApplication(Request $request)
     {
         $validated = $request->validate([
-            'full_name'         => 'required|string|max:200',
+            'applicant_type'    => 'required|in:individual,company',
             'home_address'      => 'required|string|max:500',
             'email'             => 'required|email',
-            'bvn'               => 'required|string|size:11|regex:/^\d{11}$/',
-            'employer_name'     => 'required|string|max:200',
-            'employer_address'  => 'required|string|max:500',
-            'occupation'        => 'required|string|max:150',
-            'job_description'   => 'required|string|max:1000',
-            'staff_number'      => 'required|string|max:50',
-            // Documents
-            'valid_id'          => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
-            'passport_photo'    => 'required|file|mimes:jpg,jpeg,png|max:5120',
-            'work_id_card'      => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
-            'employment_letter' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
-            'bank_statements'   => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'phone_primary'     => 'required|string|max:30',
+            'phone_secondary'   => 'nullable|string|max:30',
+            'home_address_place_id' => 'nullable|string|max:255',
+            'employer_address_place_id' => 'nullable|string|max:255',
+            'next_of_kin_address_place_id' => 'nullable|string|max:255',
+            'company_address_place_id' => 'nullable|string|max:255',
+            'bvn'               => 'required_if:applicant_type,individual|nullable|string|size:11|regex:/^\d{11}$/',
+            'nin'               => 'required_if:applicant_type,individual|nullable|string|max:20',
+            'title'             => 'required|string|max:30',
+            'surname'           => 'required|string|max:100',
+            'first_name'        => 'required|string|max:100',
+            'other_name'        => 'nullable|string|max:120',
+            'marital_status'    => 'required_if:applicant_type,individual|nullable|in:single,married,divorced,separated',
+            'gender'            => 'required_if:applicant_type,individual|nullable|in:female,male',
+            'date_of_birth'     => 'required_if:applicant_type,individual|nullable|date|before:today',
+            'passport_number'   => 'required_if:applicant_type,individual|nullable|string|max:50',
+            'passport_expiry_date' => 'required_if:applicant_type,individual|nullable|date|after:today',
+            'employer_name'     => 'required_if:applicant_type,individual|nullable|string|max:200',
+            'employer_address'  => 'required_if:applicant_type,individual|nullable|string|max:500',
+            'occupation'        => 'required_if:applicant_type,individual|nullable|string|max:150',
+            'job_description'   => 'required_if:applicant_type,individual|nullable|string|max:1000',
+            'staff_number'      => 'required_if:applicant_type,individual|nullable|string|max:50',
+            'sector'            => 'required_if:applicant_type,individual|nullable|in:private,public',
+            'ippis_number'      => 'nullable|string|max:80',
+            'monthly_salary'    => 'required_if:applicant_type,individual|nullable|numeric|min:0',
+            'salary_account_number' => 'required_if:applicant_type,individual|nullable|string|max:30',
+            'bank_name'         => 'required_if:applicant_type,individual|nullable|string|max:150',
+            'social_media_platform' => 'nullable|in:facebook,instagram,x',
+            'social_media_handle' => 'nullable|string|max:150',
+            'next_of_kin_surname' => 'required_if:applicant_type,individual|nullable|string|max:100',
+            'next_of_kin_first_name' => 'required_if:applicant_type,individual|nullable|string|max:100',
+            'next_of_kin_other_names' => 'nullable|string|max:150',
+            'next_of_kin_relationship' => 'required_if:applicant_type,individual|nullable|string|max:80',
+            'next_of_kin_date_of_birth' => 'nullable|date|before:today',
+            'next_of_kin_gender' => 'nullable|in:female,male',
+            'next_of_kin_title' => 'nullable|string|max:30',
+            'next_of_kin_address' => 'required_if:applicant_type,individual|nullable|string|max:500',
+            'next_of_kin_phone_primary' => 'required_if:applicant_type,individual|nullable|string|max:30',
+            'next_of_kin_phone_secondary' => 'nullable|string|max:30',
+            'next_of_kin_email' => 'nullable|email',
+            'company_name'      => 'required_if:applicant_type,company|nullable|string|max:200',
+            'company_rc_number' => 'required_if:applicant_type,company|nullable|string|max:80',
+            'company_email'     => 'required_if:applicant_type,company|nullable|email',
+            'company_phone'     => 'required_if:applicant_type,company|nullable|string|max:30',
+            'company_address'   => 'required_if:applicant_type,company|nullable|string|max:500',
+            'company_sector'    => 'required_if:applicant_type,company|nullable|string|max:150',
+            'company_bank_name' => 'required_if:applicant_type,company|nullable|string|max:150',
+            'company_account_number' => 'required_if:applicant_type,company|nullable|string|max:30',
+            'representative_role' => 'required_if:applicant_type,company|nullable|string|max:150',
+            'loan_purpose'      => 'nullable|string|max:500',
+            'fast_credit_agreement' => 'accepted',
+            'digital_signature' => 'required|string|max:200',
+            'digital_signature_image' => ['required', 'string', 'regex:/^data:image\/png;base64,[A-Za-z0-9+\/=]+$/'],
+            'valid_id'          => 'required_if:applicant_type,individual|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'passport_photo'    => 'required_if:applicant_type,individual|file|mimes:jpg,jpeg,png|max:5120',
+            'work_id_card'      => 'required_if:applicant_type,individual|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'employment_letter' => 'required_if:applicant_type,individual|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'bank_statements'   => 'required_if:applicant_type,individual|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'representative_valid_id' => 'required_if:applicant_type,company|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'cac_status_report' => 'required_if:applicant_type,company|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'share_certificate' => 'required_if:applicant_type,company|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'memart'            => 'required_if:applicant_type,company|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'register_of_members' => 'required_if:applicant_type,company|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'shareholders_agreement' => 'required_if:applicant_type,company|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'return_of_allotment' => 'required_if:applicant_type,company|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'certificate_of_incorporation' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'board_resolution' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'company_bank_statement' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'tin_certificate' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ], [
             'bvn.size'  => 'BVN must be exactly 11 digits.',
             'bvn.regex' => 'BVN must contain only numbers.',
+            'fast_credit_agreement.accepted' => 'You must accept the Fast Credit loan agreement before submitting.',
         ]);
  
         // ── Store uploaded documents ──────────────────────────────────────────
-        $docKeys   = ['valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements'];
+        $fullName = $this->_travelFlexFullName($validated);
+
+        $docKeys = $validated['applicant_type'] === 'company'
+            ? ['representative_valid_id', 'cac_status_report', 'share_certificate', 'memart', 'register_of_members', 'shareholders_agreement', 'return_of_allotment', 'certificate_of_incorporation', 'board_resolution', 'company_bank_statement', 'tin_certificate']
+            : ['valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements'];
         $uploadPaths = [];
         $storagePaths = [];
  
@@ -2623,19 +2723,35 @@ class FlightBookingController extends Controller
         session(['travelFlexPlan' => $tfPlan]);
  
         $applicant = [
-            'full_name'        => $validated['full_name'],
+            'applicant_type'    => $validated['applicant_type'],
+            'full_name'        => $fullName,
             'email'            => $validated['email'],
             'home_address'     => $validated['home_address'],
-            'bvn'              => $validated['bvn'],
-            'employer_name'    => $validated['employer_name'],
-            'employer_address' => $validated['employer_address'],
-            'occupation'       => $validated['occupation'],
-            'job_description'  => $validated['job_description'],
-            'staff_number'     => $validated['staff_number'],
+            'phone_primary'    => $validated['phone_primary'],
+            'phone_secondary'  => $validated['phone_secondary'] ?? null,
+            'home_address_place_id' => $validated['home_address_place_id'] ?? null,
+            'bvn'              => $validated['bvn'] ?? null,
+            'nin'              => $validated['nin'] ?? null,
+            'title'            => $validated['title'] ?? null,
+            'surname'          => $validated['surname'] ?? null,
+            'first_name'       => $validated['first_name'] ?? null,
+            'other_name'       => $validated['other_name'] ?? null,
+            'marital_status'   => $validated['marital_status'] ?? null,
+            'gender'           => $validated['gender'] ?? null,
+            'date_of_birth'    => $validated['date_of_birth'] ?? null,
+            'passport_number'  => $validated['passport_number'] ?? null,
+            'passport_expiry_date' => $validated['passport_expiry_date'] ?? null,
+            'employer_name'    => $validated['employer_name'] ?? null,
+            'employer_address' => $validated['employer_address'] ?? null,
+            'occupation'       => $validated['occupation'] ?? null,
+            'job_description'  => $validated['job_description'] ?? null,
+            'staff_number'     => $validated['staff_number'] ?? null,
         ];
  
+        $fastCredit = $this->_fastCreditApplicationPayload($validated, $request);
+
         session(['travelFlexApplicant' => $applicant, 'travelFlexDocPaths' => $storagePaths]);
-        $travelFlexApplication = $this->_persistTravelFlexApplication($applicant, $tfPlan, $storagePaths);
+        $travelFlexApplication = $this->_persistTravelFlexApplication($applicant, $tfPlan, $storagePaths, $fastCredit);
  
         // ── Now branch on payment method ──────────────────────────────────────
         if ($booking = $travelFlexApplication->booking) {
@@ -2773,7 +2889,104 @@ class FlightBookingController extends Controller
         return $this->_startSeerbitPayment('travelflex_down_payment');
     }
 
-    private function _persistTravelFlexApplication(array $applicant, array $tfPlan, array $documentPaths): TravelFlexApplication
+    private function _travelFlexFullName(array $validated): string
+    {
+        return trim(collect([
+            $validated['title'] ?? null,
+            $validated['surname'] ?? null,
+            $validated['first_name'] ?? null,
+            $validated['other_name'] ?? null,
+        ])->filter(fn ($value) => filled($value))->implode(' '));
+    }
+
+    private function _fastCreditApplicationPayload(array $validated, Request $request): array
+    {
+        $applicantType = $validated['applicant_type'];
+        $fullName = $this->_travelFlexFullName($validated);
+
+        return [
+            'applicant_type' => $applicantType,
+            'identity_details' => [
+                'nin' => $validated['nin'] ?? null,
+                'title' => $validated['title'] ?? null,
+                'surname' => $validated['surname'] ?? null,
+                'first_name' => $validated['first_name'] ?? null,
+                'other_name' => $validated['other_name'] ?? null,
+                'marital_status' => $validated['marital_status'] ?? null,
+                'gender' => $validated['gender'] ?? null,
+                'date_of_birth' => $validated['date_of_birth'] ?? null,
+                'phone_primary' => $validated['phone_primary'],
+                'phone_secondary' => $validated['phone_secondary'] ?? null,
+                'passport_number' => $validated['passport_number'] ?? null,
+                'passport_expiry_date' => $validated['passport_expiry_date'] ?? null,
+                'social_media_platform' => $validated['social_media_platform'] ?? null,
+                'social_media_handle' => $validated['social_media_handle'] ?? null,
+            ],
+            'employment_details' => [
+                'employer_name' => $validated['employer_name'] ?? null,
+                'employer_address' => $validated['employer_address'] ?? null,
+                'occupation' => $validated['occupation'] ?? null,
+                'job_description' => $validated['job_description'] ?? null,
+                'staff_number' => $validated['staff_number'] ?? null,
+                'sector' => $validated['sector'] ?? null,
+                'ippis_number' => $validated['ippis_number'] ?? null,
+                'employer_address_place_id' => $validated['employer_address_place_id'] ?? null,
+            ],
+            'bank_details' => [
+                'monthly_salary' => $validated['monthly_salary'] ?? null,
+                'salary_account_number' => $validated['salary_account_number'] ?? null,
+                'bank_name' => $validated['bank_name'] ?? null,
+            ],
+            'next_of_kin_details' => [
+                'surname' => $validated['next_of_kin_surname'] ?? null,
+                'first_name' => $validated['next_of_kin_first_name'] ?? null,
+                'other_names' => $validated['next_of_kin_other_names'] ?? null,
+                'relationship' => $validated['next_of_kin_relationship'] ?? null,
+                'date_of_birth' => $validated['next_of_kin_date_of_birth'] ?? null,
+                'gender' => $validated['next_of_kin_gender'] ?? null,
+                'title' => $validated['next_of_kin_title'] ?? null,
+                'residential_address' => $validated['next_of_kin_address'] ?? null,
+                'residential_address_place_id' => $validated['next_of_kin_address_place_id'] ?? null,
+                'phone_primary' => $validated['next_of_kin_phone_primary'] ?? null,
+                'phone_secondary' => $validated['next_of_kin_phone_secondary'] ?? null,
+                'email' => $validated['next_of_kin_email'] ?? null,
+            ],
+            'company_details' => [
+                'company_name' => $validated['company_name'] ?? null,
+                'rc_number' => $validated['company_rc_number'] ?? null,
+                'email' => $validated['company_email'] ?? null,
+                'phone' => $validated['company_phone'] ?? null,
+                'registered_address' => $validated['company_address'] ?? null,
+                'registered_address_place_id' => $validated['company_address_place_id'] ?? null,
+                'sector' => $validated['company_sector'] ?? null,
+                'bank_name' => $validated['company_bank_name'] ?? null,
+                'account_number' => $validated['company_account_number'] ?? null,
+                'loan_purpose' => $validated['loan_purpose'] ?? null,
+            ],
+            'representative_details' => [
+                'full_name' => $fullName,
+                'email' => $validated['email'],
+                'phone_primary' => $validated['phone_primary'],
+                'phone_secondary' => $validated['phone_secondary'] ?? null,
+                'role' => $validated['representative_role'] ?? null,
+                'residential_address' => $validated['home_address'],
+                'residential_address_place_id' => $validated['home_address_place_id'] ?? null,
+            ],
+            'agreement_acceptance' => [
+                'agreement' => 'fast_credit_loan_agreement',
+                'version' => '2026-07-09',
+                'accepted' => $request->boolean('fast_credit_agreement'),
+                'digital_signature' => $validated['digital_signature'],
+                'signature_image' => $validated['digital_signature_image'],
+                'signature_format' => 'image/png',
+                'accepted_at' => now()->toIso8601String(),
+                'ip_address' => $request->ip(),
+                'user_agent' => substr((string) $request->userAgent(), 0, 500),
+            ],
+        ];
+    }
+
+    private function _persistTravelFlexApplication(array $applicant, array $tfPlan, array $documentPaths, array $fastCredit = []): TravelFlexApplication
     {
         $booking = ($dbId = session('flightBookingDbId')) ? FlightBooking::find($dbId) : null;
         $bvn = (string) ($applicant['bvn'] ?? '');
@@ -2784,24 +2997,34 @@ class FlightBookingController extends Controller
                 'flight_booking_id' => $booking?->id,
                 'booking_ref' => $booking?->booking_ref ?? session('bookingRef'),
                 'unique_id' => $booking?->unique_id ?? session('bookingUniqueId'),
+                'applicant_type' => $fastCredit['applicant_type'] ?? $applicant['applicant_type'] ?? 'individual',
                 'applicant_details' => [
                     'full_name' => $applicant['full_name'] ?? null,
                     'email' => $applicant['email'] ?? null,
                     'home_address' => $applicant['home_address'] ?? null,
+                    'phone_primary' => $applicant['phone_primary'] ?? null,
+                    'phone_secondary' => $applicant['phone_secondary'] ?? null,
+                    'applicant_type' => $applicant['applicant_type'] ?? 'individual',
                 ],
                 'bvn_metadata' => [
                     'last_four' => $bvn !== '' ? substr($bvn, -4) : null,
                     'hash' => $bvn !== '' ? hash('sha256', $bvn . config('app.key')) : null,
                     'captured_at' => now()->toIso8601String(),
                 ],
-                'employment_details' => [
+                'identity_details' => $fastCredit['identity_details'] ?? null,
+                'employment_details' => $fastCredit['employment_details'] ?? [
                     'employer_name' => $applicant['employer_name'] ?? null,
                     'employer_address' => $applicant['employer_address'] ?? null,
                     'occupation' => $applicant['occupation'] ?? null,
                     'job_description' => $applicant['job_description'] ?? null,
                     'staff_number' => $applicant['staff_number'] ?? null,
                 ],
+                'bank_details' => $fastCredit['bank_details'] ?? null,
+                'next_of_kin_details' => $fastCredit['next_of_kin_details'] ?? null,
+                'company_details' => $fastCredit['company_details'] ?? null,
+                'representative_details' => $fastCredit['representative_details'] ?? null,
                 'document_paths' => $documentPaths,
+                'agreement_acceptance' => $fastCredit['agreement_acceptance'] ?? null,
                 'repayment_plan' => $tfPlan,
                 'down_payment' => $tfPlan['down_payment'] ?? null,
                 'down_percent' => $tfPlan['down_percent'] ?? null,

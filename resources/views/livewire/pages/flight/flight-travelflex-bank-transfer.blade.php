@@ -1,4 +1,4 @@
-@component('layouts.app', ['title' => 'TravelFlex - Bank Transfer'])
+﻿@component('layouts.app', ['title' => 'TravelFlex - Bank Transfer'])
 
 @php
     $bookingFlight = session('bookingFlight', []);
@@ -6,12 +6,13 @@
     $tfPlan = session('travelFlexPlan', []);
     $applicant = session('travelFlexApplicant', []);
     $currency = $flight['currency'] ?? 'NGN';
-    $sym = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency . ' ' };
+    $sym = match($currency) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'GBP' => html_entity_decode('&pound;', ENT_QUOTES, 'UTF-8'), 'EUR' => html_entity_decode('&euro;', ENT_QUOTES, 'UTF-8'), default => $currency . ' ' };
     $fmt = fn($v) => $sym . number_format((float) $v, 2);
     $segments = $flight['segments'] ?? [];
     $firstSeg = $segments[0] ?? [];
     $lastSeg = !empty($segments) ? $segments[count($segments) - 1] : [];
     $route = trim(($firstSeg['from'] ?? '') . ' → ' . ($lastSeg['to'] ?? ''), ' →');
+    $upfrontPaymentTotal = (float) ($tfPlan['upfront_payment_total'] ?? (($tfPlan['down_payment'] ?? 0) + ($tfPlan['administration_fee'] ?? 0) + ($tfPlan['insurance_fee'] ?? 0)));
 @endphp
 
 <style>
@@ -75,8 +76,8 @@
         </div>
         <div>
             <div class="tfb-kicker">TravelFlex Down Payment</div>
-            <div class="tfb-title">Transfer Your Down Payment</div>
-            <div class="tfb-sub">Send the exact down payment amount to one of the accounts below, then submit your transaction reference so our team can verify the payment and continue your TravelFlex review.</div>
+            <div class="tfb-title">Transfer Your TravelFlex Upfront Payment</div>
+            <div class="tfb-sub">Send the exact upfront amount to one of the accounts below, then submit your transaction reference so our team can verify the payment and continue ticketing.</div>
         </div>
     </section>
 
@@ -85,8 +86,9 @@
             <section class="tfb-card">
                 <div class="tfb-card-title">Payment Amount</div>
                 <div class="tfb-amount">
-                    <div><div class="tfb-label">Down payment</div><div class="tfb-value" style="color:var(--tf-green);">{{ $fmt($tfPlan['down_payment'] ?? 0) }}</div></div>
-                    <div><div class="tfb-label">Percent</div><div class="tfb-value">{{ $tfPlan['down_percent'] ?? 30 }}%</div></div>
+                    <div><div class="tfb-label">Due after approval</div><div class="tfb-value" style="color:var(--tf-green);">{{ $fmt($upfrontPaymentTotal) }}</div></div>
+                    <div><div class="tfb-label">Down payment</div><div class="tfb-value">{{ $fmt($tfPlan['down_payment'] ?? 0) }}</div></div>
+                    <div><div class="tfb-label">Admin + insurance</div><div class="tfb-value">{{ $fmt(($tfPlan['administration_fee'] ?? 0) + ($tfPlan['insurance_fee'] ?? 0)) }}</div></div>
                     <div><div class="tfb-label">Remaining balance</div><div class="tfb-value">{{ $fmt($tfPlan['remaining_balance'] ?? 0) }}</div></div>
                 </div>
             </section>
