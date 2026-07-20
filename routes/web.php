@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\AdminReportExportController;
 use App\Http\Controllers\AirCargoController;
+use App\Http\Controllers\CarController;
 use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\LeadwayController;
 use App\Http\Controllers\ProtocolController;
 use App\Http\Controllers\LoungeController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\AdminVisaDocumentController;
 use App\Http\Controllers\FlightBookingController;
 use App\Http\Controllers\FlightController;
@@ -29,6 +31,8 @@ use App\Livewire\Pages\Insurance\Insurance as InsurancePage;
 use App\Livewire\Pages\Insurance\InsuranceQuote as InsuranceQuotePage;
 use App\Livewire\Pages\AirCargo\AirCargo as AirCargoPage;
 use App\Livewire\Pages\AirCargo\AirCargoCreate;
+use App\Livewire\Pages\CarHire\CarHire as CarHirePage;
+use App\Livewire\Pages\Support\Support as SupportPage;
 use App\Livewire\Pages\Visa\ApplicationWizard as VisaApplicationWizard;
 use App\Livewire\Pages\Visa\Discovery as VisaDiscovery;
 use App\Livewire\Pages\Visa\Results as VisaResults;
@@ -140,8 +144,33 @@ Route::get('/air/cargo/zones', [AirCargoController::class, 'getShippingZones'])-
 Route::post('/air/cargo/create', [AirCargoController::class, 'airCargoPost'])->name('air.cargo.post');
 Route::get('/air/cargo/payment/callback', [AirCargoController::class, 'callbackSeerbit'])->name('air.cargo.callback');
 Route::get('/air/cargo/success', [AirCargoController::class, 'airCargoSuccess'])->name('air.cargo.success');
-Route::get('/air/support', function () { /* ... */
-})->name('air.support');
+// Support routes
+Route::get('/air/support', SupportPage::class)->name('air.support');
+Route::get('/air/support/flight-assist', [SupportController::class, 'flightAssistForm'])->name('air.support.flight-assist.form');
+Route::post('/air/support/flight-assist', [SupportController::class, 'submitFlightAssist'])->name('air.support.flight-assist');
+Route::get('/air/support/extra-luggage', [SupportController::class, 'extraLuggageForm'])->name('air.support.extra-luggage.form');
+Route::post('/air/support/extra-luggage', [SupportController::class, 'submitExtraLuggage'])->name('air.support.extra-luggage');
+Route::get('/air/support/visa-confirmation', [SupportController::class, 'visaConfirmationForm'])->name('air.support.visa-confirmation.form');
+Route::post('/air/support/visa-confirmation', [SupportController::class, 'submitVisaConfirmation'])->name('air.support.visa-confirmation');
+Route::get('/air/support/yellow-card', [SupportController::class, 'yellowCardForm'])->name('air.support.yellow-card.form');
+Route::post('/air/support/yellow-card', [SupportController::class, 'submitYellowCard'])->name('air.support.yellow-card');
+Route::get('/air/support/payment/callback/budpay', [SupportController::class, 'budpayCallback'])->name('air.support.budpay.callback');
+Route::get('/air/support/payment/callback/seerbit', [SupportController::class, 'seerbitCallback'])->name('air.support.seerbit.callback');
+Route::get('/air/support/success', [SupportController::class, 'success'])->name('air.support.success');
+
+// Car Hire routes
+Route::get('/air/carhire', CarHirePage::class)->name('air.carhire');
+Route::post('/air/carhire/submit', [CarController::class, 'submitCarHire'])->name('air.carhire.submit');
+Route::get('/air/carhire/payment/callback/budpay', [CarController::class, 'budpayCallbackCarHire'])->name('air.carhire.budpay.callback');
+Route::get('/air/carhire/payment/callback/seerbit', [CarController::class, 'seerbitCallbackCarHire'])->name('air.carhire.seerbit.callback');
+Route::get('/air/carhire/success', [CarController::class, 'successCarHire'])->name('air.carhire.success');
+Route::post('/air/carhire/distance', [CarController::class, 'distance'])->name('air.carhire.distance');
+
+// Transfer routes
+Route::post('/air/transfer/submit', [CarController::class, 'submitTransfer'])->name('air.transfer.submit');
+Route::get('/air/transfer/payment/callback/budpay', [CarController::class, 'budpayCallbackTransfer'])->name('air.transfer.budpay.callback');
+Route::get('/air/transfer/payment/callback/seerbit', [CarController::class, 'seerbitCallbackTransfer'])->name('air.transfer.seerbit.callback');
+Route::get('/air/transfer/success', [CarController::class, 'successTransfer'])->name('air.transfer.success');
 
 Route::get('/admin/travelflex-applications/{application}/documents/{key}', function (\App\Models\TravelFlexApplication $application, string $key) {
     $user = auth()->user();
@@ -156,6 +185,19 @@ Route::get('/admin/travelflex-applications/{application}/documents/{key}', funct
 
     return \Illuminate\Support\Facades\Storage::disk('local')->download($path);
 })->middleware('auth')->name('admin.travelflex.documents.download');
+
+Route::get('/admin/air-cargo-bookings/{record}/document-preview', function (\App\Models\AirCargoModel $record) {
+    $user = auth()->user();
+    $adminEmails = collect(config('travelwheel.admin_emails', []));
+
+    abort_unless($user && ($user->is_admin || $adminEmails->contains(strtolower($user->email))), 403);
+
+    $path = 'public/shipments/' . $record->shipment_details;
+
+    abort_unless($record->shipment_details && \Illuminate\Support\Facades\Storage::exists($path), 404);
+
+    return \Illuminate\Support\Facades\Storage::response($path);
+})->middleware('auth')->name('admin.aircargo.document.preview');
 
 Route::get('/admin/reports/export/{report}', AdminReportExportController::class)
     ->middleware('auth')

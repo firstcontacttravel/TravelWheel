@@ -103,8 +103,10 @@ class AirCargoController extends Controller
             Storage::put('public/shipments/' . $filename, $pdf->output());
 
             if ($request->hasFile('preview')) {
-                $previewImage = $shippingId . '.jpg';
-                $request->file('preview')->move(public_path('assets/aircargo'), $previewImage);
+                $previewFile  = $request->file('preview');
+                $extension    = $this->normalizePreviewExtension($previewFile->getClientOriginalExtension());
+                $previewImage = $shippingId . '.' . $extension;
+                $previewFile->move(public_path('assets/aircargo'), $previewImage);
             } else {
                 $previewImage = null;
             }
@@ -145,8 +147,10 @@ class AirCargoController extends Controller
             Storage::put('public/shipments/' . $filename, $pdf->output());
 
             if ($request->hasFile('pPreview')) {
-                $previewImage = $shippingId . '.jpg';
-                $request->file('pPreview')->move(public_path('assets/aircargo'), $previewImage);
+                $previewFile  = $request->file('pPreview');
+                $extension    = $this->normalizePreviewExtension($previewFile->getClientOriginalExtension());
+                $previewImage = $shippingId . '.' . $extension;
+                $previewFile->move(public_path('assets/aircargo'), $previewImage);
             } else {
                 $previewImage = null;
             }
@@ -183,6 +187,13 @@ class AirCargoController extends Controller
         ]);
 
         return redirect()->away($result['redirect_link']);
+    }
+
+    private function normalizePreviewExtension(?string $extension): string
+    {
+        $extension = strtolower((string) $extension);
+
+        return in_array($extension, ['jpg', 'jpeg', 'png', 'pdf'], true) ? $extension : 'jpg';
     }
 
     public function callbackSeerbit(Request $request)

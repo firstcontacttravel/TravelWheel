@@ -52,6 +52,11 @@ return [
         'key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    'budpay' => [
+        'public_key' => env('BUDPAY_PUBLIC_KEY'),
+        'secret_key' => env('BUDPAY_SECRET_KEY'),
+    ],
+
     'visa' => [
         'quote_ttl_minutes' => env('VISA_QUOTE_TTL_MINUTES', 30),
     ],
