@@ -149,7 +149,7 @@ class FlightController extends Controller
             'access'        => config('services.travelnext.access'),
             'ip_address'    => config('services.travelnext.ip'),
 
-            'requiredCurrency'      => 'NGN',
+            'requiredCurrency'      => 'USD',
             'journeyType'           => $journeyType,
             'OriginDestinationInfo' => $originDestination,
 

@@ -2235,6 +2235,14 @@
     .tw-toast-enter { transition: all 0.3s ease; transform: translateY(-10px); opacity: 0; }
     .tw-toast-leave { transition: all 0.3s ease; transform: translateY(-10px); opacity: 0; }
 
+    /* Multi-city legs sat 2-up in a grid, so each leg's own route "stroke" line
+       only had ~half the card width to stretch into (vs. the oneway/return
+       route line, which gets the full width) — same overall grid width, but a
+       visibly stubby line surrounded by dead space. Stack legs full-width
+       instead, one per row, matching how depart/return already stack. */
+    .mc-grid { grid-template-columns: 1fr !important; }
+    .mc-leg.mc-span { grid-column: 1 !important; }
+
 </style>
 
 

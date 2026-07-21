@@ -2,9 +2,15 @@
 
 namespace App\Support;
 
+use App\Models\ExchangeRate;
+
 class FlightMarkup
 {
     private const NIGERIA = 'nigeria';
+
+    private const SUPPLIER_CURRENCY = 'USD';
+
+    private static ?float $cachedUsdRate = null;
 
     private const MARKUPS = [
         'from_nigeria' => [
@@ -29,18 +35,49 @@ class FlightMarkup
 
     public static function apply(array $flight): array
     {
-        $supplierPrice = (float) ($flight['supplierPrice'] ?? $flight['price'] ?? 0);
+        $rate = self::usdToNgnRate();
+
+        // The airline API is queried with requiredCurrency=USD, but the markup
+        // table below is denominated in Naira — convert the supplier fare to NGN
+        // before adding the markup so both operands are in the same currency.
+        $supplierPrice = self::convert((float) ($flight['supplierPrice'] ?? $flight['price'] ?? 0), $rate);
         $category = self::routeCategory($flight);
         $cabin = self::cabinCategory($flight);
         $markup = self::MARKUPS[$category][$cabin] ?? 0.0;
 
-        $flight['supplierPrice'] = round($supplierPrice, 2);
+        $flight['supplierPrice'] = $supplierPrice;
         $flight['markupAmount'] = round($markup, 2);
         $flight['markupCategory'] = $category;
         $flight['markupCabin'] = $cabin;
         $flight['price'] = round($supplierPrice + $markup, 2);
+        $flight['baseFare'] = self::convert((float) ($flight['baseFare'] ?? 0), $rate);
+        $flight['totalTax'] = self::convert((float) ($flight['totalTax'] ?? 0), $rate);
+        $flight['currency'] = 'NGN';
+
+        if (!empty($flight['fareBreakdown']) && is_array($flight['fareBreakdown'])) {
+            $flight['fareBreakdown'] = array_map(function ($fb) use ($rate) {
+                foreach (['baseFare', 'totalFare', 'serviceTax', 'surcharges', 'changePenalty', 'refundPenalty'] as $field) {
+                    if (isset($fb[$field])) {
+                        $fb[$field] = self::convert((float) $fb[$field], $rate);
+                    }
+                }
+                $fb['currency'] = 'NGN';
+
+                return $fb;
+            }, $flight['fareBreakdown']);
+        }
 
         return $flight;
+    }
+
+    private static function convert(float $amount, float $rate): float
+    {
+        return round($amount * $rate, 2);
+    }
+
+    private static function usdToNgnRate(): float
+    {
+        return self::$cachedUsdRate ??= ExchangeRate::rateFor(self::SUPPLIER_CURRENCY);
     }
 
     public static function routeCategory(array $flight): string
