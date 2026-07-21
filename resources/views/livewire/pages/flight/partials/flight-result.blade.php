@@ -785,7 +785,7 @@
     .sr-card-class { color: #676767; font-size: 11px; font-weight: 700; }
     .sr-card-price-wrap {
         position: absolute; top: 15px; right: 24px; width: 199px; min-height: 159px; padding-left: 18px;
-        border-left: 1px solid #d6d6d6; align-items: stretch; justify-content: center;
+        border-left: 2px solid #c1c7d0; align-items: stretch; justify-content: center;
     }
     .sr-card-price-label { font-size: 10px; color: #111827; text-align: right; }
     .sr-card-price { font-family: var(--font); font-size: 22px; font-weight: 850; text-align: right; }
@@ -953,8 +953,8 @@
         min-width: 93px;
     }
     .sr-seg-line {
-        min-width: 359px;
-        padding: 2px 10px 0;
+        min-width: 64px;
+        padding: 2px 6px 0;
     }
     .sr-seg-track {
         position: relative;
@@ -1219,7 +1219,7 @@
         min-height: 159px;
         margin: 0;
         padding-left: 18px;
-        border-left: 1px solid #d6d6d6;
+        border-left: 2px solid #c1c7d0;
         display: flex;
         flex-direction: column;
         align-items: stretch;
@@ -1309,7 +1309,7 @@
         transform: none;
     }
     .sr-card-body {
-        padding: 0 247px 0 24px !important;
+        padding: 0 267px 0 24px !important;
     }
     .sr-card-body > div:first-child {
         position: absolute;
@@ -1371,13 +1371,16 @@
         display: none;
     }
     .sr-depart-return {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 10px;
         padding-top: 3px;
     }
     .sr-dr-col {
         min-width: 0;
+    }
+    .sr-dr-col:only-child {
+        grid-column: 1 / -1;
     }
     .sr-dr-col + .sr-dr-col {
         padding-left: 0 !important;
@@ -1390,7 +1393,7 @@
         width: 100%;
     }
     .sr-seg {
-        min-width: 93px;
+        min-width: 56px;
         gap: 6px;
     }
     .sr-seg:first-child {
@@ -1409,7 +1412,7 @@
         line-height: 1.2;
     }
     .sr-seg-place {
-        max-width: 93px;
+        max-width: 70px;
         color: #676767;
         font-size: 12px;
         font-weight: 400;
@@ -1417,8 +1420,8 @@
         white-space: normal;
     }
     .sr-seg-line {
-        min-width: 359px;
-        padding: 2px 10px 0;
+        min-width: 64px;
+        padding: 2px 6px 0;
     }
     .sr-seg-duration,
     .sr-seg-stop {
@@ -1532,8 +1535,11 @@
         transition: transform .16s ease;
     }
     .sr-card .sr-dr-col {
-        padding-left: 0 !important;
-        padding-right: 0 !important;
+        padding: 12px 16px 14px !important;
+        background: #fff;
+        border: 1px solid #f1f5f9;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
     .sr-card-expanded .sr-card-meta-clean {
         position: static;
@@ -2101,8 +2107,8 @@
             padding: 9px 14px 12px;
         }
         .sr-card-head .sr-book-btn { grid-column: 1 / -1; }
-        .sr-depart-return { flex-direction: column; gap: 14px; }
-        .sr-dr-col + .sr-dr-col { border-left: none; border-top: 1px dashed var(--gray-200); padding-left: 0; margin-left: 0; padding-top: 12px; }
+        .sr-depart-return { grid-template-columns: 1fr; gap: 14px; }
+        .sr-dr-col + .sr-dr-col { border-left: none; border-top: none; padding-left: 0; margin-left: 0; padding-top: 0; }
         .sr-card-meta-clean { position: static; padding: 10px 0 0; margin-top: 10px; flex-wrap: wrap; border-top-color: #e5e7eb; }
         .sr-card-expanded .sr-card-meta-clean {
             position: static;
@@ -2880,7 +2886,7 @@
                     <template x-if="!flight.multiLegs || flight.multiLegs.length === 0">
                         <div class="sr-depart-return">
                             {{-- Outbound --}}
-                            <div class="sr-dr-col" style="padding-right:10px;">
+                            <div class="sr-dr-col">
                                 <div class="sr-dr-label" x-text="'Depart ' + flight.departTime + ' · ' + flight.airline"></div>
                                 <div class="sr-segments">
                                     <div class="sr-seg">
@@ -2903,7 +2909,7 @@
                             </div>
                             {{-- Return inbound --}}
                             <template x-if="flight.returnSegments && flight.returnSegments.length > 0">
-                                <div class="sr-dr-col" style="padding-left:10px;">
+                                <div class="sr-dr-col">
                                     <div class="sr-dr-label" x-text="'Return ' + (flight.returnSegments[0]?.departTime || '') + ' · ' + flight.airline"></div>
                                     <div class="sr-segments">
                                         <div class="sr-seg">
