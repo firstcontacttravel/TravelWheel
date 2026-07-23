@@ -64,7 +64,7 @@
             <tr><td>Employer Address</td><td>{{ $applicant['employer_address'] ?? 'â€”' }}</td></tr>
             <tr><td>Occupation</td><td>{{ $applicant['occupation'] ?? 'â€”' }}</td></tr>
             <tr><td>Job Description</td><td>{{ $applicant['job_description'] ?? 'â€”' }}</td></tr>
-            <tr><td>Staff Number</td><td>{{ $applicant['staff_number'] ?? 'â€”' }}</td></tr>
+            <tr><td>Office ID</td><td>{{ $applicant['office_id'] ?? $applicant['staff_number'] ?? 'â€”' }}</td></tr>
         </table>
 
         {{-- â”€â”€ Flight Details â”€â”€ --}}

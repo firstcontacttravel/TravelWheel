@@ -3,6 +3,8 @@
 namespace App\Support;
 
 use App\Models\ExchangeRate;
+use App\Models\FlightServiceCharge;
+use Throwable;
 
 class FlightMarkup
 {
@@ -12,7 +14,7 @@ class FlightMarkup
 
     private static ?float $cachedUsdRate = null;
 
-    private const MARKUPS = [
+    private const DEFAULT_CHARGES = [
         'from_nigeria' => [
             'economy' => 30000.0,
             'premium_economy' => 60000.0,
@@ -33,6 +35,8 @@ class FlightMarkup
         ],
     ];
 
+    private static ?array $cachedCharges = null;
+
     public static function apply(array $flight): array
     {
         $rate = self::usdToNgnRate();
@@ -43,10 +47,14 @@ class FlightMarkup
         $supplierPrice = self::convert((float) ($flight['supplierPrice'] ?? $flight['price'] ?? 0), $rate);
         $category = self::routeCategory($flight);
         $cabin = self::cabinCategory($flight);
-        $markup = self::MARKUPS[$category][$cabin] ?? 0.0;
+        $passengerCount = self::passengerCount($flight);
+        $chargePerPassenger = self::chargeFor($category, $cabin);
+        $markup = $chargePerPassenger * $passengerCount;
 
         $flight['supplierPrice'] = $supplierPrice;
         $flight['markupAmount'] = round($markup, 2);
+        $flight['markupRatePerPassenger'] = round($chargePerPassenger, 2);
+        $flight['markupPassengerCount'] = $passengerCount;
         $flight['markupCategory'] = $category;
         $flight['markupCabin'] = $cabin;
         $flight['price'] = round($supplierPrice + $markup, 2);
@@ -54,7 +62,7 @@ class FlightMarkup
         $flight['totalTax'] = self::convert((float) ($flight['totalTax'] ?? 0), $rate);
         $flight['currency'] = 'NGN';
 
-        if (!empty($flight['fareBreakdown']) && is_array($flight['fareBreakdown'])) {
+        if (! empty($flight['fareBreakdown']) && is_array($flight['fareBreakdown'])) {
             $flight['fareBreakdown'] = array_map(function ($fb) use ($rate) {
                 foreach (['baseFare', 'totalFare', 'serviceTax', 'surcharges', 'changePenalty', 'refundPenalty'] as $field) {
                     if (isset($fb[$field])) {
@@ -70,6 +78,12 @@ class FlightMarkup
         return $flight;
     }
 
+    public static function forgetCachedConfiguration(): void
+    {
+        self::$cachedUsdRate = null;
+        self::$cachedCharges = null;
+    }
+
     private static function convert(float $amount, float $rate): float
     {
         return round($amount * $rate, 2);
@@ -78,6 +92,27 @@ class FlightMarkup
     private static function usdToNgnRate(): float
     {
         return self::$cachedUsdRate ??= ExchangeRate::rateFor(self::SUPPLIER_CURRENCY);
+    }
+
+    private static function chargeFor(string $category, string $cabin): float
+    {
+        if (self::$cachedCharges === null) {
+            try {
+                self::$cachedCharges = FlightServiceCharge::allKeyed();
+            } catch (Throwable) {
+                self::$cachedCharges = [];
+            }
+        }
+
+        return (float) (self::$cachedCharges[$category.'.'.$cabin] ?? self::DEFAULT_CHARGES[$category][$cabin] ?? 0);
+    }
+
+    private static function passengerCount(array $flight): int
+    {
+        $quantity = collect($flight['fareBreakdown'] ?? [])
+            ->sum(fn ($breakdown): int => max(0, (int) ($breakdown['qty'] ?? 0)));
+
+        return max(1, $quantity);
     }
 
     public static function routeCategory(array $flight): string

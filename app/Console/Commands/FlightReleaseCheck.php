@@ -40,15 +40,33 @@ class FlightReleaseCheck extends Command
 
         try {
             DB::connection()->getPdo();
-            foreach (['flight_bookings', 'travel_flex_applications', 'jobs', 'failed_jobs'] as $table) {
+            foreach (['flight_bookings', 'travel_flex_applications', 'exchange_rates', 'flight_service_charges', 'jobs', 'failed_jobs'] as $table) {
                 $this->require($errors, Schema::hasTable($table), "Required table {$table} is missing.");
+            }
+
+            if (Schema::hasTable('exchange_rates')) {
+                foreach (['USD', 'GBP', 'EUR'] as $currency) {
+                    $this->require(
+                        $errors,
+                        DB::table('exchange_rates')->where('currency', $currency)->where('rate', '>', 0)->exists(),
+                        "A positive {$currency}/NGN exchange rate is required.",
+                    );
+                }
+            }
+
+            if (Schema::hasTable('flight_service_charges')) {
+                $this->require(
+                    $errors,
+                    DB::table('flight_service_charges')->where('amount', '>=', 0)->count() === 12,
+                    'All 12 flight service charge combinations must be configured.',
+                );
             }
 
             foreach (['itinerary_snapshot', 'payment_reference', 'payment_verified_at', 'ticket_ordered'] as $column) {
                 $this->require($errors, Schema::hasColumn('flight_bookings', $column), "flight_bookings.{$column} is missing.");
             }
 
-            foreach (['financing_status', 'deposit_status', 'approval_expires_at'] as $column) {
+            foreach (['financing_status', 'deposit_status', 'approval_expires_at', 'generated_application_path', 'generated_application_sha256'] as $column) {
                 $this->require($errors, Schema::hasColumn('travel_flex_applications', $column), "travel_flex_applications.{$column} is missing.");
             }
         } catch (\Throwable $exception) {

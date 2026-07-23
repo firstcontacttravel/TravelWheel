@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Country;
+use App\Models\ExchangeRate;
 use App\Models\VisaApplication;
-use App\Models\VisaExchangeRate;
 use App\Models\VisaProduct;
 use App\Services\VisaPaymentService;
 use App\Services\VisaQuotationService;
@@ -31,6 +31,19 @@ class VisaPricingPaymentTest extends TestCase
         $authority = $quote->items->firstWhere('payee', 'authority');
         $this->assertFalse($authority->pay_online);
         $this->assertSame('20000.00', $authority->checkout_total);
+    }
+
+    public function test_visa_quotes_use_the_shared_exchange_rates_table_for_gbp(): void
+    {
+        $application = $this->application();
+        $application->product->fees()->where('name', 'Adult visa fee')->update(['currency' => 'GBP']);
+        ExchangeRate::query()->updateOrCreate(['currency' => 'GBP'], ['rate' => 2000]);
+
+        $quote = app(VisaQuotationService::class)->create($application->fresh());
+
+        $this->assertSame(2000.0, (float) data_get($quote->exchange_rate_snapshot, 'GBP.rate'));
+        $this->assertSame('exchange_rates', data_get($quote->exchange_rate_snapshot, 'GBP.source'));
+        $this->assertSame('400500.00', $quote->payable_total);
     }
 
     public function test_quote_readiness_uses_the_automatic_snapshotted_workflow(): void
@@ -175,7 +188,7 @@ class VisaPricingPaymentTest extends TestCase
         $product->fees()->create(['name' => 'Adult visa fee', 'fee_type' => 'visa', 'traveler_type' => 'adult', 'calculation_basis' => 'per_traveler', 'currency' => 'USD', 'amount' => 100, 'payee' => 'travelwheel', 'pay_online' => true]);
         $product->fees()->create(['name' => 'Service fee', 'fee_type' => 'service', 'traveler_type' => 'all', 'calculation_basis' => 'per_application', 'currency' => 'NGN', 'amount' => 500, 'payee' => 'travelwheel', 'pay_online' => true]);
         $product->fees()->create(['name' => 'Authority fee', 'fee_type' => 'authority', 'traveler_type' => 'all', 'calculation_basis' => 'per_application', 'currency' => 'USD', 'amount' => 20, 'payee' => 'authority', 'pay_online' => false]);
-        VisaExchangeRate::query()->create(['source_currency' => 'USD', 'target_currency' => 'NGN', 'rate' => 1000, 'source' => 'test', 'effective_from' => now()->subMinute(), 'is_active' => true]);
+        ExchangeRate::query()->updateOrCreate(['currency' => 'USD'], ['rate' => 1000]);
 
         $application = VisaApplication::query()->create([
             'reference' => (string) Str::ulid(), 'resume_token_hash' => hash('sha256', 'token'), 'visa_product_id' => $product->id,

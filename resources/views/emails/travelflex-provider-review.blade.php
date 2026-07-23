@@ -145,11 +145,11 @@
                                             <td style="padding:0 22px 18px;">
                                                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                                     <tr><td style="{{ $cellLabel }}">Company</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'company_details.company_name', '-') }}</td></tr>
-                                                    <tr><td style="{{ $cellLabel }}">RC number</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'company_details.rc_number', '-') }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Company email</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'company_details.email', '-') }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Company phone</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'company_details.phone', '-') }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Sector</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'company_details.sector', '-') }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Representative role</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'representative_details.role', '-') }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Office ID</td><td style="{{ $cellValue }}">{{ $applicant['office_id'] ?? '-' }}</td></tr>
                                                 </table>
                                             </td>
                                         </tr>
@@ -162,7 +162,7 @@
                                                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                                     <tr><td style="{{ $cellLabel }}">Employer</td><td style="{{ $cellValue }}">{{ $applicant['employer_name'] ?? '-' }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Occupation</td><td style="{{ $cellValue }}">{{ $applicant['occupation'] ?? '-' }}</td></tr>
-                                                    <tr><td style="{{ $cellLabel }}">Staff number</td><td style="{{ $cellValue }}">{{ $applicant['staff_number'] ?? '-' }}</td></tr>
+                                                    <tr><td style="{{ $cellLabel }}">Office ID</td><td style="{{ $cellValue }}">{{ $applicant['office_id'] ?? $applicant['staff_number'] ?? '-' }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Sector</td><td style="{{ $cellValue }}">{{ $label($applicant['sector'] ?? null) }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Monthly salary</td><td style="{{ $cellValue }}">{{ $money(data_get($applicant, 'bank_details.monthly_salary'), $currency) }}</td></tr>
                                                     <tr><td style="{{ $cellLabel }}">Salary bank</td><td style="{{ $cellValue }}">{{ data_get($applicant, 'bank_details.bank_name', '-') }}</td></tr>

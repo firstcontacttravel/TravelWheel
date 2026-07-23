@@ -28,6 +28,8 @@ class TravelFlexApplicationService
         $applicant['company_details'] = $application->company_details ?? [];
         $applicant['representative_details'] = $application->representative_details ?? [];
         $applicant['agreement_acceptance'] = $application->agreement_acceptance ?? [];
+        $bvnLastFour = (string) data_get($application->bvn_metadata, 'last_four', '');
+        $applicant['bvn'] = $bvnLastFour !== '' ? '*******'.$bvnLastFour : null;
 
         $flightInfo = $application->booking?->flight_snapshot ?? [];
 
@@ -201,7 +203,7 @@ class TravelFlexApplicationService
             return $localPath;
         }
 
-        $legacyPath = storage_path('app/' . ltrim($path, '/\\'));
+        $legacyPath = storage_path('app/'.ltrim($path, '/\\'));
 
         return is_file($legacyPath) ? $legacyPath : null;
     }

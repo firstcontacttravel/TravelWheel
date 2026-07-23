@@ -59,6 +59,7 @@
 
     $baseTotal = (float) ($flight['price'] ?? $dbBooking?->total_price ?? 0);
     $serviceCharge = (float) ($flight['markupAmount'] ?? $dbBooking?->markup_amount ?? 0);
+    $serviceChargePassengerCount = (int) ($flight['markupPassengerCount'] ?? data_get($dbBooking?->markup_details, 'passenger_count', 1));
     $extraServices = $dbBooking?->extra_services_snapshot ?? session('selectedExtras', []);
     $baggageItems = $extraServices['baggage'] ?? [];
     $mealItems = $extraServices['meal'] ?? [];
@@ -972,7 +973,7 @@
                     @endforelse
 
                     @if($serviceCharge > 0)
-                        <div class="cf-row"><span>Service charge</span><strong>{{ $fmt($serviceCharge) }}</strong></div>
+                        <div class="cf-row"><span>Service charge ({{ $serviceChargePassengerCount }} {{ \Illuminate\Support\Str::plural('passenger', $serviceChargePassengerCount) }})</span><strong>{{ $fmt($serviceCharge) }}</strong></div>
                     @endif
                     @if($extrasTotal > 0)
                         <div class="cf-row"><span>Extras</span><strong>{{ $fmt($extrasTotal) }}</strong></div>

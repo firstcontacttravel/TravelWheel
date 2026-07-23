@@ -1,36 +1,36 @@
 <?php
 
 use App\Http\Controllers\AdminReportExportController;
+use App\Http\Controllers\AdminVisaDocumentController;
 use App\Http\Controllers\AirCargoController;
 use App\Http\Controllers\CarController;
-use App\Http\Controllers\InsuranceController;
-use App\Http\Controllers\LeadwayController;
-use App\Http\Controllers\ProtocolController;
-use App\Http\Controllers\LoungeController;
-use App\Http\Controllers\SupportController;
-use App\Http\Controllers\AdminVisaDocumentController;
 use App\Http\Controllers\FlightBookingController;
 use App\Http\Controllers\FlightController;
 use App\Http\Controllers\FlightSearchController;
+use App\Http\Controllers\InsuranceController;
+use App\Http\Controllers\LeadwayController;
+use App\Http\Controllers\LoungeController;
+use App\Http\Controllers\ProtocolController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\VisaApplicationController;
 use App\Http\Controllers\VisaPaymentController;
 use App\Http\Controllers\VisaPortalController;
 use App\Http\Controllers\VisaSearchController;
 use App\Http\Middleware\EnsureVisaProductEnabled;
-use App\Livewire\Pages\FlightBooking;
-use App\Livewire\Pages\FlightPage;
-use App\Livewire\Pages\HomePage;
-use App\Livewire\Pages\Protocol\Protocol as ProtocolPage;
-use App\Livewire\Pages\Protocol\ProtocolInternationalPlans;
-use App\Livewire\Pages\Protocol\ProtocolPlans;
-use App\Livewire\Pages\Lounge\Lounge as LoungePage;
-use App\Livewire\Pages\Lounge\LoungeResults;
-use App\Livewire\Pages\Lounge\LoungePlan;
-use App\Livewire\Pages\Insurance\Insurance as InsurancePage;
-use App\Livewire\Pages\Insurance\InsuranceQuote as InsuranceQuotePage;
 use App\Livewire\Pages\AirCargo\AirCargo as AirCargoPage;
 use App\Livewire\Pages\AirCargo\AirCargoCreate;
 use App\Livewire\Pages\CarHire\CarHire as CarHirePage;
+use App\Livewire\Pages\FlightBooking;
+use App\Livewire\Pages\FlightPage;
+use App\Livewire\Pages\HomePage;
+use App\Livewire\Pages\Insurance\Insurance as InsurancePage;
+use App\Livewire\Pages\Insurance\InsuranceQuote as InsuranceQuotePage;
+use App\Livewire\Pages\Lounge\Lounge as LoungePage;
+use App\Livewire\Pages\Lounge\LoungePlan;
+use App\Livewire\Pages\Lounge\LoungeResults;
+use App\Livewire\Pages\Protocol\Protocol as ProtocolPage;
+use App\Livewire\Pages\Protocol\ProtocolInternationalPlans;
+use App\Livewire\Pages\Protocol\ProtocolPlans;
 use App\Livewire\Pages\Support\Support as SupportPage;
 use App\Livewire\Pages\Visa\ApplicationWizard as VisaApplicationWizard;
 use App\Livewire\Pages\Visa\Discovery as VisaDiscovery;
@@ -179,7 +179,9 @@ Route::get('/admin/travelflex-applications/{application}/documents/{key}', funct
     abort_unless($user && ($user->is_admin || $adminEmails->contains(strtolower($user->email))), 403);
 
     $documents = $application->document_paths ?? [];
-    $path = is_array($documents) ? ($documents[$key] ?? null) : null;
+    $path = $key === 'fast_credit_application'
+        ? $application->generated_application_path
+        : (is_array($documents) ? ($documents[$key] ?? null) : null);
 
     abort_unless($path && \Illuminate\Support\Facades\Storage::disk('local')->exists($path), 404);
 
@@ -192,7 +194,7 @@ Route::get('/admin/air-cargo-bookings/{record}/document-preview', function (\App
 
     abort_unless($user && ($user->is_admin || $adminEmails->contains(strtolower($user->email))), 403);
 
-    $path = 'public/shipments/' . $record->shipment_details;
+    $path = 'public/shipments/'.$record->shipment_details;
 
     abort_unless($record->shipment_details && \Illuminate\Support\Facades\Storage::exists($path), 404);
 

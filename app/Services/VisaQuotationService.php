@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\ExchangeRate;
 use App\Models\VisaApplication;
-use App\Models\VisaExchangeRate;
 use App\Models\VisaQuote;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -117,11 +117,16 @@ class VisaQuotationService
 
                 continue;
             }
-            $rate = VisaExchangeRate::query()->where('source_currency', $currency)->where('target_currency', $target)->where('is_active', true)->where('effective_from', '<=', now())->where(fn ($q) => $q->whereNull('effective_until')->orWhere('effective_until', '>=', now()))->latest('effective_from')->first();
+            $rate = ExchangeRate::query()->where('currency', $currency)->first();
             if (! $rate) {
-                throw ValidationException::withMessages(['quote' => "No active {$currency}/{$target} exchange rate is configured."]);
+                throw ValidationException::withMessages(['quote' => "No {$currency}/{$target} exchange rate is configured."]);
             }
-            $rates[$currency] = ['rate' => (float) $rate->rate, 'source' => $rate->source, 'rate_id' => $rate->id, 'captured_at' => now()->toIso8601String()];
+            $rates[$currency] = [
+                'rate' => (float) $rate->rate,
+                'source' => 'exchange_rates',
+                'rate_id' => $rate->id,
+                'captured_at' => now()->toIso8601String(),
+            ];
         }
 
         return $rates;

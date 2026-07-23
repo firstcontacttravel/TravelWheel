@@ -43,7 +43,7 @@
 
                 <div class="vw-fields">
                     @php $defaultNationalityId = $countries->firstWhere('alpha2', 'NG')?->id; @endphp
-                    <label class="vw-field"><span>Passport nationality</span><select name="nationality_id" x-model="nationalityId" @change="handleNationalityChange()" required><option value="">Choose nationality</option>@foreach($countries as $country)<option value="{{ $country->id }}">{{ $country->name }} ({{ $country->alpha2 }})</option>@endforeach</select></label>
+                    <label class="vw-field"><span>Passport nationality</span><select name="nationality_id" x-model="nationalityId" @change="handleNationalityChange()" required><option value="">Choose nationality</option>@foreach($countries as $country)<option value="{{ $country->id }}" @selected((string) old('nationality_id', $defaultNationalityId) === (string) $country->id)>{{ $country->name }} ({{ $country->alpha2 }})</option>@endforeach</select></label>
                     <label class="vw-field">
                         <span>Destination</span>
                         <select name="destination_ref" x-model="destinationRef" @change="sameCountryNotice = false" :disabled="destinationsLoading" required>

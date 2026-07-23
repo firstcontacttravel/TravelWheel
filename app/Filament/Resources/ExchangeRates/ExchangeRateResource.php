@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ExchangeRates;
 
+use App\Filament\Resources\ExchangeRates\Pages\CreateExchangeRate;
 use App\Filament\Resources\ExchangeRates\Pages\EditExchangeRate;
 use App\Filament\Resources\ExchangeRates\Pages\ListExchangeRates;
 use App\Models\ExchangeRate;
@@ -27,16 +28,29 @@ class ExchangeRateResource extends Resource
 
     protected static ?string $navigationLabel = 'Exchange Rates';
 
+    protected static ?string $modelLabel = 'exchange rate';
+
+    protected static ?string $pluralModelLabel = 'Exchange Rates';
+
     protected static ?string $recordTitleAttribute = 'currency';
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('currency')->disabled(),
-            TextInput::make('rate')
-                ->numeric()
+            TextInput::make('currency')
+                ->label('Source currency')
                 ->required()
-                ->helperText('NGN per 1 unit of this currency. Used to convert flight fares from the airline API (USD) to Naira.'),
+                ->length(3)
+                ->unique(ignoreRecord: true)
+                ->dehydrateStateUsing(fn ($state): string => strtoupper((string) $state))
+                ->disabledOn('edit'),
+            TextInput::make('rate')
+                ->label('NGN rate')
+                ->numeric()
+                ->minValue(0.000001)
+                ->required()
+                ->prefix('₦')
+                ->helperText('Naira per 1 unit of this currency. Changes apply to Visa, Flights, and every TravelWheel product using currency conversion.'),
         ]);
     }
 
@@ -45,8 +59,8 @@ class ExchangeRateResource extends Resource
         return $table
             ->defaultSort('currency')
             ->columns([
-                TextColumn::make('currency')->badge(),
-                TextColumn::make('rate')->numeric(decimalPlaces: 2),
+                TextColumn::make('currency')->label('Source currency')->badge(),
+                TextColumn::make('rate')->label('NGN per unit')->money('NGN'),
             ])
             ->recordActions([EditAction::make()]);
     }
@@ -55,13 +69,9 @@ class ExchangeRateResource extends Resource
     {
         return [
             'index' => ListExchangeRates::route('/'),
+            'create' => CreateExchangeRate::route('/create'),
             'edit' => EditExchangeRate::route('/{record}/edit'),
         ];
-    }
-
-    public static function canCreate(): bool
-    {
-        return false;
     }
 
     public static function canDelete(Model $record): bool

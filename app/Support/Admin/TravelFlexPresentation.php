@@ -19,15 +19,15 @@ class TravelFlexPresentation
         $html = '<div class="tw-booking-hero">';
         $html .= '<div class="tw-booking-hero-main">';
         $html .= '<div class="tw-booking-eyebrow">TravelFlex application</div>';
-        $html .= '<div class="tw-booking-title">' . e($application->booking_ref ?: 'TravelFlex') . '</div>';
-        $html .= '<div class="tw-booking-route">' . e($applicant) . '</div>';
+        $html .= '<div class="tw-booking-title">'.e($application->booking_ref ?: 'TravelFlex').'</div>';
+        $html .= '<div class="tw-booking-route">'.e($applicant).'</div>';
         $html .= '<div class="tw-booking-meta">';
-        $html .= '<span>' . e($email) . '</span>';
-        $html .= '<span>' . e(self::label($application->payment_method)) . '</span>';
-        $html .= '<span>' . e(($application->down_percent ?: '-') . '% down') . '</span>';
+        $html .= '<span>'.e($email).'</span>';
+        $html .= '<span>'.e(self::label($application->payment_method)).'</span>';
+        $html .= '<span>'.e(($application->down_percent ?: '-').'% down').'</span>';
         $html .= '</div></div>';
         $html .= '<div class="tw-booking-hero-side">';
-        $html .= '<div class="tw-booking-price">' . e(self::money($application->grand_total)) . '</div>';
+        $html .= '<div class="tw-booking-price">'.e(self::money($application->grand_total)).'</div>';
         $html .= '<div class="tw-booking-pill-row">';
         $html .= self::statusPill('Application', $application->application_status);
         $html .= self::statusPill('Provider', $application->provider_status);
@@ -72,10 +72,14 @@ class TravelFlexPresentation
                 'Company phone' => data_get($application->company_details, 'phone'),
                 'Registered address' => data_get($application->company_details, 'registered_address'),
                 'Business sector' => data_get($application->company_details, 'sector'),
+                'Owner job title' => data_get($application->employment_details, 'occupation'),
+                'Office ID' => data_get($application->employment_details, 'office_id', data_get($application->employment_details, 'staff_number')),
+                'Personal monthly income' => self::money(data_get($application->bank_details, 'monthly_salary')),
                 'Bank name' => data_get($application->company_details, 'bank_name'),
                 'Account number' => data_get($application->company_details, 'account_number'),
                 'Representative role' => data_get($application->representative_details, 'role'),
-                'Loan purpose' => data_get($application->company_details, 'loan_purpose'),
+                'Next of kin' => trim((string) data_get($application->next_of_kin_details, 'surname').' '.(string) data_get($application->next_of_kin_details, 'first_name')),
+                'Witness' => data_get($application->agreement_acceptance, 'witness.full_name'),
                 'Agreement signature' => data_get($application->agreement_acceptance, 'digital_signature'),
                 'Agreement accepted' => data_get($application->agreement_acceptance, 'accepted_at'),
             ]);
@@ -85,15 +89,16 @@ class TravelFlexPresentation
             'Employer' => data_get($application->employment_details, 'employer_name'),
             'Employer address' => data_get($application->employment_details, 'employer_address'),
             'Occupation' => data_get($application->employment_details, 'occupation'),
-            'Staff number' => data_get($application->employment_details, 'staff_number'),
+            'Office ID' => data_get($application->employment_details, 'office_id', data_get($application->employment_details, 'staff_number')),
             'Job description' => data_get($application->employment_details, 'job_description'),
             'Sector' => self::label(data_get($application->employment_details, 'sector')),
             'IPPIS number' => data_get($application->employment_details, 'ippis_number'),
             'Monthly salary' => self::money(data_get($application->bank_details, 'monthly_salary')),
             'Salary account number' => data_get($application->bank_details, 'salary_account_number'),
             'Bank name' => data_get($application->bank_details, 'bank_name'),
-            'Next of kin' => trim((string) data_get($application->next_of_kin_details, 'surname') . ' ' . (string) data_get($application->next_of_kin_details, 'first_name')),
+            'Next of kin' => trim((string) data_get($application->next_of_kin_details, 'surname').' '.(string) data_get($application->next_of_kin_details, 'first_name')),
             'Next of kin phone' => data_get($application->next_of_kin_details, 'phone_primary'),
+            'Witness' => data_get($application->agreement_acceptance, 'witness.full_name'),
             'Agreement signature' => data_get($application->agreement_acceptance, 'digital_signature'),
             'Agreement accepted' => data_get($application->agreement_acceptance, 'accepted_at'),
         ]);
@@ -108,7 +113,7 @@ class TravelFlexPresentation
             'Administration fee' => self::money(data_get($plan, 'administration_fee')),
             'Insurance fee' => self::money(data_get($plan, 'insurance_fee')),
             'Due after approval' => self::money(data_get($plan, 'upfront_payment_total')),
-            'Down percent' => $application->down_percent ? $application->down_percent . '%' : null,
+            'Down percent' => $application->down_percent ? $application->down_percent.'%' : null,
             'Grand total' => self::money($application->grand_total),
             'Total interest' => self::money($application->total_interest),
             'Repayment plan' => data_get($plan, 'repayment_plan'),
@@ -121,25 +126,28 @@ class TravelFlexPresentation
             $html .= '<table class="min-w-full divide-y divide-gray-200 text-sm dark:divide-white/10">';
             $html .= '<thead><tr>';
             foreach (['Due date', 'Amount', 'Label'] as $header) {
-                $html .= '<th class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e($header) . '</th>';
+                $html .= '<th class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e($header).'</th>';
             }
             $html .= '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-white/10">';
             foreach ($schedule as $row) {
                 $html .= '<tr>';
-                $html .= '<td class="px-3 py-2">' . e(data_get($row, 'date', data_get($row, 'due_date', '-'))) . '</td>';
-                $html .= '<td class="px-3 py-2">' . e(self::money(data_get($row, 'amount'))) . '</td>';
-                $html .= '<td class="px-3 py-2">' . e(data_get($row, 'label', data_get($row, 'title', '-'))) . '</td>';
+                $html .= '<td class="px-3 py-2">'.e(data_get($row, 'date', data_get($row, 'due_date', '-'))).'</td>';
+                $html .= '<td class="px-3 py-2">'.e(self::money(data_get($row, 'amount'))).'</td>';
+                $html .= '<td class="px-3 py-2">'.e(data_get($row, 'label', data_get($row, 'title', '-'))).'</td>';
                 $html .= '</tr>';
             }
             $html .= '</tbody></table></div>';
         }
 
-        return new HtmlString($html . '</div>');
+        return new HtmlString($html.'</div>');
     }
 
     public static function documents(TravelFlexApplication $application): HtmlString
     {
         $documents = $application->document_paths ?? [];
+        if (filled($application->generated_application_path)) {
+            $documents = ['fast_credit_application' => $application->generated_application_path, ...$documents];
+        }
 
         if (! is_array($documents) || $documents === []) {
             return self::empty('No documents stored.');
@@ -156,9 +164,9 @@ class TravelFlexPresentation
         $html .= '<div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">';
         $html .= '<div>';
         $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">Document package</div>';
-        $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e($availableRequired) . ' of ' . e(count($required)) . ' required files available. ' . e($available->count()) . ' uploaded files stored in total.</div>';
+        $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">'.e($availableRequired).' of '.e(count($required)).' required files available. '.e($available->count()).' uploaded files stored in total.</div>';
         $html .= '</div>';
-        $html .= '<div class="inline-flex w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-200">' . e($availableRequired === count($required) ? 'Complete' : 'Needs attention') . '</div>';
+        $html .= '<div class="inline-flex w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 dark:bg-white/10 dark:text-gray-200">'.e($availableRequired === count($required) ? 'Complete' : 'Needs attention').'</div>';
         $html .= '</div></div>';
         $html .= '<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">';
 
@@ -166,26 +174,26 @@ class TravelFlexPresentation
             $path = $documents[$key] ?? null;
             $exists = $path && Storage::disk('local')->exists($path);
             $isRequired = in_array($key, $required, true);
-            $html .= '<div class="flex min-h-40 flex-col rounded-lg border ' . ($exists || ! $isRequired ? 'border-gray-200' : 'border-danger-200') . ' bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
+            $html .= '<div class="flex min-h-40 flex-col rounded-lg border '.($exists || ! $isRequired ? 'border-gray-200' : 'border-danger-200').' bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
             $html .= '<div class="flex items-start justify-between gap-3">';
             $html .= '<div>';
-            $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">' . e(self::documentLabel($key)) . '</div>';
-            $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e(self::documentDescription($key)) . '</div>';
-            $html .= '<div class="mt-2 text-[11px] font-semibold ' . ($isRequired ? 'text-danger-700' : 'text-gray-500') . '">' . e($isRequired ? 'Required' : 'Recommended') . '</div>';
+            $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">'.e(self::documentLabel($key)).'</div>';
+            $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">'.e(self::documentDescription($key)).'</div>';
+            $html .= '<div class="mt-2 text-[11px] font-semibold '.($isRequired ? 'text-danger-700' : 'text-gray-500').'">'.e($isRequired ? 'Required' : 'Recommended').'</div>';
             $html .= '</div>';
-            $html .= '<span class="rounded-full px-2 py-1 text-[11px] font-semibold ' . ($exists ? 'bg-success-50 text-success-700' : ($isRequired ? 'bg-danger-50 text-danger-700' : 'bg-gray-100 text-gray-600')) . '">' . e($exists ? 'Ready' : ($isRequired ? 'Missing' : 'Not uploaded')) . '</span>';
+            $html .= '<span class="rounded-full px-2 py-1 text-[11px] font-semibold '.($exists ? 'bg-success-50 text-success-700' : ($isRequired ? 'bg-danger-50 text-danger-700' : 'bg-gray-100 text-gray-600')).'">'.e($exists ? 'Ready' : ($isRequired ? 'Missing' : 'Not uploaded')).'</span>';
             $html .= '</div>';
             $html .= '<div class="mt-4 rounded-lg bg-gray-50 p-3 text-xs text-gray-500 dark:bg-white/5 dark:text-gray-400">';
             $html .= $exists ? 'Uploaded document is available for secure review.' : 'Applicant has not provided this document.';
             $html .= '</div>';
-            $html .= '<div class="mt-auto pt-4 text-xs text-gray-500 dark:text-gray-400">' . e($exists ? self::fileSize($path) . ' uploaded' : 'Upload not found') . '</div>';
+            $html .= '<div class="mt-auto pt-4 text-xs text-gray-500 dark:text-gray-400">'.e($exists ? self::fileSize($path).' uploaded' : 'Upload not found').'</div>';
             if ($exists) {
-                $html .= '<a class="mt-3 inline-flex w-fit rounded-md bg-primary-600 px-3 py-2 text-xs font-semibold text-white hover:bg-primary-500" href="' . e(route('admin.travelflex.documents.download', [$application, $key])) . '" target="_blank">Download document</a>';
+                $html .= '<a class="mt-3 inline-flex w-fit rounded-md bg-primary-600 px-3 py-2 text-xs font-semibold text-white hover:bg-primary-500" href="'.e(route('admin.travelflex.documents.download', [$application, $key])).'" target="_blank">Download document</a>';
             }
             $html .= '</div>';
         }
 
-        return new HtmlString($html . '</div></div>');
+        return new HtmlString($html.'</div></div>');
     }
 
     public static function providerHandoff(TravelFlexApplication $application): HtmlString
@@ -210,7 +218,7 @@ class TravelFlexPresentation
         $html .= '<div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">';
         $html .= '<div>';
         $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">Provider handoff</div>';
-        $html .= '<div class="mt-1 max-w-3xl text-sm text-gray-500 dark:text-gray-400">' . e($nextAction) . '</div>';
+        $html .= '<div class="mt-1 max-w-3xl text-sm text-gray-500 dark:text-gray-400">'.e($nextAction).'</div>';
         $html .= '</div>';
         $html .= '<div class="flex flex-wrap gap-2">';
         $html .= self::smallState('Payment', $paymentReady ? 'Verified' : self::label($application->payment_status), $paymentReady);
@@ -218,24 +226,24 @@ class TravelFlexPresentation
         $html .= self::smallState('Provider', self::label($application->provider_status), $providerSent, $providerFailed);
         $html .= '</div></div>';
         $html .= '<div class="mt-4 grid gap-3 md:grid-cols-3">';
-        $html .= self::handoffFact('Provider status', self::label($application->provider_status), filled($application->provider_email_sent_at) ? 'Sent ' . self::watDateTime($application->provider_email_sent_at) : 'Not sent yet');
-        $html .= self::handoffFact('Payment status', self::label($application->payment_status), 'Down payment ' . self::money($application->down_payment));
-        $html .= self::handoffFact('Application status', self::label($application->application_status), filled($application->reviewed_at) ? 'Reviewed ' . self::watDateTime($application->reviewed_at) : 'Awaiting review');
+        $html .= self::handoffFact('Provider status', self::label($application->provider_status), filled($application->provider_email_sent_at) ? 'Sent '.self::watDateTime($application->provider_email_sent_at) : 'Not sent yet');
+        $html .= self::handoffFact('Payment status', self::label($application->payment_status), 'Down payment '.self::money($application->down_payment));
+        $html .= self::handoffFact('Application status', self::label($application->application_status), filled($application->reviewed_at) ? 'Reviewed '.self::watDateTime($application->reviewed_at) : 'Awaiting review');
         $html .= '</div>';
 
         if (filled($application->provider_email_error)) {
             $html .= '<div class="mt-4 rounded-lg border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-300">';
             $html .= '<div class="font-semibold">Provider email error</div>';
-            $html .= '<div class="mt-1 break-words">' . e($application->provider_email_error) . '</div>';
+            $html .= '<div class="mt-1 break-words">'.e($application->provider_email_error).'</div>';
             $html .= '</div>';
         }
 
-        return new HtmlString($html . '</div></div>');
+        return new HtmlString($html.'</div></div>');
     }
 
     private static function card(array $items): HtmlString
     {
-        return new HtmlString('<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">' . self::definitionGrid($items) . '</div>');
+        return new HtmlString('<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">'.self::definitionGrid($items).'</div>');
     }
 
     private static function definitionGrid(array $items): string
@@ -244,17 +252,17 @@ class TravelFlexPresentation
 
         foreach ($items as $label => $value) {
             $html .= '<div>';
-            $html .= '<dt class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e((string) $label) . '</dt>';
-            $html .= '<dd class="mt-1 break-words text-sm text-gray-950 dark:text-white">' . e(blank($value) ? '-' : (string) $value) . '</dd>';
+            $html .= '<dt class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e((string) $label).'</dt>';
+            $html .= '<dd class="mt-1 break-words text-sm text-gray-950 dark:text-white">'.e(blank($value) ? '-' : (string) $value).'</dd>';
             $html .= '</div>';
         }
 
-        return $html . '</dl>';
+        return $html.'</dl>';
     }
 
     private static function money(mixed $amount): string
     {
-        return $amount === null || $amount === '' ? '-' : 'NGN ' . number_format((float) $amount, 2);
+        return $amount === null || $amount === '' ? '-' : 'NGN '.number_format((float) $amount, 2);
     }
 
     private static function statusPill(string $label, ?string $status): string
@@ -266,24 +274,24 @@ class TravelFlexPresentation
             default => 'neutral',
         };
 
-        return '<span class="tw-status-pill tw-status-' . e($tone) . '"><span>' . e($label) . '</span><strong>' . e(self::label($status)) . '</strong></span>';
+        return '<span class="tw-status-pill tw-status-'.e($tone).'"><span>'.e($label).'</span><strong>'.e(self::label($status)).'</strong></span>';
     }
 
     private static function timelineItem(string $label, ?string $value, bool $isComplete): string
     {
-        return '<div class="tw-timeline-item ' . ($isComplete ? 'is-complete' : '') . '">' .
-            '<span class="tw-timeline-dot"></span>' .
-            '<div><div class="tw-timeline-label">' . e($label) . '</div>' .
-            '<div class="tw-timeline-value">' . e($value ?: '-') . '</div></div>' .
+        return '<div class="tw-timeline-item '.($isComplete ? 'is-complete' : '').'">'.
+            '<span class="tw-timeline-dot"></span>'.
+            '<div><div class="tw-timeline-label">'.e($label).'</div>'.
+            '<div class="tw-timeline-value">'.e($value ?: '-').'</div></div>'.
             '</div>';
     }
 
     private static function handoffFact(string $label, string $value, string $description): string
     {
-        return '<div class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">' .
-            '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e($label) . '</div>' .
-            '<div class="mt-1 text-sm font-semibold text-gray-950 dark:text-white">' . e($value) . '</div>' .
-            '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e($description) . '</div>' .
+        return '<div class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">'.
+            '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e($label).'</div>'.
+            '<div class="mt-1 text-sm font-semibold text-gray-950 dark:text-white">'.e($value).'</div>'.
+            '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">'.e($description).'</div>'.
             '</div>';
     }
 
@@ -293,8 +301,8 @@ class TravelFlexPresentation
             ? 'bg-danger-50 text-danger-700 dark:bg-danger-500/10 dark:text-danger-300'
             : ($good ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-300' : 'bg-warning-50 text-warning-700 dark:bg-warning-500/10 dark:text-warning-300');
 
-        return '<span class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ' . $classes . '">' .
-            e($label) . ': ' . e($value) .
+        return '<span class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold '.$classes.'">'.
+            e($label).': '.e($value).
             '</span>';
     }
 
@@ -321,6 +329,7 @@ class TravelFlexPresentation
     private static function documentLabel(string $key): string
     {
         return [
+            'fast_credit_application' => 'Completed Fast Credit application',
             'valid_id' => 'Valid government ID',
             'passport_photo' => 'Passport photograph',
             'work_id_card' => 'Work ID card',
@@ -343,6 +352,7 @@ class TravelFlexPresentation
     private static function documentDescription(string $key): string
     {
         return [
+            'fast_credit_application' => 'Immutable, auto-filled provider application PDF',
             'valid_id' => 'Identity verification document',
             'passport_photo' => 'Applicant profile photograph',
             'work_id_card' => 'Employment identity proof',
@@ -365,10 +375,11 @@ class TravelFlexPresentation
     private static function documentKeys(TravelFlexApplication $application): array
     {
         if (($application->applicant_type ?? 'individual') !== 'company') {
-            return self::requiredDocuments($application);
+            return ['fast_credit_application', ...self::requiredDocuments($application)];
         }
 
         return [
+            'fast_credit_application',
             ...self::requiredDocuments($application),
             'certificate_of_incorporation',
             'board_resolution',
@@ -393,14 +404,14 @@ class TravelFlexPresentation
         }
 
         if ($bytes >= 1024 * 1024) {
-            return number_format($bytes / (1024 * 1024), 1) . ' MB';
+            return number_format($bytes / (1024 * 1024), 1).' MB';
         }
 
-        return number_format(max(1, $bytes / 1024), 0) . ' KB';
+        return number_format(max(1, $bytes / 1024), 0).' KB';
     }
 
     private static function empty(string $message): HtmlString
     {
-        return new HtmlString('<div class="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-white/10 dark:text-gray-400">' . e($message) . '</div>');
+        return new HtmlString('<div class="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-white/10 dark:text-gray-400">'.e($message).'</div>');
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ExchangeRates\Pages;
 
 use App\Filament\Resources\ExchangeRates\ExchangeRateResource;
+use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
 
 class ListExchangeRates extends ListRecords
@@ -11,6 +12,6 @@ class ListExchangeRates extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [CreateAction::make()];
     }
 }

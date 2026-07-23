@@ -1,4 +1,5 @@
 <?php
+
 // ── app/Mail/TravelFlexApplicationMail.php ────────────────────────────────────
 // Sent to the loan provider (+ CC to Travelwheel) when a user submits a
 // TravelFlex loan application before any down payment is collected.
@@ -21,28 +22,28 @@ class TravelFlexApplicationMail extends Mailable
     use AttachesItineraryPdf, Queueable, SerializesModels;
 
     /**
-     * @param array  $applicant   Validated applicant fields
-     * @param array  $loanPlan    TravelFlex plan details (amount, schedule, etc.)
-     * @param array  $flightInfo  Mapped flight data
-     * @param array  $uploadPaths Absolute paths to uploaded files ['valid_id' => '/path', ...]
-     * @param string $bookingRef  UniqueID from the booking API
+     * @param  array  $applicant  Validated applicant fields
+     * @param  array  $loanPlan  TravelFlex plan details (amount, schedule, etc.)
+     * @param  array  $flightInfo  Mapped flight data
+     * @param  array  $uploadPaths  Absolute paths to uploaded files ['valid_id' => '/path', ...]
+     * @param  string  $bookingRef  UniqueID from the booking API
      */
     public function __construct(
-        public array  $applicant,
-        public array  $loanPlan,
-        public array  $flightInfo,
-        public array  $uploadPaths,
+        public array $applicant,
+        public array $loanPlan,
+        public array $flightInfo,
+        public array $uploadPaths,
         public string $bookingRef = '',
         public ?TravelFlexApplication $application = null,
     ) {}
 
     public function envelope(): Envelope
     {
-        $reference = $this->bookingRef ? ' - ' . $this->bookingRef : '';
+        $reference = $this->bookingRef ? ' - '.$this->bookingRef : '';
         $applicant = $this->applicant['full_name'] ?? 'Applicant';
 
         return new Envelope(
-            subject: 'TravelFlex Provider Review - ' . $applicant . $reference,
+            subject: 'TravelFlex Provider Review - '.$applicant.$reference,
         );
 
     }
@@ -59,11 +60,11 @@ class TravelFlexApplicationMail extends Mailable
     {
         $attachments = [];
         $labels = [
-            'valid_id'          => 'Valid_ID',
-            'passport_photo'    => 'Passport_Photo',
-            'work_id_card'      => 'Work_ID_Card',
+            'valid_id' => 'Valid_ID',
+            'passport_photo' => 'Passport_Photo',
+            'work_id_card' => 'Work_ID_Card',
             'employment_letter' => 'Employment_Letter',
-            'bank_statements'   => 'Bank_Statements',
+            'bank_statements' => 'Bank_Statements',
             'representative_valid_id' => 'Representative_Valid_ID',
             'cac_status_report' => 'CAC_Status_Report_Form_CAC_1_1',
             'share_certificate' => 'Share_Certificate',
@@ -81,18 +82,22 @@ class TravelFlexApplicationMail extends Mailable
             if ($path && file_exists($path)) {
                 $ext = pathinfo($path, PATHINFO_EXTENSION);
                 $attachments[] = Attachment::fromPath($path)
-                    ->as(($labels[$key] ?? $key) . '_' . $this->bookingRef . '.' . $ext);
+                    ->as(($labels[$key] ?? $key).'_'.$this->bookingRef.'.'.$ext);
             }
         }
 
         if ($this->application) {
-            $pdfBytes = app(TravelFlexApplicationPdfService::class)->generate($this->application);
+            $pdfService = app(TravelFlexApplicationPdfService::class);
+            $storedPath = $pdfService->storedAbsolutePath($this->application);
             $reference = $this->bookingRef ?: ($this->application->booking_ref ?: $this->application->unique_id ?: 'application');
+            $filename = 'Fast_Credit_Application_'.preg_replace('/[^A-Za-z0-9_-]+/', '_', $reference).'.pdf';
 
-            $attachments[] = Attachment::fromData(
-                fn () => $pdfBytes,
-                'TravelFlex_Application_' . preg_replace('/[^A-Za-z0-9_-]+/', '_', $reference) . '.pdf'
-            )->withMime('application/pdf');
+            $attachments[] = $storedPath
+                ? Attachment::fromPath($storedPath)->as($filename)->withMime('application/pdf')
+                : Attachment::fromData(
+                    fn () => $pdfService->generate($this->application),
+                    $filename,
+                )->withMime('application/pdf');
         }
 
         $booking = FlightBooking::query()

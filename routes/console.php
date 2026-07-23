@@ -19,3 +19,12 @@ Schedule::command('travelflex:send-repayment-reminders')
     ->dailyAt('08:00')
     ->timezone('Africa/Lagos')
     ->withoutOverlapping();
+
+Schedule::command('reports:sync')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+Schedule::command('reports:send-scheduled')
+    ->hourly()
+    ->timezone('Africa/Lagos')
+    ->withoutOverlapping();

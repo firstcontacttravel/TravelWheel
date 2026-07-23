@@ -44,17 +44,19 @@
     $errors       = $errors ?? new \Illuminate\Support\MessageBag();
     $errorKeys    = collect($errors->keys());
     $initialStep  = $errorKeys->intersect([
-        'employer_name', 'occupation', 'employer_address', 'job_description', 'staff_number', 'sector', 'ippis_number',
+        'employer_name', 'occupation', 'employer_address', 'job_description', 'office_id', 'sector', 'ippis_number',
         'monthly_salary', 'salary_account_number', 'bank_name', 'social_media_platform', 'social_media_handle',
-        'company_name', 'company_rc_number', 'company_email', 'company_phone', 'company_address', 'company_sector',
-        'representative_role', 'company_bank_name', 'company_account_number', 'loan_purpose', 'next_of_kin_surname',
+        'government_id_type', 'next_of_kin_surname',
         'next_of_kin_first_name', 'next_of_kin_relationship', 'next_of_kin_address', 'next_of_kin_phone_primary',
     ])->isNotEmpty() ? 2 : ($errorKeys->intersect([
         'valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements',
         'representative_valid_id', 'cac_status_report', 'share_certificate', 'memart', 'register_of_members',
         'shareholders_agreement', 'return_of_allotment', 'certificate_of_incorporation', 'board_resolution',
         'company_bank_statement', 'tin_certificate',
-    ])->isNotEmpty() ? 3 : ($errorKeys->intersect(['fast_credit_agreement', 'digital_signature', 'digital_signature_image'])->isNotEmpty() ? 4 : 1));
+    ])->isNotEmpty() ? 3 : ($errorKeys->intersect([
+        'fast_credit_agreement', 'digital_signature', 'digital_signature_image', 'witness_full_name',
+        'witness_signature_image', 'witness_declaration',
+    ])->isNotEmpty() ? 4 : 1));
     $routeLines   = [];
     if ($isMulti) {
         foreach ($multiLegs as $leg) {
@@ -484,7 +486,7 @@
                 <strong>1. Applicant</strong><span>Basic applicant and contact details</span>
             </button>
             <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 2 }" @click="step = 2">
-                <strong>2. Profile</strong><span x-text="applicantType === 'company' ? 'Company and representative details' : 'Employment and next of kin'"></span>
+                <strong>2. Profile</strong><span>Employment, banking and next of kin</span>
             </button>
             <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 3 }" @click="step = 3">
                 <strong>3. Documents</strong><span>Upload required supporting files</span>
@@ -572,19 +574,19 @@
                     @error('phone_secondary') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field">
-                    <div class="tfa-label">Bank Verification Number (BVN) <span class="tfa-req" x-show="applicantType === 'individual'">*</span></div>
+                    <div class="tfa-label">Bank Verification Number (BVN) <span class="tfa-req">*</span></div>
                     <input class="tfa-input {{ $errors->has('bvn') ? 'error' : '' }}"
                            type="text" name="bvn" value="{{ old('bvn') }}"
-                           maxlength="11" placeholder="11-digit BVN">
+                           maxlength="11" inputmode="numeric" placeholder="11-digit BVN">
                     <div class="tfa-hint">Your BVN is used for credit verification only</div>
                     @error('bvn') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
-                <div class="tfa-field" x-show="applicantType === 'individual'">
+                <div class="tfa-field">
                     <div class="tfa-label">National Identification Number (NIN) <span class="tfa-req">*</span></div>
-                    <input class="tfa-input {{ $errors->has('nin') ? 'error' : '' }}" type="text" name="nin" value="{{ old('nin') }}" placeholder="NIN">
+                    <input class="tfa-input {{ $errors->has('nin') ? 'error' : '' }}" type="text" name="nin" value="{{ old('nin') }}" maxlength="11" inputmode="numeric" placeholder="11-digit NIN">
                     @error('nin') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
-                <div class="tfa-field" x-show="applicantType === 'individual'">
+                <div class="tfa-field">
                     <div class="tfa-label">Marital Status <span class="tfa-req">*</span></div>
                     <select class="tfa-input {{ $errors->has('marital_status') ? 'error' : '' }}" name="marital_status">
                         <option value="">Select status</option>
@@ -594,7 +596,7 @@
                     </select>
                     @error('marital_status') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
-                <div class="tfa-field" x-show="applicantType === 'individual'">
+                <div class="tfa-field">
                     <div class="tfa-label">Gender <span class="tfa-req">*</span></div>
                     <select class="tfa-input {{ $errors->has('gender') ? 'error' : '' }}" name="gender">
                         <option value="">Select gender</option>
@@ -603,36 +605,46 @@
                     </select>
                     @error('gender') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
-                <div class="tfa-field" x-show="applicantType === 'individual'">
+                <div class="tfa-field">
                     <div class="tfa-label">Date of Birth <span class="tfa-req">*</span></div>
                     <input class="tfa-input {{ $errors->has('date_of_birth') ? 'error' : '' }}" type="date" name="date_of_birth" value="{{ old('date_of_birth', $prefillDob) }}">
                     @error('date_of_birth') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
-                <div class="tfa-field" x-show="applicantType === 'individual'">
+                <div class="tfa-field">
                     <div class="tfa-label">Passport Number <span class="tfa-req">*</span></div>
                     <input class="tfa-input {{ $errors->has('passport_number') ? 'error' : '' }}" type="text" name="passport_number" value="{{ old('passport_number', $prefillPassportNo) }}">
                     @error('passport_number') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
-                <div class="tfa-field" x-show="applicantType === 'individual'">
+                <div class="tfa-field">
                     <div class="tfa-label">Passport Expiry Date <span class="tfa-req">*</span></div>
                     <input class="tfa-input {{ $errors->has('passport_expiry_date') ? 'error' : '' }}" type="date" name="passport_expiry_date" value="{{ old('passport_expiry_date', $prefillPassportExpiry) }}">
                     @error('passport_expiry_date') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field">
+                    <div class="tfa-label">Government ID Type <span class="tfa-req">*</span></div>
+                    <select class="tfa-input {{ $errors->has('government_id_type') ? 'error' : '' }}" name="government_id_type">
+                        <option value="">Select the ID you are uploading</option>
+                        @foreach(['national_id' => 'National ID', 'drivers_licence' => "Driver's Licence", 'international_passport' => 'International Passport', 'voters_card' => "Voter's Card"] as $value => $label)
+                            <option value="{{ $value }}" @selected(old('government_id_type') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                    @error('government_id_type') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
             </div>
         </div>
 
         {{-- Section 2: Employment Information --}}
-        <div class="tfa-card" x-show="step === 2 && applicantType === 'individual'" x-cloak>
+        <div class="tfa-card" x-show="step === 2" x-cloak>
             <div class="tfa-section-title">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg>
-                Employment Information
+                Employment and Banking Information
             </div>
             <div class="tfa-grid">
                 <div class="tfa-field">
-                    <div class="tfa-label">Employer Company Name <span class="tfa-req">*</span></div>
+                    <div class="tfa-label"><span x-text="applicantType === 'company' ? 'Your Company Name' : 'Employer Company Name'"></span> <span class="tfa-req">*</span></div>
                     <input class="tfa-input {{ $errors->has('employer_name') ? 'error' : '' }}"
                            type="text" name="employer_name" value="{{ old('employer_name') }}"
-                           placeholder="Name of your employer">
+                           :placeholder="applicantType === 'company' ? 'Name of your company' : 'Name of your employer'">
                     @error('employer_name') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field">
@@ -659,19 +671,21 @@
                     @error('job_description') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field">
-                    <div class="tfa-label">Staff Number / Employee ID <span class="tfa-req">*</span></div>
-                    <input class="tfa-input {{ $errors->has('staff_number') ? 'error' : '' }}"
-                           type="text" name="staff_number" value="{{ old('staff_number') }}"
-                           placeholder="Your company staff ID">
-                    @error('staff_number') <span class="tfa-error">{{ $message }}</span> @enderror
+                    <div class="tfa-label">Office ID <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('office_id') ? 'error' : '' }}"
+                           type="text" name="office_id" value="{{ old('office_id') }}"
+                           placeholder="Your work or company ID number">
+                    @error('office_id') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field">
                     <div class="tfa-label">Sector <span class="tfa-req">*</span></div>
-                    <select class="tfa-input {{ $errors->has('sector') ? 'error' : '' }}" name="sector">
+                    <select class="tfa-input {{ $errors->has('sector') ? 'error' : '' }}" name="sector" :disabled="applicantType === 'company'">
                         <option value="">Select sector</option>
                         <option value="private" @selected(old('sector') === 'private')>Private</option>
                         <option value="public" @selected(old('sector') === 'public')>Public</option>
                     </select>
+                    <input type="hidden" name="sector" value="private" :disabled="applicantType !== 'company'">
+                    <div class="tfa-hint" x-show="applicantType === 'company'">Business owners are recorded as private sector.</div>
                     @error('sector') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field">
@@ -680,8 +694,8 @@
                     @error('ippis_number') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field">
-                    <div class="tfa-label">Monthly Salary Amount <span class="tfa-req">*</span></div>
-                    <input class="tfa-input {{ $errors->has('monthly_salary') ? 'error' : '' }}" type="number" min="0" step="0.01" name="monthly_salary" value="{{ old('monthly_salary') }}" placeholder="Monthly salary">
+                    <div class="tfa-label"><span x-text="applicantType === 'company' ? 'Personal Monthly Income / Draw' : 'Monthly Salary Amount'"></span> <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('monthly_salary') ? 'error' : '' }}" type="number" min="0" step="0.01" name="monthly_salary" value="{{ old('monthly_salary') }}" :placeholder="applicantType === 'company' ? 'Personal monthly income from the company' : 'Monthly salary'">
                     @error('monthly_salary') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>
                 <div class="tfa-field">
@@ -718,33 +732,17 @@
             </div>
         </div>
 
-        <div class="tfa-card" x-show="step === 2 && applicantType === 'company'" x-cloak>
-            <div class="tfa-section-title">Company Information</div>
-            <div class="tfa-grid">
-                @foreach([
-                    ['company_name', 'Company Name', 'text'], ['company_rc_number', 'RC Number', 'text'], ['company_email', 'Company Email', 'email'], ['company_phone', 'Company Phone', 'text'],
-                    ['company_sector', 'Business Sector', 'text'], ['representative_role', 'Representative Role', 'text'], ['company_bank_name', 'Company Bank Name', 'text'], ['company_account_number', 'Company Account Number', 'text'],
-                ] as [$name, $label, $type])
-                    <div class="tfa-field"><div class="tfa-label">{{ $label }} <span class="tfa-req">*</span></div><input class="tfa-input {{ $errors->has($name) ? 'error' : '' }}" type="{{ $type }}" name="{{ $name }}" value="{{ old($name) }}">@error($name) <span class="tfa-error">{{ $message }}</span> @enderror</div>
-                @endforeach
-                <div class="tfa-field tfa-full"><div class="tfa-label">Registered Office Address <span class="tfa-req">*</span></div><input class="tfa-input {{ $errors->has('company_address') ? 'error' : '' }}" type="text" name="company_address" value="{{ old('company_address') }}" placeholder="Start typing and select registered office address" autocomplete="off" data-google-address data-place-target="company_address_place_id"><input type="hidden" name="company_address_place_id" id="company_address_place_id" value="{{ old('company_address_place_id') }}">@error('company_address') <span class="tfa-error">{{ $message }}</span> @enderror</div>
-                <div class="tfa-field tfa-full"><div class="tfa-label">Loan Purpose / Travel Package</div><textarea class="tfa-textarea {{ $errors->has('loan_purpose') ? 'error' : '' }}" name="loan_purpose" rows="2">{{ old('loan_purpose') }}</textarea>@error('loan_purpose') <span class="tfa-error">{{ $message }}</span> @enderror</div>
-                <div class="tfa-field"><div class="tfa-label">Loan Amount</div><input class="tfa-input" type="text" value="{{ $fmt($loanAmount) }}" readonly></div>
-                <div class="tfa-field"><div class="tfa-label">Loan Tenure</div><input class="tfa-input" type="text" value="{{ $repayPlan }}" readonly></div>
-            </div>
-        </div>
-
-        <div class="tfa-card" x-show="step === 2 && applicantType === 'individual'" x-cloak>
+        <div class="tfa-card" x-show="step === 2" x-cloak>
             <div class="tfa-section-title">Next of Kin</div>
             <div class="tfa-grid">
                 @foreach([
                     ['next_of_kin_surname', 'Surname', 'text', true], ['next_of_kin_first_name', 'First Name', 'text', true], ['next_of_kin_other_names', 'Other Names', 'text', false], ['next_of_kin_relationship', 'Relationship', 'text', true],
-                    ['next_of_kin_title', 'Title', 'text', false], ['next_of_kin_phone_primary', 'Phone Number 1', 'text', true], ['next_of_kin_phone_secondary', 'Phone Number 2', 'text', false], ['next_of_kin_email', 'Email Address', 'email', false],
+                    ['next_of_kin_title', 'Title', 'text', true], ['next_of_kin_phone_primary', 'Phone Number 1', 'text', true], ['next_of_kin_phone_secondary', 'Phone Number 2', 'text', false], ['next_of_kin_email', 'Email Address', 'email', true],
                 ] as [$name, $label, $type, $required])
                     <div class="tfa-field"><div class="tfa-label">{{ $label }} @if($required)<span class="tfa-req">*</span>@endif</div><input class="tfa-input {{ $errors->has($name) ? 'error' : '' }}" type="{{ $type }}" name="{{ $name }}" value="{{ old($name) }}">@error($name) <span class="tfa-error">{{ $message }}</span> @enderror</div>
                 @endforeach
-                <div class="tfa-field"><div class="tfa-label">Date of Birth</div><input class="tfa-input {{ $errors->has('next_of_kin_date_of_birth') ? 'error' : '' }}" type="date" name="next_of_kin_date_of_birth" value="{{ old('next_of_kin_date_of_birth') }}">@error('next_of_kin_date_of_birth') <span class="tfa-error">{{ $message }}</span> @enderror</div>
-                <div class="tfa-field"><div class="tfa-label">Gender</div><select class="tfa-input {{ $errors->has('next_of_kin_gender') ? 'error' : '' }}" name="next_of_kin_gender"><option value="">Select gender</option><option value="female" @selected(old('next_of_kin_gender') === 'female')>Female</option><option value="male" @selected(old('next_of_kin_gender') === 'male')>Male</option></select>@error('next_of_kin_gender') <span class="tfa-error">{{ $message }}</span> @enderror</div>
+                <div class="tfa-field"><div class="tfa-label">Date of Birth <span class="tfa-req">*</span></div><input class="tfa-input {{ $errors->has('next_of_kin_date_of_birth') ? 'error' : '' }}" type="date" name="next_of_kin_date_of_birth" value="{{ old('next_of_kin_date_of_birth') }}">@error('next_of_kin_date_of_birth') <span class="tfa-error">{{ $message }}</span> @enderror</div>
+                <div class="tfa-field"><div class="tfa-label">Gender <span class="tfa-req">*</span></div><select class="tfa-input {{ $errors->has('next_of_kin_gender') ? 'error' : '' }}" name="next_of_kin_gender"><option value="">Select gender</option><option value="female" @selected(old('next_of_kin_gender') === 'female')>Female</option><option value="male" @selected(old('next_of_kin_gender') === 'male')>Male</option></select>@error('next_of_kin_gender') <span class="tfa-error">{{ $message }}</span> @enderror</div>
                 <div class="tfa-field tfa-full"><div class="tfa-label">Residential Address <span class="tfa-req">*</span></div><input class="tfa-input {{ $errors->has('next_of_kin_address') ? 'error' : '' }}" type="text" name="next_of_kin_address" value="{{ old('next_of_kin_address') }}" placeholder="Start typing and select next of kin address" autocomplete="off" data-google-address data-place-target="next_of_kin_address_place_id"><input type="hidden" name="next_of_kin_address_place_id" id="next_of_kin_address_place_id" value="{{ old('next_of_kin_address_place_id') }}">@error('next_of_kin_address') <span class="tfa-error">{{ $message }}</span> @enderror</div>
             </div>
         </div>
@@ -913,6 +911,31 @@
                     @error('digital_signature_image') <span class="tfa-error">{{ $message }}</span> @enderror
                     <span class="tfa-error" id="tfa-signature-error" style="display:none;">Please draw your signature before submitting.</span>
                 </div>
+                <div class="tfa-field tfa-full" style="margin-top:10px;padding-top:18px;border-top:1px solid var(--gray-200);">
+                    <div class="tfa-label">Witness Full Name <span class="tfa-req">*</span></div>
+                    <input class="tfa-input {{ $errors->has('witness_full_name') ? 'error' : '' }}" type="text" name="witness_full_name" value="{{ old('witness_full_name') }}" placeholder="Full legal name of the witness">
+                    @error('witness_full_name') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
+                <div class="tfa-field tfa-full">
+                    <div class="tfa-label">Witness Signature <span class="tfa-req">*</span></div>
+                    <div class="tfa-signature-box {{ $errors->has('witness_signature_image') ? 'error' : '' }}">
+                        <div class="tfa-signature-toolbar">
+                            <span>The witness must draw their own signature inside this box.</span>
+                            <button type="button" class="tfa-signature-clear" id="tfa-witness-signature-clear">Clear</button>
+                        </div>
+                        <canvas id="tfa-witness-signature-pad" class="tfa-signature-canvas"></canvas>
+                    </div>
+                    <input type="hidden" name="witness_signature_image" id="tfa-witness-signature-image" value="{{ old('witness_signature_image') }}">
+                    @error('witness_signature_image') <span class="tfa-error">{{ $message }}</span> @enderror
+                    <span class="tfa-error" id="tfa-witness-signature-error" style="display:none;">The witness must draw their signature before submission.</span>
+                </div>
+                <div class="tfa-field tfa-full">
+                    <label class="tf-agree-row" style="margin:0;">
+                        <input type="checkbox" name="witness_declaration" value="1" @checked(old('witness_declaration'))>
+                        <span>I confirm that I am the named witness and that the signature above is my own.</span>
+                    </label>
+                    @error('witness_declaration') <span class="tfa-error">{{ $message }}</span> @enderror
+                </div>
             </div>
         </div>
 
@@ -959,6 +982,15 @@
     let signatureRatio = 1;
     let signatureCssWidth = 0;
     let signatureCssHeight = 0;
+    const witnessSignatureCanvas = document.getElementById('tfa-witness-signature-pad');
+    const witnessSignatureInput = document.getElementById('tfa-witness-signature-image');
+    const witnessSignatureError = document.getElementById('tfa-witness-signature-error');
+    let witnessSignatureHasInk = Boolean(witnessSignatureInput?.value);
+    let witnessSignatureDrawing = false;
+    let witnessSignatureContext = null;
+    let witnessSignatureRatio = 1;
+    let witnessSignatureCssWidth = 0;
+    let witnessSignatureCssHeight = 0;
 
     function configureSignatureContext() {
         if (!signatureContext) return;
@@ -1090,6 +1122,88 @@
         signatureInput.value = '';
     }
 
+    function configureWitnessSignatureContext() {
+        if (!witnessSignatureContext) return;
+        witnessSignatureContext.setTransform(witnessSignatureRatio, 0, 0, witnessSignatureRatio, 0, 0);
+        witnessSignatureContext.lineWidth = 2.4;
+        witnessSignatureContext.lineCap = 'round';
+        witnessSignatureContext.lineJoin = 'round';
+        witnessSignatureContext.strokeStyle = '#101828';
+    }
+
+    function resizeWitnessSignatureCanvas(force = false) {
+        if (!witnessSignatureCanvas) return false;
+        const previous = witnessSignatureInput?.value || '';
+        const rect = witnessSignatureCanvas.getBoundingClientRect();
+        if (rect.width < 20 || rect.height < 20) return false;
+
+        witnessSignatureRatio = Math.max(window.devicePixelRatio || 1, 1);
+        witnessSignatureCssWidth = rect.width;
+        witnessSignatureCssHeight = rect.height;
+        const nextWidth = Math.floor(rect.width * witnessSignatureRatio);
+        const nextHeight = Math.floor(rect.height * witnessSignatureRatio);
+        if (!force && witnessSignatureCanvas.width === nextWidth && witnessSignatureCanvas.height === nextHeight && witnessSignatureContext) return true;
+
+        witnessSignatureCanvas.width = nextWidth;
+        witnessSignatureCanvas.height = nextHeight;
+        witnessSignatureContext = witnessSignatureCanvas.getContext('2d');
+        configureWitnessSignatureContext();
+
+        if (previous) {
+            const image = new Image();
+            image.onload = function() {
+                witnessSignatureContext.drawImage(image, 0, 0, witnessSignatureCssWidth, witnessSignatureCssHeight);
+            };
+            image.src = previous;
+        }
+        return true;
+    }
+
+    function witnessSignaturePoint(event) {
+        const rect = witnessSignatureCanvas.getBoundingClientRect();
+        return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    }
+
+    function startWitnessSignature(event) {
+        if (!resizeWitnessSignatureCanvas()) return;
+        event.preventDefault();
+        witnessSignatureCanvas.setPointerCapture?.(event.pointerId);
+        witnessSignatureDrawing = true;
+        witnessSignatureHasInk = true;
+        const point = witnessSignaturePoint(event);
+        witnessSignatureContext.beginPath();
+        witnessSignatureContext.moveTo(point.x, point.y);
+        witnessSignatureContext.lineTo(point.x + 0.01, point.y + 0.01);
+        witnessSignatureContext.stroke();
+        witnessSignatureError.style.display = 'none';
+    }
+
+    function moveWitnessSignature(event) {
+        if (!witnessSignatureDrawing || !witnessSignatureContext) return;
+        event.preventDefault();
+        const point = witnessSignaturePoint(event);
+        witnessSignatureContext.lineTo(point.x, point.y);
+        witnessSignatureContext.stroke();
+    }
+
+    function finishWitnessSignature(event) {
+        if (!witnessSignatureDrawing) return;
+        event?.preventDefault?.();
+        witnessSignatureDrawing = false;
+        if (witnessSignatureHasInk) witnessSignatureInput.value = witnessSignatureCanvas.toDataURL('image/png');
+    }
+
+    function clearWitnessSignature() {
+        if (!resizeWitnessSignatureCanvas(true) || !witnessSignatureContext || !witnessSignatureCanvas) return;
+        witnessSignatureContext.save();
+        witnessSignatureContext.setTransform(1, 0, 0, 1, 0, 0);
+        witnessSignatureContext.clearRect(0, 0, witnessSignatureCanvas.width, witnessSignatureCanvas.height);
+        witnessSignatureContext.restore();
+        configureWitnessSignatureContext();
+        witnessSignatureHasInk = false;
+        witnessSignatureInput.value = '';
+    }
+
     if (signatureCanvas) {
         window.addEventListener('resize', () => resizeSignatureCanvas(true));
         signatureCanvas.addEventListener('pointerdown', startSignature);
@@ -1100,11 +1214,28 @@
         document.getElementById('tfa-signature-clear')?.addEventListener('click', clearSignature);
     }
 
+    if (witnessSignatureCanvas) {
+        window.addEventListener('resize', () => resizeWitnessSignatureCanvas(true));
+        witnessSignatureCanvas.addEventListener('pointerdown', startWitnessSignature);
+        witnessSignatureCanvas.addEventListener('pointermove', moveWitnessSignature);
+        witnessSignatureCanvas.addEventListener('pointerup', finishWitnessSignature);
+        witnessSignatureCanvas.addEventListener('pointercancel', finishWitnessSignature);
+        witnessSignatureCanvas.addEventListener('pointerleave', finishWitnessSignature);
+        document.getElementById('tfa-witness-signature-clear')?.addEventListener('click', clearWitnessSignature);
+    }
+
     document.getElementById('tfa-form')?.addEventListener('submit', function(event) {
         if (signatureCanvas && (!signatureHasInk || !signatureInput.value)) {
             event.preventDefault();
             signatureError.style.display = 'block';
             signatureCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        if (witnessSignatureCanvas && (!witnessSignatureHasInk || !witnessSignatureInput.value)) {
+            event.preventDefault();
+            witnessSignatureError.style.display = 'block';
+            witnessSignatureCanvas.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
 

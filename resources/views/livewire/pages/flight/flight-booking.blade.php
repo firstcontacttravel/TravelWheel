@@ -1375,6 +1375,7 @@
     $totalBase  = (float)($mappedFlight['baseFare'] ?? ($itinTotals['BaseFare']['Amount'] ?? 0));
     $totalTax   = (float)($mappedFlight['totalTax'] ?? ($itinTotals['TotalTax']['Amount'] ?? 0));
     $markupAmount = (float)($mappedFlight['markupAmount'] ?? 0);
+    $markupPassengerCount = (int)($mappedFlight['markupPassengerCount'] ?? 1);
     $discount   = 0;
 
     $taxLabels = [
@@ -2804,7 +2805,7 @@
                         @if($markupAmount > 0)
                         <div style="padding:10px 0;margin-bottom:10px;border-bottom:1px solid var(--gray-100);">
                             <div class="bk-fare-row">
-                                <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">Service charge</span>
+                                <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">Service charge ({{ $markupPassengerCount }} {{ \Illuminate\Support\Str::plural('passenger', $markupPassengerCount) }})</span>
                                 <span class="bk-fare-val" style="font-weight:800;">{{ $fmt($markupAmount) }}</span>
                             </div>
                         </div>

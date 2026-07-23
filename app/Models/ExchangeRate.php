@@ -16,6 +16,13 @@ class ExchangeRate extends Model
         return ['rate' => 'float'];
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (self $rate): void {
+            $rate->currency = strtoupper($rate->currency);
+        });
+    }
+
     public static function rateFor(string $currency): float
     {
         $rate = static::query()->where('currency', strtoupper($currency))->value('rate');
