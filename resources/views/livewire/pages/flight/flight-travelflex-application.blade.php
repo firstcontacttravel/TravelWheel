@@ -99,16 +99,9 @@
     }
     .tfa-textarea { height: auto; padding: 10px 12px; resize: vertical; min-height: 80px; }
     .tfa-input:focus, .tfa-select:focus, .tfa-textarea:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
-    .tfa-place-autocomplete {
-        display: block;
-        width: 100%;
-        min-height: 44px;
-        color-scheme: light;
-        font-family: var(--font);
-        font-size: 14px;
-        --gmpx-color-surface: var(--gray-50);
-        --gmpx-color-on-surface: var(--gray-900);
-    }
+    .pac-container { z-index: 99999; border-radius: 9px; border: 1px solid var(--gray-200); box-shadow: 0 12px 28px rgba(16,24,40,.14); font-family: var(--font); }
+    .pac-item { padding: 8px 11px; font-size: 12px; line-height: 1.45; cursor: pointer; }
+    .pac-item-query { font-size: 13px; }
     .tfa-client-error { display: block; }
     .tfa-input[readonly] { background: #eef2f7; color: var(--gray-500); cursor: not-allowed; }
     .tfa-input.error, .tfa-select.error, .tfa-textarea.error { border-color: var(--red); }
@@ -405,7 +398,6 @@
     }
     .tfa-agreement-box h4:first-child { margin-top: 0; }
     .tfa-agreement-box p { margin: 0 0 8px; }
-    .pac-container { z-index: 99999; }
     @media(max-width:640px) {
         body { margin-top: 0; }
         .tfa-wrap { padding: 14px 12px 64px; }
@@ -1088,7 +1080,7 @@
             if (googleSource) {
                 if (!googleSource.value.trim()) {
                     showTravelFlexClientError(googleSource, 'Please enter this address before continuing.');
-                    googleSource._placeAutocomplete?.focus();
+                    googleSource.focus();
                     googleSource.closest('.tfa-field')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     return false;
                 }
@@ -1197,42 +1189,34 @@
         if (travelFlexPlacesInitialization) return travelFlexPlacesInitialization;
 
         travelFlexPlacesInitialization = (async function() {
-            const { PlaceAutocompleteElement } = await google.maps.importLibrary('places');
+            const { Autocomplete } = await google.maps.importLibrary('places');
 
             document.querySelectorAll('[data-google-address]').forEach(function(input) {
                 if (input.dataset.googleReady === '1') return;
 
-                const autocomplete = new PlaceAutocompleteElement();
-                autocomplete.className = 'tfa-place-autocomplete';
-                autocomplete.placeholder = input.placeholder || 'Start typing an address';
-                autocomplete.includedRegionCodes = ['ng'];
-                autocomplete.requestedRegion = 'ng';
-                autocomplete.value = input.value || '';
+                const autocomplete = new Autocomplete(input, {
+                    componentRestrictions: { country: 'ng' },
+                    fields: ['formatted_address', 'place_id'],
+                    types: ['geocode'],
+                });
 
-                input.insertAdjacentElement('afterend', autocomplete);
                 input.dataset.googleReady = '1';
-                input.required = false;
-                input.style.display = 'none';
                 input._placeAutocomplete = autocomplete;
 
-                autocomplete.addEventListener('input', function() {
-                    input.value = autocomplete.value || '';
+                input.addEventListener('input', function() {
                     const target = document.getElementById(input.dataset.placeTarget);
                     if (target) target.value = '';
                     clearTravelFlexClientError(input);
                 });
 
-                autocomplete.addEventListener('gmp-select', async function({ placePrediction }) {
-                    const place = placePrediction.toPlace();
-                    await place.fetchFields({ fields: ['formattedAddress'] });
-
-                    const address = place.formattedAddress || autocomplete.value || '';
-                    autocomplete.value = address;
-                    input.value = address;
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-
+                autocomplete.addListener('place_changed', function() {
+                    const place = autocomplete.getPlace();
+                    const address = place.formatted_address || input.value || '';
                     const target = document.getElementById(input.dataset.placeTarget);
-                    if (target) target.value = place.id || '';
+
+                    input.value = address;
+                    if (target) target.value = place.place_id || '';
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
                     clearTravelFlexClientError(input);
                 });
             });
@@ -1246,6 +1230,10 @@
             await travelFlexPlacesInitialization;
         } catch (error) {
             travelFlexPlacesInitialization = null;
+            document.querySelectorAll('[data-google-address]').forEach(function(input) {
+                input.dataset.googleReady = '0';
+                input.style.display = '';
+            });
         }
     };
 
@@ -1475,6 +1463,6 @@
     });
 </script>
 @if(config('services.google_maps.key'))
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&loading=async&v=weekly&callback=initTravelFlexAddressAutocomplete" async></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&loading=async&v=weekly&libraries=places&callback=initTravelFlexAddressAutocomplete" async></script>
 @endif
 @endcomponent
