@@ -27,11 +27,11 @@
     $isMulti = count($multiLegs) > 0;
     $tripLabel = $isReturn ? 'Round trip' : ($isMulti ? 'Multi-city' : 'One-way');
     $cabinLabel = \App\Support\FlightDisplay::cabin($flight, $dbBooking);
+    $routeLabel = \App\Support\FlightDisplay::route($flight);
 
     $firstSeg = $segments[0] ?? [];
     $lastSeg = ! empty($segments) ? $segments[count($segments) - 1] : [];
     $finalSeg = $isReturn && ! empty($returnSegments) ? $returnSegments[count($returnSegments) - 1] : $lastSeg;
-    $routeLabel = trim(($firstSeg['from'] ?? '') . ' → ' . ($finalSeg['to'] ?? ''), ' →');
 
     $breakdown = $bookingFlight['fareBreakdown'] ?? $flight['fareBreakdown'] ?? [];
     $contact = $contact ?? session('bookingContact', []);
@@ -340,6 +340,36 @@
         width: 64px;
         height: 1px;
         background: var(--cf-line);
+    }
+
+    .cf-multi-route-top {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 10px;
+        padding: 14px 18px;
+        background: #fbfcfe;
+        border-bottom: 1px solid var(--cf-line-2);
+    }
+
+    .cf-multi-route-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-width: 0;
+        padding: 10px 12px;
+        border: 1px solid var(--cf-line);
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .cf-multi-route-item strong {
+        overflow: hidden;
+        color: var(--cf-text);
+        font-family: var(--cf-mono);
+        font-size: 12px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .cf-leg {
@@ -778,19 +808,37 @@
                     </div>
                 </div>
 
-                <div class="cf-route-top">
-                    <div class="cf-airport">
-                        <div class="cf-airport-code">{{ $firstSeg['from'] ?? '' }}</div>
-                        <div class="cf-airport-name">{{ $firstSeg['fromCity'] ?? $firstSeg['fromAirport'] ?? 'Departure' }}</div>
+                @if($isMulti)
+                    <div class="cf-multi-route-top" aria-label="Multi-city itinerary summary: {{ $routeLabel }}">
+                        @foreach($legs as $leg)
+                            @php
+                                $summarySegments = array_values(array_filter($leg['segments'] ?? []));
+                                $summaryFirst = $summarySegments[0] ?? [];
+                                $summaryLast = ! empty($summarySegments) ? $summarySegments[count($summarySegments) - 1] : [];
+                            @endphp
+                            @if(! empty($summarySegments))
+                                <div class="cf-multi-route-item">
+                                    <span class="cf-chip">{{ $leg['label'] }}</span>
+                                    <strong>{{ $summaryFirst['from'] ?? '' }} → {{ $summaryLast['to'] ?? '' }}</strong>
+                                </div>
+                            @endif
+                        @endforeach
                     </div>
-                    <div class="cf-plane-line">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16Z"/></svg>
+                @else
+                    <div class="cf-route-top">
+                        <div class="cf-airport">
+                            <div class="cf-airport-code">{{ $firstSeg['from'] ?? '' }}</div>
+                            <div class="cf-airport-name">{{ $firstSeg['fromCity'] ?? $firstSeg['fromAirport'] ?? 'Departure' }}</div>
+                        </div>
+                        <div class="cf-plane-line">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16Z"/></svg>
+                        </div>
+                        <div class="cf-airport">
+                            <div class="cf-airport-code">{{ $finalSeg['to'] ?? '' }}</div>
+                            <div class="cf-airport-name">{{ $finalSeg['toCity'] ?? $finalSeg['toAirport'] ?? 'Arrival' }}</div>
+                        </div>
                     </div>
-                    <div class="cf-airport">
-                        <div class="cf-airport-code">{{ $finalSeg['to'] ?? '' }}</div>
-                        <div class="cf-airport-name">{{ $finalSeg['toCity'] ?? $finalSeg['toAirport'] ?? 'Arrival' }}</div>
-                    </div>
-                </div>
+                @endif
 
                 @foreach($legs as $leg)
                     @php

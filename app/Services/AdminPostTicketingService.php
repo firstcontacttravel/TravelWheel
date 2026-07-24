@@ -70,8 +70,8 @@ class AdminPostTicketingService
             ];
         }
 
-        $response = Http::timeout(60)
-            ->post('https://travelnext.works/api/aeroVE5/' . $endpoint, $apiPayload);
+        $response = Http::connectTimeout(10)->timeout(60)
+            ->post('https://travelnext.works/api/aeroVE5/'.$endpoint, $apiPayload);
 
         $data = $response->json() ?: [];
         $ok = ! $response->failed() && $this->extractSuccess($data);
@@ -105,7 +105,11 @@ class AdminPostTicketingService
 
     private function redactPayload(array $payload): array
     {
-        $payload['user_password'] = '[redacted]';
+        foreach (['user_id', 'user_password', 'access', 'ip_address'] as $key) {
+            if (array_key_exists($key, $payload)) {
+                $payload[$key] = '[redacted]';
+            }
+        }
 
         return $payload;
     }
@@ -201,7 +205,7 @@ class AdminPostTicketingService
                 ->implode(', ');
 
             if (filled($missing)) {
-                return 'Invalid passenger details: passenger ' . ($index + 1) . ' is missing ' . $missing . '.';
+                return 'Invalid passenger details: passenger '.($index + 1).' is missing '.$missing.'.';
             }
         }
 
@@ -264,10 +268,11 @@ class AdminPostTicketingService
         $flat = [];
 
         foreach ($payload as $key => $value) {
-            $path = $prefix === '' ? (string) $key : $prefix . '.' . $key;
+            $path = $prefix === '' ? (string) $key : $prefix.'.'.$key;
 
             if (is_array($value)) {
                 $flat += $this->flatten($value, $path);
+
                 continue;
             }
 

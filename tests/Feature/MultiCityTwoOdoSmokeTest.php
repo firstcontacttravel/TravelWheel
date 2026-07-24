@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -9,6 +10,9 @@ class MultiCityTwoOdoSmokeTest extends TestCase
 {
     public function test_multi_city_uses_each_origin_destination_option_as_a_leg(): void
     {
+        $firstDeparture = CarbonImmutable::today()->addDays(10);
+        $secondDeparture = $firstDeparture->addDays(4);
+
         Http::fake([
             'https://travelnext.works/api/aeroVE5/availability' => Http::response([
                 'AirSearchResponse' => [
@@ -50,13 +54,25 @@ class MultiCityTwoOdoSmokeTest extends TestCase
                                     [
                                         'TotalStops' => 0,
                                         'OriginDestinationOption' => [
-                                            $this->segment('CDG', 'LOS', '2026-07-20T08:00:00', '2026-07-20T14:00:00', '001'),
+                                            $this->segment(
+                                                'CDG',
+                                                'LOS',
+                                                $firstDeparture->setTime(8, 0)->toIso8601String(),
+                                                $firstDeparture->setTime(14, 0)->toIso8601String(),
+                                                '001'
+                                            ),
                                         ],
                                     ],
                                     [
                                         'TotalStops' => 0,
                                         'OriginDestinationOption' => [
-                                            $this->segment('LOS', 'CDG', '2026-07-24T22:00:00', '2026-07-25T06:00:00', '002'),
+                                            $this->segment(
+                                                'LOS',
+                                                'CDG',
+                                                $secondDeparture->setTime(22, 0)->toIso8601String(),
+                                                $secondDeparture->addDay()->setTime(6, 0)->toIso8601String(),
+                                                '002'
+                                            ),
                                         ],
                                     ],
                                 ],
@@ -74,8 +90,8 @@ class MultiCityTwoOdoSmokeTest extends TestCase
             'kids' => 0,
             'flight_type' => 'Y',
             'multi_legs' => json_encode([
-                ['from' => 'Paris (CDG)', 'to' => 'Lagos (LOS)', 'depart' => '20/07/2026'],
-                ['from' => 'Lagos (LOS)', 'to' => 'Paris (CDG)', 'depart' => '24/07/2026'],
+                ['from' => 'Paris (CDG)', 'to' => 'Lagos (LOS)', 'depart' => $firstDeparture->format('d/m/Y')],
+                ['from' => 'Lagos (LOS)', 'to' => 'Paris (CDG)', 'depart' => $secondDeparture->format('d/m/Y')],
             ]),
         ])->assertRedirect(route('flights.search.loading'));
 

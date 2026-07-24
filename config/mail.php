@@ -45,7 +45,7 @@ return [
             'port' => env('MAIL_PORT', 2525),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
-            'timeout' => null,
+            'timeout' => (int) env('MAIL_TIMEOUT', 10),
             'local_domain' => env('MAIL_EHLO_DOMAIN', parse_url((string) env('APP_URL', 'http://localhost'), PHP_URL_HOST)),
         ],
 
@@ -118,6 +118,5 @@ return [
     'travelflex_provider' => env('MAIL_TRAVELFLEX_PROVIDER', 'loans@travelwheel.com'),
     'travelwheel_address' => env('MAIL_TRAVELWHEEL_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
     'support_address' => env('MAIL_SUPPORT_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
-    
 
 ];

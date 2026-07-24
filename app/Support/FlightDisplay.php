@@ -65,6 +65,65 @@ class FlightDisplay
             ->toArray();
     }
 
+    public static function route(mixed $flight): string
+    {
+        $groups = [];
+        $multiLegs = data_get($flight, 'multiLegs', []);
+
+        if (is_array($multiLegs) && $multiLegs !== []) {
+            foreach ($multiLegs as $leg) {
+                $groups[] = data_get($leg, 'segments', []);
+            }
+        } else {
+            $groups[] = data_get($flight, 'segments', []);
+
+            $returnSegments = data_get($flight, 'returnSegments', []);
+            if (is_array($returnSegments) && $returnSegments !== []) {
+                $groups[] = $returnSegments;
+            }
+        }
+
+        $codes = [];
+
+        foreach ($groups as $segments) {
+            if (! is_array($segments)) {
+                continue;
+            }
+
+            foreach ($segments as $segment) {
+                $segment = is_object($segment) ? (array) $segment : (array) $segment;
+                $from = strtoupper(trim(self::first($segment, [
+                    'from',
+                    'fromCode',
+                    'airportOriginCode',
+                    'DepartureAirportLocationCode',
+                ])));
+                $to = strtoupper(trim(self::first($segment, [
+                    'to',
+                    'toCode',
+                    'airportDestinationCode',
+                    'ArrivalAirportLocationCode',
+                ])));
+
+                if ($from !== '' && end($codes) !== $from) {
+                    $codes[] = $from;
+                }
+
+                if ($to !== '' && end($codes) !== $to) {
+                    $codes[] = $to;
+                }
+            }
+        }
+
+        if ($codes === []) {
+            $from = strtoupper(trim((string) data_get($flight, 'from', '')));
+            $to = strtoupper(trim((string) data_get($flight, 'to', '')));
+            $codes = array_values(array_filter([$from, $to]));
+        }
+
+        return implode(' → ', $codes);
+    }
+
     public static function cabinBaggageValues(mixed $values): array
     {
         return collect(is_array($values) ? $values : [$values])

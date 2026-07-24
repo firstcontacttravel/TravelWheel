@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\FlightBookings\Tables;
 
 use App\Filament\Resources\FlightBookings\FlightBookingResource;
-use App\Mail\PaymentReceiptMail;
 use App\Models\FlightBooking;
 use App\Models\PaymentVerificationRecord;
 use App\Models\PostTicketingRequest;
@@ -11,6 +10,7 @@ use App\Models\TicketingRecord;
 use App\Services\AdminPostTicketingService;
 use App\Services\AdminReplacementFlightSearchService;
 use App\Services\AdminTicketingService;
+use App\Services\DurableMailService;
 use App\Services\SeerbitPaymentService;
 use App\Services\TravelFlexApplicationService;
 use App\Services\TravelFlexFlowService;
@@ -34,7 +34,6 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -72,7 +71,7 @@ class FlightBookingsTable
                     ->copyable()
                     ->sortable()
                     ->weight('bold')
-                    ->description(fn (FlightBooking $record): string => trim(($record->unique_id ?: 'No UniqueID') . ' | ' . ($record->fare_type ?: 'No fare type'))),
+                    ->description(fn (FlightBooking $record): string => trim(($record->unique_id ?: 'No UniqueID').' | '.($record->fare_type ?: 'No fare type'))),
                 TextColumn::make('unique_id')
                     ->label('UniqueID')
                     ->searchable()
@@ -322,9 +321,9 @@ class FlightBookingsTable
     private static function passengerSummary(FlightBooking $record): string
     {
         return collect([
-            $record->adult_count . ' adult' . ($record->adult_count === 1 ? '' : 's'),
-            $record->child_count > 0 ? $record->child_count . ' child' . ($record->child_count === 1 ? '' : 'ren') : null,
-            $record->infant_count > 0 ? $record->infant_count . ' infant' . ($record->infant_count === 1 ? '' : 's') : null,
+            $record->adult_count.' adult'.($record->adult_count === 1 ? '' : 's'),
+            $record->child_count > 0 ? $record->child_count.' child'.($record->child_count === 1 ? '' : 'ren') : null,
+            $record->infant_count > 0 ? $record->infant_count.' infant'.($record->infant_count === 1 ? '' : 's') : null,
         ])->filter()->implode(' | ');
     }
 
@@ -332,8 +331,8 @@ class FlightBookingsTable
     {
         return collect([
             self::passengerSummary($record),
-            (float) $record->markup_amount > 0 ? 'Service charge: ' . self::money($record->markup_amount, $record->currency) : null,
-            (float) $record->supplier_price > 0 ? 'Supplier: ' . self::money($record->supplier_price, $record->currency) : null,
+            (float) $record->markup_amount > 0 ? 'Service charge: '.self::money($record->markup_amount, $record->currency) : null,
+            (float) $record->supplier_price > 0 ? 'Supplier: '.self::money($record->supplier_price, $record->currency) : null,
         ])->filter()->implode(' | ');
     }
 
@@ -342,7 +341,7 @@ class FlightBookingsTable
         $groups = self::journeyGroups($record);
 
         if ($groups === []) {
-            return new HtmlString('<span class="text-gray-500">' . e($record->route ?: '-') . '</span>');
+            return new HtmlString('<span class="text-gray-500">'.e($record->route ?: '-').'</span>');
         }
 
         $hasMultiLegs = collect($record->flight_snapshot['multiLegs'] ?? [])
@@ -352,7 +351,7 @@ class FlightBookingsTable
             : self::label($record->trip_type ?: 'one_way');
 
         $html = '<div class="tw-journey-cell">';
-        $html .= '<div class="tw-journey-kind">' . e($tripLabel) . '</div>';
+        $html .= '<div class="tw-journey-kind">'.e($tripLabel).'</div>';
 
         foreach ($groups as $group) {
             $segments = $group['segments'];
@@ -370,7 +369,7 @@ class FlightBookingsTable
                     $flightLabel = $flight;
 
                     if (filled($airline) && filled($flight) && ! str_starts_with(strtoupper($flight), strtoupper($airline))) {
-                        $flightLabel = trim($airline . ' ' . $flight);
+                        $flightLabel = trim($airline.' '.$flight);
                     }
 
                     $time = trim(collect([
@@ -381,21 +380,21 @@ class FlightBookingsTable
                     $html = '';
 
                     if (filled($time)) {
-                        $html .= '<span class="tw-journey-time">' . e($time) . '</span>';
+                        $html .= '<span class="tw-journey-time">'.e($time).'</span>';
                     }
 
                     if (filled($flightLabel)) {
-                        $html .= '<span>' . e($flightLabel) . '</span>';
+                        $html .= '<span>'.e($flightLabel).'</span>';
                     }
 
                     if (filled($cabin)) {
-                        $html .= '<span class="tw-journey-cabin">' . e($cabin) . '</span>';
+                        $html .= '<span class="tw-journey-cabin">'.e($cabin).'</span>';
                     }
 
                     return $html;
                 })
                 ->filter()
-                ->map(fn (string $line): string => '<div class="tw-journey-flight">' . $line . '</div>')
+                ->map(fn (string $line): string => '<div class="tw-journey-flight">'.$line.'</div>')
                 ->implode('');
 
             $html .= '<div class="tw-journey-leg">';
@@ -403,14 +402,14 @@ class FlightBookingsTable
             $html .= '<div class="tw-journey-leg-main">';
             $html .= '<div class="tw-journey-leg-top">';
             $html .= '<div class="tw-journey-route">';
-            $html .= '<span>' . e($origin ?: '-') . '</span>';
+            $html .= '<span>'.e($origin ?: '-').'</span>';
             $html .= '<span class="tw-journey-arrow">-></span>';
-            $html .= '<span>' . e($destination ?: '-') . '</span>';
+            $html .= '<span>'.e($destination ?: '-').'</span>';
             $html .= '</div>';
-            $html .= '<span class="tw-journey-label">' . e($group['label']) . '</span>';
+            $html .= '<span class="tw-journey-label">'.e($group['label']).'</span>';
             $html .= '</div>';
-            $html .= '<div class="tw-journey-date">' . e($date ?: '-') . '</div>';
-            $html .= '<div class="tw-journey-flights">' . ($flightLines ?: '<div class="tw-journey-flight">-</div>') . '</div>';
+            $html .= '<div class="tw-journey-date">'.e($date ?: '-').'</div>';
+            $html .= '<div class="tw-journey-flights">'.($flightLines ?: '<div class="tw-journey-flight">-</div>').'</div>';
             $html .= '</div>';
             $html .= '</div>';
         }
@@ -430,7 +429,7 @@ class FlightBookingsTable
         if ($multiLegs->isNotEmpty()) {
             return $multiLegs
                 ->map(fn (array $leg, int $index): array => [
-                    'label' => $leg['label'] ?? 'Leg ' . ($index + 1),
+                    'label' => $leg['label'] ?? 'Leg '.($index + 1),
                     'segments' => array_values($leg['segments'] ?? []),
                 ])
                 ->all();
@@ -489,26 +488,26 @@ class FlightBookingsTable
         $customer = $record->contact_email ?: ($record->contact_phone ?: '-');
 
         return new HtmlString(
-            '<div class="tw-action-context">' .
-                '<div>' .
-                    '<div class="tw-action-context-kicker">' . e($title) . '</div>' .
-                    '<div class="tw-action-context-title">' . e($record->booking_ref ?: 'Booking') . '</div>' .
-                    '<div class="tw-action-context-sub">' . e(trim(($record->route ?: '-') . ' | ' . ($record->airline ?: '-'))) . '</div>' .
-                '</div>' .
-                '<dl>' .
-                    '<div><dt>Customer</dt><dd>' . e($customer) . '</dd></div>' .
-                    '<div><dt>Amount</dt><dd>' . e($amount) . '</dd></div>' .
-                    '<div><dt>Service charge</dt><dd>' . e($serviceCharge) . '</dd></div>' .
-                    '<div><dt>Payment</dt><dd>' . e(self::label($record->payment_status)) . '</dd></div>' .
-                    '<div><dt>Booking</dt><dd>' . e(self::label($record->booking_status)) . '</dd></div>' .
-                '</dl>' .
+            '<div class="tw-action-context">'.
+                '<div>'.
+                    '<div class="tw-action-context-kicker">'.e($title).'</div>'.
+                    '<div class="tw-action-context-title">'.e($record->booking_ref ?: 'Booking').'</div>'.
+                    '<div class="tw-action-context-sub">'.e(trim(($record->route ?: '-').' | '.($record->airline ?: '-'))).'</div>'.
+                '</div>'.
+                '<dl>'.
+                    '<div><dt>Customer</dt><dd>'.e($customer).'</dd></div>'.
+                    '<div><dt>Amount</dt><dd>'.e($amount).'</dd></div>'.
+                    '<div><dt>Service charge</dt><dd>'.e($serviceCharge).'</dd></div>'.
+                    '<div><dt>Payment</dt><dd>'.e(self::label($record->payment_status)).'</dd></div>'.
+                    '<div><dt>Booking</dt><dd>'.e(self::label($record->booking_status)).'</dd></div>'.
+                '</dl>'.
             '</div>',
         );
     }
 
     private static function money(mixed $amount, ?string $currency): string
     {
-        return trim(($currency ?: 'NGN') . ' ' . number_format((float) $amount, 2));
+        return trim(($currency ?: 'NGN').' '.number_format((float) $amount, 2));
     }
 
     public static function markBankTransferPaidAction(): Action
@@ -518,7 +517,7 @@ class FlightBookingsTable
             ->icon('heroicon-o-banknotes')
             ->color('success')
             ->visible(fn (FlightBooking $record): bool => $record->payment_status === 'awaiting_bank_transfer')
-            ->modalHeading(fn (FlightBooking $record): string => 'Verify bank transfer for ' . ($record->booking_ref ?: 'booking'))
+            ->modalHeading(fn (FlightBooking $record): string => 'Verify bank transfer for '.($record->booking_ref ?: 'booking'))
             ->modalDescription('Use this only after confirming that funds have reached the company bank account. This records an audit entry but does not issue a ticket.')
             ->modalIcon('heroicon-o-banknotes')
             ->modalIconColor('success')
@@ -558,6 +557,16 @@ class FlightBookingsTable
                 Toggle::make('send_receipt')
                     ->label('Send payment receipt now')
                     ->default(false),
+                Toggle::make('allow_mismatch')
+                    ->label('Authorised amount/currency override')
+                    ->helperText('Use only after a supervisor has approved the difference.')
+                    ->live()
+                    ->default(false),
+                Textarea::make('override_reason')
+                    ->label('Override reason')
+                    ->required(fn (Get $get): bool => (bool) $get('allow_mismatch'))
+                    ->visible(fn (Get $get): bool => (bool) $get('allow_mismatch'))
+                    ->maxLength(2000),
             ])
             ->action(function (FlightBooking $record, array $data): void {
                 $isTravelFlex = $record->payment_method === 'flex_bank_transfer';
@@ -567,6 +576,7 @@ class FlightBookingsTable
 
                 if ($isTravelFlex && (! $travelFlexApplication || $travelFlexApplication->application_status !== 'approved' || $travelFlexApplication->financing_status !== 'approved')) {
                     Notification::make()->title('TravelFlex approval required')->body('Fast Credit must approve the application before the down payment can be verified.')->danger()->send();
+
                     return;
                 }
 
@@ -579,30 +589,52 @@ class FlightBookingsTable
                             ->body($exception->validator->errors()->first('travelflex'))
                             ->danger()
                             ->send();
+
                         return;
                     }
                 }
 
+                $expectedAmount = round((float) ($record->payment_amount ?: $record->total_price), 2);
+                $receivedAmount = round((float) $data['amount_received'], 2);
+                $expectedCurrency = strtoupper((string) ($record->payment_currency ?: $record->currency ?: 'NGN'));
+                $receivedCurrency = strtoupper((string) $data['currency']);
+                $hasMismatch = $receivedAmount < $expectedAmount || $receivedCurrency !== $expectedCurrency;
+
+                if ($hasMismatch && ! ($data['allow_mismatch'] ?? false)) {
+                    Notification::make()
+                        ->title('Payment does not match the booking')
+                        ->body("Expected {$expectedCurrency} ".number_format($expectedAmount, 2).", received {$receivedCurrency} ".number_format($receivedAmount, 2).'. Use an authorised override only after supervisor review.')
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
+
                 $previousStatus = $record->payment_status;
+                $holdExpired = ! $isTravelFlex && $record->tkt_time_limit?->isPast();
 
                 $record->update([
                     'payment_status' => $isTravelFlex ? 'partially_paid' : 'paid',
                     'payment_method' => $record->payment_method ?: 'bank_transfer',
                     'payment_reference' => $data['payment_reference'] ?: $record->payment_reference,
-                    'payment_amount' => $data['amount_received'],
-                    'payment_charged_amount' => $data['amount_received'],
-                    'payment_currency' => $data['currency'],
+                    'payment_amount' => $record->payment_amount ?: $record->total_price,
+                    'payment_charged_amount' => $receivedAmount,
+                    'payment_currency' => $expectedCurrency,
                     'payment_verified_at' => now(),
+                    'booking_status' => $holdExpired ? 'hold_expired_review' : $record->booking_status,
+                    'reconciliation_note' => $holdExpired
+                        ? 'Bank transfer verified after the airline hold expired; manual recovery required.'
+                        : $record->reconciliation_note,
                 ]);
 
                 self::recordPaymentVerification($record->fresh(), [
                     'action' => 'bank_transfer_marked_paid',
                     'previous_payment_status' => $previousStatus,
-                    'new_payment_status' => 'paid',
+                    'new_payment_status' => $isTravelFlex ? 'partially_paid' : 'paid',
                     'payment_reference' => $data['payment_reference'] ?: $record->payment_reference,
-                    'amount_received' => $data['amount_received'],
-                    'currency' => $data['currency'],
-                    'verification_note' => $data['verification_note'],
+                    'amount_received' => $receivedAmount,
+                    'currency' => $receivedCurrency,
+                    'verification_note' => trim($data['verification_note'].(($data['allow_mismatch'] ?? false) ? "\nAuthorised override: ".$data['override_reason'] : '')),
                 ]);
 
                 $paidBooking = $record->fresh();
@@ -649,8 +681,8 @@ class FlightBookingsTable
             ->color('info')
             ->visible(fn (FlightBooking $record): bool => filled($record->payment_reference) && in_array($record->payment_method, ['gateway', 'flex_gateway'], true))
             ->requiresConfirmation()
-            ->modalHeading(fn (FlightBooking $record): string => 'Verify SeerBit payment for ' . ($record->booking_ref ?: 'booking'))
-            ->modalDescription(fn (FlightBooking $record): string => 'Confirm the payment status for this booking reference before any ticketing action is taken. Payment reference: ' . ($record->payment_reference ?: '-'))
+            ->modalHeading(fn (FlightBooking $record): string => 'Verify SeerBit payment for '.($record->booking_ref ?: 'booking'))
+            ->modalDescription(fn (FlightBooking $record): string => 'Confirm the payment status for this booking reference before any ticketing action is taken. Payment reference: '.($record->payment_reference ?: '-'))
             ->modalIcon('heroicon-o-shield-check')
             ->modalIconColor('info')
             ->modalSubmitActionLabel('Verify with SeerBit')
@@ -680,40 +712,47 @@ class FlightBookingsTable
                     return;
                 }
 
-                $newStatus = $result['ok'] ? 'paid' : $previousStatus;
+                $expectedAmount = round((float) ($record->payment_amount ?: $record->total_price), 2);
+                $receivedAmount = $result['amount'] === null ? null : round((float) $result['amount'], 2);
+                $expectedCurrency = strtoupper((string) ($record->payment_currency ?: $record->currency ?: 'NGN'));
+                $receivedCurrency = strtoupper((string) ($result['currency'] ?: $expectedCurrency));
+                $amountMatches = $receivedAmount !== null && $receivedAmount >= $expectedAmount;
+                $currencyMatches = $receivedCurrency === $expectedCurrency;
+                $verified = (bool) $result['ok'] && $amountMatches && $currencyMatches;
+                $newStatus = $verified ? 'paid' : $previousStatus;
                 $gatewayResponse = $record->payment_gateway_response ?: [];
                 $gatewayResponse['seerbit_verify'] = $result['raw'] ?? [];
 
                 $record->update([
                     'payment_status' => $newStatus,
-                    'payment_amount' => $result['amount'] ?? $record->payment_amount,
-                    'payment_charged_amount' => $result['amount'] ?? $record->payment_charged_amount,
-                    'payment_currency' => $result['currency'] ?? $record->payment_currency,
-                    'payment_verified_at' => $result['ok'] ? now() : $record->payment_verified_at,
+                    'payment_charged_amount' => $verified ? $receivedAmount : $record->payment_charged_amount,
+                    'payment_verified_at' => $verified ? now() : $record->payment_verified_at,
                     'payment_gateway_response' => $gatewayResponse,
                 ]);
 
                 $verifiedBooking = $record->fresh();
 
-                if ($result['ok'] && $verifiedBooking->payment_method === 'flex_gateway') {
+                if ($verified && $verifiedBooking->payment_method === 'flex_gateway') {
                     app(TravelFlexApplicationService::class)->syncPaymentFromBooking($verifiedBooking);
                 }
 
                 self::recordPaymentVerification($verifiedBooking, [
-                    'action' => $result['ok'] ? 'seerbit_verified_paid' : 'seerbit_verified_unpaid',
+                    'action' => $verified ? 'seerbit_verified_paid' : 'seerbit_verified_unpaid',
                     'previous_payment_status' => $previousStatus,
                     'new_payment_status' => $newStatus,
                     'payment_reference' => $record->payment_reference,
                     'amount_received' => $result['amount'] ?? null,
                     'currency' => $result['currency'] ?? $record->payment_currency ?: $record->currency,
-                    'verification_note' => $result['message'] ?? 'SeerBit verification completed.',
+                    'verification_note' => $verified
+                        ? ($result['message'] ?? 'SeerBit verification completed.')
+                        : "Verification blocked. Expected {$expectedCurrency} ".number_format($expectedAmount, 2).'; received '.($receivedAmount === null ? 'no amount' : $receivedCurrency.' '.number_format($receivedAmount, 2)).'.',
                     'gateway_response' => $result['raw'] ?? [],
                 ]);
 
                 Notification::make()
-                    ->title($result['ok'] ? 'SeerBit payment verified' : 'SeerBit payment not confirmed')
-                    ->body($result['message'] ?? 'Verification completed. Ticketing was not triggered.')
-                    ->{$result['ok'] ? 'success' : 'warning'}()
+                    ->title($verified ? 'SeerBit payment verified' : 'SeerBit amount or currency not confirmed')
+                    ->body($verified ? ($result['message'] ?? 'Verification completed. Ticketing was not triggered.') : 'The gateway result did not match the expected booking amount and currency.')
+                    ->{$verified ? 'success' : 'warning'}()
                     ->send();
             });
     }
@@ -726,8 +765,8 @@ class FlightBookingsTable
             ->color('gray')
             ->visible(fn (FlightBooking $record): bool => $record->payment_status === 'paid' && filled($record->contact_email) && ! $record->payment_receipt_sent)
             ->requiresConfirmation()
-            ->modalHeading(fn (FlightBooking $record): string => 'Send payment receipt to ' . $record->contact_email)
-            ->modalDescription(fn (FlightBooking $record): string => 'A receipt will be emailed for ' . trim(($record->payment_currency ?: $record->currency ?: 'NGN') . ' ' . number_format((float) ($record->payment_charged_amount ?: ($record->payment_amount ?: $record->total_price)), 2)) . '. This does not change ticketing status.')
+            ->modalHeading(fn (FlightBooking $record): string => 'Send payment receipt to '.$record->contact_email)
+            ->modalDescription(fn (FlightBooking $record): string => 'A receipt will be emailed for '.trim(($record->payment_currency ?: $record->currency ?: 'NGN').' '.number_format((float) ($record->payment_charged_amount ?: ($record->payment_amount ?: $record->total_price)), 2)).'. This does not change ticketing status.')
             ->modalIcon('heroicon-o-envelope')
             ->modalIconColor('gray')
             ->modalSubmitActionLabel('Send receipt')
@@ -766,7 +805,16 @@ class FlightBookingsTable
         }
 
         try {
-            Mail::to($record->contact_email)->send(new PaymentReceiptMail($record));
+            $sent = app(DurableMailService::class)->sendNowOrStore(
+                DurableMailService::FLIGHT_RECEIPT,
+                (string) $record->contact_email,
+                $record,
+                [],
+                'flight-payment-receipt:'.$record->id,
+            );
+            if (! $sent) {
+                throw new \RuntimeException('Receipt saved for automatic retry.');
+            }
             $record->update(['payment_receipt_sent' => true]);
 
             return true;
@@ -798,7 +846,7 @@ class FlightBookingsTable
             ->color('warning')
             ->visible(fn (FlightBooking $record): bool => self::canOrderTicket($record))
             ->requiresConfirmation()
-            ->modalHeading(fn (FlightBooking $record): string => ($record->booking_status === 'ticketing_failed' ? 'Retry ticket order for ' : 'Order ticket for ') . ($record->booking_ref ?: 'booking'))
+            ->modalHeading(fn (FlightBooking $record): string => ($record->booking_status === 'ticketing_failed' ? 'Retry ticket order for ' : 'Order ticket for ').($record->booking_ref ?: 'booking'))
             ->modalDescription('Issue the ticket for this paid booking. Run this only after payment has been confirmed and the passenger details have been reviewed.')
             ->modalIcon('heroicon-o-ticket')
             ->modalIconColor('warning')
@@ -837,15 +885,8 @@ class FlightBookingsTable
                     return;
                 }
 
-                $newStatus = $result['ok'] ? 'ticketed' : 'ticketing_failed';
-
-                $record->update([
-                    'booking_status' => $newStatus,
-                    'ticket_ordered' => (bool) $result['ok'],
-                    'ticket_ordered_at' => $result['ok'] ? now() : null,
-                    'ticket_api_response' => $result['response'] ?? [],
-                    'unique_id' => $result['unique_id'] ?? $record->unique_id,
-                ]);
+                $record = $record->fresh();
+                $newStatus = $record->booking_status;
 
                 self::recordTicketing($record->fresh(), [
                     'action' => $result['ok'] ? 'ticket_order_success' : 'ticket_order_failed',
@@ -859,7 +900,7 @@ class FlightBookingsTable
 
                 Notification::make()
                     ->title($result['ok'] ? 'Ticket ordered' : 'Ticket order failed')
-                    ->body(($result['message'] ?? 'Ticket order completed.') . ' Ticketing action was recorded.')
+                    ->body(($result['message'] ?? 'Ticket order completed.').' Ticketing action was recorded.')
                     ->{$result['ok'] ? 'success' : 'danger'}()
                     ->send();
             });
@@ -872,7 +913,7 @@ class FlightBookingsTable
             ->icon('heroicon-o-identification')
             ->color('info')
             ->visible(fn (FlightBooking $record): bool => filled($record->unique_id))
-            ->modalHeading(fn (FlightBooking $record): string => 'Fetch Trip Details for ' . ($record->booking_ref ?: 'booking'))
+            ->modalHeading(fn (FlightBooking $record): string => 'Fetch Trip Details for '.($record->booking_ref ?: 'booking'))
             ->modalDescription('Refresh the latest ticket status, airline PNR, and itinerary details for this booking.')
             ->modalIcon('heroicon-o-identification')
             ->modalIconColor('info')
@@ -916,7 +957,7 @@ class FlightBookingsTable
 
                 Notification::make()
                     ->title($result['ok'] ? 'Trip details fetched' : 'Trip details not available')
-                    ->body(trim('Ticket: ' . ($result['ticket_status'] ?? '-') . ' | PNR: ' . ($result['airline_pnr'] ?? '-') . '. See Latest Trip Details below.'))
+                    ->body(trim('Ticket: '.($result['ticket_status'] ?? '-').' | PNR: '.($result['airline_pnr'] ?? '-').'. See Latest Trip Details below.'))
                     ->{$result['ok'] ? 'success' : 'warning'}()
                     ->send();
             });
@@ -930,7 +971,7 @@ class FlightBookingsTable
             ->color('success')
             ->visible(fn (FlightBooking $record): bool => $record->booking_status === 'ticketed' && filled($record->contact_email))
             ->requiresConfirmation()
-            ->modalHeading(fn (FlightBooking $record): string => 'Resend e-ticket to ' . $record->contact_email)
+            ->modalHeading(fn (FlightBooking $record): string => 'Resend e-ticket to '.$record->contact_email)
             ->modalDescription('Send the customer a fresh copy of the e-ticket using the latest available ticket status and airline PNR.')
             ->modalIcon('heroicon-o-paper-airplane')
             ->modalIconColor('success')
@@ -971,7 +1012,7 @@ class FlightBookingsTable
                     'ticket_status' => $tripResult['ticket_status'] ?? null,
                     'airline_pnr' => $tripResult['airline_pnr'] ?? null,
                     'unique_id' => $record->unique_id,
-                    'message' => 'E-ticket resent to ' . $record->contact_email,
+                    'message' => 'E-ticket resent to '.$record->contact_email,
                     'request_payload' => $tripResult['request'] ?? [],
                     'response_payload' => self::responseWithTripDetails($tripResult['response'] ?? [], $tripDetails ?? []),
                 ]);
@@ -990,7 +1031,7 @@ class FlightBookingsTable
             ->icon('heroicon-o-exclamation-triangle')
             ->color('danger')
             ->visible(fn (FlightBooking $record): bool => $record->payment_status === 'paid' && $record->booking_status !== 'ticketed')
-            ->modalHeading(fn (FlightBooking $record): string => 'Alert support about ' . ($record->booking_ref ?: 'booking'))
+            ->modalHeading(fn (FlightBooking $record): string => 'Alert support about '.($record->booking_ref ?: 'booking'))
             ->modalDescription('Use this when payment is confirmed but ticketing needs manual support intervention. The message is recorded in ticketing history.')
             ->modalIcon('heroicon-o-exclamation-triangle')
             ->modalIconColor('danger')
@@ -1049,6 +1090,7 @@ class FlightBookingsTable
 
         return $paymentReady
             && filled($record->unique_id)
+            && (! $record->tkt_time_limit || $record->tkt_time_limit->isFuture())
             && ! $record->ticket_ordered
             && $record->booking_status !== 'ticketed'
             && in_array($record->booking_status, ['on_hold', 'confirmed', 'awaiting_deposit', 'failed', 'ticketing_failed'], true);
@@ -1071,7 +1113,7 @@ class FlightBookingsTable
             ->color('danger')
             ->visible(fn (FlightBooking $record): bool => self::canRunCancelBooking($record))
             ->requiresConfirmation()
-            ->modalHeading(fn (FlightBooking $record): string => 'Cancel ' . ($record->booking_ref ?: 'booking'))
+            ->modalHeading(fn (FlightBooking $record): string => 'Cancel '.($record->booking_ref ?: 'booking'))
             ->modalDescription('Cancel this provider booking using the booking UniqueID. For already ticketed bookings, use Void or Refund instead.')
             ->modalIcon('heroicon-o-x-circle')
             ->modalIconColor('danger')
@@ -1132,7 +1174,7 @@ class FlightBookingsTable
             ->icon('heroicon-o-magnifying-glass-circle')
             ->color('info')
             ->visible(fn (FlightBooking $record): bool => filled($record->unique_id) && $record->postTicketingRequests()->whereNotNull('ptr_unique_id')->exists())
-            ->modalHeading(fn (FlightBooking $record): string => 'Check PTR status for ' . ($record->booking_ref ?: 'booking'))
+            ->modalHeading(fn (FlightBooking $record): string => 'Check PTR status for '.($record->booking_ref ?: 'booking'))
             ->modalDescription('Check the latest status of a refund, void, reissue, or cancellation request.')
             ->modalIcon('heroicon-o-magnifying-glass-circle')
             ->modalIconColor('info')
@@ -1170,13 +1212,13 @@ class FlightBookingsTable
         bool $needsPreferenceOption = false,
         ?string $requiresQuoteType = null,
     ): Action {
-        return Action::make('postTicketing' . str($operationType)->studly())
+        return Action::make('postTicketing'.str($operationType)->studly())
             ->label($label)
             ->icon($icon)
             ->color($color)
             ->visible(fn (FlightBooking $record): bool => self::canRunPostTicketing($record, $operationType, $requiresQuoteType))
             ->requiresConfirmation()
-            ->modalHeading(fn (FlightBooking $record): string => $label . ' for ' . ($record->booking_ref ?: 'booking'))
+            ->modalHeading(fn (FlightBooking $record): string => $label.' for '.($record->booking_ref ?: 'booking'))
             ->modalDescription(fn (FlightBooking $record): string => self::postTicketingDescription($operationType, $record))
             ->modalIcon($icon)
             ->modalIconColor($color)
@@ -1245,7 +1287,7 @@ class FlightBookingsTable
 
                             foreach (self::reissueWholeItineraryScopes($record) as $scope => $label) {
                                 $key = self::reissueScopeFieldKey($scope);
-                                $set('replacement_entire_' . $key . '_flight_option', null);
+                                $set('replacement_entire_'.$key.'_flight_option', null);
                             }
                         })
                         ->live()
@@ -1308,7 +1350,7 @@ class FlightBookingsTable
                     $schema[] = Select::make('replacement_flight_option')
                         ->label('Replacement flight')
                         ->helperText(fn (): string => filled(self::replacementFlightAirlineCode($record))
-                            ? 'Options are loaded from availability and limited to the original booking airline (' . self::replacementFlightAirlineCode($record) . '). Select a flight, then review the itinerary below.'
+                            ? 'Options are loaded from availability and limited to the original booking airline ('.self::replacementFlightAirlineCode($record).'). Select a flight, then review the itinerary below.'
                             : 'Options are loaded from the availability API. Select a flight, then review the full itinerary below before requesting the quote.')
                         ->options(fn (Get $get): array => app(AdminReplacementFlightSearchService::class)->options($record, [
                             'from' => $get('replacement_from'),
@@ -1341,13 +1383,13 @@ class FlightBookingsTable
                     foreach (self::reissueWholeItineraryScopes($record) as $scope => $scopeLabel) {
                         $key = self::reissueScopeFieldKey($scope);
 
-                        $schema[] = Placeholder::make('replacement_entire_' . $key . '_heading')
+                        $schema[] = Placeholder::make('replacement_entire_'.$key.'_heading')
                             ->hiddenLabel()
-                            ->content(fn (): HtmlString => new HtmlString('<div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white">' . e($scopeLabel) . '</div>'))
+                            ->content(fn (): HtmlString => new HtmlString('<div class="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-950 dark:border-white/10 dark:bg-white/5 dark:text-white">'.e($scopeLabel).'</div>'))
                             ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire')
                             ->columnSpanFull();
 
-                        $schema[] = Select::make('replacement_entire_' . $key . '_from')
+                        $schema[] = Select::make('replacement_entire_'.$key.'_from')
                             ->label('From')
                             ->default(fn () => self::defaultReissueAirport($record, 'from', $scope))
                             ->getSearchResultsUsing(fn (?string $search): array => app(AdminReplacementFlightSearchService::class)->airportSearchOptions($search))
@@ -1361,7 +1403,7 @@ class FlightBookingsTable
                             ->live()
                             ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire');
 
-                        $schema[] = Select::make('replacement_entire_' . $key . '_to')
+                        $schema[] = Select::make('replacement_entire_'.$key.'_to')
                             ->label('To')
                             ->default(fn () => self::defaultReissueAirport($record, 'to', $scope))
                             ->getSearchResultsUsing(fn (?string $search): array => app(AdminReplacementFlightSearchService::class)->airportSearchOptions($search))
@@ -1375,7 +1417,7 @@ class FlightBookingsTable
                             ->live()
                             ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire');
 
-                        $schema[] = Select::make('replacement_entire_' . $key . '_cabin')
+                        $schema[] = Select::make('replacement_entire_'.$key.'_cabin')
                             ->label('Cabin')
                             ->options([
                                 'Y' => 'Economy (Y)',
@@ -1388,7 +1430,7 @@ class FlightBookingsTable
                             ->live()
                             ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire');
 
-                        $schema[] = DatePicker::make('replacement_entire_' . $key . '_departure_date')
+                        $schema[] = DatePicker::make('replacement_entire_'.$key.'_departure_date')
                             ->label('New departure date')
                             ->native(false)
                             ->default(fn () => self::defaultReissueDate($record, $scope))
@@ -1397,16 +1439,16 @@ class FlightBookingsTable
                             ->live()
                             ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire');
 
-                        $schema[] = Select::make('replacement_entire_' . $key . '_flight_option')
+                        $schema[] = Select::make('replacement_entire_'.$key.'_flight_option')
                             ->label('Replacement flight')
                             ->helperText(fn (): string => filled(self::replacementFlightAirlineCode($record))
-                                ? 'Limited to the original booking airline (' . self::replacementFlightAirlineCode($record) . '). Select the replacement for this itinerary part.'
+                                ? 'Limited to the original booking airline ('.self::replacementFlightAirlineCode($record).'). Select the replacement for this itinerary part.'
                                 : 'Select the replacement for this itinerary part.')
                             ->options(fn (Get $get): array => app(AdminReplacementFlightSearchService::class)->options($record, [
-                                'from' => $get('replacement_entire_' . $key . '_from'),
-                                'to' => $get('replacement_entire_' . $key . '_to'),
-                                'departure_date' => $get('replacement_entire_' . $key . '_departure_date'),
-                                'cabin' => $get('replacement_entire_' . $key . '_cabin'),
+                                'from' => $get('replacement_entire_'.$key.'_from'),
+                                'to' => $get('replacement_entire_'.$key.'_to'),
+                                'departure_date' => $get('replacement_entire_'.$key.'_departure_date'),
+                                'cabin' => $get('replacement_entire_'.$key.'_cabin'),
                                 'scope' => $scope,
                                 'airline_code' => self::replacementFlightAirlineCode($record),
                             ]))
@@ -1418,10 +1460,10 @@ class FlightBookingsTable
                             ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire')
                             ->columnSpanFull();
 
-                        $schema[] = Placeholder::make('replacement_entire_' . $key . '_preview')
+                        $schema[] = Placeholder::make('replacement_entire_'.$key.'_preview')
                             ->label('Selected flight details')
-                            ->content(fn (Get $get): HtmlString => self::replacementFlightPreview($get('replacement_entire_' . $key . '_flight_option')))
-                            ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire' && filled($get('replacement_entire_' . $key . '_flight_option')))
+                            ->content(fn (Get $get): HtmlString => self::replacementFlightPreview($get('replacement_entire_'.$key.'_flight_option')))
+                            ->visible(fn (Get $get): bool => $get('replacement_scope') === 'entire' && filled($get('replacement_entire_'.$key.'_flight_option')))
                             ->columnSpanFull();
                     }
                 }
@@ -1444,6 +1486,7 @@ class FlightBookingsTable
                             ->body('Select a new quote before processing this post-ticketing action.')
                             ->danger()
                             ->send();
+
                         return;
                     }
 
@@ -1462,6 +1505,7 @@ class FlightBookingsTable
                     $decoded = json_decode($data['pax_details_json'] ?? '[]', true);
                     if (json_last_error() !== JSON_ERROR_NONE) {
                         Notification::make()->title('Invalid passenger ticket details')->body('Review the formatting and try again.')->danger()->send();
+
                         return;
                     }
                     $extraPayload['paxDetails'] = self::normalizePostTicketingPaxDetails($decoded);
@@ -1470,6 +1514,7 @@ class FlightBookingsTable
 
                     if ($passengerError !== null) {
                         Notification::make()->title('Invalid passenger ticket details')->body($passengerError)->danger()->send();
+
                         return;
                     }
                 }
@@ -1483,6 +1528,7 @@ class FlightBookingsTable
 
                     if ($selectedPassengers === []) {
                         Notification::make()->title('No passengers selected')->body('Select at least one passenger ticket before submitting this request.')->danger()->send();
+
                         return;
                     }
 
@@ -1492,6 +1538,7 @@ class FlightBookingsTable
 
                     if ($missingTickets) {
                         Notification::make()->title('Missing e-ticket number')->body('This request requires an e-ticket for every selected passenger. Run Trip Details first or update the passenger ticket details.')->danger()->send();
+
                         return;
                     }
 
@@ -1499,6 +1546,7 @@ class FlightBookingsTable
 
                     if ($passengerError !== null) {
                         Notification::make()->title('Invalid passenger ticket details')->body($passengerError)->danger()->send();
+
                         return;
                     }
 
@@ -1513,6 +1561,7 @@ class FlightBookingsTable
 
                         if (count($replacementMap) !== count(self::reissueWholeItineraryScopes($record))) {
                             Notification::make()->title('Incomplete replacement itinerary')->body('Select a replacement flight for every outbound, return, or multi-city part before requesting the quote.')->danger()->send();
+
                             return;
                         }
 
@@ -1524,6 +1573,7 @@ class FlightBookingsTable
 
                         if ($replacementSegments === []) {
                             Notification::make()->title('Invalid replacement flight')->body('Search again and select a replacement flight before requesting a quote.')->danger()->send();
+
                             return;
                         }
 
@@ -1533,6 +1583,7 @@ class FlightBookingsTable
 
                     if (self::flattenReissueItineraryGroups($proposedItinerary) === []) {
                         Notification::make()->title('Invalid itinerary')->body('The selected booking does not have enough itinerary details for a reissue quote.')->danger()->send();
+
                         return;
                     }
 
@@ -1540,6 +1591,7 @@ class FlightBookingsTable
 
                     if ($dateError !== null) {
                         Notification::make()->title('Invalid reissue dates')->body($dateError)->danger()->send();
+
                         return;
                     }
 
@@ -1566,6 +1618,7 @@ class FlightBookingsTable
                 ->body('Resolve or check the existing active PTR request before starting another one.')
                 ->danger()
                 ->send();
+
             return;
         }
 
@@ -1618,7 +1671,7 @@ class FlightBookingsTable
 
         Notification::make()
             ->title(($result['ok'] ?? false) ? 'Post-ticketing request stored' : 'Post-ticketing request failed')
-            ->body(($result['message'] ?? 'Request completed.') . ' PTR: ' . ($ptr->ptr_unique_id ?: '-'))
+            ->body(($result['message'] ?? 'Request completed.').' PTR: '.($ptr->ptr_unique_id ?: '-'))
             ->{($result['ok'] ?? false) ? 'success' : 'danger'}()
             ->send();
     }
@@ -1674,7 +1727,7 @@ class FlightBookingsTable
             'ticket_status' => $tripResult['ticket_status'] ?? null,
             'airline_pnr' => $tripResult['airline_pnr'] ?? null,
             'unique_id' => $record->unique_id,
-            'message' => trim(($result['message'] ?? 'Reissue completed.') . ' PTR: ' . ($ptr->ptr_unique_id ?: '-')),
+            'message' => trim(($result['message'] ?? 'Reissue completed.').' PTR: '.($ptr->ptr_unique_id ?: '-')),
             'request_payload' => $result['request'] ?? [],
             'response_payload' => [
                 'reissue' => $result['response'] ?? [],
@@ -1698,7 +1751,7 @@ class FlightBookingsTable
                 'ticket_status' => $tripResult['ticket_status'] ?? null,
                 'airline_pnr' => $tripResult['airline_pnr'] ?? null,
                 'unique_id' => $record->unique_id,
-                'message' => 'Updated e-ticket sent to ' . $record->contact_email,
+                'message' => 'Updated e-ticket sent to '.$record->contact_email,
                 'request_payload' => $tripResult['request'] ?? [],
                 'response_payload' => self::responseWithTripDetails($tripResult['response'] ?? [], $patchedTripDetails),
             ]);
@@ -1736,7 +1789,7 @@ class FlightBookingsTable
             'previous_booking_status' => $previousStatus,
             'new_booking_status' => $newStatus,
             'unique_id' => $record->unique_id,
-            'message' => trim(($result['message'] ?? 'Void completed.') . ' PTR: ' . ($ptr->ptr_unique_id ?: '-')),
+            'message' => trim(($result['message'] ?? 'Void completed.').' PTR: '.($ptr->ptr_unique_id ?: '-')),
             'request_payload' => $result['request'] ?? [],
             'response_payload' => $result['response'] ?? [],
         ]);
@@ -1761,7 +1814,7 @@ class FlightBookingsTable
             'previous_booking_status' => $previousStatus,
             'new_booking_status' => $newStatus,
             'unique_id' => $record->unique_id,
-            'message' => trim(($result['message'] ?? 'Refund completed.') . ' PTR: ' . ($ptr->ptr_unique_id ?: '-')),
+            'message' => trim(($result['message'] ?? 'Refund completed.').' PTR: '.($ptr->ptr_unique_id ?: '-')),
             'request_payload' => $result['request'] ?? [],
             'response_payload' => $result['response'] ?? [],
         ]);
@@ -1847,6 +1900,7 @@ class FlightBookingsTable
 
         if (! is_array($rawPassengers) || $rawPassengers === []) {
             $record->update(['passengers_snapshot' => $ptrPassengers]);
+
             return;
         }
 
@@ -2110,7 +2164,7 @@ class FlightBookingsTable
     {
         return $record->ticketingRecords()
             ->whereIn('action', ['reissue_completed', 'reissue_completed_trip_details_failed'])
-            ->where('message', 'like', '%' . $ptrUniqueId . '%')
+            ->where('message', 'like', '%'.$ptrUniqueId.'%')
             ->exists();
     }
 
@@ -2118,7 +2172,7 @@ class FlightBookingsTable
     {
         return $record->ticketingRecords()
             ->where('action', 'reissue_snapshot_eticket_sent')
-            ->where('message', 'like', '%' . $ptrUniqueId . '%')
+            ->where('message', 'like', '%'.$ptrUniqueId.'%')
             ->exists();
     }
 
@@ -2126,7 +2180,7 @@ class FlightBookingsTable
     {
         return $record->ticketingRecords()
             ->whereIn('action', ['void_completed', 'void_partial_completed'])
-            ->where('message', 'like', '%' . $ptrUniqueId . '%')
+            ->where('message', 'like', '%'.$ptrUniqueId.'%')
             ->exists();
     }
 
@@ -2134,7 +2188,7 @@ class FlightBookingsTable
     {
         return $record->ticketingRecords()
             ->whereIn('action', ['refund_completed', 'refund_partial_completed'])
-            ->where('message', 'like', '%' . $ptrUniqueId . '%')
+            ->where('message', 'like', '%'.$ptrUniqueId.'%')
             ->exists();
     }
 
@@ -2168,7 +2222,7 @@ class FlightBookingsTable
                 'ticket_status' => $tripResult['ticket_status'] ?? null,
                 'airline_pnr' => $tripResult['airline_pnr'] ?? null,
                 'unique_id' => $record->unique_id,
-                'message' => 'Updated reissue e-ticket refreshed and sent. PTR: ' . ($ptr->ptr_unique_id ?: '-'),
+                'message' => 'Updated reissue e-ticket refreshed and sent. PTR: '.($ptr->ptr_unique_id ?: '-'),
                 'request_payload' => $tripResult['request'] ?? [],
                 'response_payload' => [
                     'ptr_status' => $result['response'] ?? [],
@@ -2237,7 +2291,7 @@ class FlightBookingsTable
             $options = collect($multiLegs)
                 ->filter(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== [])
                 ->mapWithKeys(fn (array $leg, int $index): array => [
-                    'multi:' . $index => self::reissueScopeLabel($record, 'multi:' . $index),
+                    'multi:'.$index => self::reissueScopeLabel($record, 'multi:'.$index),
                 ])
                 ->all();
 
@@ -2282,16 +2336,16 @@ class FlightBookingsTable
         $segments = self::reissueScopeSegments($record, $scope);
         $first = $segments[0] ?? [];
         $last = $segments === [] ? [] : $segments[array_key_last($segments)];
-        $route = trim((string) self::segmentValue($first, ['from', 'airportOriginCode'], '') . ' -> ' . (string) self::segmentValue($last, ['to', 'airportDestinationCode'], ''));
+        $route = trim((string) self::segmentValue($first, ['from', 'airportOriginCode'], '').' -> '.(string) self::segmentValue($last, ['to', 'airportDestinationCode'], ''));
         $date = self::dateFromSegment($first);
 
         $prefix = match (true) {
-            str_starts_with((string) $scope, 'multi:') => 'Multi-city leg ' . (((int) substr((string) $scope, 6)) + 1),
+            str_starts_with((string) $scope, 'multi:') => 'Multi-city leg '.(((int) substr((string) $scope, 6)) + 1),
             $scope === 'return' => 'Return flight',
             default => 'Outbound flight',
         };
 
-        return trim($prefix . (filled($route) && $route !== '->' ? ': ' . $route : '') . (filled($date) ? ' - ' . $date : ''));
+        return trim($prefix.(filled($route) && $route !== '->' ? ': '.$route : '').(filled($date) ? ' - '.$date : ''));
     }
 
     private static function reissueWholeItineraryScopes(FlightBooking $record): array
@@ -2303,7 +2357,7 @@ class FlightBookingsTable
             return collect($multiLegs)
                 ->filter(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== [])
                 ->mapWithKeys(fn (array $leg, int $index): array => [
-                    'multi:' . $index => self::reissueScopeLabel($record, 'multi:' . $index),
+                    'multi:'.$index => self::reissueScopeLabel($record, 'multi:'.$index),
                 ])
                 ->all();
         }
@@ -2339,9 +2393,9 @@ class FlightBookingsTable
         $sourceKey = self::reissueScopeFieldKey($scope);
         $targetKey = self::reissueScopeFieldKey($targetScope);
 
-        $set('replacement_entire_' . $sourceKey . '_flight_option', null);
-        $set('replacement_entire_' . $targetKey . '_' . $targetDirection, $value);
-        $set('replacement_entire_' . $targetKey . '_flight_option', null);
+        $set('replacement_entire_'.$sourceKey.'_flight_option', null);
+        $set('replacement_entire_'.$targetKey.'_'.$targetDirection, $value);
+        $set('replacement_entire_'.$targetKey.'_flight_option', null);
     }
 
     private static function reissueScopeContext(FlightBooking $record, ?string $scope): HtmlString
@@ -2353,27 +2407,27 @@ class FlightBookingsTable
         }
 
         $html = '<div class="rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-gray-900">';
-        $html .= '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e(self::reissueScopeLabel($record, $scope)) . '</div>';
+        $html .= '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e(self::reissueScopeLabel($record, $scope)).'</div>';
         $html .= '<div class="overflow-x-auto"><table class="min-w-full text-left text-sm"><thead><tr class="text-xs uppercase text-gray-500 dark:text-gray-400">';
 
         foreach (['From', 'To', 'Depart', 'Airline', 'Flight', 'Cabin'] as $heading) {
-            $html .= '<th class="border-b border-gray-100 px-3 py-2 font-medium dark:border-white/10">' . e($heading) . '</th>';
+            $html .= '<th class="border-b border-gray-100 px-3 py-2 font-medium dark:border-white/10">'.e($heading).'</th>';
         }
 
         $html .= '</tr></thead><tbody>';
 
         foreach ($segments as $segment) {
             $html .= '<tr class="text-gray-950 dark:text-white">';
-            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e((string) self::segmentValue($segment, ['from', 'airportOriginCode'], '-')) . '</td>';
-            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e((string) self::segmentValue($segment, ['to', 'airportDestinationCode'], '-')) . '</td>';
-            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e(self::watDateTime(self::segmentValue($segment, ['departDT', 'departureDate', 'departDate'], null), 'D, d M Y H:i')) . '</td>';
-            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e((string) self::segmentValue($segment, ['airline', 'airlineCode'], '-')) . '</td>';
-            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e((string) self::segmentValue($segment, ['flightNo', 'flightNumber'], '-')) . '</td>';
-            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">' . e((string) self::segmentValue($segment, ['cabin', 'cabinCode'], '-')) . '</td>';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">'.e((string) self::segmentValue($segment, ['from', 'airportOriginCode'], '-')).'</td>';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">'.e((string) self::segmentValue($segment, ['to', 'airportDestinationCode'], '-')).'</td>';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">'.e(self::watDateTime(self::segmentValue($segment, ['departDT', 'departureDate', 'departDate'], null), 'D, d M Y H:i')).'</td>';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">'.e((string) self::segmentValue($segment, ['airline', 'airlineCode'], '-')).'</td>';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">'.e((string) self::segmentValue($segment, ['flightNo', 'flightNumber'], '-')).'</td>';
+            $html .= '<td class="border-b border-gray-100 px-3 py-2 dark:border-white/10">'.e((string) self::segmentValue($segment, ['cabin', 'cabinCode'], '-')).'</td>';
             $html .= '</tr>';
         }
 
-        return new HtmlString($html . '</tbody></table></div></div>');
+        return new HtmlString($html.'</tbody></table></div></div>');
     }
 
     private static function reissueEntireScopeContext(FlightBooking $record): HtmlString
@@ -2397,15 +2451,15 @@ class FlightBookingsTable
             $html .= '<div class="rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-gray-900">';
             $html .= '<div class="flex flex-wrap items-start justify-between gap-3">';
             $html .= '<div>';
-            $html .= '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e($label) . '</div>';
-            $html .= '<div class="mt-1 text-base font-semibold text-gray-950 dark:text-white">' . e((string) self::segmentValue($first, ['from', 'airportOriginCode'], '-') . ' -> ' . (string) self::segmentValue($last, ['to', 'airportDestinationCode'], '-')) . '</div>';
+            $html .= '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e($label).'</div>';
+            $html .= '<div class="mt-1 text-base font-semibold text-gray-950 dark:text-white">'.e((string) self::segmentValue($first, ['from', 'airportOriginCode'], '-').' -> '.(string) self::segmentValue($last, ['to', 'airportDestinationCode'], '-')).'</div>';
             $html .= '</div>';
-            $html .= '<div class="text-right text-sm text-gray-600 dark:text-gray-300">' . e(self::watDateTime(self::segmentValue($first, ['departDT', 'departureDate', 'departDate'], null), 'D, d M Y H:i')) . '<br>' . e($flights ?: '-') . '</div>';
+            $html .= '<div class="text-right text-sm text-gray-600 dark:text-gray-300">'.e(self::watDateTime(self::segmentValue($first, ['departDT', 'departureDate', 'departDate'], null), 'D, d M Y H:i')).'<br>'.e($flights ?: '-').'</div>';
             $html .= '</div>';
             $html .= '</div>';
         }
 
-        return new HtmlString($html . '</div>');
+        return new HtmlString($html.'</div>');
     }
 
     private static function reissueScopeSegments(FlightBooking $record, ?string $scope): array
@@ -2480,7 +2534,7 @@ class FlightBookingsTable
     {
         if ($get !== null) {
             $key = self::reissueScopeFieldKey($scope);
-            $value = $get('replacement_entire_' . $key . '_departure_date');
+            $value = $get('replacement_entire_'.$key.'_departure_date');
 
             if (filled($value)) {
                 return self::parseDateString($value);
@@ -2534,11 +2588,11 @@ class FlightBookingsTable
             $groupDeparture = self::segmentDepartureCarbon($segments[0] ?? []);
 
             if ($groupDeparture === null) {
-                return $label . ' is missing a valid departure date.';
+                return $label.' is missing a valid departure date.';
             }
 
             if ($previousDeparture !== null && $groupDeparture->lt($previousDeparture)) {
-                return $label . ' cannot depart before ' . $previousGroup . '.';
+                return $label.' cannot depart before '.$previousGroup.'.';
             }
 
             $previousSegmentDeparture = null;
@@ -2547,11 +2601,11 @@ class FlightBookingsTable
                 $segmentDeparture = self::segmentDepartureCarbon($segment);
 
                 if ($segmentDeparture === null) {
-                    return $label . ' segment ' . ($index + 1) . ' is missing a valid departure date.';
+                    return $label.' segment '.($index + 1).' is missing a valid departure date.';
                 }
 
                 if ($previousSegmentDeparture !== null && $segmentDeparture->lt($previousSegmentDeparture)) {
-                    return $label . ' has flight segments out of order.';
+                    return $label.' has flight segments out of order.';
                 }
 
                 $previousSegmentDeparture = $segmentDeparture;
@@ -2572,7 +2626,7 @@ class FlightBookingsTable
             return collect($multiLegs)
                 ->filter(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== [])
                 ->map(fn (array $leg, int $index): array => [
-                    'label' => $leg['label'] ?? 'Leg ' . ($index + 1),
+                    'label' => $leg['label'] ?? 'Leg '.($index + 1),
                     'segments' => array_values($leg['segments']),
                 ])
                 ->values()
@@ -2618,7 +2672,7 @@ class FlightBookingsTable
         if (str_starts_with($scope, 'multi:')) {
             $index = (int) substr($scope, 6);
             $multiLegs[$index] = array_merge(is_array($multiLegs[$index] ?? null) ? $multiLegs[$index] : [], [
-                'label' => 'Leg ' . ($index + 1),
+                'label' => 'Leg '.($index + 1),
                 'segments' => array_values($replacementSegments),
             ]);
             $tripType = 'multicity';
@@ -2645,7 +2699,7 @@ class FlightBookingsTable
 
         foreach (self::reissueWholeItineraryScopes($record) as $scope => $label) {
             $key = self::reissueScopeFieldKey($scope);
-            $segments = $search->decodeOption($data['replacement_entire_' . $key . '_flight_option'] ?? null);
+            $segments = $search->decodeOption($data['replacement_entire_'.$key.'_flight_option'] ?? null);
 
             if ($segments === []) {
                 continue;
@@ -2664,9 +2718,9 @@ class FlightBookingsTable
 
         if ($multiLegs !== []) {
             foreach ($multiLegs as $index => $leg) {
-                $scope = 'multi:' . $index;
+                $scope = 'multi:'.$index;
                 $multiLegs[$index] = array_merge(is_array($leg) ? $leg : [], [
-                    'label' => 'Leg ' . ($index + 1),
+                    'label' => 'Leg '.($index + 1),
                     'segments' => array_values($replacementMap[$scope] ?? []),
                 ]);
             }
@@ -2775,7 +2829,7 @@ class FlightBookingsTable
                 $last = $segments === [] ? null : $segments[array_key_last($segments)];
 
                 return array_merge($leg, [
-                    'label' => $leg['label'] ?? 'Leg ' . ($index + 1),
+                    'label' => $leg['label'] ?? 'Leg '.($index + 1),
                     'from' => $first['from'] ?? ($leg['from'] ?? null),
                     'to' => $last['to'] ?? ($leg['to'] ?? null),
                     'departureDate' => $first['departDT'] ?? ($leg['departureDate'] ?? null),
@@ -2848,7 +2902,7 @@ class FlightBookingsTable
                     'departDT' => $departDt,
                     'arriveDT' => $arriveDt,
                     'duration' => (int) ($segment['duration'] ?? 0),
-                    'flightNo' => trim($airlineCode . $flightNumber),
+                    'flightNo' => trim($airlineCode.$flightNumber),
                     'flightNumber' => $flightNumber,
                     'airline' => $segment['airline'] ?? $airlineCode,
                     'airlineCode' => $airlineCode,
@@ -2897,7 +2951,7 @@ class FlightBookingsTable
                 $first = $firstSegments[0];
                 $last = $lastSegments[array_key_last($lastSegments)];
 
-                return trim(($first['from'] ?? '') . ' -> ' . ($last['to'] ?? ''));
+                return trim(($first['from'] ?? '').' -> '.($last['to'] ?? ''));
             }
         }
 
@@ -2910,7 +2964,7 @@ class FlightBookingsTable
         $first = $segments[0];
         $last = $segments[array_key_last($segments)];
 
-        return trim(($first['from'] ?? '') . ' -> ' . ($last['to'] ?? ''));
+        return trim(($first['from'] ?? '').' -> '.($last['to'] ?? ''));
     }
 
     private static function cabinLabel(string $code): string
@@ -2974,7 +3028,7 @@ class FlightBookingsTable
         }
 
         foreach ($passengers as $index => $passenger) {
-            $label = 'Passenger ' . ($index + 1);
+            $label = 'Passenger '.($index + 1);
             $missing = collect([
                 'type' => $passenger['type'] ?? null,
                 'title' => $passenger['title'] ?? null,
@@ -2987,7 +3041,7 @@ class FlightBookingsTable
                 ->implode(', ');
 
             if (filled($missing)) {
-                return $label . ' is missing ' . $missing . '. Fetch Trip Details, check PTR Status after reissue, or update the passenger ticket details before requesting a quote.';
+                return $label.' is missing '.$missing.'. Fetch Trip Details, check PTR Status after reissue, or update the passenger ticket details before requesting a quote.';
             }
         }
 
@@ -3052,11 +3106,11 @@ class FlightBookingsTable
     {
         return collect(self::postTicketingPaxSource($record, $quotePtrUniqueId))
             ->mapWithKeys(function (array $passenger, int $index): array {
-                $name = trim(($passenger['title'] ?? '') . ' ' . ($passenger['firstName'] ?? '') . ' ' . ($passenger['lastName'] ?? ''));
+                $name = trim(($passenger['title'] ?? '').' '.($passenger['firstName'] ?? '').' '.($passenger['lastName'] ?? ''));
                 $ticket = filled($passenger['eTicket'] ?? null) ? $passenger['eTicket'] : 'No e-ticket';
                 $type = $passenger['type'] ?? 'PAX';
 
-                return [(string) $index => trim($type . ' - ' . ($name ?: 'Passenger') . ' - ' . $ticket)];
+                return [(string) $index => trim($type.' - '.($name ?: 'Passenger').' - '.$ticket)];
             })
             ->all();
     }
@@ -3156,7 +3210,7 @@ class FlightBookingsTable
         $stops = (int) ($summary['stops'] ?? max(0, count($segments) - 1));
         $duration = (int) ($summary['duration'] ?? collect($segments)->sum(fn (array $segment): int => (int) ($segment['duration'] ?? 0)));
         $fare = filled($summary['totalFare'] ?? null)
-            ? trim((string) ($summary['currency'] ?? '') . ' ' . number_format((float) $summary['totalFare'], 2))
+            ? trim((string) ($summary['currency'] ?? '').' '.number_format((float) $summary['totalFare'], 2))
             : '-';
 
         $html = '<div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">';
@@ -3164,12 +3218,12 @@ class FlightBookingsTable
         $html .= '<div class="flex flex-wrap items-start justify-between gap-4">';
         $html .= '<div>';
         $html .= '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Selected replacement itinerary</div>';
-        $html .= '<div class="mt-1 text-lg font-semibold text-gray-950 dark:text-white">' . e(($first['airportOriginCode'] ?? '-') . ' -> ' . ($last['airportDestinationCode'] ?? '-')) . '</div>';
-        $html .= '<div class="mt-1 text-sm text-gray-600 dark:text-gray-300">' . e(self::formatDateTime($first['departDT'] ?? null) . ' to ' . self::formatDateTime($last['arriveDT'] ?? null)) . '</div>';
+        $html .= '<div class="mt-1 text-lg font-semibold text-gray-950 dark:text-white">'.e(($first['airportOriginCode'] ?? '-').' -> '.($last['airportDestinationCode'] ?? '-')).'</div>';
+        $html .= '<div class="mt-1 text-sm text-gray-600 dark:text-gray-300">'.e(self::formatDateTime($first['departDT'] ?? null).' to '.self::formatDateTime($last['arriveDT'] ?? null)).'</div>';
         $html .= '</div>';
         $html .= '<div class="grid grid-cols-2 gap-3 text-right sm:grid-cols-4">';
-        $html .= self::previewMetric('Flights', $summary['flightNumbers'] ?? collect($segments)->map(fn (array $segment): string => trim(($segment['airlineCode'] ?? '') . ($segment['flightNumber'] ?? '')))->filter()->implode(' / '));
-        $html .= self::previewMetric('Stops', $stops === 0 ? 'Nonstop' : $stops . ' stop' . ($stops === 1 ? '' : 's'));
+        $html .= self::previewMetric('Flights', $summary['flightNumbers'] ?? collect($segments)->map(fn (array $segment): string => trim(($segment['airlineCode'] ?? '').($segment['flightNumber'] ?? '')))->filter()->implode(' / '));
+        $html .= self::previewMetric('Stops', $stops === 0 ? 'Nonstop' : $stops.' stop'.($stops === 1 ? '' : 's'));
         $html .= self::previewMetric('Duration', self::durationLabel($duration));
         $html .= self::previewMetric('Fare', $fare);
         $html .= '</div>';
@@ -3182,26 +3236,26 @@ class FlightBookingsTable
             $html .= '<div class="p-4">';
             $html .= '<div class="flex flex-wrap items-start justify-between gap-4">';
             $html .= '<div class="min-w-0">';
-            $html .= '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Segment ' . e((string) ($index + 1)) . '</div>';
-            $html .= '<div class="mt-1 text-base font-semibold text-gray-950 dark:text-white">' . e(($segment['airportOriginCode'] ?? '-') . ' -> ' . ($segment['airportDestinationCode'] ?? '-')) . '</div>';
-            $html .= '<div class="mt-1 text-sm text-gray-600 dark:text-gray-300">' . e(trim(($segment['airline'] ?? $segment['airlineCode'] ?? '-') . ' ' . ($segment['airlineCode'] ?? '') . ' ' . ($segment['flightNumber'] ?? ''))) . '</div>';
+            $html .= '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Segment '.e((string) ($index + 1)).'</div>';
+            $html .= '<div class="mt-1 text-base font-semibold text-gray-950 dark:text-white">'.e(($segment['airportOriginCode'] ?? '-').' -> '.($segment['airportDestinationCode'] ?? '-')).'</div>';
+            $html .= '<div class="mt-1 text-sm text-gray-600 dark:text-gray-300">'.e(trim(($segment['airline'] ?? $segment['airlineCode'] ?? '-').' '.($segment['airlineCode'] ?? '').' '.($segment['flightNumber'] ?? ''))).'</div>';
             $html .= '</div>';
             $html .= '<div class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">';
             $html .= self::previewMetric('Depart', self::formatDateTime($segment['departDT'] ?? null));
             $html .= self::previewMetric('Arrive', self::formatDateTime($segment['arriveDT'] ?? null));
-            $html .= self::previewMetric('Cabin', trim(($segment['cabin'] ?? '-') . ' (' . ($segment['cabinPreference'] ?? '-') . ')'));
+            $html .= self::previewMetric('Cabin', trim(($segment['cabin'] ?? '-').' ('.($segment['cabinPreference'] ?? '-').')'));
             $html .= self::previewMetric('Aircraft', $segment['equipment'] ?? '-');
             $html .= '</div>';
             $html .= '</div>';
             $html .= '</div>';
         }
 
-        return new HtmlString($html . '</div></div>');
+        return new HtmlString($html.'</div></div>');
     }
 
     private static function previewMetric(string $label, mixed $value): string
     {
-        return '<div><div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e($label) . '</div><div class="mt-1 break-words font-semibold text-gray-950 dark:text-white">' . e(filled($value) ? (string) $value : '-') . '</div></div>';
+        return '<div><div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e($label).'</div><div class="mt-1 break-words font-semibold text-gray-950 dark:text-white">'.e(filled($value) ? (string) $value : '-').'</div></div>';
     }
 
     private static function formatDateTime(?string $value): string
@@ -3218,7 +3272,7 @@ class FlightBookingsTable
         $hours = intdiv($minutes, 60);
         $remainingMinutes = $minutes % 60;
 
-        return trim(($hours > 0 ? $hours . 'h ' : '') . ($remainingMinutes > 0 ? $remainingMinutes . 'm' : ''));
+        return trim(($hours > 0 ? $hours.'h ' : '').($remainingMinutes > 0 ? $remainingMinutes.'m' : ''));
     }
 
     private static function watDateTime(mixed $value, string $format = 'd M Y, H:i'): string
@@ -3241,7 +3295,7 @@ class FlightBookingsTable
         $value = trim($value);
 
         if (preg_match('/^(\d{4}-\d{2}-\d{2}[T\s]\d{2}):(\d{2})(\d{2})$/', $value, $matches)) {
-            return $matches[1] . ':' . $matches[2] . ':' . $matches[3];
+            return $matches[1].':'.$matches[2].':'.$matches[3];
         }
 
         return $value;
@@ -3273,8 +3327,8 @@ class FlightBookingsTable
             $tripResult = app(AdminTicketingService::class)->tripDetails($record);
         } catch (Throwable $exception) {
             return new HtmlString(
-                '<div class="rounded-lg border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-200">' .
-                    e('Trip Details check failed: ' . $exception->getMessage()) .
+                '<div class="rounded-lg border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-500/30 dark:bg-danger-500/10 dark:text-danger-200">'.
+                    e('Trip Details check failed: '.$exception->getMessage()).
                 '</div>'
             );
         }
@@ -3290,9 +3344,9 @@ class FlightBookingsTable
         $warning = 'Cancellation cannot be reversed. If this booking has already been ticketed, use Void or Refund instead.';
 
         return new HtmlString(
-            '<div class="rounded-lg border border-warning-200 bg-warning-50 p-3 dark:border-warning-500/30 dark:bg-warning-500/10">' .
-                '<div class="mb-3 text-sm font-semibold text-gray-950 dark:text-white">' . e($warning) . '</div>' .
-                self::definitionGridForAction($items) .
+            '<div class="rounded-lg border border-warning-200 bg-warning-50 p-3 dark:border-warning-500/30 dark:bg-warning-500/10">'.
+                '<div class="mb-3 text-sm font-semibold text-gray-950 dark:text-white">'.e($warning).'</div>'.
+                self::definitionGridForAction($items).
             '</div>'
         );
     }
@@ -3303,12 +3357,12 @@ class FlightBookingsTable
 
         foreach ($items as $label => $value) {
             $html .= '<div>';
-            $html .= '<dt class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e((string) $label) . '</dt>';
-            $html .= '<dd class="mt-1 break-words text-sm font-semibold text-gray-950 dark:text-white">' . e(filled($value) ? (string) $value : '-') . '</dd>';
+            $html .= '<dt class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e((string) $label).'</dt>';
+            $html .= '<dd class="mt-1 break-words text-sm font-semibold text-gray-950 dark:text-white">'.e(filled($value) ? (string) $value : '-').'</dd>';
             $html .= '</div>';
         }
 
-        return $html . '</dl>';
+        return $html.'</dl>';
     }
 
     private static function canRunPostTicketing(FlightBooking $record, string $operationType, ?string $requiresQuoteType = null): bool

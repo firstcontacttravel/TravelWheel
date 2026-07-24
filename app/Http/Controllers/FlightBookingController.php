@@ -2,22 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\BookingPendingMail;
-use App\Mail\ETicketMail;
-use App\Mail\PaymentReceiptMail;
 use App\Models\FlightBooking;
 use App\Models\TravelFlexApplication;
+use App\Services\AdminTicketingService;
+use App\Services\DurableMailService;
 use App\Services\SeerbitPaymentService;
 use App\Services\TravelFlexApplicationPdfService;
 use App\Services\TravelFlexApplicationService;
 use App\Services\TravelFlexFlowService;
+use App\Support\FlightDisplay;
 use App\Support\FlightMarkup;
 use Carbon\Carbon;
+use Illuminate\Http\Client\Pool;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -45,7 +45,7 @@ class FlightBookingController extends Controller
 
         // ── 1. Revalidate ─────────────────────────────────────────────────────────
         try {
-            $revalidateResponse = Http::timeout(60)
+            $revalidateResponse = Http::connectTimeout(10)->timeout(60)
                 ->post('https://travelnext.works/api/aeroVE5/revalidate', $payload);
         } catch (\Throwable $exception) {
             Log::error('Flight revalidation request failed', [
@@ -95,60 +95,68 @@ class FlightBookingController extends Controller
                 $odo = [$odo];
             }
 
-            return collect($odo)->map(function ($seg) use ($airlines, $airports) {
-                $fs = $seg['FlightSegment'];
-                $dep = \Carbon\Carbon::parse($fs['DepartureDateTime']);
-                $arr = \Carbon\Carbon::parse($fs['ArrivalDateTime']);
-                $airlineCode = $fs['MarketingAirlineCode'];
-                $airline = $airlines->get($airlineCode);
-                $fromCode = $fs['DepartureAirportLocationCode'];
-                $toCode = $fs['ArrivalAirportLocationCode'];
-                $fromAirport = $airports->get($fromCode);
-                $toAirport = $airports->get($toCode);
-                $opCode = $fs['OperatingAirline']['Code'] ?? $airlineCode;
-                $opAirline = $airlines->get($opCode);
+            return collect($odo)
+                ->filter(fn ($segment): bool => is_array($segment)
+                    && is_array($segment['FlightSegment'] ?? null)
+                    && filled(data_get($segment, 'FlightSegment.DepartureDateTime'))
+                    && filled(data_get($segment, 'FlightSegment.ArrivalDateTime'))
+                    && filled(data_get($segment, 'FlightSegment.MarketingAirlineCode'))
+                    && filled(data_get($segment, 'FlightSegment.DepartureAirportLocationCode'))
+                    && filled(data_get($segment, 'FlightSegment.ArrivalAirportLocationCode')))
+                ->map(function ($seg) use ($airlines, $airports) {
+                    $fs = $seg['FlightSegment'];
+                    $dep = \Carbon\Carbon::parse($fs['DepartureDateTime']);
+                    $arr = \Carbon\Carbon::parse($fs['ArrivalDateTime']);
+                    $airlineCode = $fs['MarketingAirlineCode'];
+                    $airline = $airlines->get($airlineCode);
+                    $fromCode = $fs['DepartureAirportLocationCode'];
+                    $toCode = $fs['ArrivalAirportLocationCode'];
+                    $fromAirport = $airports->get($fromCode);
+                    $toAirport = $airports->get($toCode);
+                    $opCode = $fs['OperatingAirline']['Code'] ?? $airlineCode;
+                    $opAirline = $airlines->get($opCode);
 
-                return [
-                    'from' => $fromCode,
-                    'to' => $toCode,
-                    'fromCity' => $fromAirport ? ($fromAirport['City'].' ('.$fromCode.')') : $fromCode,
-                    'toCity' => $toAirport ? ($toAirport['City'].' ('.$toCode.')') : $toCode,
-                    'fromAirport' => $fromAirport['AirportName'] ?? $fromCode,
-                    'toAirport' => $toAirport['AirportName'] ?? $toCode,
-                    'fromCountry' => $fromAirport['Country'] ?? '',
-                    'toCountry' => $toAirport['Country'] ?? '',
-                    'fromLat' => $fromAirport['Latitude'] ?? null,
-                    'fromLon' => $fromAirport['Longitude'] ?? null,
-                    'toLat' => $toAirport['Latitude'] ?? null,
-                    'toLon' => $toAirport['Longitude'] ?? null,
-                    'departTime' => $dep->format('H:i'),
-                    'arriveTime' => $arr->format('H:i'),
-                    'departDate' => $dep->format('D, d M Y'),
-                    'arriveDate' => $arr->format('D, d M Y'),
-                    'departDT' => $fs['DepartureDateTime'],
-                    'arriveDT' => $fs['ArrivalDateTime'],
-                    'duration' => (int) $fs['JourneyDuration'],
-                    'flightNo' => $airlineCode.$fs['FlightNumber'],
-                    'airline' => $fs['MarketingAirlineName'],
-                    'airlineCode' => $airlineCode,
-                    'airlineLogo' => $airline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
-                    'equipment' => $fs['OperatingAirline']['Equipment'] ?? '',
-                    'cabin' => trim((string) ($fs['CabinClassText'] ?? '')) !== ''
-                        ? $fs['CabinClassText']
-                        : \App\Support\FlightDisplay::cabin(['cabinCode' => $fs['CabinClassCode'] ?? 'Y']),
-                    'cabinCode' => $fs['CabinClassCode'] ?? 'Y',
-                    'resBookCode' => $seg['ResBookDesigCode'] ?? '',
-                    'mealCode' => $fs['MealCode'] ?? '',
-                    'seatsLeft' => (int) ($seg['SeatsRemaining']['Number'] ?? 9),
-                    'belowMinimum' => (bool) ($seg['SeatsRemaining']['BelowMinimum'] ?? false),
-                    'isCodeshare' => $opCode !== $airlineCode,
-                    'operatingCode' => $opCode,
-                    'operatingAirline' => $fs['OperatingAirline']['Name'] ?? '',
-                    'operatingFlightNo' => $opCode.($fs['OperatingAirline']['FlightNumber'] ?? ''),
-                    'operatingLogo' => $opAirline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
-                    'eticket' => (bool) ($fs['Eticket'] ?? true),
-                ];
-            })->values()->toArray();
+                    return [
+                        'from' => $fromCode,
+                        'to' => $toCode,
+                        'fromCity' => $fromAirport ? ($fromAirport['City'].' ('.$fromCode.')') : $fromCode,
+                        'toCity' => $toAirport ? ($toAirport['City'].' ('.$toCode.')') : $toCode,
+                        'fromAirport' => $fromAirport['AirportName'] ?? $fromCode,
+                        'toAirport' => $toAirport['AirportName'] ?? $toCode,
+                        'fromCountry' => $fromAirport['Country'] ?? '',
+                        'toCountry' => $toAirport['Country'] ?? '',
+                        'fromLat' => $fromAirport['Latitude'] ?? null,
+                        'fromLon' => $fromAirport['Longitude'] ?? null,
+                        'toLat' => $toAirport['Latitude'] ?? null,
+                        'toLon' => $toAirport['Longitude'] ?? null,
+                        'departTime' => $dep->format('H:i'),
+                        'arriveTime' => $arr->format('H:i'),
+                        'departDate' => $dep->format('D, d M Y'),
+                        'arriveDate' => $arr->format('D, d M Y'),
+                        'departDT' => $fs['DepartureDateTime'],
+                        'arriveDT' => $fs['ArrivalDateTime'],
+                        'duration' => (int) $fs['JourneyDuration'],
+                        'flightNo' => $airlineCode.$fs['FlightNumber'],
+                        'airline' => $fs['MarketingAirlineName'],
+                        'airlineCode' => $airlineCode,
+                        'airlineLogo' => $airline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+                        'equipment' => $fs['OperatingAirline']['Equipment'] ?? '',
+                        'cabin' => trim((string) ($fs['CabinClassText'] ?? '')) !== ''
+                            ? $fs['CabinClassText']
+                            : \App\Support\FlightDisplay::cabin(['cabinCode' => $fs['CabinClassCode'] ?? 'Y']),
+                        'cabinCode' => $fs['CabinClassCode'] ?? 'Y',
+                        'resBookCode' => $seg['ResBookDesigCode'] ?? '',
+                        'mealCode' => $fs['MealCode'] ?? '',
+                        'seatsLeft' => (int) ($seg['SeatsRemaining']['Number'] ?? 9),
+                        'belowMinimum' => (bool) ($seg['SeatsRemaining']['BelowMinimum'] ?? false),
+                        'isCodeshare' => $opCode !== $airlineCode,
+                        'operatingCode' => $opCode,
+                        'operatingAirline' => $fs['OperatingAirline']['Name'] ?? '',
+                        'operatingFlightNo' => $opCode.($fs['OperatingAirline']['FlightNumber'] ?? ''),
+                        'operatingLogo' => $opAirline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+                        'eticket' => (bool) ($fs['Eticket'] ?? true),
+                    ];
+                })->values()->toArray();
         };
 
         // ── 4. Helpers ────────────────────────────────────────────────────────────
@@ -380,11 +388,14 @@ class FlightBookingController extends Controller
 
         // ── 9. Fetch extra services & fare rules ──────────────────────────────────
         try {
-            $extraResponse = Http::timeout(60)
-                ->post('https://travelnext.works/api/aeroVE5/extra_services', $payload1);
-
-            $fareRulesResponse = Http::timeout(60)
-                ->post('https://travelnext.works/api/aeroVE5/fare_rules', $payload1);
+            $responses = Http::pool(fn (Pool $pool): array => [
+                $pool->as('extras')->connectTimeout(10)->timeout(60)
+                    ->post('https://travelnext.works/api/aeroVE5/extra_services', $payload1),
+                $pool->as('rules')->connectTimeout(10)->timeout(60)
+                    ->post('https://travelnext.works/api/aeroVE5/fare_rules', $payload1),
+            ]);
+            $extraResponse = $responses['extras'];
+            $fareRulesResponse = $responses['rules'];
         } catch (\Throwable $exception) {
             Log::error('Flight ancillary request failed', [
                 'error' => $exception->getMessage(),
@@ -479,8 +490,16 @@ class FlightBookingController extends Controller
 
         $bookingFlight = session('bookingFlight', []);
         $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
+        $dbBooking = session('flightBookingDbId')
+            ? FlightBooking::find(session('flightBookingDbId'))
+            : null;
         if (empty($mappedFlight) && $dbBooking) {
             $mappedFlight = $dbBooking->flight_snapshot ?? [];
+        }
+        if (empty($mappedFlight)) {
+            return redirect()->route('air.flight-s')->withErrors([
+                'error' => 'Your selected flight has expired. Please search again.',
+            ]);
         }
         $fareType = strtolower($mappedFlight['fareType'] ?? 'public');
         $checkoutIntent = $validated['intent'] ?? session('bookingIntent', 'booking');
@@ -766,7 +785,7 @@ class FlightBookingController extends Controller
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Payment record not found.']);
         }
 
-        $lock = Cache::lock('flight-payment-callback:'.$booking->id, 180);
+        $lock = Cache::lock('flight-payment-processing:'.$booking->id, 300);
         if (! $lock->get()) {
             $this->_primeBookingSession($booking);
 
@@ -855,7 +874,6 @@ class FlightBookingController extends Controller
         ]);
 
         $booking = $booking->fresh();
-        $this->_sendPaymentReceipt($booking);
 
         $this->_primeBookingSession($booking);
         session([
@@ -863,12 +881,16 @@ class FlightBookingController extends Controller
             'paymentMethod' => $booking->payment_method,
         ]);
 
-        return match ($booking->payment_flow) {
+        $response = match ($booking->payment_flow) {
             'webfare_full' => $this->_completeWebfarePayment($booking, $request),
             'held_ticket_full' => $this->_completeHeldTicketPayment($booking),
             'travelflex_down_payment' => $this->_completeTravelFlexPayment($booking, $request),
             default => redirect()->route('air.flight-s')->withErrors(['error' => 'Unknown payment flow.']),
         };
+
+        $this->_sendPaymentReceipt($booking->fresh());
+
+        return $response;
     }
 
     public function seerbitWebhook(Request $request, SeerbitPaymentService $seerbit)
@@ -878,20 +900,32 @@ class FlightBookingController extends Controller
             ?? $request->input('data.payments.paymentReference')
             ?? $request->input('reference');
 
+        $status = 'received';
+
         if ($reference && $booking = FlightBooking::where('payment_reference', $reference)->first()) {
-            $verification = $seerbit->verifyPayment($reference);
-            if ($verification['ok']) {
-                $booking->update([
-                    'payment_verified_at' => $booking->payment_verified_at ?: now(),
-                    'payment_charged_amount' => $verification['amount'] ?? $booking->payment_charged_amount,
-                    'payment_gateway_response' => $verification['raw'] ?? $request->all(),
-                ]);
+            $lock = Cache::lock('flight-payment-processing:'.$booking->id, 300);
+
+            if ($lock->get()) {
+                try {
+                    $this->_processSeerbitCallback($request, $seerbit, $booking->fresh(), $reference);
+                    $status = 'processed';
+                } catch (\Throwable $exception) {
+                    $status = 'deferred';
+                    Log::warning('SeerBit webhook completion deferred', [
+                        'booking_id' => $booking->id,
+                        'error_type' => $exception::class,
+                    ]);
+                } finally {
+                    $lock->release();
+                }
+            } else {
+                $status = 'processing';
             }
         }
 
         return response()->json([
             'ackReference' => $request->header('ackReference', $reference ?: Str::uuid()->toString()),
-            'status' => 'received',
+            'status' => $status,
         ]);
     }
 
@@ -1005,21 +1039,17 @@ class FlightBookingController extends Controller
 
         if ($existingUniqueId) {
             // Already on hold — call ticket_order instead of book
-            $ticketResult = $this->_callTicketOrderApi($existingUniqueId);
-            $ticketResponse = $ticketResult['data'];
-            $ticketSuccess = filter_var(
-                ($ticketResponse['AirOrderTicketRS']['TicketOrderResult']['Success'] ?? false),
-                FILTER_VALIDATE_BOOLEAN
-            );
+            $dbBooking = $dbId ? FlightBooking::find($dbId) : null;
+            $ticketResult = $dbBooking
+                ? app(AdminTicketingService::class)->ticketOrder($dbBooking)
+                : ['ok' => false, 'message' => 'Booking record not found.', 'response' => []];
+            $ticketResponse = $ticketResult['response'] ?? [];
+            $ticketSuccess = (bool) ($ticketResult['ok'] ?? false);
 
-            if ($dbId && $dbBooking = \App\Models\FlightBooking::find($dbId)) {
+            if ($dbBooking) {
                 $dbBooking->update([
                     'payment_method' => 'flex_gateway',
                     'payment_status' => 'paid',
-                    'booking_status' => $ticketSuccess ? 'ticketed' : 'ticketing_failed',
-                    'ticket_ordered' => $ticketSuccess,
-                    'ticket_ordered_at' => $ticketSuccess ? now() : null,
-                    'ticket_api_response' => $ticketResponse,
                 ]);
                 if ($ticketSuccess) {
                     $this->_sendConfirmedEmail($dbBooking);
@@ -1167,11 +1197,42 @@ class FlightBookingController extends Controller
 
     private function _startSeerbitPayment(string $flow)
     {
+        $paymentScope = session('flightBookingDbId')
+            ? 'booking:'.session('flightBookingDbId')
+            : 'session:'.session()->getId();
+        $lock = Cache::lock('flight-payment-initialize:'.sha1($paymentScope.':'.$flow), 45);
+
+        if (! $lock->get()) {
+            return back()->withErrors([
+                'error' => 'Payment setup is already in progress. Please wait a moment and try again.',
+            ]);
+        }
+
         try {
             $booking = $this->_prepareSeerbitBooking($flow);
             $amount = $this->_paymentAmountForFlow($flow, $booking);
             $currency = $booking->currency ?: 'NGN';
-            $reference = $this->_generatePaymentReference();
+            $existingRedirect = $this->_seerbitRedirectLink($booking->payment_gateway_response ?? []);
+            $samePendingPayment = $booking->payment_status === 'pending'
+                && $booking->payment_flow === $flow
+                && filled($booking->payment_reference)
+                && round((float) $booking->payment_amount, 2) === round($amount, 2)
+                && strtoupper((string) $booking->payment_currency) === strtoupper($currency);
+
+            if ($samePendingPayment && $existingRedirect) {
+                session([
+                    'flightBookingDbId' => $booking->id,
+                    'bookingRef' => $booking->booking_ref,
+                    'seerbitPaymentReference' => $booking->payment_reference,
+                    'seerbitPaymentFlow' => $flow,
+                ]);
+
+                return redirect()->away($existingRedirect);
+            }
+
+            $reference = $samePendingPayment
+                ? (string) $booking->payment_reference
+                : $this->_generatePaymentReference();
 
             $booking->update([
                 'payment_reference' => $reference,
@@ -1181,6 +1242,7 @@ class FlightBookingController extends Controller
                 'payment_currency' => $currency,
                 'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
                 'payment_status' => 'pending',
+                'payment_initializing_at' => now(),
             ]);
 
             session([
@@ -1207,7 +1269,10 @@ class FlightBookingController extends Controller
                 'productDescription' => $this->_paymentDescription($flow, $booking),
             ]);
 
-            $booking->update(['payment_gateway_response' => $checkout['raw']]);
+            $booking->update([
+                'payment_gateway_response' => $checkout['raw'],
+                'payment_initializing_at' => null,
+            ]);
 
             return redirect()->away($checkout['redirect_link']);
         } catch (\Throwable $e) {
@@ -1220,7 +1285,17 @@ class FlightBookingController extends Controller
                 isset($booking) ? $booking : null,
                 $e->getMessage() ?: 'Unable to start payment. Please try again.'
             );
+        } finally {
+            $lock->release();
         }
+    }
+
+    private function _seerbitRedirectLink(array $response): ?string
+    {
+        return data_get($response, 'data.payments.redirectLink')
+            ?? data_get($response, 'data.redirectLink')
+            ?? data_get($response, 'payments.redirectLink')
+            ?? data_get($response, 'redirect_link');
     }
 
     private function _prepareSeerbitBooking(string $flow): FlightBooking
@@ -1252,7 +1327,6 @@ class FlightBookingController extends Controller
                 $this->_assertHeldBookingPayable($booking);
             }
             $booking->update([
-                'payment_status' => 'pending',
                 'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
                 'extra_services_snapshot' => session('selectedExtras', $booking->extra_services_snapshot ?? []),
             ]);
@@ -1346,18 +1420,13 @@ class FlightBookingController extends Controller
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Booking hold reference missing.']);
         }
 
-        $ticketResult = $this->_callTicketOrderApi($booking->unique_id);
-        $ticketResponse = $ticketResult['data'];
-        $ticketResult2 = $ticketResponse['AirOrderTicketRS']['TicketOrderResult'] ?? [];
-        $ticketSuccess = filter_var($ticketResult2['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $ticketResult = app(AdminTicketingService::class)->ticketOrder($booking);
+        $ticketResponse = $ticketResult['response'] ?? [];
+        $ticketSuccess = (bool) ($ticketResult['ok'] ?? false);
 
         $booking->update([
             'payment_method' => 'gateway',
             'payment_status' => 'paid',
-            'booking_status' => $ticketSuccess ? 'ticketed' : 'ticketing_failed',
-            'ticket_ordered' => $ticketSuccess,
-            'ticket_ordered_at' => $ticketSuccess ? now() : null,
-            'ticket_api_response' => $ticketResponse,
         ]);
 
         if ($ticketSuccess) {
@@ -1436,18 +1505,13 @@ class FlightBookingController extends Controller
         ]);
 
         if ($booking->unique_id) {
-            $ticketResult = $this->_callTicketOrderApi($booking->unique_id);
-            $ticketResponse = $ticketResult['data'];
-            $ticketResult2 = $ticketResponse['AirOrderTicketRS']['TicketOrderResult'] ?? [];
-            $ticketSuccess = filter_var($ticketResult2['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $ticketResult = app(AdminTicketingService::class)->ticketOrder($booking);
+            $ticketResponse = $ticketResult['response'] ?? [];
+            $ticketSuccess = (bool) ($ticketResult['ok'] ?? false);
 
             $booking->update([
                 'payment_method' => 'flex_gateway',
                 'payment_status' => 'partially_paid',
-                'booking_status' => $ticketSuccess ? 'ticketed' : 'ticketing_failed',
-                'ticket_ordered' => $ticketSuccess,
-                'ticket_ordered_at' => $ticketSuccess ? now() : null,
-                'ticket_api_response' => $ticketResponse,
             ]);
 
             if ($ticketSuccess) {
@@ -1843,10 +1907,29 @@ class FlightBookingController extends Controller
         }
 
         $travelDate = $this->_bookingTravelDate();
+        $bookingFlight = session('bookingFlight', []);
+        $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
+        $passportMandatory = filter_var(
+            $mappedFlight['isPassportMandatory'] ?? false,
+            FILTER_VALIDATE_BOOLEAN,
+        );
 
         foreach ($passengers as $i => $pax) {
             $title = (string) ($pax['title'] ?? '');
             $type = (string) ($pax['type'] ?? '');
+
+            if ($passportMandatory) {
+                foreach ([
+                    'passport_no' => 'Passport number',
+                    'passport_issue_country' => 'Passport issuing country',
+                    'passport_issue_date' => 'Passport issue date',
+                    'passport_exp' => 'Passport expiry date',
+                ] as $field => $label) {
+                    if (blank($pax[$field] ?? null)) {
+                        $messages["passengers.{$i}.{$field}"] = "{$label} is required for this fare.";
+                    }
+                }
+            }
 
             if (in_array($type, ['CHD', 'INF'], true) && ! in_array($title, ['Master', 'Miss'], true)) {
                 $messages["passengers.{$i}.title"] = 'Child and infant passenger titles must be Master or Miss.';
@@ -1871,6 +1954,25 @@ class FlightBookingController extends Controller
             }
             if ($pax['type'] === 'INF' && $age >= 2) {
                 $messages[$key] = 'Infant passengers must be under 2 years old on the travel date.';
+            }
+
+            if (! empty($pax['passport_issue_date'])) {
+                try {
+                    if (Carbon::parse($pax['passport_issue_date'])->gt($travelDate)) {
+                        $messages["passengers.{$i}.passport_issue_date"] = 'Passport issue date must be before the travel date.';
+                    }
+                } catch (\Throwable) {
+                    // The request date rule provides the customer-facing error.
+                }
+            }
+            if (! empty($pax['passport_exp'])) {
+                try {
+                    if (Carbon::parse($pax['passport_exp'])->lte($travelDate)) {
+                        $messages["passengers.{$i}.passport_exp"] = 'Passport must remain valid through the travel date.';
+                    }
+                } catch (\Throwable) {
+                    // The request date rule provides the customer-facing error.
+                }
             }
         }
 
@@ -1995,7 +2097,7 @@ class FlightBookingController extends Controller
             ],
         ];
         try {
-            $response = Http::timeout(90)->post('https://travelnext.works/api/aeroVE5/booking', $payload);
+            $response = Http::connectTimeout(10)->timeout(90)->post('https://travelnext.works/api/aeroVE5/booking', $payload);
             if ($response->failed()) {
                 return ['error' => true, 'message' => 'Booking request failed. Please try again.', 'data' => []];
             }
@@ -2005,38 +2107,6 @@ class FlightBookingController extends Controller
             Log::error('FlightBooking API error', ['message' => $e->getMessage()]);
 
             return ['error' => true, 'message' => 'A network error occurred. Please try again.', 'data' => []];
-        }
-    }
-
-    private function _callTicketOrderApi(string $uniqueId): array
-    {
-        $payload = [
-            'user_id' => config('services.travelnext.user_id'),
-            'user_password' => config('services.travelnext.password'),
-            'access' => config('services.travelnext.access'),
-            'ip_address' => config('services.travelnext.ip'),
-            'UniqueID' => $uniqueId,
-        ];
-
-        try {
-            $response = Http::timeout(60)->post('https://travelnext.works/api/aeroVE5/ticket_order', $payload);
-            if ($response->failed()) {
-                return ['error' => true, 'message' => 'Ticket order request failed.', 'data' => []];
-            }
-            $data = $response->json();
-            $result = $data['AirOrderTicketRS']['TicketOrderResult'] ?? [];
-            $ok = filter_var($result['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            if (! $ok) {
-                $errMsg = $this->_extractApiErrorMessage($result, 'Ticket order failed.');
-
-                return ['error' => true, 'message' => $errMsg, 'data' => $data];
-            }
-
-            return ['error' => false, 'message' => '', 'data' => $data];
-        } catch (\Throwable $e) {
-            Log::error('TicketOrder API error', ['message' => $e->getMessage()]);
-
-            return ['error' => true, 'message' => 'A network error occurred during ticketing.', 'data' => []];
         }
     }
 
@@ -2057,9 +2127,6 @@ class FlightBookingController extends Controller
 
     private function _persistBooking(array $mappedFlight, array $validated, array $apiResponse, array $overrides = []): FlightBooking
     {
-        $segments = $mappedFlight['segments'] ?? [];
-        $firstSeg = $segments[0] ?? [];
-        $lastSeg = ! empty($segments) ? end($segments) : [];
         $contact = $validated['contact'] ?? session('bookingContact', []);
         $passengers = $validated['passengers'] ?? session('bookingPassengers', []);
 
@@ -2076,7 +2143,7 @@ class FlightBookingController extends Controller
             'session_id' => session('bookingSessionId', ''),
             'fare_type' => $mappedFlight['fareType'] ?? 'Public',
             'trip_type' => session('tripType', ''),
-            'route' => ($firstSeg['from'] ?? '').' → '.($lastSeg['to'] ?? ''),
+            'route' => FlightDisplay::route($mappedFlight),
             'airline' => $mappedFlight['airline'] ?? '',
             'cabin' => \App\Support\FlightDisplay::cabin($mappedFlight),
             'currency' => $mappedFlight['currency'] ?? 'NGN',
@@ -2129,9 +2196,6 @@ class FlightBookingController extends Controller
         Log::info('_sendConfirmedEmail: start', [
             'booking_id' => $booking->id,
             'booking_ref' => $booking->booking_ref,
-            'recipient' => $booking->contact_email,
-            'mail_default' => config('mail.default'),
-            'mail_from' => config('mail.from.address'),
             'has_trip_details' => ! empty($tripDetails),
             'has_unique_id' => ! empty($booking->unique_id),
         ]);
@@ -2158,30 +2222,31 @@ class FlightBookingController extends Controller
         try {
             Log::info('_sendConfirmedEmail: sending ETicketMail', [
                 'booking_ref' => $booking->booking_ref,
-                'recipient' => $booking->contact_email,
             ]);
 
             // dd($tripDetails['ItineraryInfo']['ReservationItems'][0]['ReservationItem']['AirlinePNR']);
 
-            Mail::to($booking->contact_email)->send(
-                new ETicketMail($booking, $tripDetails)
+            $sent = app(DurableMailService::class)->sendNowOrStore(
+                DurableMailService::FLIGHT_ETICKET,
+                (string) $booking->contact_email,
+                $booking,
+                ['trip_details' => $tripDetails],
+                'flight-eticket:'.$booking->id,
             );
 
-            $booking->update(['confirmation_email_sent' => true]);
+            if ($sent) {
+                $booking->update(['confirmation_email_sent' => true]);
+            }
 
-            Log::info('_sendConfirmedEmail: mail sent successfully', [
+            Log::info($sent ? '_sendConfirmedEmail: delivered' : '_sendConfirmedEmail: saved for retry', [
                 'booking_id' => $booking->id,
                 'booking_ref' => $booking->booking_ref,
-                'recipient' => $booking->contact_email,
             ]);
         } catch (\Throwable $e) {
             Log::error('_sendConfirmedEmail: failed to send ETicketMail', [
                 'booking_id' => $booking->id,
                 'booking_ref' => $booking->booking_ref,
-                'recipient' => $booking->contact_email,
-                'error' => $e->getMessage(),
-                'exception' => get_class($e),
-                'trace' => $e->getTraceAsString(),
+                'error_type' => $e::class,
             ]);
         }
     }
@@ -2207,45 +2272,60 @@ class FlightBookingController extends Controller
         }
 
         try {
-            Mail::to($booking->contact_email)->send(new PaymentReceiptMail($booking));
-            $booking->update(['payment_receipt_sent' => true]);
+            $sent = app(DurableMailService::class)->sendNowOrStore(
+                DurableMailService::FLIGHT_RECEIPT,
+                (string) $booking->contact_email,
+                $booking,
+                [],
+                'flight-payment-receipt:'.$booking->id,
+            );
+            if ($sent) {
+                $booking->update(['payment_receipt_sent' => true]);
+            }
 
-            Log::info('_sendPaymentReceipt: mail sent successfully', [
+            Log::info($sent ? '_sendPaymentReceipt: delivered' : '_sendPaymentReceipt: saved for retry', [
                 'booking_id' => $booking->id,
                 'booking_ref' => $booking->booking_ref,
-                'recipient' => $booking->contact_email,
             ]);
         } catch (\Throwable $e) {
             Log::error('_sendPaymentReceipt: failed', [
                 'booking_id' => $booking->id,
                 'booking_ref' => $booking->booking_ref,
-                'recipient' => $booking->contact_email,
-                'error' => $e->getMessage(),
-                'exception' => get_class($e),
+                'error_type' => $e::class,
             ]);
         }
     }
 
     private function _sendPendingEmail(FlightBooking $booking, string $method = 'bank_transfer'): void
     {
+        if ($booking->pending_email_sent && $method === 'hold') {
+            return;
+        }
+
         try {
             \Log::info('Attempting to send pending email', [
                 'booking_id' => $booking->id,
-                'email' => $booking->contact_email,
                 'method' => $method,
             ]);
 
-            Mail::to($booking->contact_email)
-                ->send(new BookingPendingMail($booking, $method));
+            $sent = app(DurableMailService::class)->sendNowOrStore(
+                DurableMailService::FLIGHT_PENDING,
+                (string) $booking->contact_email,
+                $booking,
+                compact('method'),
+                "flight-pending:{$booking->id}:{$method}",
+            );
+            if ($sent) {
+                $booking->update(['pending_email_sent' => true]);
+            }
 
-            \Log::info('Pending email sent successfully', [
+            \Log::info($sent ? 'Pending email delivered' : 'Pending email saved for retry', [
                 'booking_id' => $booking->id,
             ]);
         } catch (\Exception $e) {
             \Log::error('Failed to send pending email', [
                 'booking_id' => $booking->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+                'error_type' => $e::class,
             ]);
         }
     }
@@ -2253,33 +2333,7 @@ class FlightBookingController extends Controller
     private function _sendTicketingFailureAlert(FlightBooking $booking, string $message, array $ticketResponse = []): void
     {
         try {
-            $flight = $booking->flight_snapshot ?? [];
-            $segments = $flight['segments'] ?? [];
-            $firstSeg = $segments[0] ?? [];
-            $lastSeg = ! empty($segments) ? end($segments) : [];
-
-            $alertData = [
-                'uniqueId' => $booking->unique_id,
-                'bookingStatus' => 'PAID_UNTICKETED',
-                'ticketStatus' => 'TICKETING_FAILED',
-                'origin' => $firstSeg['from'] ?? '',
-                'destination' => $lastSeg['to'] ?? '',
-                'fareType' => $booking->fare_type ?? '',
-                'passengers' => $booking->passengers_snapshot ?? [],
-                'flights' => [],
-                'pricing' => [
-                    'booking_ref' => $booking->booking_ref,
-                    'amount_paid' => $booking->payment_charged_amount ?? $booking->payment_amount,
-                    'currency' => $booking->payment_currency,
-                    'payment_reference' => $booking->payment_reference,
-                    'ticket_error' => $message,
-                    'ticket_response' => $ticketResponse,
-                ],
-                'timestamp' => now(),
-            ];
-
-            Mail::to(config('mail.support_address', 'support@travelwheel.com'))
-                ->send(new \App\Mail\UnTicketedConfirmationAlert($alertData));
+            app(AdminTicketingService::class)->sendFailureAlert($booking, $message, $ticketResponse);
         } catch (\Throwable $e) {
             Log::error('Ticketing failure alert failed', [
                 'booking_ref' => $booking->booking_ref,
@@ -2390,7 +2444,7 @@ class FlightBookingController extends Controller
         ];
 
         try {
-            $response = Http::timeout(30)->post('https://travelnext.works/api/aeroVE5/trip_details', $payload);
+            $response = Http::connectTimeout(10)->timeout(30)->post('https://travelnext.works/api/aeroVE5/trip_details', $payload);
             if ($response->failed()) {
                 return [];
             }
@@ -2428,31 +2482,22 @@ class FlightBookingController extends Controller
     private function _sendUnTicketedConfirmationAlert(array $tripData, string $uniqueId): void
     {
         try {
-            $customerInfos = collect(data_get($tripData, 'ItineraryInfo.CustomerInfos', []))
-                ->map(fn ($c) => $c['CustomerInfo'] ?? $c);
+            $booking = FlightBooking::query()->where('unique_id', $uniqueId)->latest()->first();
+            if (! $booking) {
+                Log::warning('Unticketed supplier result has no local booking', ['unique_id' => $uniqueId]);
 
-            $resItems = collect(data_get($tripData, 'ItineraryInfo.ReservationItems', []))
-                ->map(fn ($r) => $r['ReservationItem'] ?? $r);
+                return;
+            }
 
-            $itinPricing = data_get($tripData, 'ItineraryInfo.ItineraryPricing', []);
-
-            $alertData = [
-                'uniqueId' => $uniqueId,
-                'bookingStatus' => $tripData['BookingStatus'] ?? 'UNKNOWN',
-                'ticketStatus' => $tripData['TicketStatus'] ?? 'UNKNOWN',
-                'origin' => $tripData['Origin'] ?? '',
-                'destination' => $tripData['Destination'] ?? '',
-                'fareType' => $tripData['FareType'] ?? '',
-                'passengers' => $customerInfos->toArray(),
-                'flights' => $resItems->toArray(),
-                'pricing' => $itinPricing,
-                'timestamp' => now(),
-            ];
-
-            Mail::to(config('mail.support_address', 'support@travelwheel.com'))
-                ->send(new \App\Mail\UnTicketedConfirmationAlert($alertData));
+            app(AdminTicketingService::class)->sendFailureAlert(
+                $booking,
+                'Supplier status is '.($tripData['TicketStatus'] ?? 'UNKNOWN').' while booking status is '.($tripData['BookingStatus'] ?? 'UNKNOWN').'.',
+            );
         } catch (\Throwable $e) {
-            Log::error('UnTicketedConfirmationAlert failed', ['error' => $e->getMessage()]);
+            Log::error('UnTicketedConfirmationAlert failed', [
+                'unique_id' => $uniqueId,
+                'error_type' => $e::class,
+            ]);
         }
     }
 
@@ -3135,27 +3180,6 @@ class FlightBookingController extends Controller
     }
 
     // ── Private: send TravelFlex application emails ───────────────────────────
-    private function _sendTravelFlexApplicationEmails(
-        array $applicant,
-        array $tfPlan,
-        array $uploadPaths,
-        string $bookingRef = ''
-    ): void {
-        $bookingFlight = session('bookingFlight', []);
-        $flightInfo = $bookingFlight['flight'] ?? $bookingFlight;
-
-        $mail = new \App\Mail\TravelFlexApplicationMail($applicant, $tfPlan, $flightInfo, $uploadPaths, $bookingRef);
-
-        try {
-            // To loan provider + CC to Travelwheel
-            \Illuminate\Support\Facades\Mail::to(config('mail.travelflex_provider', 'loans@travelwheel.com'))
-                ->cc(config('mail.travelwheel_address', 'support@travelwheel.com'))
-                ->send($mail);
-        } catch (\Throwable $e) {
-            Log::error('TravelFlexApplicationMail failed', ['error' => $e->getMessage()]);
-        }
-    }
-
     /**
      * Collect and structure the selected extra services (baggage, meals) from the request
      * Returns a formatted array containing all selected services with their details

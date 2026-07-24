@@ -18,13 +18,29 @@ Artisan::command('travelflex:send-repayment-reminders', function () {
 Schedule::command('travelflex:send-repayment-reminders')
     ->dailyAt('08:00')
     ->timezone('Africa/Lagos')
-    ->withoutOverlapping();
+    ->withoutOverlapping(120);
+
+Schedule::command('operations:heartbeat scheduler')
+    ->everyMinute()
+    ->withoutOverlapping(2);
+
+Schedule::command('notifications:process-outbox --limit=5')
+    ->everyMinute()
+    ->withoutOverlapping(5);
+
+Schedule::command('queue:work --stop-when-empty --sleep=1 --tries=3 --timeout=180 --max-time=50')
+    ->everyMinute()
+    ->withoutOverlapping(5);
+
+Schedule::command('flights:reconcile --limit=200')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(10);
 
 Schedule::command('reports:sync')
     ->everyFiveMinutes()
-    ->withoutOverlapping();
+    ->withoutOverlapping(15);
 
 Schedule::command('reports:send-scheduled')
     ->hourly()
     ->timezone('Africa/Lagos')
-    ->withoutOverlapping();
+    ->withoutOverlapping(120);

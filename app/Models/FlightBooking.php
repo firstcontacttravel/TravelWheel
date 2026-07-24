@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedJson;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FlightBooking extends Model
@@ -34,10 +34,14 @@ class FlightBooking extends Model
         'payment_charged_amount',
         'payment_currency',
         'payment_verified_at',
+        'payment_initializing_at',
         'payment_gateway_response',
         'tkt_time_limit',
         'ticket_ordered',
         'ticket_ordered_at',
+        'ticketing_started_at',
+        'last_reconciled_at',
+        'reconciliation_note',
         'contact_email',
         'contact_phone',
         'adult_count',
@@ -57,27 +61,30 @@ class FlightBooking extends Model
     ];
 
     protected $casts = [
-        'booking_api_response'       => 'array',
-        'ticket_api_response'        => 'array',
-        'itinerary_snapshot'         => 'array',
-        'passengers_snapshot'        => 'array',
-        'flight_snapshot'            => 'array',
-        'extra_services_snapshot'    => 'array',
-        'markup_details'             => 'array',
-        'payment_gateway_response'   => 'array',
-        'tkt_time_limit'             => 'datetime',
-        'payment_verified_at'        => 'datetime',
-        'ticket_ordered_at'          => 'datetime',
-        'bank_transfer_notified_at'  => 'datetime',
-        'ticket_ordered'             => 'boolean',
-        'confirmation_email_sent'    => 'boolean',
-        'pending_email_sent'         => 'boolean',
-        'payment_receipt_sent'       => 'boolean',
-        'total_price'                => 'decimal:2',
-        'supplier_price'             => 'decimal:2',
-        'markup_amount'              => 'decimal:2',
-        'payment_amount'             => 'decimal:2',
-        'payment_charged_amount'     => 'decimal:2',
+        'booking_api_response' => 'array',
+        'ticket_api_response' => 'array',
+        'itinerary_snapshot' => 'array',
+        'passengers_snapshot' => EncryptedJson::class,
+        'flight_snapshot' => 'array',
+        'extra_services_snapshot' => 'array',
+        'markup_details' => 'array',
+        'payment_gateway_response' => 'array',
+        'tkt_time_limit' => 'datetime',
+        'payment_verified_at' => 'datetime',
+        'payment_initializing_at' => 'datetime',
+        'ticket_ordered_at' => 'datetime',
+        'ticketing_started_at' => 'datetime',
+        'last_reconciled_at' => 'datetime',
+        'bank_transfer_notified_at' => 'datetime',
+        'ticket_ordered' => 'boolean',
+        'confirmation_email_sent' => 'boolean',
+        'pending_email_sent' => 'boolean',
+        'payment_receipt_sent' => 'boolean',
+        'total_price' => 'decimal:2',
+        'supplier_price' => 'decimal:2',
+        'markup_amount' => 'decimal:2',
+        'payment_amount' => 'decimal:2',
+        'payment_charged_amount' => 'decimal:2',
     ];
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -106,20 +113,24 @@ class FlightBooking extends Model
 
     public function tktHoursRemaining(): int
     {
-        if (! $this->tkt_time_limit) return 0;
+        if (! $this->tkt_time_limit) {
+            return 0;
+        }
+
         return max(0, (int) now()->diffInHours($this->tkt_time_limit, false));
     }
 
     public function formattedPrice(): string
     {
-        $sym = match($this->currency) {
-            'NGN'   => '₦',
-            'USD'   => '$',
-            'GBP'   => '£',
-            'EUR'   => '€',
-            default => $this->currency . ' ',
+        $sym = match ($this->currency) {
+            'NGN' => '₦',
+            'USD' => '$',
+            'GBP' => '£',
+            'EUR' => '€',
+            default => $this->currency.' ',
         };
-        return $sym . number_format($this->total_price, 2);
+
+        return $sym.number_format($this->total_price, 2);
     }
 
     public function totalPassengers(): int

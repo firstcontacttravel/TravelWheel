@@ -29,4 +29,11 @@ class FlightBookingWizardTest extends TestCase
             ->assertSee('Review Booking')
             ->assertDontSee('Traveller Details');
     }
+
+    public function test_passenger_summary_does_not_suggest_the_count_can_be_adjusted(): void
+    {
+        Livewire::test(FlightBooking::class)
+            ->assertSee('1 passenger')
+            ->assertDontSee('adjust if needed');
+    }
 }

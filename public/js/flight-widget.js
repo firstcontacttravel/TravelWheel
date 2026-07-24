@@ -4,7 +4,10 @@
 (function () {
     'use strict';
 
-    var AIRPORTS_URL = '/assets/data/airports.json';
+    var airportsUrlMeta = document.querySelector('meta[name="travelwheel-airports-url"]');
+    var AIRPORTS_URL = airportsUrlMeta
+        ? airportsUrlMeta.getAttribute('content')
+        : new URL('assets/data/airports.json', document.baseURI).toString();
     var airports = [];
 
     /* ── Load airports JSON once ── */

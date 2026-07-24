@@ -494,9 +494,9 @@
         {{-- Search Button --}}
         <div class="fw-search-row">
             <span x-show="errors.general || errors.passengers" class="fw-error" style="margin-right:auto;" x-text="errors.general || errors.passengers"></span>
-            <button class="fw-search-btn" type="button" @click="search">
+            <button class="fw-search-btn" type="button" @click="search" :disabled="submitting">
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.2 4.2"/></svg>
-                Search Flights
+                <span x-text="submitting ? 'Searching…' : 'Search Flights'"></span>
             </button>
         </div>
 
@@ -541,6 +541,7 @@ function flightWidget() {
         childs:     Number(defaults.childs ?? 0),
         kids:       Number(defaults.kids ?? 0),
         flightType: defaults.flightType || 'Y',
+        submitting: false,
 
         multiLegs: defaultLegs.map(leg => ({
             from: leg.from || '',
@@ -989,21 +990,37 @@ function flightWidget() {
             if (this.totalPassengers() > 9) {
                 this.errors.passengers = 'The total number of passengers must not exceed 9 per booking.';
             }
+            if (this.kids > this.adults) {
+                this.errors.passengers = 'Each infant must be accompanied by an adult.';
+            }
             if (this.trip !== 'multi') {
                 if (!this.from.trim())   this.errors.from    = 'Please enter a departure city or airport.';
                 if (!this.to.trim())     this.errors.to      = 'Please enter a destination city or airport.';
                 if (!this.depart.trim()) this.errors.depart  = 'Please select a departure date.';
+                if (this.from.trim() && this.from.trim() === this.to.trim())
+                    this.errors.to = 'Origin and destination must be different.';
                 if (this.trip === 'Return' && !this.returning.trim())
                     this.errors.returning = 'Please select a return date.';
             } else {
                 if (this.multiLegs.some(l => !l.from || !l.to || !l.depart))
                     this.errors.general = 'Please complete all flight legs.';
+                if (this.multiLegs.some(l => l.from && l.from === l.to))
+                    this.errors.general = 'Each flight leg must have a different origin and destination.';
+                for (let i = 1; i < this.multiLegs.length; i++) {
+                    const previous = this._parseDate(this.multiLegs[i - 1].depart);
+                    const current = this._parseDate(this.multiLegs[i].depart);
+                    if (previous && current && current < previous) {
+                        this.errors.general = 'Multi-city dates must be in travel order.';
+                        break;
+                    }
+                }
             }
             return Object.keys(this.errors).length === 0;
         },
 
         search() {
-            if (!this.validate()) return;
+            if (this.submitting || !this.validate()) return;
+            this.submitting = true;
             if (this.trip === 'multi') {
                 this.multiLegs = this.multiLegs.map(leg => ({ ...leg, cabin: this.flightType, cabinOpen: false }));
             }

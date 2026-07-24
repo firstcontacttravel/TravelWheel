@@ -3,19 +3,37 @@
 namespace App\Services;
 
 use App\Mail\TravelFlexApplicationMail;
-use App\Mail\TravelFlexRepaymentReminderMail;
-use App\Mail\TravelFlexStatusMail;
 use App\Models\FlightBooking;
 use App\Models\TravelFlexApplication;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 class TravelFlexApplicationService
 {
     public function sendProviderEmail(TravelFlexApplication $application): void
+    {
+        $sent = app(DurableMailService::class)->sendNowOrStore(
+            DurableMailService::TRAVELFLEX_PROVIDER,
+            (string) config('mail.travelflex_provider', 'loans@travelwheel.com'),
+            $application,
+            [],
+            'travelflex-provider:'.$application->id,
+            [(string) config('mail.travelwheel_address', config('mail.from.address'))],
+        );
+
+        $application->update([
+            'provider_status' => $sent ? 'sent' : 'pending_retry',
+            'provider_email_sent_at' => $sent ? now() : null,
+            'provider_email_error' => $sent ? null : 'Email saved for automatic retry.',
+        ]);
+
+        if (! $sent) {
+            throw new RuntimeException('Provider email was saved for automatic retry.');
+        }
+    }
+
+    public function providerMailable(TravelFlexApplication $application): TravelFlexApplicationMail
     {
         $applicant = array_merge(
             $application->applicant_details ?? [],
@@ -39,22 +57,14 @@ class TravelFlexApplicationService
             ])
             ->all();
 
-        Mail::to(config('mail.travelflex_provider', 'loans@travelwheel.com'))
-            ->cc(config('mail.travelwheel_address', config('mail.from.address')))
-            ->send(new TravelFlexApplicationMail(
-                $applicant,
-                $application->repayment_plan ?? [],
-                $flightInfo,
-                $uploadPaths,
-                $application->booking_ref ?: $application->unique_id ?: '',
-                $application,
-            ));
-
-        $application->update([
-            'provider_status' => 'sent',
-            'provider_email_sent_at' => now(),
-            'provider_email_error' => null,
-        ]);
+        return new TravelFlexApplicationMail(
+            $applicant,
+            $application->repayment_plan ?? [],
+            $flightInfo,
+            $uploadPaths,
+            $application->booking_ref ?: $application->unique_id ?: '',
+            $application,
+        );
     }
 
     public function notifyCustomerStatus(TravelFlexApplication $application, string $status, ?string $note = null): bool
@@ -65,9 +75,13 @@ class TravelFlexApplicationService
             return false;
         }
 
-        Mail::to($email)->send(new TravelFlexStatusMail($application->fresh(['booking']), $status, $note));
-
-        return true;
+        return app(DurableMailService::class)->sendNowOrStore(
+            DurableMailService::TRAVELFLEX_STATUS,
+            $email,
+            $application,
+            compact('status', 'note'),
+            "travelflex-status:{$application->id}:{$status}",
+        );
     }
 
     public function syncPaymentFromBooking(FlightBooking $booking): ?TravelFlexApplication
@@ -138,7 +152,7 @@ class TravelFlexApplicationService
                 continue;
             }
 
-            $cacheKey = implode(':', [
+            $uniqueKey = implode(':', [
                 'travelflex-reminder',
                 $application->id,
                 $index,
@@ -146,20 +160,14 @@ class TravelFlexApplicationService
                 now('Africa/Lagos')->format('Y-m-d'),
             ]);
 
-            if (! Cache::add($cacheKey, true, now()->addDays(2))) {
-                continue;
-            }
-
-            try {
-                Mail::to($email)->send(new TravelFlexRepaymentReminderMail($application, $instalment, $timing));
+            if (app(DurableMailService::class)->sendNowOrStore(
+                DurableMailService::TRAVELFLEX_REPAYMENT,
+                $email,
+                $application,
+                compact('instalment', 'timing'),
+                $uniqueKey,
+            )) {
                 $sent++;
-            } catch (\Throwable $exception) {
-                Cache::forget($cacheKey);
-                Log::error('TravelFlex repayment reminder failed', [
-                    'application_id' => $application->id,
-                    'booking_ref' => $application->booking_ref,
-                    'error' => $exception->getMessage(),
-                ]);
             }
         }
 

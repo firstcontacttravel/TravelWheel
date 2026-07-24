@@ -2,8 +2,8 @@
 
 namespace App\Support\Admin;
 
-use Illuminate\Support\HtmlString;
 use Illuminate\Support\Collection;
+use Illuminate\Support\HtmlString;
 
 class FlightBookingPresentation
 {
@@ -29,8 +29,8 @@ class FlightBookingPresentation
         $html .= '<div class="tw-booking-hero-main">';
         $html .= '<div class="tw-booking-identity">';
         $html .= '<div>';
-        $html .= '<div class="tw-booking-title">' . e($record->booking_ref ?: 'Booking') . '</div>';
-        $html .= '<div class="tw-booking-subtitle">' . e(collect([$queue, $tripLabel, $record->unique_id ?: 'No UniqueID', $record->fare_type ?: 'No fare type'])->implode(' / ')) . '</div>';
+        $html .= '<div class="tw-booking-title">'.e($record->booking_ref ?: 'Booking').'</div>';
+        $html .= '<div class="tw-booking-subtitle">'.e(collect([$queue, $tripLabel, $record->unique_id ?: 'No UniqueID', $record->fare_type ?: 'No fare type'])->implode(' / ')).'</div>';
         $html .= '</div>';
         $html .= '<div class="tw-booking-pill-row">';
         $html .= self::statusPill('Booking', $record->booking_status);
@@ -39,10 +39,10 @@ class FlightBookingPresentation
         $html .= '</div>';
 
         $html .= '<div class="tw-booking-route-board">';
-        $html .= '<div class="tw-booking-airport"><span>From</span><strong>' . e($origin ?: '-') . '</strong><small>' . e(self::value($firstSegment, 'fromCity', '')) . '</small></div>';
+        $html .= '<div class="tw-booking-airport"><span>From</span><strong>'.e($origin ?: '-').'</strong><small>'.e(self::value($firstSegment, 'fromCity', '')).'</small></div>';
         $html .= '<div class="tw-booking-route-line"><span></span></div>';
-        $html .= '<div class="tw-booking-airport is-destination"><span>To</span><strong>' . e($destination ?: '-') . '</strong><small>' . e(self::value($lastSegment, 'toCity', '')) . '</small></div>';
-        $html .= '<div class="tw-booking-route-full">' . e($route ?: '-') . '</div>';
+        $html .= '<div class="tw-booking-airport is-destination"><span>To</span><strong>'.e($destination ?: '-').'</strong><small>'.e(self::value($lastSegment, 'toCity', '')).'</small></div>';
+        $html .= '<div class="tw-booking-route-full">'.e($route ?: '-').'</div>';
         $html .= '</div>';
 
         $html .= '<div class="tw-booking-hero-facts">';
@@ -51,8 +51,8 @@ class FlightBookingPresentation
             $html .= self::heroFact('Service charge', self::money($record->markup_amount, $record->currency));
         }
         $html .= self::heroFact('Airline', $record->airline ?: 'Unknown airline');
-        $html .= self::heroFact('Passengers', $passengers . ' passenger' . ($passengers === 1 ? '' : 's'));
-        $html .= self::heroFact('Legs', $legsCount . ' leg' . ($legsCount === 1 ? '' : 's'));
+        $html .= self::heroFact('Passengers', $passengers.' passenger'.($passengers === 1 ? '' : 's'));
+        $html .= self::heroFact('Legs', $legsCount.' leg'.($legsCount === 1 ? '' : 's'));
         $html .= '</div>';
         $html .= '</div>';
 
@@ -107,8 +107,8 @@ class FlightBookingPresentation
             $html .= '<div class="tw-passenger-card">';
             $html .= '<div class="tw-passenger-head">';
             $html .= '<div>';
-            $html .= '<div class="tw-passenger-name">' . e($name ?: 'Passenger ' . ($index + 1)) . '</div>';
-            $html .= '<div class="tw-passenger-type">' . e(self::value($passenger, 'type', 'Passenger')) . '</div>';
+            $html .= '<div class="tw-passenger-name">'.e($name ?: 'Passenger '.($index + 1)).'</div>';
+            $html .= '<div class="tw-passenger-type">'.e(self::value($passenger, 'type', 'Passenger')).'</div>';
             $html .= '</div>';
             $html .= self::badge(self::value($passenger, 'gender', '-'));
             $html .= '</div>';
@@ -134,7 +134,7 @@ class FlightBookingPresentation
             $html .= '</div>';
         }
 
-        return new HtmlString($html . '</div>');
+        return new HtmlString($html.'</div>');
     }
 
     public static function flight(mixed $payload): HtmlString
@@ -152,12 +152,12 @@ class FlightBookingPresentation
         $html .= '<div class="tw-flight-brand">';
 
         if ($logo = self::value($flight, 'airlineLogo')) {
-            $html .= '<img class="tw-flight-logo" src="' . e($logo) . '" alt="">';
+            $html .= '<img class="tw-flight-logo" src="'.e($logo).'" alt="">';
         }
 
         $html .= '<div class="tw-flight-brand-copy">';
-        $html .= '<div class="tw-flight-name">' . e(self::value($flight, 'airline', 'Unknown airline')) . '</div>';
-        $html .= '<div class="tw-flight-sub">' . e(collect([self::value($flight, 'airlineCode'), self::value($flight, 'validatingCode')])->filter()->implode(' / ') ?: '-') . '</div>';
+        $html .= '<div class="tw-flight-name">'.e(self::value($flight, 'airline', 'Unknown airline')).'</div>';
+        $html .= '<div class="tw-flight-sub">'.e(collect([self::value($flight, 'airlineCode'), self::value($flight, 'validatingCode')])->filter()->implode(' / ') ?: '-').'</div>';
         $html .= '</div></div>';
         $html .= '<div class="tw-flight-facts">';
         $html .= self::miniFact('Fare', self::value($flight, 'fareType', '-'));
@@ -184,13 +184,13 @@ class FlightBookingPresentation
                 $html .= '<section class="tw-detail-leg">';
                 $html .= '<header class="tw-detail-leg-head">';
                 $html .= '<div>';
-                $html .= '<div class="tw-detail-leg-label">' . e($group['label'] ?? 'Leg ' . ($groupIndex + 1)) . '</div>';
-                $html .= '<div class="tw-detail-leg-route">' . e($route ?: '-') . '</div>';
+                $html .= '<div class="tw-detail-leg-label">'.e($group['label'] ?? 'Leg '.($groupIndex + 1)).'</div>';
+                $html .= '<div class="tw-detail-leg-route">'.e($route ?: '-').'</div>';
                 $html .= '</div>';
                 $html .= '<div class="tw-detail-leg-meta">';
-                $html .= '<span>' . e($stops === 0 ? 'Non stop' : $stops . ' stop' . ($stops === 1 ? '' : 's')) . '</span>';
+                $html .= '<span>'.e($stops === 0 ? 'Non stop' : $stops.' stop'.($stops === 1 ? '' : 's')).'</span>';
                 if (filled($duration)) {
-                    $html .= '<span>' . e($duration) . '</span>';
+                    $html .= '<span>'.e($duration).'</span>';
                 }
                 $html .= '</div>';
                 $html .= '</header>';
@@ -207,16 +207,16 @@ class FlightBookingPresentation
                     }
 
                     $html .= '<div class="tw-detail-segment">';
-                    $html .= '<span class="tw-detail-segment-index">' . e((string) ($index + 1)) . '</span>';
+                    $html .= '<span class="tw-detail-segment-index">'.e((string) ($index + 1)).'</span>';
                     $html .= '<div class="tw-detail-segment-main">';
-                    $html .= '<div class="tw-detail-segment-title">' . e(self::segmentFlightLabel($segment, $flight)) . '</div>';
-                    $html .= '<div class="tw-detail-segment-sub">' . e(collect([
-                        self::segmentDateTime($segment, 'depart') . ' -> ' . self::segmentDateTime($segment, 'arrive'),
+                    $html .= '<div class="tw-detail-segment-title">'.e(self::segmentFlightLabel($segment, $flight)).'</div>';
+                    $html .= '<div class="tw-detail-segment-sub">'.e(collect([
+                        self::segmentDateTime($segment, 'depart').' -> '.self::segmentDateTime($segment, 'arrive'),
                         self::segmentDurationLabel($segment),
                         self::cabinText($segment, $flight),
-                    ])->filter(fn ($value): bool => filled(trim((string) $value, ' ->')))->implode(' | ')) . '</div>';
+                    ])->filter(fn ($value): bool => filled(trim((string) $value, ' ->')))->implode(' | ')).'</div>';
                     $html .= '</div>';
-                    $html .= '<div class="tw-detail-segment-route">' . e(self::routeFromSegments([$segment])) . '</div>';
+                    $html .= '<div class="tw-detail-segment-route">'.e(self::routeFromSegments([$segment])).'</div>';
                     $html .= '</div>';
                 }
 
@@ -227,7 +227,7 @@ class FlightBookingPresentation
             $html .= '</div>';
         }
 
-        return new HtmlString($html . '</div>');
+        return new HtmlString($html.'</div>');
     }
 
     public static function extras(mixed $payload): HtmlString
@@ -251,14 +251,14 @@ class FlightBookingPresentation
             $items = is_array($items) ? $items : [];
 
             $html .= '<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
-            $html .= '<div class="mb-3 text-sm font-semibold text-gray-950 dark:text-white">' . e($label) . '</div>';
+            $html .= '<div class="mb-3 text-sm font-semibold text-gray-950 dark:text-white">'.e($label).'</div>';
             $html .= $items === []
-                ? '<div class="text-sm text-gray-500 dark:text-gray-400">No ' . e(strtolower($label)) . ' selected.</div>'
+                ? '<div class="text-sm text-gray-500 dark:text-gray-400">No '.e(strtolower($label)).' selected.</div>'
                 : self::tableFromItems($items);
             $html .= '</div>';
         }
 
-        return new HtmlString($html . '</div>');
+        return new HtmlString($html.'</div>');
     }
 
     public static function apiResponse(mixed $payload, string $emptyMessage): HtmlString
@@ -281,7 +281,7 @@ class FlightBookingPresentation
 
         $html .= '<details class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
         $html .= '<summary class="cursor-pointer text-sm font-semibold text-gray-950 dark:text-white">Full structured response</summary>';
-        $html .= '<div class="mt-4">' . self::tree($response) . '</div>';
+        $html .= '<div class="mt-4">'.self::tree($response).'</div>';
         $html .= '</details>';
         $html .= '</div>';
 
@@ -312,7 +312,7 @@ class FlightBookingPresentation
         $html .= '</div>';
         $html .= '<details class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
         $html .= '<summary class="cursor-pointer text-sm font-semibold text-gray-950 dark:text-white">Full response</summary>';
-        $html .= '<div class="mt-4">' . self::tree($payload) . '</div>';
+        $html .= '<div class="mt-4">'.self::tree($payload).'</div>';
         $html .= '</details>';
         $html .= '</div>';
 
@@ -331,8 +331,8 @@ class FlightBookingPresentation
             $html .= '<div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900">';
             $html .= '<div class="mb-3 flex flex-wrap items-start justify-between gap-3">';
             $html .= '<div>';
-            $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">' . e(str((string) $record->action)->headline()) . '</div>';
-            $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">' . e(self::watDateTime($record->created_at)) . '</div>';
+            $html .= '<div class="text-sm font-semibold text-gray-950 dark:text-white">'.e(str((string) $record->action)->headline()).'</div>';
+            $html .= '<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">'.e(self::watDateTime($record->created_at)).'</div>';
             $html .= '</div>';
             $html .= self::badge($record->new_payment_status ?: '-');
             $html .= '</div>';
@@ -347,7 +347,7 @@ class FlightBookingPresentation
             $html .= '</div>';
         }
 
-        return new HtmlString($html . '</div>');
+        return new HtmlString($html.'</div>');
     }
 
     public static function ticketingHistory(Collection $records): HtmlString
@@ -364,13 +364,13 @@ class FlightBookingPresentation
                 self::watDateTime($record->created_at),
                 $record->ticket_status ?: $record->new_booking_status ?: '-',
                 [
-                'Performed by' => $record->performer?->name ?: 'System',
-                'Previous status' => $record->previous_booking_status,
-                'New status' => $record->new_booking_status,
-                'Ticket status' => $record->ticket_status,
-                'Airline PNR' => $record->airline_pnr,
-                'UniqueID' => $record->unique_id,
-                'Message' => $record->message,
+                    'Performed by' => $record->performer?->name ?: 'System',
+                    'Previous status' => $record->previous_booking_status,
+                    'New status' => $record->new_booking_status,
+                    'Ticket status' => $record->ticket_status,
+                    'Airline PNR' => $record->airline_pnr,
+                    'UniqueID' => $record->unique_id,
+                    'Message' => $record->message,
                 ],
             ),
         );
@@ -448,7 +448,7 @@ class FlightBookingPresentation
             $html .= '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Passengers</div>';
             $html .= self::tableFromItems(collect($passengers)->map(fn ($passenger): array => is_array($passenger) ? [
                 'Type' => $passenger['type'] ?? '-',
-                'Name' => trim(($passenger['title'] ?? '') . ' ' . ($passenger['firstName'] ?? '') . ' ' . ($passenger['lastName'] ?? '')),
+                'Name' => trim(($passenger['title'] ?? '').' '.($passenger['firstName'] ?? '').' '.($passenger['lastName'] ?? '')),
                 'E-ticket' => $passenger['eTicket'] ?? '-',
             ] : [])->all());
             $html .= '</div>';
@@ -464,7 +464,7 @@ class FlightBookingPresentation
                 'Depart' => self::watDateTime($segment['departDT'] ?? ($segment['departureDate'] ?? null), 'D, d M Y H:i'),
                 'Arrive' => self::watDateTime($segment['arriveDT'] ?? null, 'D, d M Y H:i'),
                 'Cabin' => $segment['cabin'] ?? ($segment['cabinPreference'] ?? '-'),
-                'Flight' => trim(($segment['airlineCode'] ?? '') . ' ' . ($segment['flightNumber'] ?? ($segment['flightNo'] ?? ''))),
+                'Flight' => trim(($segment['airlineCode'] ?? '').' '.($segment['flightNumber'] ?? ($segment['flightNo'] ?? ''))),
             ] : [])->all());
             $html .= '</div>';
         }
@@ -478,12 +478,12 @@ class FlightBookingPresentation
                 'To' => $segment['airportDestinationCode'] ?? '-',
                 'Date' => $segment['departureDate'] ?? '-',
                 'Cabin' => $segment['cabinPreference'] ?? '-',
-                'Flight' => trim(($segment['airlineCode'] ?? '') . ' ' . ($segment['flightNumber'] ?? '')),
+                'Flight' => trim(($segment['airlineCode'] ?? '').' '.($segment['flightNumber'] ?? '')),
             ] : [])->all());
             $html .= '</div>';
         }
 
-        return $html . '</div>';
+        return $html.'</div>';
     }
 
     private static function postTicketingResponsePanel(array $payload, string $operationType): string
@@ -519,7 +519,7 @@ class FlightBookingPresentation
 
                     $voidRows[] = [
                         'Type' => $item['PassengerType'] ?? $item['type'] ?? '-',
-                        'Name' => trim(($item['Title'] ?? $item['title'] ?? '') . ' ' . ($item['FirstName'] ?? $item['firstName'] ?? '') . ' ' . ($item['LastName'] ?? $item['lastName'] ?? '')),
+                        'Name' => trim(($item['Title'] ?? $item['title'] ?? '').' '.($item['FirstName'] ?? $item['firstName'] ?? '').' '.($item['LastName'] ?? $item['lastName'] ?? '')),
                         'E-ticket' => $item['ETicket'] ?? $item['eTicket'] ?? '-',
                         'Admin charge' => self::moneyNode($item['AdminCharges'] ?? null),
                         'GST' => self::moneyNode($item['GSTCharge'] ?? $item['GSTCharges'] ?? null),
@@ -534,9 +534,9 @@ class FlightBookingPresentation
             return '';
         }
 
-        return '<div class="mt-4">' .
-            '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Void fees and refund</div>' .
-            self::tableFromItems($voidRows) .
+        return '<div class="mt-4">'.
+            '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Void fees and refund</div>'.
+            self::tableFromItems($voidRows).
             '</div>';
     }
 
@@ -553,7 +553,7 @@ class FlightBookingPresentation
                 $fares = $item['QuotedFares'];
                 $refundRows[] = [
                     'Type' => $item['PassengerType'] ?? $item['type'] ?? '-',
-                    'Name' => trim(($item['Title'] ?? $item['title'] ?? '') . ' ' . ($item['FirstName'] ?? $item['firstName'] ?? '') . ' ' . ($item['LastName'] ?? $item['lastName'] ?? '')),
+                    'Name' => trim(($item['Title'] ?? $item['title'] ?? '').' '.($item['FirstName'] ?? $item['firstName'] ?? '').' '.($item['LastName'] ?? $item['lastName'] ?? '')),
                     'E-ticket' => $item['ETicket'] ?? $item['eTicket'] ?? '-',
                     'Total fare' => self::moneyNode($fares['TotalFare'] ?? null),
                     'Unused fare' => self::moneyNode($fares['UnusedFare'] ?? null),
@@ -571,9 +571,9 @@ class FlightBookingPresentation
             return '';
         }
 
-        return '<div class="mt-4">' .
-            '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Refund quote amounts</div>' .
-            self::tableFromItems($refundRows) .
+        return '<div class="mt-4">'.
+            '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Refund quote amounts</div>'.
+            self::tableFromItems($refundRows).
             '</div>';
     }
 
@@ -636,30 +636,30 @@ class FlightBookingPresentation
         }
 
         if ($segmentRows === [] && $fareRows === [] && self::isReissueQuotePending($payload)) {
-            return '<div class="mt-4 rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-800 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-200">' .
-                '<div class="font-semibold">' . e('Reissue quote pricing is still processing.') . '</div>' .
-                '<div class="mt-1">' . e('Flightslogic returned a PTR reference but no fare amounts yet. Run PTR Status for this quote PTR after the processing time; once completed, the fare differences will show here.') . '</div>' .
+            return '<div class="mt-4 rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-800 dark:border-warning-500/30 dark:bg-warning-500/10 dark:text-warning-200">'.
+                '<div class="font-semibold">'.e('Reissue quote pricing is still processing.').'</div>'.
+                '<div class="mt-1">'.e('Flightslogic returned a PTR reference but no fare amounts yet. Run PTR Status for this quote PTR after the processing time; once completed, the fare differences will show here.').'</div>'.
                 '</div>';
         }
 
         if ($totalRows !== []) {
-            $html .= '<div class="mt-4">' .
-                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue quote price summary</div>' .
-                self::tableFromItems($totalRows) .
+            $html .= '<div class="mt-4">'.
+                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue quote price summary</div>'.
+                self::tableFromItems($totalRows).
                 '</div>';
         }
 
         if ($segmentRows !== []) {
-            $html .= '<div class="mt-4">' .
-                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue quote segments</div>' .
-                self::tableFromItems($segmentRows) .
+            $html .= '<div class="mt-4">'.
+                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue quote segments</div>'.
+                self::tableFromItems($segmentRows).
                 '</div>';
         }
 
         if ($fareRows !== []) {
-            $html .= '<div class="mt-4">' .
-                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue quote fare differences</div>' .
-                self::tableFromItems($fareRows) .
+            $html .= '<div class="mt-4">'.
+                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue quote fare differences</div>'.
+                self::tableFromItems($fareRows).
                 '</div>';
         }
 
@@ -718,7 +718,7 @@ class FlightBookingPresentation
             $html .= '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">PTR passengers</div>';
             $html .= self::tableFromItems(collect($passengers)->map(fn ($passenger): array => is_array($passenger) ? [
                 'Type' => $passenger['PassengerType'] ?? $passenger['type'] ?? '-',
-                'Name' => trim(($passenger['Title'] ?? $passenger['title'] ?? '') . ' ' . ($passenger['FirstName'] ?? $passenger['firstName'] ?? '') . ' ' . ($passenger['LastName'] ?? $passenger['lastName'] ?? '')),
+                'Name' => trim(($passenger['Title'] ?? $passenger['title'] ?? '').' '.($passenger['FirstName'] ?? $passenger['firstName'] ?? '').' '.($passenger['LastName'] ?? $passenger['lastName'] ?? '')),
                 'E-ticket' => $passenger['ETicket'] ?? $passenger['eTicket'] ?? '-',
             ] : [])->all());
             $html .= '</div>';
@@ -742,7 +742,7 @@ class FlightBookingPresentation
             }
         }
 
-        return $html . '</div>';
+        return $html.'</div>';
     }
 
     private static function ptrDetailsFromPayload(array $payload): array
@@ -776,7 +776,7 @@ class FlightBookingPresentation
             }
 
             $rows[] = [
-                'Passenger' => trim(($passenger['Title'] ?? '') . ' ' . ($passenger['FirstName'] ?? '') . ' ' . ($passenger['LastName'] ?? '')),
+                'Passenger' => trim(($passenger['Title'] ?? '').' '.($passenger['FirstName'] ?? '').' '.($passenger['LastName'] ?? '')),
                 'E-ticket' => $passenger['ETicket'] ?? '-',
                 'Total fare' => self::moneyNode($fare['TotalFare'] ?? null),
                 'Unused fare' => self::moneyNode($fare['UnusedFare'] ?? null),
@@ -791,9 +791,9 @@ class FlightBookingPresentation
             return '';
         }
 
-        return '<div class="mt-3">' .
-            '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Refund quote fare breakdown</div>' .
-            self::tableFromItems($rows) .
+        return '<div class="mt-3">'.
+            '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Refund quote fare breakdown</div>'.
+            self::tableFromItems($rows).
             '</div>';
     }
 
@@ -847,16 +847,16 @@ class FlightBookingPresentation
         $html = '';
 
         if ($segmentRows !== []) {
-            $html .= '<div class="mt-3">' .
-                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue preference segments</div>' .
-                self::tableFromItems($segmentRows) .
+            $html .= '<div class="mt-3">'.
+                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue preference segments</div>'.
+                self::tableFromItems($segmentRows).
                 '</div>';
         }
 
         if ($fareRows !== []) {
-            $html .= '<div class="mt-3">' .
-                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue fare differences</div>' .
-                self::tableFromItems($fareRows) .
+            $html .= '<div class="mt-3">'.
+                '<div class="mb-2 text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Reissue fare differences</div>'.
+                self::tableFromItems($fareRows).
                 '</div>';
         }
 
@@ -915,7 +915,7 @@ class FlightBookingPresentation
 
             $last = (string) str($path)->afterLast('.');
 
-            if (in_array($last, ['user_password'], true)) {
+            if (in_array($last, ['user_id', 'user_password', 'access', 'ip_address'], true)) {
                 continue;
             }
 
@@ -999,7 +999,7 @@ class FlightBookingPresentation
         $html .= '<div class="tw-ticket-card-head">';
         $html .= '<div>';
         $html .= '<div class="tw-ticket-kicker">Ticket status</div>';
-        $html .= '<div class="tw-ticket-title">' . e($ticketed ? 'Ticketed' : self::label($record->booking_status ?? null)) . '</div>';
+        $html .= '<div class="tw-ticket-title">'.e($ticketed ? 'Ticketed' : self::label($record->booking_status ?? null)).'</div>';
         $html .= '</div>';
         $html .= self::statusPill('Booking', $record->booking_status ?? null);
         $html .= '</div>';
@@ -1029,13 +1029,13 @@ class FlightBookingPresentation
 
         $html = '<div class="tw-history-feed">';
         $html .= '<div class="tw-history-latest">';
-        $html .= '<div class="tw-history-section-label">Latest ' . e($type) . '</div>';
+        $html .= '<div class="tw-history-section-label">Latest '.e($type).'</div>';
         $html .= $renderer($latest);
         $html .= '</div>';
 
         if ($older->isNotEmpty()) {
             $html .= '<details class="tw-history-more">';
-            $html .= '<summary><span>Show previous ' . e((string) $older->count()) . '</span><small>History</small></summary>';
+            $html .= '<summary><span>Show previous '.e((string) $older->count()).'</span><small>History</small></summary>';
             $html .= '<div class="tw-history-stack">';
 
             foreach ($older as $record) {
@@ -1055,16 +1055,16 @@ class FlightBookingPresentation
         $html = '<article class="tw-history-item">';
         $html .= '<header class="tw-history-item-head">';
         $html .= '<div>';
-        $html .= '<div class="tw-history-title">' . e($title) . '</div>';
-        $html .= '<div class="tw-history-date">' . e($date) . '</div>';
+        $html .= '<div class="tw-history-title">'.e($title).'</div>';
+        $html .= '<div class="tw-history-date">'.e($date).'</div>';
         $html .= '</div>';
         $html .= self::badge($badge);
         $html .= '</header>';
 
         if ($body !== null) {
-            $html .= '<div class="tw-history-body">' . $body . '</div>';
+            $html .= '<div class="tw-history-body">'.$body.'</div>';
         } elseif ($details !== []) {
-            $html .= '<div class="tw-history-body">' . self::definitionGrid($details) . '</div>';
+            $html .= '<div class="tw-history-body">'.self::definitionGrid($details).'</div>';
         }
 
         $html .= '</article>';
@@ -1074,15 +1074,15 @@ class FlightBookingPresentation
 
     private static function ticketStep(string $label, bool $complete, string $value): string
     {
-        return '<div class="tw-ticket-step ' . ($complete ? 'is-complete' : '') . '">' .
-            '<span></span>' .
-            '<div><strong>' . e($label) . '</strong><small>' . e($value ?: '-') . '</small></div>' .
+        return '<div class="tw-ticket-step '.($complete ? 'is-complete' : '').'">'.
+            '<span></span>'.
+            '<div><strong>'.e($label).'</strong><small>'.e($value ?: '-').'</small></div>'.
             '</div>';
     }
 
     private static function ticketMetric(string $label, string $value): string
     {
-        return '<div class="tw-ticket-metric"><span>' . e($label) . '</span><strong>' . e($value ?: '-') . '</strong></div>';
+        return '<div class="tw-ticket-metric"><span>'.e($label).'</span><strong>'.e($value ?: '-').'</strong></div>';
     }
 
     private static function heroLegPreview(array $group): string
@@ -1101,22 +1101,22 @@ class FlightBookingPresentation
         $date = self::segmentDateTime($first, 'depart');
         $stops = max(0, count($segments) - 1);
         $flights = collect($segments)
-            ->map(fn (array $segment): string => trim((string) (self::value($segment, 'flightNo') ?: trim((string) self::value($segment, 'airlineCode') . ' ' . (string) self::value($segment, 'flightNumber')))))
+            ->map(fn (array $segment): string => trim((string) (self::value($segment, 'flightNo') ?: trim((string) self::value($segment, 'airlineCode').' '.(string) self::value($segment, 'flightNumber')))))
             ->filter()
             ->unique()
             ->implode(', ');
 
         $html = '<div class="tw-booking-leg">';
         $html .= '<div class="tw-booking-leg-head">';
-        $html .= '<span>' . e($group['label'] ?? 'Leg') . '</span>';
-        $html .= '<strong>' . e($route ?: '-') . '</strong>';
+        $html .= '<span>'.e($group['label'] ?? 'Leg').'</span>';
+        $html .= '<strong>'.e($route ?: '-').'</strong>';
         $html .= '</div>';
         $html .= '<div class="tw-booking-leg-meta">';
-        $html .= '<span>' . e($date ?: '-') . '</span>';
-        $html .= '<span>' . e($stops === 0 ? 'Non stop' : $stops . ' stop' . ($stops === 1 ? '' : 's')) . '</span>';
+        $html .= '<span>'.e($date ?: '-').'</span>';
+        $html .= '<span>'.e($stops === 0 ? 'Non stop' : $stops.' stop'.($stops === 1 ? '' : 's')).'</span>';
 
         if (filled($flights)) {
-            $html .= '<span>' . e($flights) . '</span>';
+            $html .= '<span>'.e($flights).'</span>';
         }
 
         $html .= '</div>';
@@ -1127,7 +1127,7 @@ class FlightBookingPresentation
 
     private static function heroFact(string $label, string $value): string
     {
-        return '<div class="tw-booking-fact"><span>' . e($label) . '</span><strong>' . e($value ?: '-') . '</strong></div>';
+        return '<div class="tw-booking-fact"><span>'.e($label).'</span><strong>'.e($value ?: '-').'</strong></div>';
     }
 
     private static function itineraryGroups(array $flight): array
@@ -1139,7 +1139,7 @@ class FlightBookingPresentation
         if ($multiLegs->isNotEmpty()) {
             return $multiLegs
                 ->map(fn (array $leg, int $index): array => [
-                    'label' => $leg['label'] ?? 'Leg ' . ($index + 1),
+                    'label' => $leg['label'] ?? 'Leg '.($index + 1),
                     'segments' => array_values($leg['segments'] ?? []),
                 ])
                 ->all();
@@ -1190,36 +1190,36 @@ class FlightBookingPresentation
         $first = $segments[0];
         $last = $segments[array_key_last($segments)];
 
-        return trim((self::value($first, 'from', self::value($first, 'airportOriginCode', '')) ?: '-') . ' -> ' . (self::value($last, 'to', self::value($last, 'airportDestinationCode', '')) ?: '-'));
+        return trim((self::value($first, 'from', self::value($first, 'airportOriginCode', '')) ?: '-').' -> '.(self::value($last, 'to', self::value($last, 'airportDestinationCode', '')) ?: '-'));
     }
 
     private static function detailAirportNode(string $label, array $segment, string $prefix, string $timePrefix): string
     {
         $code = self::value($segment, $prefix, self::value($segment, $prefix === 'from' ? 'airportOriginCode' : 'airportDestinationCode'));
-        $city = self::value($segment, $prefix . 'City');
-        $airport = self::value($segment, $prefix . 'Airport');
+        $city = self::value($segment, $prefix.'City');
+        $airport = self::value($segment, $prefix.'Airport');
         $time = self::segmentDateTime($segment, $timePrefix);
 
-        return '<div class="tw-detail-airport">' .
-            '<div class="tw-detail-airport-kicker">' . e($label) . '</div>' .
-            '<div class="tw-detail-airport-code">' . e($code ?: '-') . '</div>' .
-            '<div class="tw-detail-airport-time">' . e($time ?: '-') . '</div>' .
-            '<div class="tw-detail-airport-name">' . e(trim(($city ?: '') . ' ' . ($airport ? '(' . $airport . ')' : ''))) . '</div>' .
+        return '<div class="tw-detail-airport">'.
+            '<div class="tw-detail-airport-kicker">'.e($label).'</div>'.
+            '<div class="tw-detail-airport-code">'.e($code ?: '-').'</div>'.
+            '<div class="tw-detail-airport-time">'.e($time ?: '-').'</div>'.
+            '<div class="tw-detail-airport-name">'.e(trim(($city ?: '').' '.($airport ? '('.$airport.')' : ''))).'</div>'.
             '</div>';
     }
 
     private static function segmentDateTime(array $segment, string $prefix): string
     {
-        $date = self::value($segment, $prefix . 'Date');
-        $time = self::value($segment, $prefix . 'Time');
-        $dateTime = self::value($segment, $prefix . 'DT')
+        $date = self::value($segment, $prefix.'Date');
+        $time = self::value($segment, $prefix.'Time');
+        $dateTime = self::value($segment, $prefix.'DT')
             ?: self::value($segment, $prefix === 'depart' ? 'DepartureDateTime' : 'ArrivalDateTime');
 
         if (filled($dateTime)) {
             return self::watDateTime($dateTime, 'D, d M Y H:i');
         }
 
-        return trim(($date ?: '') . ' ' . ($time ?: ''));
+        return trim(($date ?: '').' '.($time ?: ''));
     }
 
     private static function segmentFlightLabel(array $segment, array $flight = []): string
@@ -1227,9 +1227,9 @@ class FlightBookingPresentation
         $airline = self::value($segment, 'airline', self::value($flight, 'airline', 'Flight'));
         $code = self::value($segment, 'airlineCode', self::value($flight, 'airlineCode'));
         $flightNo = self::value($segment, 'flightNo')
-            ?: trim((string) $code . ' ' . (string) self::value($segment, 'flightNumber'));
+            ?: trim((string) $code.' '.(string) self::value($segment, 'flightNumber'));
 
-        return trim(($airline ?: 'Flight') . ' ' . ($flightNo ?: ''));
+        return trim(($airline ?: 'Flight').' '.($flightNo ?: ''));
     }
 
     private static function cabinText(array $primary, array $fallback = []): string
@@ -1260,7 +1260,7 @@ class FlightBookingPresentation
         if (is_numeric($duration)) {
             $minutes = (int) $duration;
 
-            return trim(floor($minutes / 60) . 'h ' . ($minutes % 60) . 'm');
+            return trim(floor($minutes / 60).'h '.($minutes % 60).'m');
         }
 
         return (string) $duration;
@@ -1276,12 +1276,12 @@ class FlightBookingPresentation
             return '';
         }
 
-        return trim(floor($minutes / 60) . 'h ' . ($minutes % 60) . 'm');
+        return trim(floor($minutes / 60).'h '.($minutes % 60).'m');
     }
 
     private static function miniFact(string $label, mixed $value): string
     {
-        return '<div class="tw-flight-fact"><span>' . e($label) . '</span><strong>' . e(self::scalar($value ?: '-')) . '</strong></div>';
+        return '<div class="tw-flight-fact"><span>'.e($label).'</span><strong>'.e(self::scalar($value ?: '-')).'</strong></div>';
     }
 
     private static function normalize(mixed $payload): mixed
@@ -1316,10 +1316,11 @@ class FlightBookingPresentation
         $flat = [];
 
         foreach ($payload as $key => $value) {
-            $path = $prefix === '' ? (string) $key : $prefix . '.' . $key;
+            $path = $prefix === '' ? (string) $key : $prefix.'.'.$key;
 
             if (is_array($value)) {
                 $flat += self::flatten($value, $path);
+
                 continue;
             }
 
@@ -1349,33 +1350,33 @@ class FlightBookingPresentation
     private static function tree(mixed $value): string
     {
         if (! is_array($value)) {
-            return '<span class="text-sm text-gray-700 dark:text-gray-200">' . e(self::scalar($value)) . '</span>';
+            return '<span class="text-sm text-gray-700 dark:text-gray-200">'.e(self::scalar($value)).'</span>';
         }
 
         $html = '<div class="space-y-2">';
 
         foreach ($value as $key => $child) {
             $html .= '<div class="rounded-md border border-gray-100 bg-gray-50 p-3 dark:border-white/10 dark:bg-white/5">';
-            $html .= '<div class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">' . e((string) $key) . '</div>';
+            $html .= '<div class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">'.e((string) $key).'</div>';
             $html .= self::tree($child);
             $html .= '</div>';
         }
 
-        return $html . '</div>';
+        return $html.'</div>';
     }
 
     private static function airportBlock(string $label, array $segment, string $prefix): string
     {
         $code = self::value($segment, $prefix);
-        $city = self::value($segment, $prefix . 'City');
-        $airport = self::value($segment, $prefix . 'Airport');
-        $country = self::value($segment, $prefix . 'Country');
+        $city = self::value($segment, $prefix.'City');
+        $airport = self::value($segment, $prefix.'Airport');
+        $country = self::value($segment, $prefix.'Country');
 
-        return '<div>' .
-            '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e($label) . '</div>' .
-            '<div class="mt-1 text-lg font-semibold text-gray-950 dark:text-white">' . e($code ?: '-') . '</div>' .
-            '<div class="text-sm text-gray-700 dark:text-gray-200">' . e($city ?: '-') . '</div>' .
-            '<div class="text-xs text-gray-500 dark:text-gray-400">' . e(trim(($airport ?: '') . ', ' . ($country ?: ''), ', ')) . '</div>' .
+        return '<div>'.
+            '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e($label).'</div>'.
+            '<div class="mt-1 text-lg font-semibold text-gray-950 dark:text-white">'.e($code ?: '-').'</div>'.
+            '<div class="text-sm text-gray-700 dark:text-gray-200">'.e($city ?: '-').'</div>'.
+            '<div class="text-xs text-gray-500 dark:text-gray-400">'.e(trim(($airport ?: '').', '.($country ?: ''), ', ')).'</div>'.
             '</div>';
     }
 
@@ -1389,12 +1390,12 @@ class FlightBookingPresentation
             }
 
             $html .= '<div>';
-            $html .= '<dt class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e((string) $label) . '</dt>';
-            $html .= '<dd class="mt-1 break-words text-sm text-gray-950 dark:text-white">' . e(self::scalar($value)) . '</dd>';
+            $html .= '<dt class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e((string) $label).'</dt>';
+            $html .= '<dd class="mt-1 break-words text-sm text-gray-950 dark:text-white">'.e(self::scalar($value)).'</dd>';
             $html .= '</div>';
         }
 
-        return $html . '</dl>';
+        return $html.'</dl>';
     }
 
     private static function detailList(array $items): string
@@ -1407,8 +1408,8 @@ class FlightBookingPresentation
             }
 
             $html .= '<div class="tw-passenger-detail">';
-            $html .= '<dt>' . e((string) $label) . '</dt>';
-            $html .= '<dd>' . e(self::scalar($value)) . '</dd>';
+            $html .= '<dt>'.e((string) $label).'</dt>';
+            $html .= '<dd>'.e(self::scalar($value)).'</dd>';
             $html .= '</div>';
         }
 
@@ -1438,7 +1439,7 @@ class FlightBookingPresentation
         $html .= '<thead><tr>';
 
         foreach ($headers as $header) {
-            $html .= '<th class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">' . e((string) $header) . '</th>';
+            $html .= '<th class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e((string) $header).'</th>';
         }
 
         $html .= '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-white/10">';
@@ -1451,18 +1452,18 @@ class FlightBookingPresentation
             $html .= '<tr>';
 
             foreach ($headers as $header) {
-                $html .= '<td class="px-3 py-2 text-gray-950 dark:text-white">' . e(self::scalar($row[$header] ?? '-')) . '</td>';
+                $html .= '<td class="px-3 py-2 text-gray-950 dark:text-white">'.e(self::scalar($row[$header] ?? '-')).'</td>';
             }
 
             $html .= '</tr>';
         }
 
-        return $html . '</tbody></table></div>';
+        return $html.'</tbody></table></div>';
     }
 
     private static function badge(string $value): string
     {
-        return '<span class="inline-flex rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 dark:bg-white/10 dark:text-gray-200">' . e($value ?: '-') . '</span>';
+        return '<span class="inline-flex rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 dark:bg-white/10 dark:text-gray-200">'.e($value ?: '-').'</span>';
     }
 
     private static function statusPill(string $label, ?string $status): string
@@ -1474,15 +1475,15 @@ class FlightBookingPresentation
             default => 'neutral',
         };
 
-        return '<span class="tw-status-pill tw-status-' . e($tone) . '"><span>' . e($label) . '</span><strong>' . e(self::label($status)) . '</strong></span>';
+        return '<span class="tw-status-pill tw-status-'.e($tone).'"><span>'.e($label).'</span><strong>'.e(self::label($status)).'</strong></span>';
     }
 
     private static function timelineItem(string $label, ?string $value, bool $isComplete): string
     {
-        return '<div class="tw-timeline-item ' . ($isComplete ? 'is-complete' : '') . '">' .
-            '<span class="tw-timeline-dot"></span>' .
-            '<div><div class="tw-timeline-label">' . e($label) . '</div>' .
-            '<div class="tw-timeline-value">' . e($value ?: '-') . '</div></div>' .
+        return '<div class="tw-timeline-item '.($isComplete ? 'is-complete' : '').'">'.
+            '<span class="tw-timeline-dot"></span>'.
+            '<div><div class="tw-timeline-label">'.e($label).'</div>'.
+            '<div class="tw-timeline-value">'.e($value ?: '-').'</div></div>'.
             '</div>';
     }
 
@@ -1518,7 +1519,7 @@ class FlightBookingPresentation
 
     private static function empty(string $message): HtmlString
     {
-        return new HtmlString('<div class="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-white/10 dark:text-gray-400">' . e($message) . '</div>');
+        return new HtmlString('<div class="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500 dark:border-white/10 dark:text-gray-400">'.e($message).'</div>');
     }
 
     private static function value(array $array, string $key, mixed $default = null): mixed
@@ -1532,7 +1533,7 @@ class FlightBookingPresentation
             return '-';
         }
 
-        return trim((string) ($currency ?: '') . ' ' . number_format((float) $amount, 2));
+        return trim((string) ($currency ?: '').' '.number_format((float) $amount, 2));
     }
 
     private static function moneyNode(mixed $value): string
@@ -1603,7 +1604,7 @@ class FlightBookingPresentation
         $value = trim($value);
 
         if (preg_match('/^(\d{4}-\d{2}-\d{2}[T\s]\d{2}):(\d{2})(\d{2})$/', $value, $matches)) {
-            return $matches[1] . ':' . $matches[2] . ':' . $matches[3];
+            return $matches[1].':'.$matches[2].':'.$matches[3];
         }
 
         return $value;

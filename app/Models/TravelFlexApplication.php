@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedJson;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -51,18 +52,18 @@ class TravelFlexApplication extends Model
     ];
 
     protected $casts = [
-        'applicant_details' => 'array',
-        'bvn_metadata' => 'array',
-        'identity_details' => 'array',
-        'employment_details' => 'array',
-        'bank_details' => 'array',
-        'next_of_kin_details' => 'array',
-        'company_details' => 'array',
-        'representative_details' => 'array',
-        'document_paths' => 'array',
+        'applicant_details' => EncryptedJson::class,
+        'bvn_metadata' => EncryptedJson::class,
+        'identity_details' => EncryptedJson::class,
+        'employment_details' => EncryptedJson::class,
+        'bank_details' => EncryptedJson::class,
+        'next_of_kin_details' => EncryptedJson::class,
+        'company_details' => EncryptedJson::class,
+        'representative_details' => EncryptedJson::class,
+        'document_paths' => EncryptedJson::class,
         'generated_application_at' => 'datetime',
-        'agreement_acceptance' => 'array',
-        'repayment_plan' => 'array',
+        'agreement_acceptance' => EncryptedJson::class,
+        'repayment_plan' => EncryptedJson::class,
         'down_payment' => 'decimal:2',
         'grand_total' => 'decimal:2',
         'total_interest' => 'decimal:2',

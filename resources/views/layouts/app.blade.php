@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="travelwheel-airports-url" content="{{ asset('assets/data/airports.json') }}">
     <title>{{ $title ?? 'TravelWheel - Air Transport' }}</title>
     
     <!-- Fonts -->
@@ -18,8 +19,8 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Compiled Tailwind CSS -->
+    @vite('resources/css/app.css')
 
     <link rel="stylesheet" href="{{ asset('bootstrap-5.0.2/dist/css/bootstrap.min.css') }}">
     <script src="{{ asset('bootstrap-5.0.2/dist/js/bootstrap.bundle.min.js') }}"></script>
@@ -122,7 +123,7 @@
     </script>
 
     
-    <script src="{{ asset('js/flight-widget.js') }}"></script>
+    <script src="{{ asset('js/flight-widget.js') }}?v={{ filemtime(public_path('js/flight-widget.js')) }}"></script>
     @stack('scripts')
 
 </body>

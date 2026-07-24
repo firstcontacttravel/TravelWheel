@@ -99,6 +99,17 @@
     }
     .tfa-textarea { height: auto; padding: 10px 12px; resize: vertical; min-height: 80px; }
     .tfa-input:focus, .tfa-select:focus, .tfa-textarea:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,.1); }
+    .tfa-place-autocomplete {
+        display: block;
+        width: 100%;
+        min-height: 44px;
+        color-scheme: light;
+        font-family: var(--font);
+        font-size: 14px;
+        --gmpx-color-surface: var(--gray-50);
+        --gmpx-color-on-surface: var(--gray-900);
+    }
+    .tfa-client-error { display: block; }
     .tfa-input[readonly] { background: #eef2f7; color: var(--gray-500); cursor: not-allowed; }
     .tfa-input.error, .tfa-select.error, .tfa-textarea.error { border-color: var(--red); }
     .tfa-error { font-size: 11px; color: var(--red); margin-top: 2px; }
@@ -482,22 +493,22 @@
         @csrf
 
         <div class="tfa-wizard" aria-label="Application steps">
-            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 1 }" @click="step = 1">
+            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 1 }" @click="step = window.travelFlexNavigate(step, 1, applicantType)">
                 <strong>1. Applicant</strong><span>Basic applicant and contact details</span>
             </button>
-            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 2 }" @click="step = 2">
+            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 2 }" @click="step = window.travelFlexNavigate(step, 2, applicantType)">
                 <strong>2. Profile</strong><span>Employment, banking and next of kin</span>
             </button>
-            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 3 }" @click="step = 3">
+            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 3 }" @click="step = window.travelFlexNavigate(step, 3, applicantType)">
                 <strong>3. Documents</strong><span>Upload required supporting files</span>
             </button>
-            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 4 }" @click="step = 4">
+            <button type="button" class="tfa-wizard-step" :class="{ 'is-active': step === 4 }" @click="step = window.travelFlexNavigate(step, 4, applicantType)">
                 <strong>4. Agreement</strong><span>Review declaration and submit</span>
             </button>
         </div>
 
         <div class="tfa-step-help">
-            Complete one section at a time. You can move between sections before submitting, and the final submit button only appears on the agreement step.
+            Complete each section before continuing. You can return to an earlier section at any time, and the final submit button only appears on the agreement step.
         </div>
 
         <div class="tfa-card" x-show="step === 1" x-cloak>
@@ -947,7 +958,7 @@
             <button type="button" class="tfa-btn-ghost" x-show="step > 1" @click="step = Math.max(1, step - 1)">
                 Previous section
             </button>
-            <button type="button" class="tfa-btn-primary" x-show="step < 4" @click="step = Math.min(4, step + 1)">
+            <button type="button" class="tfa-btn-primary" x-show="step < 4" @click="step = window.travelFlexNavigate(step, step + 1, applicantType)">
                 Continue
             </button>
             <button type="submit" class="tfa-btn-primary" id="tfa-submit" x-show="step === 4" x-cloak>
@@ -973,6 +984,186 @@
             input.closest('.tfa-file-wrap')?.classList.remove('has-file');
         }
     }
+
+    const travelFlexStepFields = {
+        1: [
+            'applicant_type', 'title', 'surname', 'first_name', 'home_address', 'email',
+            'phone_primary', 'bvn', 'nin', 'marital_status', 'gender', 'date_of_birth',
+            'passport_number', 'passport_expiry_date', 'government_id_type',
+        ],
+        2: [
+            'employer_name', 'occupation', 'employer_address', 'job_description', 'office_id',
+            'sector', 'monthly_salary', 'salary_account_number', 'bank_name',
+            'next_of_kin_surname', 'next_of_kin_first_name', 'next_of_kin_relationship',
+            'next_of_kin_date_of_birth', 'next_of_kin_gender', 'next_of_kin_title',
+            'next_of_kin_address', 'next_of_kin_phone_primary', 'next_of_kin_email',
+        ],
+        4: [
+            'fast_credit_agreement', 'digital_signature', 'witness_full_name',
+            'witness_declaration',
+        ],
+    };
+    const travelFlexIndividualDocuments = [
+        'valid_id', 'passport_photo', 'work_id_card', 'employment_letter', 'bank_statements',
+    ];
+    const travelFlexCompanyDocuments = [
+        'representative_valid_id', 'cac_status_report', 'share_certificate', 'memart',
+        'register_of_members', 'shareholders_agreement', 'return_of_allotment',
+    ];
+
+    function travelFlexNamedFields(name) {
+        return Array.from(document.querySelectorAll('#tfa-form [name="' + name + '"]'));
+    }
+
+    function clearTravelFlexClientError(field) {
+        const container = field?.closest?.('.tfa-field');
+        container?.querySelector('.tfa-client-error')?.remove();
+        field?.classList?.remove('error');
+        field?.closest?.('.tfa-file-wrap')?.classList.remove('border-red-400');
+    }
+
+    function showTravelFlexClientError(field, message) {
+        const container = field?.closest?.('.tfa-field');
+        if (!container) return;
+
+        clearTravelFlexClientError(field);
+        const error = document.createElement('span');
+        error.className = 'tfa-error tfa-client-error';
+        error.textContent = message;
+        container.appendChild(error);
+        field.classList?.add('error');
+        field.closest?.('.tfa-file-wrap')?.classList.add('border-red-400');
+    }
+
+    function syncTravelFlexRequirements(applicantType) {
+        const allRequiredNames = Object.values(travelFlexStepFields).flat();
+        allRequiredNames.forEach(function(name) {
+            travelFlexNamedFields(name).forEach(function(field) {
+                field.required = field.dataset.googleReady !== '1';
+            });
+        });
+        [...travelFlexIndividualDocuments, ...travelFlexCompanyDocuments].forEach(function(name) {
+            travelFlexNamedFields(name).forEach(clearTravelFlexClientError);
+        });
+
+        const sector = document.querySelector('#tfa-form select[name="sector"]');
+        const ippis = document.querySelector('#tfa-form input[name="ippis_number"]');
+        if (ippis) {
+            ippis.required = applicantType !== 'company' && sector?.value === 'public';
+        }
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const localDate = function(date) {
+            return new Date(date.getTime() - (date.getTimezoneOffset() * 60000))
+                .toISOString()
+                .slice(0, 10);
+        };
+
+        ['date_of_birth', 'next_of_kin_date_of_birth'].forEach(function(name) {
+            const field = document.querySelector('#tfa-form [name="' + name + '"]');
+            if (field) field.max = localDate(yesterday);
+        });
+        const passportExpiry = document.querySelector('#tfa-form [name="passport_expiry_date"]');
+        if (passportExpiry) passportExpiry.min = localDate(tomorrow);
+
+        ['bvn', 'nin'].forEach(function(name) {
+            const field = document.querySelector('#tfa-form [name="' + name + '"]');
+            if (field) {
+                field.pattern = '[0-9]{11}';
+                field.title = name.toUpperCase() + ' must be exactly 11 digits.';
+            }
+        });
+    }
+
+    function validateTravelFlexNamedFields(names) {
+        for (const name of names) {
+            const fields = travelFlexNamedFields(name);
+            const googleSource = fields.find(function(field) {
+                return field.dataset.googleReady === '1';
+            });
+
+            if (googleSource) {
+                if (!googleSource.value.trim()) {
+                    showTravelFlexClientError(googleSource, 'Please enter this address before continuing.');
+                    googleSource._placeAutocomplete?.focus();
+                    googleSource.closest('.tfa-field')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return false;
+                }
+                clearTravelFlexClientError(googleSource);
+                continue;
+            }
+
+            const enabledFields = fields.filter(function(field) {
+                return !field.disabled && field.type !== 'hidden';
+            });
+            const firstInvalid = enabledFields.find(function(field) {
+                return !field.checkValidity();
+            });
+
+            if (firstInvalid) {
+                firstInvalid.reportValidity();
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function validateTravelFlexDocuments(applicantType) {
+        const requiredDocuments = applicantType === 'company'
+            ? travelFlexCompanyDocuments
+            : travelFlexIndividualDocuments;
+
+        for (const name of requiredDocuments) {
+            const input = document.getElementById(name);
+            if (input?.files?.length) {
+                clearTravelFlexClientError(input);
+                continue;
+            }
+
+            showTravelFlexClientError(input, 'Please upload this required document before continuing.');
+            input?.closest('.tfa-field')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+
+        return true;
+    }
+
+    function validateTravelFlexStep(step, applicantType) {
+        syncTravelFlexRequirements(applicantType);
+
+        if (step === 3) {
+            return validateTravelFlexDocuments(applicantType);
+        }
+
+        const names = [...(travelFlexStepFields[step] || [])];
+        const sector = document.querySelector('#tfa-form select[name="sector"]');
+        if (step === 2 && applicantType !== 'company' && sector?.value === 'public') {
+            names.push('ippis_number');
+        }
+
+        return validateTravelFlexNamedFields(names);
+    }
+
+    window.travelFlexNavigate = function(currentStep, requestedStep, applicantType) {
+        const current = Number(currentStep);
+        const requested = Math.max(1, Math.min(4, Number(requestedStep)));
+
+        if (requested <= current) {
+            return requested;
+        }
+
+        if (!validateTravelFlexStep(current, applicantType)) {
+            return current;
+        }
+
+        return Math.min(requested, current + 1);
+    };
+
     const signatureCanvas = document.getElementById('tfa-signature-pad');
     const signatureInput = document.getElementById('tfa-signature-image');
     const signatureError = document.getElementById('tfa-signature-error');
@@ -1000,45 +1191,83 @@
         signatureContext.lineJoin = 'round';
         signatureContext.strokeStyle = '#101828';
     }
-    window.initTravelFlexAddressAutocomplete = function() {
-        if (!window.google?.maps?.places) return;
+    let travelFlexPlacesInitialization;
+    window.initTravelFlexAddressAutocomplete = async function() {
+        if (!window.google?.maps?.importLibrary) return;
+        if (travelFlexPlacesInitialization) return travelFlexPlacesInitialization;
 
-        document.querySelectorAll('[data-google-address]').forEach(function(input) {
-            if (input.dataset.googleReady === '1') return;
-            input.dataset.googleReady = '1';
+        travelFlexPlacesInitialization = (async function() {
+            const { PlaceAutocompleteElement } = await google.maps.importLibrary('places');
 
-            const autocomplete = new google.maps.places.Autocomplete(input, {
-                fields: ['formatted_address', 'place_id'],
-                types: ['address'],
-                componentRestrictions: { country: 'ng' },
+            document.querySelectorAll('[data-google-address]').forEach(function(input) {
+                if (input.dataset.googleReady === '1') return;
+
+                const autocomplete = new PlaceAutocompleteElement();
+                autocomplete.className = 'tfa-place-autocomplete';
+                autocomplete.placeholder = input.placeholder || 'Start typing an address';
+                autocomplete.includedRegionCodes = ['ng'];
+                autocomplete.requestedRegion = 'ng';
+                autocomplete.value = input.value || '';
+
+                input.insertAdjacentElement('afterend', autocomplete);
+                input.dataset.googleReady = '1';
+                input.required = false;
+                input.style.display = 'none';
+                input._placeAutocomplete = autocomplete;
+
+                autocomplete.addEventListener('input', function() {
+                    input.value = autocomplete.value || '';
+                    const target = document.getElementById(input.dataset.placeTarget);
+                    if (target) target.value = '';
+                    clearTravelFlexClientError(input);
+                });
+
+                autocomplete.addEventListener('gmp-select', async function({ placePrediction }) {
+                    const place = placePrediction.toPlace();
+                    await place.fetchFields({ fields: ['formattedAddress'] });
+
+                    const address = place.formattedAddress || autocomplete.value || '';
+                    autocomplete.value = address;
+                    input.value = address;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+                    const target = document.getElementById(input.dataset.placeTarget);
+                    if (target) target.value = place.id || '';
+                    clearTravelFlexClientError(input);
+                });
             });
-            let selectedValue = input.value;
 
-            autocomplete.addListener('place_changed', function() {
-                const place = autocomplete.getPlace();
-                if (place.formatted_address) {
-                    input.value = place.formatted_address;
-                    selectedValue = place.formatted_address;
-                }
+            syncTravelFlexRequirements(
+                document.querySelector('#tfa-form [name="applicant_type"]:checked')?.value || 'individual'
+            );
+        })();
 
-                const target = document.getElementById(input.dataset.placeTarget);
-                if (target) {
-                    target.value = place.place_id || '';
-                }
-            });
-
-            input.addEventListener('input', function() {
-                if (input.value === selectedValue) return;
-                const target = document.getElementById(input.dataset.placeTarget);
-                if (target) {
-                    target.value = '';
-                }
-            });
-        });
+        try {
+            await travelFlexPlacesInitialization;
+        } catch (error) {
+            travelFlexPlacesInitialization = null;
+        }
     };
 
     document.addEventListener('DOMContentLoaded', function() {
+        const applicantType = document.querySelector('#tfa-form [name="applicant_type"]:checked')?.value || 'individual';
+        syncTravelFlexRequirements(applicantType);
         window.initTravelFlexAddressAutocomplete();
+
+        document.querySelectorAll('#tfa-form input, #tfa-form select, #tfa-form textarea').forEach(function(field) {
+            field.addEventListener('input', function() {
+                clearTravelFlexClientError(field);
+            });
+            field.addEventListener('change', function() {
+                clearTravelFlexClientError(field);
+            });
+        });
+        document.querySelectorAll('#tfa-form [name="applicant_type"], #tfa-form [name="sector"]').forEach(function(field) {
+            field.addEventListener('change', function() {
+                const selectedType = document.querySelector('#tfa-form [name="applicant_type"]:checked')?.value || 'individual';
+                syncTravelFlexRequirements(selectedType);
+            });
+        });
     });
 
     function resizeSignatureCanvas(force = false) {
@@ -1246,6 +1475,6 @@
     });
 </script>
 @if(config('services.google_maps.key'))
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&libraries=places&callback=initTravelFlexAddressAutocomplete" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&loading=async&v=weekly&callback=initTravelFlexAddressAutocomplete" async></script>
 @endif
 @endcomponent

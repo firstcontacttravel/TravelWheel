@@ -82,6 +82,38 @@ class FlightDocumentReadinessTest extends TestCase
         $this->assertTrue($data['isTicketed']);
     }
 
+    public function test_multicity_confirmation_summarises_the_actual_legs(): void
+    {
+        $booking = $this->booking('ticketed', true, 'TW-MULTI-VIEW');
+        $snapshot = $booking->flight_snapshot;
+        $snapshot['segments'] = [];
+        $snapshot['multiLegs'] = [
+            ['segments' => [$this->segment('LOS', 'ABV', '2026-08-10T08:00:00', '2026-08-10T09:15:00')]],
+            ['segments' => [$this->segment('ABV', 'ACC', '2026-08-12T10:00:00', '2026-08-12T11:30:00')]],
+        ];
+        $booking->update([
+            'trip_type' => 'multi',
+            'route' => 'LOS → ABV → ACC',
+            'flight_snapshot' => $snapshot,
+        ]);
+
+        $this->view('livewire.pages.flight.flight-confirmation', [
+            'flight' => $snapshot,
+            'dbBooking' => $booking->fresh(),
+            'bookingRef' => $booking->booking_ref,
+            'paymentMethod' => 'gateway',
+            'ticketSuccess' => true,
+            'tripDetails' => [],
+        ])
+            ->assertSee('Multi-city itinerary summary', false)
+            ->assertSee('Leg 1')
+            ->assertSee('LOS → ABV')
+            ->assertSee('Leg 2')
+            ->assertSee('ABV → ACC')
+            ->assertDontSee('>Departure<', false)
+            ->assertDontSee('>Arrival<', false);
+    }
+
     private function booking(string $status, bool $ticketed, string $reference = 'TW-DOC-001'): FlightBooking
     {
         return FlightBooking::create([

@@ -4,7 +4,9 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Resources\FlightBookings\FlightBookingResource;
 use App\Models\FlightBooking;
+use App\Models\NotificationOutbox;
 use App\Models\PostTicketingRequest;
+use App\Models\SystemHeartbeat;
 use App\Models\TravelFlexApplication;
 use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\StatsOverviewWidget;
@@ -33,6 +35,8 @@ class PaymentOperationsOverview extends StatsOverviewWidget
             ->where('payment_status', 'paid')
             ->where('created_at', '>=', now()->subDays(30))
             ->sum('markup_amount');
+        $schedulerHeartbeat = SystemHeartbeat::query()->where('name', 'scheduler')->first()?->last_seen_at;
+        $schedulerHealthy = $schedulerHeartbeat && now()->diffInMinutes($schedulerHeartbeat) <= 3;
 
         return [
             Stat::make('Today bookings', number_format($todayBookings))
@@ -41,12 +45,12 @@ class PaymentOperationsOverview extends StatsOverviewWidget
                 ->color('primary')
                 ->url(FlightBookingResource::getUrl()),
 
-            Stat::make('Paid revenue', 'NGN ' . number_format($paidRevenue, 2))
+            Stat::make('Paid revenue', 'NGN '.number_format($paidRevenue, 2))
                 ->description('Last 30 days')
                 ->descriptionIcon(Heroicon::OutlinedBanknotes)
                 ->color('success'),
 
-            Stat::make('Service charges', 'NGN ' . number_format($serviceCharges, 2))
+            Stat::make('Service charges', 'NGN '.number_format($serviceCharges, 2))
                 ->description('Markup collected in last 30 days')
                 ->descriptionIcon(Heroicon::OutlinedReceiptPercent)
                 ->color('info'),
@@ -98,6 +102,18 @@ class PaymentOperationsOverview extends StatsOverviewWidget
                 ->description('Loan applications awaiting admin review')
                 ->descriptionIcon(Heroicon::OutlinedCreditCard)
                 ->color('primary'),
+
+            Stat::make('Pending email delivery', NotificationOutbox::query()
+                ->whereNull('sent_at')
+                ->count())
+                ->description('Saved emails awaiting delivery or retry')
+                ->descriptionIcon(Heroicon::OutlinedEnvelope)
+                ->color(NotificationOutbox::query()->whereNull('sent_at')->exists() ? 'warning' : 'success'),
+
+            Stat::make('Scheduler heartbeat', $schedulerHealthy ? 'Healthy' : 'Stale')
+                ->description($schedulerHeartbeat ? 'Last seen '.$schedulerHeartbeat->diffForHumans() : 'Scheduler has never checked in')
+                ->descriptionIcon(Heroicon::OutlinedSignal)
+                ->color($schedulerHealthy ? 'success' : 'danger'),
         ];
     }
 }

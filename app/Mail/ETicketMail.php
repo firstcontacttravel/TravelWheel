@@ -25,7 +25,7 @@ class ETicketMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your E-Ticket - ' . $this->booking->booking_ref . ' | TravelWheel',
+            subject: 'Your E-Ticket - '.$this->booking->booking_ref.' | TravelWheel',
         );
     }
 
@@ -66,9 +66,7 @@ class ETicketMail extends Mailable
             Log::error('[ETicketMail] attachment generation failed', [
                 'booking_id' => $this->booking->id,
                 'booking_ref' => $this->booking->booking_ref,
-                'error' => $e->getMessage(),
-                'exception' => get_class($e),
-                'trace' => $e->getTraceAsString(),
+                'error_type' => $e::class,
             ]);
 
             throw $e;
@@ -77,7 +75,7 @@ class ETicketMail extends Mailable
         return [
             Attachment::fromData(
                 fn () => $pdfBytes,
-                'eticket-' . $this->booking->booking_ref . '.pdf'
+                'eticket-'.$this->booking->booking_ref.'.pdf'
             )->withMime('application/pdf'),
         ];
     }

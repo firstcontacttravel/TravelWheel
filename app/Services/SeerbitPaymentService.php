@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -26,7 +27,7 @@ class SeerbitPaymentService
 
     public function initializePayment(array $payload): array
     {
-        $response = Http::timeout(30)
+        $response = Http::connectTimeout(10)->timeout(30)
             ->withToken($this->encryptedKey())
             ->acceptJson()
             ->post($this->baseUrl.'/api/v2/payments', array_merge([
@@ -60,7 +61,7 @@ class SeerbitPaymentService
 
     public function verifyPayment(string $paymentReference): array
     {
-        $response = Http::timeout(30)
+        $response = Http::connectTimeout(10)->timeout(30)
             ->withToken($this->encryptedKey())
             ->acceptJson()
             ->get($this->baseUrl.'/api/v3/payments/query/'.urlencode($paymentReference));
@@ -124,27 +125,33 @@ class SeerbitPaymentService
             throw new RuntimeException('SeerBit keys are not configured.');
         }
 
-        $response = Http::timeout(20)
-            ->acceptJson()
-            ->post($this->baseUrl.'/api/v2/encrypt/keys', [
-                'key' => $this->secretKey.'.'.$this->publicKey,
-            ]);
+        return Cache::remember(
+            'seerbit:encrypted-key:'.sha1((string) $this->publicKey),
+            now()->addMinutes(5),
+            function (): string {
+                $response = Http::connectTimeout(10)->timeout(20)
+                    ->acceptJson()
+                    ->post($this->baseUrl.'/api/v2/encrypt/keys', [
+                        'key' => $this->secretKey.'.'.$this->publicKey,
+                    ]);
 
-        $data = $response->json() ?: [];
-        $encryptedKey = data_get($data, 'data.EncryptedSecKey.encryptedKey')
-            ?? data_get($data, 'data.EncryptedSecKey')
-            ?? data_get($data, 'data.encryptedKey')
-            ?? data_get($data, 'EncryptedSecKey.encryptedKey')
-            ?? data_get($data, 'EncryptedSecKey')
-            ?? data_get($data, 'encryptedKey');
+                $data = $response->json() ?: [];
+                $encryptedKey = data_get($data, 'data.EncryptedSecKey.encryptedKey')
+                    ?? data_get($data, 'data.EncryptedSecKey')
+                    ?? data_get($data, 'data.encryptedKey')
+                    ?? data_get($data, 'EncryptedSecKey.encryptedKey')
+                    ?? data_get($data, 'EncryptedSecKey')
+                    ?? data_get($data, 'encryptedKey');
 
-        if ($response->failed() || ! $encryptedKey) {
-            Log::error('SeerBit key encryption failed', [
-                'status' => $response->status(),
-            ]);
-            throw new RuntimeException('Unable to authenticate with payment gateway.');
-        }
+                if ($response->failed() || ! $encryptedKey) {
+                    Log::error('SeerBit key encryption failed', [
+                        'status' => $response->status(),
+                    ]);
+                    throw new RuntimeException('Unable to authenticate with payment gateway.');
+                }
 
-        return (string) $encryptedKey;
+                return (string) $encryptedKey;
+            },
+        );
     }
 }
