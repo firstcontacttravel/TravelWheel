@@ -787,12 +787,14 @@ class FlightBookingController extends Controller
 
         $lock = Cache::lock('flight-payment-processing:'.$booking->id, 300);
         if (! $lock->get()) {
-            $this->_primeBookingSession($booking);
+            $booking = $booking->fresh();
+            $this->_prepareSeerbitStatusSession($booking, $reference);
 
-            return $this->_redirectAfterSeerbitFailure(
-                $booking,
-                'Your payment is already being processed. Please wait a moment and refresh the status page.'
-            );
+            if ($this->_seerbitPublicStatus($booking)['state'] === 'complete') {
+                return $this->_redirectAfterSeerbitFlow($booking);
+            }
+
+            return redirect()->route('payments.seerbit.processing');
         }
 
         try {
@@ -800,6 +802,51 @@ class FlightBookingController extends Controller
         } finally {
             $lock->release();
         }
+    }
+
+    public function seerbitProcessing()
+    {
+        $booking = $this->_seerbitSessionBooking();
+        if (! $booking) {
+            return redirect()->route('air.flight-s')->withErrors([
+                'error' => 'We could not find the payment being processed. Please contact support if you were debited.',
+            ]);
+        }
+
+        $this->_prepareSeerbitStatusSession($booking, (string) $booking->payment_reference);
+        $status = $this->_seerbitPublicStatus($booking);
+
+        if ($status['state'] === 'complete') {
+            return $this->_redirectAfterSeerbitFlow($booking);
+        }
+
+        return view('livewire.pages.flight.flight-payment-processing', [
+            'booking' => $booking,
+            'paymentStatus' => $status,
+        ]);
+    }
+
+    public function seerbitStatus()
+    {
+        $booking = $this->_seerbitSessionBooking();
+        if (! $booking) {
+            return response()->json([
+                'state' => 'missing',
+                'headline' => 'Payment status unavailable',
+                'message' => 'We could not find this payment in your current session. Please contact support if you were debited.',
+            ], 404);
+        }
+
+        $this->_prepareSeerbitStatusSession($booking, (string) $booking->payment_reference);
+        $status = $this->_seerbitPublicStatus($booking);
+
+        if ($status['state'] === 'complete') {
+            $status['redirect_url'] = $this->_seerbitRedirectUrl($booking);
+        }
+
+        return response()
+            ->json($status)
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
     }
 
     private function _processSeerbitCallback(
@@ -1837,9 +1884,109 @@ class FlightBookingController extends Controller
 
     private function _redirectAfterSeerbitFlow(FlightBooking $booking)
     {
+        return redirect()->to($this->_seerbitRedirectUrl($booking));
+    }
+
+    private function _seerbitRedirectUrl(FlightBooking $booking): string
+    {
         return $booking->payment_flow === 'travelflex_down_payment'
-            ? redirect()->route('flights.travelflex.confirmation')
-            : redirect()->route('flights.confirmation');
+            ? route('flights.travelflex.confirmation')
+            : route('flights.confirmation');
+    }
+
+    private function _seerbitSessionBooking(): ?FlightBooking
+    {
+        $bookingId = session('flightBookingDbId');
+        $reference = session('seerbitPaymentReference');
+
+        if (! $bookingId || ! $reference) {
+            return null;
+        }
+
+        return FlightBooking::query()
+            ->whereKey($bookingId)
+            ->where('payment_reference', $reference)
+            ->first();
+    }
+
+    private function _prepareSeerbitStatusSession(FlightBooking $booking, string $reference): void
+    {
+        $this->_primeBookingSession($booking);
+
+        session([
+            'seerbitPaymentReference' => $reference,
+            'seerbitPaymentFlow' => $booking->payment_flow,
+            'paymentMethod' => $booking->payment_method ?: (
+                $booking->payment_flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway'
+            ),
+            'bookingConfirmation' => $booking->booking_api_response ?? session('bookingConfirmation', []),
+            'ticketOrderResult' => $booking->ticket_api_response ?? session('ticketOrderResult', []),
+            'ticketSuccess' => $booking->ticket_ordered || $booking->booking_status === 'ticketed',
+        ]);
+    }
+
+    private function _seerbitPublicStatus(FlightBooking $booking): array
+    {
+        $booking = $booking->fresh();
+        $bookingStatus = strtolower((string) $booking->booking_status);
+        $paymentStatus = strtolower((string) $booking->payment_status);
+        $paymentConfirmed = $booking->payment_verified_at !== null
+            || in_array($paymentStatus, ['paid', 'partially_paid'], true);
+
+        if (
+            $booking->ticket_ordered
+            || $bookingStatus === 'ticketed'
+            || ($paymentConfirmed && $bookingStatus === 'confirmed')
+        ) {
+            return [
+                'state' => 'complete',
+                'headline' => $bookingStatus === 'ticketed' || $booking->ticket_ordered
+                    ? 'Payment confirmed and ticket issued'
+                    : 'Payment and booking confirmed',
+                'message' => $bookingStatus === 'ticketed' || $booking->ticket_ordered
+                    ? 'Your booking is ticketed. We are taking you to your confirmation now.'
+                    : 'Your booking is confirmed. We are taking you to your confirmation now.',
+                'booking_reference' => $booking->booking_ref,
+            ];
+        }
+
+        if ($paymentConfirmed && in_array($bookingStatus, [
+            'failed',
+            'ticketing_failed',
+            'hold_expired_review',
+        ], true)) {
+            return [
+                'state' => 'attention',
+                'headline' => 'Payment received — ticketing needs attention',
+                'message' => 'Your payment is confirmed, but the ticket could not be issued automatically. Our team has been notified and your payment record is safe.',
+                'booking_reference' => $booking->booking_ref,
+            ];
+        }
+
+        if ($paymentStatus === 'failed' && ! $paymentConfirmed) {
+            return [
+                'state' => 'failed',
+                'headline' => 'Payment could not be verified',
+                'message' => 'We could not verify this payment. If your account was debited, please contact support with your booking reference before trying again.',
+                'booking_reference' => $booking->booking_ref,
+            ];
+        }
+
+        if ($paymentConfirmed || $bookingStatus === 'ticketing_in_progress') {
+            return [
+                'state' => 'ticketing',
+                'headline' => 'Payment confirmed — issuing your ticket',
+                'message' => 'Your payment is successful. We are waiting for the airline to finish issuing your ticket.',
+                'booking_reference' => $booking->booking_ref,
+            ];
+        }
+
+        return [
+            'state' => 'verifying',
+            'headline' => 'Confirming your payment',
+            'message' => 'SeerBit has returned your payment to TravelWheel. We are verifying it securely before issuing your ticket.',
+            'booking_reference' => $booking->booking_ref,
+        ];
     }
 
     private function _extractTicketOrderErrorMessage(array $response, string $fallback = 'Ticket order failed.'): string

@@ -103,7 +103,7 @@ class FlightPaymentReadinessTest extends TestCase
         $this->collectExtras($request);
     }
 
-    public function test_duplicate_gateway_callback_is_serialized(): void
+    public function test_gateway_callback_uses_processing_page_while_webhook_holds_the_real_lock(): void
     {
         $booking = $this->heldBooking([
             'payment_reference' => 'TW-LOCKED-CALLBACK',
@@ -111,16 +111,85 @@ class FlightPaymentReadinessTest extends TestCase
             'payment_amount' => 100000,
             'payment_currency' => 'NGN',
         ]);
-        $lock = Cache::lock('flight-payment-callback:'.$booking->id, 30);
+        $lock = Cache::lock('flight-payment-processing:'.$booking->id, 30);
         $this->assertTrue($lock->get());
 
         try {
             $this->get(route('payments.seerbit.callback', ['paymentReference' => $booking->payment_reference]))
-                ->assertRedirect(route('flights.payment.options'))
-                ->assertSessionHasErrors('error');
+                ->assertRedirect(route('payments.seerbit.processing'))
+                ->assertSessionDoesntHaveErrors();
+
+            $this->get(route('payments.seerbit.processing'))
+                ->assertOk()
+                ->assertSee('Confirming your payment')
+                ->assertSee($booking->booking_ref);
         } finally {
             $lock->release();
         }
+    }
+
+    public function test_contended_gateway_callback_goes_directly_to_confirmation_when_webhook_finished(): void
+    {
+        $booking = $this->heldBooking([
+            'payment_reference' => 'TW-COMPLETED-CALLBACK',
+            'payment_flow' => 'held_ticket_full',
+            'payment_amount' => 100000,
+            'payment_currency' => 'NGN',
+            'payment_status' => 'paid',
+            'payment_verified_at' => now(),
+            'booking_status' => 'ticketed',
+            'ticket_ordered' => true,
+            'ticket_ordered_at' => now(),
+        ]);
+        $lock = Cache::lock('flight-payment-processing:'.$booking->id, 30);
+        $this->assertTrue($lock->get());
+
+        try {
+            $this->get(route('payments.seerbit.callback', ['paymentReference' => $booking->payment_reference]))
+                ->assertRedirect(route('flights.confirmation'))
+                ->assertSessionHas('ticketSuccess', true)
+                ->assertSessionDoesntHaveErrors();
+        } finally {
+            $lock->release();
+        }
+    }
+
+    public function test_processing_status_redirects_when_ticketing_completes(): void
+    {
+        $booking = $this->heldBooking([
+            'payment_reference' => 'TW-STATUS-CALLBACK',
+            'payment_flow' => 'held_ticket_full',
+            'payment_amount' => 100000,
+            'payment_currency' => 'NGN',
+            'payment_status' => 'paid',
+            'payment_verified_at' => now(),
+            'booking_status' => 'ticketing_in_progress',
+        ]);
+
+        $this->withSession([
+            'flightBookingDbId' => $booking->id,
+            'seerbitPaymentReference' => $booking->payment_reference,
+        ])->getJson(route('payments.seerbit.status'))
+            ->assertOk()
+            ->assertJson([
+                'state' => 'ticketing',
+                'booking_reference' => $booking->booking_ref,
+            ]);
+
+        $booking->update([
+            'booking_status' => 'ticketed',
+            'ticket_ordered' => true,
+            'ticket_ordered_at' => now(),
+        ]);
+
+        $this->getJson(route('payments.seerbit.status'))
+            ->assertOk()
+            ->assertJson([
+                'state' => 'complete',
+                'redirect_url' => route('flights.confirmation'),
+            ]);
+
+        $this->assertTrue((bool) session('ticketSuccess'));
     }
 
     public function test_search_supplier_connection_failure_returns_customer_safe_error(): void

@@ -235,6 +235,8 @@ Route::get('/flights/pending', [FlightBookingController::class, 'pending'])->nam
 Route::get('/flights/confirmation', [FlightBookingController::class, 'confirmation'])->name('flights.confirmation');
 Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerbitCallback'])->middleware('throttle:30,1')->name('payments.seerbit.callback');
 Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->middleware('throttle:60,1')->name('payments.seerbit.webhook');
+Route::get('/payments/seerbit/processing', [FlightBookingController::class, 'seerbitProcessing'])->name('payments.seerbit.processing');
+Route::get('/payments/seerbit/status', [FlightBookingController::class, 'seerbitStatus'])->middleware('throttle:120,1')->name('payments.seerbit.status');
 Route::get('/flights/travelflex', [FlightBookingController::class, 'travelFlex'])->name('flights.travelflex');
 Route::post('/flights/travelflex/application', [FlightBookingController::class, 'travelFlexApplication'])->name('flights.travelflex.application');
 Route::get('/flights/travelflex/fastcredit', [FlightBookingController::class, 'travelFlexFastCreditRedirect'])->name('flights.travelflex.fastcredit');

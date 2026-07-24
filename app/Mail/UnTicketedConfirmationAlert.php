@@ -24,7 +24,7 @@ class UnTicketedConfirmationAlert extends Mailable
     public function content()
     {
         return new \Illuminate\Mail\Mailables\Content(
-            view: 'emails.unticketed-confirmation-alert',
+            markdown: 'emails.unticketed-confirmation-alert',
             with: ['data' => $this->alertData],
         );
     }
