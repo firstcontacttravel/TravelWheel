@@ -18,6 +18,16 @@ use App\Http\Controllers\VisaPortalController;
 use App\Http\Controllers\VisaSearchController;
 use App\Http\Middleware\EnsureVisaProductEnabled;
 use App\Livewire\Pages\AirCargo\AirCargo as AirCargoPage;
+use App\Livewire\Pages\Legal\AirportProtocolServiceTerms;
+use App\Livewire\Pages\Legal\BookingServiceAgreement;
+use App\Livewire\Pages\Legal\CookiePolicy;
+use App\Livewire\Pages\Legal\Disclaimer;
+use App\Livewire\Pages\Legal\PaymentPolicy;
+use App\Livewire\Pages\Legal\PaySmallSmallAgreement;
+use App\Livewire\Pages\Legal\PrivacyPolicy;
+use App\Livewire\Pages\Legal\RefundCancellationPolicy;
+use App\Livewire\Pages\Legal\TermsAndConditions;
+use App\Livewire\Pages\Legal\TravelInsuranceTerms;
 use App\Livewire\Pages\AirCargo\AirCargoCreate;
 use App\Livewire\Pages\CarHire\CarHire as CarHirePage;
 use App\Livewire\Pages\FlightBooking;
@@ -249,3 +259,15 @@ Route::post('/flights/travelflex/approved/payment', [FlightBookingController::cl
     ->name('flights.travelflex.approved.payment');
 Route::get('/flights/travelflex/confirmation', [FlightBookingController::class, 'travelFlexConfirmation'])->name('flights.travelflex.confirmation');
 // Route::get('/flights/booking', \App\Livewire\Pages\FlightBooking::class)->name('flights.booking');
+
+// Legal pages
+Route::get('/legal/terms-and-conditions', TermsAndConditions::class)->name('legal.terms');
+Route::get('/legal/privacy-policy', PrivacyPolicy::class)->name('legal.privacy');
+Route::get('/legal/refund-cancellation-policy', RefundCancellationPolicy::class)->name('legal.refund');
+Route::get('/legal/payment-policy', PaymentPolicy::class)->name('legal.payment');
+Route::get('/legal/booking-service-agreement', BookingServiceAgreement::class)->name('legal.booking-agreement');
+Route::get('/legal/pay-small-small-agreement', PaySmallSmallAgreement::class)->name('legal.pay-small-small');
+Route::get('/legal/travel-insurance-terms', TravelInsuranceTerms::class)->name('legal.insurance-terms');
+Route::get('/legal/airport-protocol-service-terms', AirportProtocolServiceTerms::class)->name('legal.protocol-terms');
+Route::get('/legal/cookie-policy', CookiePolicy::class)->name('legal.cookies');
+Route::get('/legal/disclaimer', Disclaimer::class)->name('legal.disclaimer');

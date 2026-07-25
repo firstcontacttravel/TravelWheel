@@ -40,16 +40,24 @@
                 <ul>
                     <li><a href="{{ route('aboutus') }}" class="text-white hover:text-[var(--color-secondary)]">About Us</a></li>
                     <li><a href="#" class="text-white hover:text-[var(--color-secondary)]">Media</a></li>
-                    <li><a href="#" class="text-white hover:text-[var(--color-secondary)]">Terms & Condition</a></li>
+                    <li><a href="{{ route('legal.terms') }}" class="text-white hover:text-[var(--color-secondary)]">Terms & Condition</a></li>
                     <li><a href="/blog" target="_blank" class="text-white hover:text-[var(--color-secondary)]">Blog</a></li>
                 </ul>
             </div>
-            
+
             <div class="w-1/2 md:w-1/6 p-2">
-                <h4 class="text-white font-bold mb-2">Help</h4>
+                <h4 class="text-white font-bold mb-2">Legal</h4>
                 <ul>
-                    <li><a href="{{ route('faq') }}" class="text-white hover:text-[var(--color-secondary)]">FAQ</a></li>
-                    <li><a href="{{ route('help') }}" class="text-white hover:text-[var(--color-secondary)]">Contact</a></li>
+                    <li><a href="{{ route('legal.terms') }}" class="text-white hover:text-[var(--color-secondary)]">Terms & Conditions</a></li>
+                    <li><a href="{{ route('legal.privacy') }}" class="text-white hover:text-[var(--color-secondary)]">Privacy Policy</a></li>
+                    <li><a href="{{ route('legal.refund') }}" class="text-white hover:text-[var(--color-secondary)]">Refund & Cancellation</a></li>
+                    <li><a href="{{ route('legal.payment') }}" class="text-white hover:text-[var(--color-secondary)]">Payment Policy</a></li>
+                    <li><a href="{{ route('legal.booking-agreement') }}" class="text-white hover:text-[var(--color-secondary)]">Booking Agreement</a></li>
+                    <li><a href="{{ route('legal.pay-small-small') }}" class="text-white hover:text-[var(--color-secondary)]">Pay Small Small</a></li>
+                    <li><a href="{{ route('legal.insurance-terms') }}" class="text-white hover:text-[var(--color-secondary)]">Insurance Terms</a></li>
+                    <li><a href="{{ route('legal.protocol-terms') }}" class="text-white hover:text-[var(--color-secondary)]">Protocol Terms</a></li>
+                    <li><a href="{{ route('legal.cookies') }}" class="text-white hover:text-[var(--color-secondary)]">Cookie Policy</a></li>
+                    <li><a href="{{ route('legal.disclaimer') }}" class="text-white hover:text-[var(--color-secondary)]">Disclaimer</a></li>
                 </ul>
             </div>
             
