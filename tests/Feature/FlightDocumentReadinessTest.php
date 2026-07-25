@@ -6,6 +6,7 @@ use App\Mail\BookingPendingMail;
 use App\Mail\ETicketMail;
 use App\Mail\PaymentReceiptMail;
 use App\Mail\TravelFlexStatusMail;
+use App\Mail\UnTicketedConfirmationAlert;
 use App\Models\FlightBooking;
 use App\Models\TravelFlexApplication;
 use App\Services\ETicketPdfService;
@@ -38,6 +39,16 @@ class FlightDocumentReadinessTest extends TestCase
             new PaymentReceiptMail($ticketed),
             new ETicketMail($ticketed),
             new TravelFlexStatusMail($application->load('booking'), 'approved'),
+            new UnTicketedConfirmationAlert([
+                'uniqueId' => $ticketed->unique_id,
+                'bookingStatus' => 'CONFIRMED',
+                'ticketStatus' => 'UNTICKETED',
+                'timestamp' => now(),
+                'origin' => 'LOS',
+                'destination' => 'ABV',
+                'fareType' => 'Public',
+                'passengers' => $ticketed->passengers_snapshot,
+            ]),
         ] as $mail) {
             $html = $mail->render();
             $this->assertNotSame('', trim($html));
