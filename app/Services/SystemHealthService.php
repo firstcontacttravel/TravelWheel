@@ -438,7 +438,7 @@ class SystemHealthService
             }
         }
 
-        $formPath = public_path('assets/fast_creadit.pdf');
+        $formPath = public_path('assets/fastcredit_tnpl_v2.pdf');
         $validPdf = is_file($formPath) && is_readable($formPath) && $this->startsWithPdfSignature($formPath);
         $details['Fast Credit PDF'] = $validPdf ? 'Available and readable' : 'Missing or invalid';
         if (! $validPdf) {

@@ -10,11 +10,15 @@ use setasign\Fpdi\Fpdi;
 
 class TravelFlexApplicationPdfService
 {
-    public const TEMPLATE_VERSION = 'fast-credit-tnpl-v1';
+    public const TEMPLATE_VERSION = 'fast-credit-tnpl-v2';
+
+    private const OUTPUT_PAGE_WIDTH = 961.56;
+
+    private const OUTPUT_PAGE_HEIGHT = 1583.04;
 
     public function generate(TravelFlexApplication $application, array $sensitive = []): string
     {
-        $template = public_path('assets/fast_creadit.pdf');
+        $template = public_path('assets/fastcredit_tnpl_v2.pdf');
 
         if (! is_file($template)) {
             throw new RuntimeException('The Fast Credit application PDF template is missing.');
@@ -28,8 +32,8 @@ class TravelFlexApplicationPdfService
         for ($pageNumber = 1; $pageNumber <= $pageCount; $pageNumber++) {
             $templateId = $pdf->importPage($pageNumber);
             $size = $pdf->getTemplateSize($templateId);
-            $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
-            $pdf->useTemplate($templateId, 0, 0, $size['width'], $size['height']);
+            $pdf->AddPage($size['orientation'], [self::OUTPUT_PAGE_WIDTH, self::OUTPUT_PAGE_HEIGHT]);
+            $pdf->useTemplate($templateId, 0, 0, self::OUTPUT_PAGE_WIDTH, self::OUTPUT_PAGE_HEIGHT);
 
             if ($pageNumber === 1) {
                 $this->fillApplicationPage($pdf, $application, $sensitive);
@@ -100,72 +104,72 @@ class TravelFlexApplicationPdfService
         $this->dateBoxes($pdf, $acceptedAt, [[685, 44], [733, 44], [781, 88]], 183, 16);
         $this->boxedCharacters($pdf, 227, 220, 244, 25, $bvn, 11);
 
-        $this->field($pdf, 85, 296, 222, 26, data_get($identity, 'title'));
-        $this->field($pdf, 392, 296, 333, 26, data_get($identity, 'surname'));
-        $this->field($pdf, 117, 333, 333, 26, data_get($identity, 'first_name'));
-        $this->field($pdf, 526, 333, 332, 26, data_get($identity, 'other_name'));
+        $this->field($pdf, 59, 293, 222, 26, data_get($identity, 'title'));
+        $this->field($pdf, 366, 293, 333, 26, data_get($identity, 'surname'));
+        $this->field($pdf, 91, 330, 333, 26, data_get($identity, 'first_name'));
+        $this->field($pdf, 500, 330, 333, 26, data_get($identity, 'other_name'));
 
         $marital = strtolower((string) data_get($identity, 'marital_status'));
-        $this->check($pdf, 302, 370, $marital === 'single');
-        $this->check($pdf, 370, 370, $marital === 'married');
-        $this->check($pdf, 445, 370, $marital === 'divorced');
-        $this->check($pdf, 520, 370, $marital === 'separated');
+        $this->check($pdf, 276, 366, $marital === 'single');
+        $this->check($pdf, 344, 366, $marital === 'married');
+        $this->check($pdf, 419, 366, $marital === 'divorced');
+        $this->check($pdf, 495, 366, $marital === 'separated');
         $gender = strtolower((string) data_get($identity, 'gender'));
-        $this->check($pdf, 794, 370, $gender === 'female');
-        $this->check($pdf, 840, 370, $gender === 'male');
+        $this->check($pdf, 769, 366, $gender === 'female');
+        $this->check($pdf, 815, 366, $gender === 'male');
 
-        $this->dateBoxes($pdf, $this->date(data_get($identity, 'date_of_birth')), [[132, 44], [180, 44], [228, 88]], 417, 16);
-        $this->field($pdf, 185, 445, 244, 25, data_get($applicant, 'phone_primary'));
-        $this->field($pdf, 561, 445, 244, 25, data_get($applicant, 'phone_secondary'));
-        $this->field($pdf, 134, 482, 443, 25, data_get($applicant, 'email'), 8);
+        $this->dateBoxes($pdf, $this->date(data_get($identity, 'date_of_birth')), [[106, 44], [153, 44], [202, 88]], 414, 16);
+        $this->field($pdf, 159, 441, 244, 25, data_get($applicant, 'phone_primary'));
+        $this->field($pdf, 535, 441, 244, 25, data_get($applicant, 'phone_secondary'));
+        $this->field($pdf, 107, 479, 443, 25, data_get($applicant, 'email'), 8);
 
         $sector = $application->applicant_type === 'company'
             ? 'private'
             : strtolower((string) data_get($employment, 'sector'));
-        $this->check($pdf, 141, 518, $sector === 'private');
-        $this->check($pdf, 209, 518, $sector === 'public');
-        $this->field($pdf, 439, 521, 285, 25, data_get($identity, 'passport_number'));
-        $this->dateBoxes($pdf, $this->date(data_get($identity, 'passport_expiry_date')), [[724, 43], [769, 43], [814, 90]], 520, 26);
+        $this->check($pdf, 115, 514, $sector === 'private');
+        $this->check($pdf, 183, 514, $sector === 'public');
+        $this->field($pdf, 384, 514, 285, 25, data_get($identity, 'passport_number'));
+        $this->dateBoxes($pdf, $this->date(data_get($identity, 'passport_expiry_date')), [[673, 43], [721, 43], [769, 90]], 513, 26);
 
-        $this->field($pdf, 106, 557, 443, 25, data_get($employment, 'occupation'));
-        $this->field($pdf, 210, 616, 244, 25, data_get($employment, 'ippis_number'));
-        $this->field($pdf, 149, 653, 665, 26, data_get($employment, 'employer_name'), 8);
-        $this->field($pdf, 159, 690, 665, 26, data_get($employment, 'employer_address'), 7);
-        $this->field($pdf, 178, 728, 333, 26, $this->money(data_get($bank, 'monthly_salary')));
-        $this->field($pdf, 180, 765, 333, 26, data_get($bank, 'salary_account_number'));
-        $this->field($pdf, 121, 802, 333, 26, data_get($bank, 'bank_name'));
+        $this->field($pdf, 80, 552, 443, 25, data_get($employment, 'occupation'));
+        $this->field($pdf, 184, 589, 244, 25, data_get($employment, 'ippis_number'));
+        $this->field($pdf, 123, 626, 665, 26, data_get($employment, 'employer_name'), 8);
+        $this->field($pdf, 133, 663, 665, 26, data_get($employment, 'employer_address'), 7);
+        $this->field($pdf, 151, 701, 333, 26, $this->money(data_get($bank, 'monthly_salary')));
+        $this->field($pdf, 154, 738, 333, 26, data_get($bank, 'salary_account_number'));
+        $this->field($pdf, 94, 775, 333, 26, data_get($bank, 'bank_name'));
 
         $platform = strtolower((string) data_get($identity, 'social_media_platform'));
-        $this->check($pdf, 256, 837, $platform === 'facebook');
-        $this->check($pdf, 358, 837, $platform === 'instagram');
-        $this->check($pdf, 507, 835, $platform === 'x');
-        $this->field($pdf, 164, 876, 665, 25, data_get($identity, 'social_media_handle'), 8);
-        $this->field($pdf, 161, 913, 443, 26, data_get($applicant, 'home_address'), 7);
-        $this->field($pdf, 138, 951, 222, 25, $this->governmentIdLabel(data_get($identity, 'government_id_type')));
-        $this->field($pdf, 106, 988, 221, 26, data_get($employment, 'office_id', data_get($employment, 'staff_number')));
+        $this->check($pdf, 230, 812, $platform === 'facebook');
+        $this->check($pdf, 332, 812, $platform === 'instagram');
+        $this->check($pdf, 481, 812, $platform === 'x');
+        $this->field($pdf, 137, 849, 665, 25, data_get($identity, 'social_media_handle'), 8);
+        $this->field($pdf, 134, 886, 443, 26, data_get($applicant, 'home_address'), 7);
+        $this->field($pdf, 111, 924, 222, 25, $this->governmentIdLabel(data_get($identity, 'government_id_type')));
+        $this->field($pdf, 80, 961, 221, 26, data_get($employment, 'office_id', data_get($employment, 'staff_number')));
 
-        $this->lineText($pdf, 214, 1038, 235, 23, $this->proposedTravelDate($application));
+        $this->lineText($pdf, 144, 987, 278, 23, $this->proposedTravelDate($application));
 
-        $this->field($pdf, 109, 1104, 333, 26, data_get($nextOfKin, 'surname'));
-        $this->field($pdf, 571, 1104, 333, 26, data_get($nextOfKin, 'other_names'));
-        $this->field($pdf, 117, 1141, 311, 26, data_get($nextOfKin, 'first_name'));
-        $this->field($pdf, 125, 1179, 155, 25, data_get($nextOfKin, 'relationship'));
-        $this->dateBoxes($pdf, $this->date(data_get($nextOfKin, 'date_of_birth')), [[132, 44], [180, 44], [228, 88]], 1226, 16);
+        $this->field($pdf, 83, 1050, 333, 26, data_get($nextOfKin, 'surname'));
+        $this->field($pdf, 545, 1050, 333, 26, data_get($nextOfKin, 'other_names'));
+        $this->field($pdf, 91, 1088, 311, 26, data_get($nextOfKin, 'first_name'));
+        $this->field($pdf, 98, 1125, 155, 25, data_get($nextOfKin, 'relationship'));
+        $this->dateBoxes($pdf, $this->date(data_get($nextOfKin, 'date_of_birth')), [[106, 44], [153, 44], [202, 88]], 1172, 16);
         $nextGender = strtolower((string) data_get($nextOfKin, 'gender'));
-        $this->check($pdf, 433, 1215, $nextGender === 'female');
-        $this->check($pdf, 479, 1215, $nextGender === 'male');
-        $this->field($pdf, 585, 1216, 155, 26, data_get($nextOfKin, 'title'));
-        $this->field($pdf, 161, 1253, 443, 26, data_get($nextOfKin, 'residential_address'), 7);
-        $this->field($pdf, 143, 1290, 244, 26, data_get($nextOfKin, 'phone_primary'));
-        $this->field($pdf, 505, 1290, 244, 26, data_get($nextOfKin, 'phone_secondary'));
-        $this->field($pdf, 142, 1327, 443, 26, data_get($nextOfKin, 'email'), 8);
+        $this->check($pdf, 407, 1161, $nextGender === 'female');
+        $this->check($pdf, 453, 1161, $nextGender === 'male');
+        $this->field($pdf, 559, 1162, 155, 26, data_get($nextOfKin, 'title'));
+        $this->field($pdf, 134, 1199, 443, 26, data_get($nextOfKin, 'residential_address'), 7);
+        $this->field($pdf, 117, 1236, 244, 26, data_get($nextOfKin, 'phone_primary'));
+        $this->field($pdf, 479, 1236, 244, 26, data_get($nextOfKin, 'phone_secondary'));
+        $this->field($pdf, 107, 1273, 443, 26, data_get($nextOfKin, 'email'), 8);
 
-        $this->field($pdf, 143, 1365, 333, 25, 'TravelWheel');
-        $this->field($pdf, 149, 1403, 333, 25, $this->travelPackage($application), 7);
-        $this->field($pdf, 129, 1439, 333, 26, $this->money(data_get($plan, 'loan_amount', data_get($plan, 'remaining_balance'))));
-        $this->field($pdf, 124, 1477, 333, 26, data_get($plan, 'repayment_plan'));
-        $this->signature($pdf, data_get($agreement, 'signature_image'), 162, 1505, 234, 34);
-        $this->dateBoxes($pdf, $acceptedAt, [[718, 44], [766, 44], [814, 88]], 1529, 16);
+        $this->field($pdf, 117, 1311, 333, 25, 'TravelWheel');
+        $this->field($pdf, 113, 1348, 333, 25, $this->travelPackage($application), 7);
+        $this->field($pdf, 104, 1385, 333, 26, $this->money(data_get($plan, 'loan_amount', data_get($plan, 'remaining_balance'))));
+        $this->field($pdf, 92, 1422, 333, 26, data_get($plan, 'repayment_plan'));
+        $this->signature($pdf, data_get($agreement, 'signature_image'), 162, 1496, 234, 34);
+        $this->dateBoxes($pdf, $acceptedAt, [[718, 44], [766, 44], [814, 88]], 1516, 16);
     }
 
     private function fillAgreementPage(Fpdi $pdf, TravelFlexApplication $application): void
@@ -175,16 +179,16 @@ class TravelFlexApplicationPdfService
         $acceptedAt = $this->date(data_get($agreement, 'accepted_at')) ?? now('Africa/Lagos');
         $date = $acceptedAt->format('d/m/Y');
 
-        $this->lineText($pdf, 520, 944, 320, 24, $name, 9);
-        $this->signature($pdf, data_get($agreement, 'signature_image'), 520, 974, 320, 30);
-        $this->lineText($pdf, 520, 1017, 320, 20, $date, 9);
+        $this->lineText($pdf, 535, 1078, 222, 18, $name, 9);
+        $this->signature($pdf, data_get($agreement, 'signature_image'), 530, 1101, 222, 18);
+        $this->lineText($pdf, 540, 1116, 222, 18, $date, 9);
 
-        $this->lineText($pdf, 500, 1088, 176, 24, $name, 8);
-        $this->lineText($pdf, 603, 1237, 256, 24, $name, 8);
-        $this->signature($pdf, data_get($agreement, 'signature_image'), 633, 1263, 228, 30);
-        $this->lineText($pdf, 594, 1310, 266, 24, data_get($agreement, 'witness.full_name'), 8);
-        $this->signature($pdf, data_get($agreement, 'witness.signature_image'), 630, 1336, 235, 30);
-        $this->lineText($pdf, 558, 1384, 300, 24, $date, 9);
+        $this->lineText($pdf, 740, 1154, 133, 18, $name, 8);
+        $this->lineText($pdf, 595, 1257, 179, 18, $name, 8);
+        $this->signature($pdf, data_get($agreement, 'signature_image'), 605, 1276, 159, 18);
+        $this->lineText($pdf, 589, 1300, 186, 18, data_get($agreement, 'witness.full_name'), 8);
+        $this->signature($pdf, data_get($agreement, 'witness.signature_image'), 596, 1319, 164, 18);
+        $this->lineText($pdf, 532, 1343, 209, 18, $date, 9);
     }
 
     private function field(Fpdi $pdf, float $x, float $y, float $width, float $height, mixed $value, float $maxFont = 9): void
