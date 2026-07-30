@@ -129,7 +129,7 @@ class TravelFlexApplicationPdfService
         $this->check($pdf, 115, 514, $sector === 'private');
         $this->check($pdf, 183, 514, $sector === 'public');
         $this->field($pdf, 384, 514, 285, 25, data_get($identity, 'passport_number'));
-        $this->dateBoxes($pdf, $this->date(data_get($identity, 'passport_expiry_date')), [[673, 43], [721, 43], [769, 90]], 513, 26);
+        $this->dateBoxes($pdf, $this->date(data_get($identity, 'passport_expiry_date')), [[673, 43], [721, 43], [769, 90]], 520, 26);
 
         $this->field($pdf, 80, 552, 443, 25, data_get($employment, 'occupation'));
         $this->field($pdf, 184, 589, 244, 25, data_get($employment, 'ippis_number'));
@@ -178,17 +178,18 @@ class TravelFlexApplicationPdfService
         $name = data_get($application->applicant_details, 'full_name');
         $acceptedAt = $this->date(data_get($agreement, 'accepted_at')) ?? now('Africa/Lagos');
         $date = $acceptedAt->format('d/m/Y');
+        $yOffset = 10;
 
-        $this->lineText($pdf, 535, 1078, 222, 18, $name, 9);
-        $this->signature($pdf, data_get($agreement, 'signature_image'), 530, 1101, 222, 18);
-        $this->lineText($pdf, 540, 1116, 222, 18, $date, 9);
+        $this->lineText($pdf, 535, 1078 + $yOffset, 222, 18, $name, 9);
+        $this->signature($pdf, data_get($agreement, 'signature_image'), 530, 1101 + $yOffset, 222, 18);
+        $this->lineText($pdf, 540, 1116 + $yOffset, 222, 18, $date, 9);
 
-        $this->lineText($pdf, 740, 1154, 133, 18, $name, 8);
-        $this->lineText($pdf, 595, 1257, 179, 18, $name, 8);
-        $this->signature($pdf, data_get($agreement, 'signature_image'), 605, 1276, 159, 18);
-        $this->lineText($pdf, 589, 1300, 186, 18, data_get($agreement, 'witness.full_name'), 8);
-        $this->signature($pdf, data_get($agreement, 'witness.signature_image'), 596, 1319, 164, 18);
-        $this->lineText($pdf, 532, 1343, 209, 18, $date, 9);
+        $this->lineText($pdf, 740, 1154 + $yOffset, 133, 18, $name, 8);
+        $this->lineText($pdf, 595, 1257 + $yOffset, 179, 18, $name, 8);
+        $this->signature($pdf, data_get($agreement, 'signature_image'), 605, 1276 + $yOffset, 159, 18);
+        $this->lineText($pdf, 589, 1300 + $yOffset, 186, 18, data_get($agreement, 'witness.full_name'), 8);
+        $this->signature($pdf, data_get($agreement, 'witness.signature_image'), 596, 1319 + $yOffset, 164, 18);
+        $this->lineText($pdf, 532, 1343 + $yOffset, 209, 18, $date, 9);
     }
 
     private function field(Fpdi $pdf, float $x, float $y, float $width, float $height, mixed $value, float $maxFont = 9): void
