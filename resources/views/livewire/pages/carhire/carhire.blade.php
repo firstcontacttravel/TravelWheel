@@ -153,6 +153,10 @@
         @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .detail-inner { display: grid; grid-template-columns: 320px 1fr; }
         @media(max-width:640px) { .detail-inner { grid-template-columns: 1fr; } }
+        .di-body { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+        .di-main { flex: 1 1 220px; min-width: 180px; }
+        .di-body .price-breakdown { flex: 0 0 250px; margin-top: 0; }
+        @media(max-width:760px) { .di-body .price-breakdown { flex: 1 1 100%; } }
 
         /* ── Carousel ── */
         .carousel-wrap { position: relative; background: #0a1060; overflow: hidden; min-height: 240px; }
@@ -235,6 +239,19 @@
         .btn-proceed-form { width: 100%; padding: 11px; background: linear-gradient(135deg,#0d1883,#2d39b6); color: white; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; }
         .btn-proceed-form:hover { background: linear-gradient(135deg,#0b1570,#1e2d9e); transform: translateY(-1px); }
         .btn-proceed-form svg { width: 12px; height: 12px; fill: white; }
+
+        /* ── Duration quick-pick chips ── */
+        .duration-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .duration-chip { padding: 9px 16px; border: 1.5px solid #dde0ee; border-radius: 20px; font-size: 12.5px; font-weight: 600; color: #555; background: #fafbff; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .15s; }
+        .duration-chip:hover { border-color: #c5cef8; background: #f0f3ff; }
+        .duration-chip.active { background: #0d1883; border-color: #0d1883; color: #fff; }
+        .duration-custom-input { width: 84px; padding: 9px 10px; border: 1.5px solid #0d1883; border-radius: 20px; font-size: 12.5px; font-family: 'DM Sans', sans-serif; color: #1a1a1a; outline: none; text-align: center; }
+
+        /* ── Single context-aware CTA (Get Quote → Proceed) ── */
+        .btn-cta { width: 100%; padding: 11px; background: #f0f3ff; color: #0d1883; border: 1.5px solid #c5cef8; border-radius: 10px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; margin-bottom: 12px; }
+        .btn-cta:hover { background: #e0e8ff; }
+        .btn-cta.is-ready { background: linear-gradient(135deg,#0d1883,#2d39b6); color: #fff; border-color: transparent; }
+        .btn-cta.is-ready:hover { background: linear-gradient(135deg,#0b1570,#1e2d9e); transform: translateY(-1px); }
         .secure-note { text-align: center; font-size: 10.5px; color: #bbb; margin-top: 9px; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .secure-note svg { width: 10px; height: 10px; opacity: .5; }
         .alert-box { background: #fff0f0; border: 1px solid #ffc5c5; color: #c0392b; border-radius: 9px; padding: 9px 13px; font-size: 12px; margin-bottom: 12px; display: none; }
@@ -411,42 +428,33 @@
                         </div>
 
                         <div class="inner-card" id="ch_pricingCard" style="display:none;">
-                            <div class="section-label">3 · Route &amp; duration</div>
+                            <div class="section-label">3 · Pick-up &amp; duration</div>
                             <div id="ch_alertA" class="alert-box"></div>
-                            <div class="form-row" style="margin-bottom:10px;">
-                                <div class="form-group">
-                                    <label>Pick-up Location</label>
-                                    <input type="text" id="ch_pickup" placeholder="e.g. Victoria Island, Lagos" oninput="ch_clearDist()">
-                                </div>
-                                <div class="form-group">
-                                    <label>Drop-off Location</label>
-                                    <input type="text" id="ch_dropoff" placeholder="e.g. Lekki Phase 1, Lagos" oninput="ch_clearDist()">
-                                </div>
+                            <div class="form-group" style="margin-bottom:10px;">
+                                <label>Pick-up Location</label>
+                                <input type="text" id="ch_pickup" placeholder="e.g. Victoria Island, Lagos">
                             </div>
                             <div class="form-group" style="margin-bottom:10px;">
-                                <label>Rental Duration (hours)</label>
-                                <input type="number" id="ch_hours" placeholder="e.g. 4" min="1" oninput="ch_calcPrice()">
-                            </div>
-                            <button class="btn-calc" onclick="ch_calcDist()">📍 Get Final Quote</button>
-                            <div class="dist-status" id="ch_calcSt">
-                                <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
-                                Calculating via Google Maps...
-                            </div>
-                            <div class="dist-result" id="ch_distRes">
-                                <div>Distance: <strong id="ch_distKmLbl">—</strong> &nbsp;·&nbsp; Drive time: <strong id="ch_driveLbl">—</strong></div>
-                                <span style="font-size:10.5px;color:#888;">via Google Maps</span>
+                                <label>Rental Duration</label>
+                                <div class="duration-chips" id="ch_durationChips">
+                                    <button type="button" class="duration-chip" onclick="ch_setDuration(2,this)">2h</button>
+                                    <button type="button" class="duration-chip" onclick="ch_setDuration(4,this)">4h</button>
+                                    <button type="button" class="duration-chip" onclick="ch_setDuration(6,this)">6h</button>
+                                    <button type="button" class="duration-chip" onclick="ch_setDuration(8,this)">8h</button>
+                                    <button type="button" class="duration-chip" onclick="ch_setDuration(12,this)">12h</button>
+                                    <button type="button" class="duration-chip" id="ch_durationCustomChip" onclick="ch_setDurationCustom(this)">Custom</button>
+                                    <input type="number" id="ch_hours" class="duration-custom-input" placeholder="Hrs" min="1" oninput="ch_calcPrice()" style="display:none;">
+                                </div>
                             </div>
                             <div class="price-breakdown" id="ch_priceBox">
                                 <div class="pb-title">Price Breakdown</div>
-                                <div class="pb-row"><span>Base price</span><strong id="pb_base">₦0</strong></div>
-                                <div class="pb-row"><span>Fuel (<span id="pb_km">0</span> km × ₦<span id="pb_frate">0</span>/km)</span><strong id="pb_fuel">₦0</strong></div>
-                                <div class="pb-row"><span>Hourly (<span id="pb_hrs">0</span> hrs × ₦<span id="pb_hrate">0</span>/hr)</span><strong id="pb_hrly">₦0</strong></div>
+                                <div class="pb-row"><span>Base Fare</span><strong id="pb_base">₦0</strong></div>
+                                <div class="pb-row"><span>Tear &amp; Wear (<span id="pb_wearpct">0</span>%)</span><strong id="pb_wear">₦0</strong></div>
+                                <div class="pb-row"><span>Fuel (<span id="pb_mins">0</span> mins × ₦<span id="pb_frate">0</span>/min)</span><strong id="pb_fuel">₦0</strong></div>
+                                <div class="pb-row"><span>Admin Fee (<span id="pb_adminpct">0</span>%)</span><strong id="pb_admin">₦0</strong></div>
                                 <div class="pb-total"><span>Total Estimate</span><strong id="pb_total">₦0</strong></div>
                             </div>
-                            <button class="btn-proceed-form" onclick="ch_goToForm()">
-                                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
-                                Proceed to Booking Form
-                            </button>
+                            <button class="btn-cta" id="ch_ctaBtn" onclick="ch_ctaAction()">Proceed to Booking Form</button>
                         </div>
 
                         <div class="inner-card" id="ch_formCard" style="display:none;">
@@ -544,12 +552,12 @@
                             @foreach(['saloon','suv','van','bus','luxury'] as $vtype)
                             <div class="type-card" onclick="tr_setType('{{ $vtype }}',this)" style="flex:1;min-width:130px;max-width:200px;margin-bottom:0;">
                                 <div class="type-thumb">
-                                    <img src="{{ $transferVehicles[$vtype]['thumb'] }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" alt="{{ ucfirst($vtype) }}">
+                                    <img src="{{ $transferVehicles[$vtype]['items'][0]['images'][0] ?? '' }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" alt="{{ ucfirst($vtype) }}">
                                     <svg style="display:none" viewBox="0 0 60 38" fill="none"><rect x="3" y="12" width="50" height="18" rx="3" fill="#0d1883" opacity="0.3"/><circle cx="14" cy="32" r="5" fill="#0d1883" opacity="0.7"/><circle cx="42" cy="32" r="5" fill="#0d1883" opacity="0.7"/></svg>
                                 </div>
                                 <div class="type-info">
                                     <h6>{{ $vtype === 'van' ? 'Mini Van' : ucfirst($vtype) }}</h6>
-                                    <small>{{ count($transferVehicles[$vtype]['models']) }} model{{ count($transferVehicles[$vtype]['models']) > 1 ? 's' : '' }}</small>
+                                    <small>{{ collect($transferVehicles[$vtype]['items'])->sum(fn($i) => count($i['models'])) }} model{{ collect($transferVehicles[$vtype]['items'])->sum(fn($i) => count($i['models'])) > 1 ? 's' : '' }}</small>
                                 </div>
                                 <div class="type-check"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5l3 3 7-7" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
                             </div>
@@ -557,20 +565,32 @@
                         </div>
                     </div>
 
-                    {{-- Step 3: Select car model --}}
-                    <div class="inner-card tinted" id="tr_modelCard" style="display:none;">
-                        <div class="section-label">3 · Select car</div>
-                        <div id="tr_typeLbl" style="font-size:12px;font-weight:500;color:#0d1883;margin-bottom:14px;"></div>
-                        <div id="tr_modelArea">
+                    {{-- Step 3: Select category --}}
+                    <div class="inner-card tinted" id="tr_catCard" style="display:none;">
+                        <div class="section-label">3 · Select category</div>
+                        <div id="tr_catTypeLbl" style="font-size:12px;font-weight:500;color:#0d1883;margin-bottom:14px;"></div>
+                        <div id="tr_catArea">
                             <div class="cat-empty">
                                 <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
                                 <p>Choose a vehicle type first</p>
                             </div>
                         </div>
+                    </div>
+
+                    {{-- Step 4: Select car model --}}
+                    <div class="inner-card tinted" id="tr_modelCard" style="display:none;">
+                        <div class="section-label">4 · Select car</div>
+                        <div id="tr_typeLbl" style="font-size:12px;font-weight:500;color:#0d1883;margin-bottom:14px;"></div>
+                        <div id="tr_modelArea">
+                            <div class="cat-empty">
+                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
+                                <p>Choose a category first</p>
+                            </div>
+                        </div>
                         <div id="tr_detailPanel" class="cat-detail-panel"></div>
                     </div>
 
-                    {{-- Step 4: Booking form --}}
+                    {{-- Step 5: Booking form --}}
                     <div class="inner-card" id="tr_formCard" style="display:none;">
                         <div class="form-section-title">Transfer Details</div>
                         <div class="form-chip"><svg viewBox="0 0 24 24"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg><span id="tr_chipTxt"></span></div>
@@ -635,15 +655,12 @@
     <input type="hidden" name="car_type"         id="h_ch_type">
     <input type="hidden" name="category"          id="h_ch_cat">
     <input type="hidden" name="car_model"         id="h_ch_model">
-    <input type="hidden" name="price"             id="h_ch_price">
-    <input type="hidden" name="distance_km"       id="h_ch_dist">
     <input type="hidden" name="rental_hours"      id="h_ch_hours">
     <input type="hidden" name="full_name"         id="h_ch_name">
     <input type="hidden" name="email"             id="h_ch_email">
     <input type="hidden" name="phone_number"      id="h_ch_phone">
     <input type="hidden" name="passengers"        id="h_ch_pax">
     <input type="hidden" name="pickup_location"   id="h_ch_pickup">
-    <input type="hidden" name="dropoff_location"  id="h_ch_dropoff">
     <input type="hidden" name="pickup_date"       id="h_ch_date">
     <input type="hidden" name="pickup_time"       id="h_ch_time">
     <input type="hidden" name="payment_option"    id="h_ch_payment">
@@ -652,8 +669,10 @@
     @csrf
     <input type="hidden" name="vehicle_type"      id="h_tr_type">
     <input type="hidden" name="vehicle_name"      id="h_tr_vname">
+    <input type="hidden" name="category"          id="h_tr_cat">
     <input type="hidden" name="price"             id="h_tr_price">
     <input type="hidden" name="distance_km"       id="h_tr_dist">
+    <input type="hidden" name="duration_mins"     id="h_tr_duration">
     <input type="hidden" name="pickup_location"   id="h_tr_from">
     <input type="hidden" name="dropoff_location"  id="h_tr_to">
     <input type="hidden" name="full_name"         id="h_tr_name">
@@ -678,8 +697,8 @@ const PAX_LIMITS = { saloon:3, suv:3, van:5, bus:12, luxury:4 };
 const SVG_FB = `<svg viewBox="0 0 60 38" fill="none"><rect x="3" y="10" width="50" height="22" rx="3" fill="#0d1883" opacity="0.3"/><circle cx="14" cy="34" r="5" fill="#0d1883" opacity="0.6"/><circle cx="42" cy="34" r="5" fill="#0d1883" opacity="0.6"/></svg>`;
 
 /* ── state ── */
-let chSelType=null, chSelCat=null, chSelModel=null, chDistKm=0, chFinalPrice=0, chPayment='budpay';
-let trSelType=null, trSelModel=null, trDistKm=0, trFinalPrice=0, trPayment='budpay';
+let chSelType=null, chSelCat=null, chSelModel=null, chFinalPrice=0, chPayment='budpay';
+let trSelType=null, trSelCat=null, trSelModel=null, trDistKm=0, trDurationMins=0, trFinalPrice=0, trPayment='budpay';
 let activeModal=null;
 
 /* ══ FARE RULES MODAL ══ */
@@ -837,7 +856,7 @@ function buildDots(count, trackId) {
 function ch_setType(type, el) {
     document.querySelectorAll('#panel-ch .type-card').forEach(c=>c.classList.remove('active'));
     el.classList.add('active');
-    chSelType=type; chSelCat=null; chSelModel=null; chDistKm=0; chFinalPrice=0;
+    chSelType=type; chSelCat=null; chSelModel=null; chFinalPrice=0;
     const lbl=document.getElementById('ch_typeLbl');
     lbl.textContent=(type==='van'?'Mini Van':type.charAt(0).toUpperCase()+type.slice(1))+' — choose a category';
     lbl.style.display='block';
@@ -846,6 +865,7 @@ function ch_setType(type, el) {
     document.getElementById('ch_formCard').style.display='none';
     document.getElementById('ch_detailPanel').classList.remove('visible');
     document.getElementById('ch_detailPanel').innerHTML='';
+    ch_setCtaReady(false);
     ch_renderThumbs(type, null);
 }
 
@@ -888,6 +908,7 @@ function ch_selectCat(type, name) {
     // Hide detail panel until model is picked
     document.getElementById('ch_detailPanel').classList.remove('visible');
     document.getElementById('ch_detailPanel').innerHTML='';
+    ch_setCtaReady(false);
     document.getElementById('ch_pricingCard').style.display='none';
     document.getElementById('ch_formCard').style.display='none';
     // Show the model picker
@@ -993,50 +1014,73 @@ function ch_resetCat() {
     if(chSelType) ch_renderThumbs(chSelType,null);
 }
 function ch_openPricing() { const c=document.getElementById('ch_pricingCard'); c.style.display='block'; document.getElementById('ch_formCard').style.display='none'; c.scrollIntoView({behavior:'smooth',block:'nearest'}); }
-function ch_clearDist() { chDistKm=0; chFinalPrice=0; document.getElementById('ch_distRes').classList.remove('show'); document.getElementById('ch_priceBox').classList.remove('show'); }
 
-async function ch_calcDist() {
-    const fromEl=document.getElementById('ch_pickup'), toEl=document.getElementById('ch_dropoff');
-    const alertEl=document.getElementById('ch_alertA');
-    alertEl.style.display='none';
-    if (!fromEl.value.trim()||!toEl.value.trim()) { showErr('ch_alertA','Please enter both pick-up and drop-off locations.'); return; }
+/* Quick-pick duration chips — replaces a bare number input */
+function ch_setDuration(hrs, el) {
+    document.querySelectorAll('#ch_durationChips .duration-chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+    const input=document.getElementById('ch_hours');
+    input.style.display='none';
+    input.value=hrs;
+    ch_calcPrice();
+}
+function ch_setDurationCustom(el) {
+    document.querySelectorAll('#ch_durationChips .duration-chip').forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+    const input=document.getElementById('ch_hours');
+    input.style.display='inline-block';
+    input.value='';
+    input.focus();
+}
+
+function ch_setCtaReady(ready) {
+    document.getElementById('ch_ctaBtn').classList.toggle('is-ready', ready);
+}
+
+/* Base Fare + Tear & Wear + Fuel + Admin Fee — same formula (and same
+   per-vehicle-type rates) as the Pick up 'n' Drop off (Transfer) tab, using
+   the rental duration in place of a route's drive time. */
+function ch_computePricing() {
     const hrs=parseFloat(document.getElementById('ch_hours').value)||0;
-    if (!hrs) { showErr('ch_alertA','Please enter the rental duration in hours first.'); return; }
-    document.getElementById('ch_calcSt').classList.add('show');
-    document.getElementById('ch_distRes').classList.remove('show');
-    document.getElementById('ch_priceBox').classList.remove('show');
-    try {
-        const r=await getDistance(fromEl, toEl);
-        chDistKm=r.distance_km;
-        document.getElementById('ch_distKmLbl').textContent=r.distance_text;
-        document.getElementById('ch_driveLbl').textContent=r.drive_time;
-        document.getElementById('ch_distRes').classList.add('show');
-        ch_calcPrice();
-    } catch(e) { showErr('ch_alertA', e.message); }
-    finally { document.getElementById('ch_calcSt').classList.remove('show'); }
+    if (!chSelCat||!chSelType||!hrs) { chFinalPrice=0; return null; }
+    const td=CH_DATA[chSelType]||{};
+    const base=chSelCat.price;
+    const wearPct=td.wear_percent||0;
+    const wear=base*wearPct/100;
+    const durationMins=Math.round(hrs*60);
+    const fuelRate=td.fuel_rate_per_minute||0;
+    const fuel=durationMins*fuelRate;
+    const subtotal=base+wear+fuel;
+    const adminPct=td.admin_fee_percent||0;
+    const admin=subtotal*adminPct/100;
+    const total=Math.round(subtotal+admin);
+    chFinalPrice=total;
+    return {base, wearPct, wear, durationMins, fuelRate, fuel, adminPct, admin, total};
 }
 
 function ch_calcPrice() {
-    if (!chSelCat||!chSelType||!chDistKm) return;
-    const td=CH_DATA[chSelType]; const fuelRate=td?.fuel_rate_per_km||0; const hrRate=td?.hourly_rate||0;
-    const hrs=parseFloat(document.getElementById('ch_hours').value)||0;
-    const base=chSelCat.price, fuel=chDistKm*fuelRate, hrly=hrs*hrRate;
-    chFinalPrice=base+fuel+hrly;
-    document.getElementById('pb_base').textContent='₦'+base.toLocaleString();
-    document.getElementById('pb_km').textContent=chDistKm;
-    document.getElementById('pb_frate').textContent=fuelRate.toLocaleString();
-    document.getElementById('pb_fuel').textContent='₦'+fuel.toLocaleString();
-    document.getElementById('pb_hrs').textContent=hrs;
-    document.getElementById('pb_hrate').textContent=hrRate.toLocaleString();
-    document.getElementById('pb_hrly').textContent='₦'+hrly.toLocaleString();
-    document.getElementById('pb_total').textContent='₦'+chFinalPrice.toLocaleString();
+    const p=ch_computePricing();
+    if (!p) { document.getElementById('ch_priceBox').classList.remove('show'); ch_setCtaReady(false); return; }
+    document.getElementById('pb_base').textContent='₦'+p.base.toLocaleString();
+    document.getElementById('pb_wearpct').textContent=p.wearPct;
+    document.getElementById('pb_wear').textContent='₦'+Math.round(p.wear).toLocaleString();
+    document.getElementById('pb_mins').textContent=p.durationMins;
+    document.getElementById('pb_frate').textContent=p.fuelRate.toLocaleString();
+    document.getElementById('pb_fuel').textContent='₦'+Math.round(p.fuel).toLocaleString();
+    document.getElementById('pb_adminpct').textContent=p.adminPct;
+    document.getElementById('pb_admin').textContent='₦'+Math.round(p.admin).toLocaleString();
+    document.getElementById('pb_total').textContent='₦'+p.total.toLocaleString();
     document.getElementById('ch_priceBox').classList.add('show');
+    ch_setCtaReady(true);
+}
+
+function ch_ctaAction() {
+    if (!document.getElementById('ch_pickup').value.trim()) { showErr('ch_alertA','Please enter your pick-up location.'); document.getElementById('ch_pickup').scrollIntoView({behavior:'smooth',block:'nearest'}); return; }
+    if (!chFinalPrice) { showErr('ch_alertA','Please select or enter the rental duration first.'); return; }
+    ch_goToForm();
 }
 
 function ch_goToForm() {
-    if (!chDistKm) { showErr('ch_alertA','Please calculate the distance first.'); return; }
-    const hrs=parseFloat(document.getElementById('ch_hours').value)||0;
-    if (!hrs) { showErr('ch_alertA','Please enter rental hours.'); return; }
     const typeName=chSelType==='van'?'Mini Van':chSelType.charAt(0).toUpperCase()+chSelType.slice(1);
     document.getElementById('ch_chipTxt').textContent=typeName+' · '+chSelCat.name+' · '+chSelModel+' · ₦'+chFinalPrice.toLocaleString();
     const paxInput=document.getElementById('ch_pax');
@@ -1053,71 +1097,158 @@ function ch_pay(m) { chPayment=m; ['budpay','seerbit'].forEach(x=>document.getEl
 function tr_setType(type, el) {
     document.querySelectorAll('#tr_typeCards .type-card').forEach(c=>c.classList.remove('active'));
     el.classList.add('active');
-    trSelType=type; trSelModel=null; trFinalPrice=0;
-    const lbl=document.getElementById('tr_typeLbl');
-    lbl.textContent=(type==='van'?'Mini Van':type.charAt(0).toUpperCase()+type.slice(1))+' — choose a car model';
-    document.getElementById('tr_modelCard').style.display='block';
+    trSelType=type; trSelCat=null; trSelModel=null; trFinalPrice=0;
+    const lbl=document.getElementById('tr_catTypeLbl');
+    lbl.textContent=(type==='van'?'Mini Van':type.charAt(0).toUpperCase()+type.slice(1))+' — choose a category';
+    document.getElementById('tr_catCard').style.display='block';
+    document.getElementById('tr_modelCard').style.display='none';
+    document.getElementById('tr_priceBox')?.classList.remove('show');
     document.getElementById('tr_detailPanel').classList.remove('visible');
     document.getElementById('tr_detailPanel').innerHTML='';
     document.getElementById('tr_formCard').style.display='none';
-    tr_renderModels(type, null);
-    document.getElementById('tr_modelCard').scrollIntoView({behavior:'smooth',block:'nearest'});
+    tr_renderCats(type, null);
+    document.getElementById('tr_catCard').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-function tr_renderModels(type, activeName) {
-    const models=TR_VEHICLES[type]?.models||[];
+function tr_renderCats(type, activeName) {
+    const cats=TR_VEHICLES[type]?.items||[];
+    const area=document.getElementById('tr_catArea');
+    if (!cats.length) { area.innerHTML=`<div class="cat-empty"><p>No categories available.</p></div>`; return; }
+    area.innerHTML=`<div class="cat-row">`+cats.map(cat=>{
+        const isActive=activeName===cat.name;
+        const isDimmed=activeName&&activeName!==cat.name;
+        const cls=`cat-thumb-card${isActive?' active':''}${isDimmed?' dimmed':''}`;
+        const thumbImg=cat.images?.[0]||'';
+        const thumb=thumbImg?`<img src="${thumbImg}" alt="${esc(cat.name)}" onerror="this.parentNode.innerHTML=SVG_FB">`:SVG_FB;
+        return `<div class="${cls}" onclick="tr_selectCat('${esc(type)}','${escQ(cat.name)}')">
+            <div class="ctc-check"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5l3 3 7-7" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="ctc-img">${thumb}</div>
+            <div class="ctc-name">${esc(cat.name)}</div>
+            <div class="ctc-price">From &#8358;${Number(cat.price).toLocaleString()}</div>
+            <div class="ctc-pax">&#128100; ${esc(cat.passengers||'—')}</div>
+        </div>`;
+    }).join('')+`</div>`;
+}
+
+function tr_selectCat(type, name) {
+    const cat=(TR_VEHICLES[type]?.items||[]).find(c=>c.name===name);
+    if (!cat) return;
+    if (trSelCat?.name===name) {
+        trSelCat=null; trSelModel=null; trFinalPrice=0;
+        document.getElementById('tr_modelCard').style.display='none';
+        document.getElementById('tr_priceBox')?.classList.remove('show');
+        document.getElementById('tr_detailPanel').classList.remove('visible');
+        document.getElementById('tr_detailPanel').innerHTML='';
+        document.getElementById('tr_formCard').style.display='none';
+        tr_renderCats(type,null);
+        return;
+    }
+    trSelCat=cat; trSelModel=null;
+    tr_renderCats(type, name);
+    document.getElementById('tr_detailPanel').classList.remove('visible');
+    document.getElementById('tr_detailPanel').innerHTML='';
+    document.getElementById('tr_priceBox')?.classList.remove('show');
+    document.getElementById('tr_formCard').style.display='none';
+    tr_renderModels(cat, null);
+}
+
+function tr_renderModels(cat, activeName) {
+    const models=cat.models||[];
     const area=document.getElementById('tr_modelArea');
-    if (!models.length) { area.innerHTML=`<div class="cat-empty"><p>No models available.</p></div>`; return; }
+    const lbl=document.getElementById('tr_typeLbl');
+    lbl.textContent=cat.name+' — select the specific car model you prefer';
+    if (!models.length) { area.innerHTML=`<div class="cat-empty"><p>No models listed for this category.</p></div>`; document.getElementById('tr_modelCard').style.display='block'; return; }
     area.innerHTML=`<div class="cat-row">`+models.map(m=>{
         const isActive=activeName===m.name;
         const isDimmed=activeName&&activeName!==m.name;
         const cls=`cat-thumb-card${isActive?' active':''}${isDimmed?' dimmed':''}`;
         const thumbImg=m.images?.[0]||'';
         const thumb=thumbImg?`<img src="${thumbImg}" alt="${esc(m.name)}" onerror="this.parentNode.innerHTML=SVG_FB">`:SVG_FB;
-        const price=trDistKm>0?Math.round(trDistKm*m.rate_per_km):null;
-        const priceLabel=price?`&#8358;${price.toLocaleString()}`:`&#8358;${m.rate_per_km}/km`;
-        return `<div class="${cls}" onclick="tr_selectModel('${esc(type)}','${escQ(m.name)}')">
+        return `<div class="${cls}" onclick="tr_selectModel('${escQ(m.name)}')">
             <div class="ctc-check"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5l3 3 7-7" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
             <div class="ctc-img">${thumb}</div>
             <div class="ctc-name">${esc(m.name)}</div>
-            <div class="ctc-price">${priceLabel}</div>
             <div class="ctc-pax">&#128100; ${esc(m.passengers||'—')}</div>
         </div>`;
     }).join('')+`</div>`;
+    document.getElementById('tr_modelCard').style.display='block';
+    document.getElementById('tr_modelCard').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-function tr_selectModel(type, name) {
-    const model=(TR_VEHICLES[type]?.models||[]).find(m=>m.name===name);
+function tr_selectModel(name) {
+    if (!trSelCat) return;
+    const model=(trSelCat.models||[]).find(m=>m.name===name);
     if (!model) return;
-    if (trSelModel?.name===name) { trSelModel=null; trFinalPrice=0; document.getElementById('tr_detailPanel').classList.remove('visible'); document.getElementById('tr_formCard').style.display='none'; tr_renderModels(type,null); return; }
+    if (trSelModel?.name===name) {
+        trSelModel=null; trFinalPrice=0;
+        document.getElementById('tr_detailPanel').classList.remove('visible');
+        document.getElementById('tr_priceBox')?.classList.remove('show');
+        document.getElementById('tr_formCard').style.display='none';
+        tr_renderModels(trSelCat,null);
+        return;
+    }
     trSelModel=model;
-    trFinalPrice=trDistKm>0?Math.round(trDistKm*model.rate_per_km):0;
-    tr_renderModels(type, name);
-    tr_buildDetail(type, model);
+    tr_renderModels(trSelCat, name);
+    tr_buildDetail(trSelType, trSelCat, model);
     document.getElementById('tr_formCard').style.display='none';
 }
 
-function tr_buildDetail(type, model) {
+/* Computes Base Fare + Tear & Wear + Fuel + Admin Fee for the selected
+   type/category, using the drive-time (minutes) from the route lookup. */
+function tr_computePricing() {
+    if (!trSelType||!trSelCat||!trDurationMins) { trFinalPrice=0; return null; }
+    const td=TR_VEHICLES[trSelType]||{};
+    const base=trSelCat.price;
+    const wearPct=td.wear_percent||0;
+    const wear=base*wearPct/100;
+    const fuelRate=td.fuel_rate_per_minute||0;
+    const fuel=trDurationMins*fuelRate;
+    const subtotal=base+wear+fuel;
+    const adminPct=td.admin_fee_percent||0;
+    const admin=subtotal*adminPct/100;
+    const total=Math.round(subtotal+admin);
+    trFinalPrice=total;
+    return {base, wearPct, wear, fuelRate, fuel, adminPct, admin, total};
+}
+
+/* Kept for the recompute-on-duration-change path when no model is selected yet
+   (no price card is shown at that point, so this just refreshes trFinalPrice). */
+function tr_calcPrice() {
+    const p=tr_computePricing();
+    return p ? p.total : null;
+}
+
+function tr_buildDetail(type, cat, model) {
     const typeName=type==='van'?'Mini Van':type.charAt(0).toUpperCase()+type.slice(1);
     const images=model.images||[];
     const slides=buildSlides(images, model.name);
     const dots=buildDots(images.length||1, 'trCar');
-    const feats=(model.features||[]).map(f=>`<li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>${esc(f)}</li>`).join('');
-    const price=trDistKm>0?Math.round(trDistKm*model.rate_per_km):null;
-    trFinalPrice=price||0;
-    const priceDisplay=price
-        ?`&#8358;${price.toLocaleString()} <span>total for ${trDistKm} km</span>`
-        :`&#8358;${model.rate_per_km}/km <span>calculate route to see total</span>`;
+    const feats=(model.features||cat.features||[]).map(f=>`<li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>${esc(f)}</li>`).join('');
+    const pricing=tr_computePricing();
+    const priceDisplay=pricing
+        ?`&#8358;${pricing.total.toLocaleString()} <span>estimated total</span>`
+        :`&#8358;${Number(cat.price).toLocaleString()} <span>base fare</span>`;
+    const priceBreakdown=pricing?`<div class="price-breakdown show" id="tr_priceBox">
+                <div class="pb-title">Price Breakdown</div>
+                <div class="pb-row"><span>Base Fare</span><strong>₦${pricing.base.toLocaleString()}</strong></div>
+                <div class="pb-row"><span>Tear &amp; Wear (${pricing.wearPct}%)</span><strong>₦${Math.round(pricing.wear).toLocaleString()}</strong></div>
+                <div class="pb-row"><span>Fuel (${trDurationMins} mins × ₦${pricing.fuelRate.toLocaleString()}/min)</span><strong>₦${Math.round(pricing.fuel).toLocaleString()}</strong></div>
+                <div class="pb-row"><span>Admin Fee (${pricing.adminPct}%)</span><strong>₦${Math.round(pricing.admin).toLocaleString()}</strong></div>
+                <div class="pb-total"><span>Total Estimate</span><strong>₦${pricing.total.toLocaleString()}</strong></div>
+            </div>`:'';
     const panel=document.getElementById('tr_detailPanel');
     panel.innerHTML=`<div class="detail-inner">
         ${buildCarousel(slides, dots, 'trCar')}
         <div class="detail-info">
-            <div><div class="di-cat-name">${esc(model.name)}</div><div class="di-type-tag">${esc(typeName)}</div></div>
-            <div>
-                <div class="di-price">${priceDisplay}</div>
-                <div class="di-pax"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>${esc(model.passengers||'—')} passengers</div>
+            <div><div class="di-cat-name">${esc(model.name)}</div><div class="di-type-tag">${esc(cat.name)} · ${esc(typeName)}</div></div>
+            <div class="di-body">
+                <div class="di-main">
+                    <div class="di-price">${priceDisplay}</div>
+                    <div class="di-pax"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>${esc(model.passengers||cat.passengers||'—')} passengers</div>
+                    <div style="margin-top:10px;"><div class="feat-label">What's included</div><ul class="feat-list">${feats}</ul></div>
+                </div>
+                ${priceBreakdown}
             </div>
-            <div><div class="feat-label">What's included</div><ul class="feat-list">${feats}</ul></div>
             <div class="di-actions">
                 <button class="btn-change" onclick="tr_resetModel()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Change</button>
                 <button class="btn-proceed-cat" onclick="tr_openForm()"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Book This Car</button>
@@ -1129,12 +1260,12 @@ function tr_buildDetail(type, model) {
     panel.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
-function tr_resetModel() { trSelModel=null; trFinalPrice=0; document.getElementById('tr_detailPanel').classList.remove('visible'); document.getElementById('tr_formCard').style.display='none'; if(trSelType) tr_renderModels(trSelType,null); }
+function tr_resetModel() { trSelModel=null; trFinalPrice=0; document.getElementById('tr_detailPanel').classList.remove('visible'); document.getElementById('tr_priceBox')?.classList.remove('show'); document.getElementById('tr_formCard').style.display='none'; if(trSelCat) tr_renderModels(trSelCat,null); }
 
 function tr_openForm() {
-    if (!trDistKm) { showErr('tr_alertA','Please calculate the route distance before booking.'); document.getElementById('tr_from').scrollIntoView({behavior:'smooth',block:'nearest'}); return; }
+    if (!trDistKm||!trDurationMins) { showErr('tr_alertA','Please calculate the route distance before booking.'); document.getElementById('tr_from').scrollIntoView({behavior:'smooth',block:'nearest'}); return; }
     const typeName=trSelType==='van'?'Mini Van':trSelType.charAt(0).toUpperCase()+trSelType.slice(1);
-    document.getElementById('tr_chipTxt').textContent=typeName+' · '+trSelModel.name+' · '+trDistKm+' km · ₦'+trFinalPrice.toLocaleString();
+    document.getElementById('tr_chipTxt').textContent=typeName+' · '+trSelCat.name+' · '+trSelModel.name+' · '+trDistKm+' km · ₦'+trFinalPrice.toLocaleString();
     const paxInput=document.getElementById('tr_pax');
     const maxPax=PAX_LIMITS[trSelType]??20;
     paxInput.max=maxPax; paxInput.placeholder='e.g. 2 (max '+maxPax+')';
@@ -1144,14 +1275,17 @@ function tr_openForm() {
 /* Fix 2: Only fully reset when BOTH location fields are cleared — preserves autocomplete mid-selection */
 function tr_clearDist() {
     trDistKm = 0;
+    trDurationMins = 0;
     trFinalPrice = 0;
     document.getElementById('tr_distRes').classList.remove('show');
     const fromVal = document.getElementById('tr_from').value.trim();
     const toVal   = document.getElementById('tr_to').value.trim();
     if (!fromVal || !toVal) {
         document.getElementById('tr_typeCard').style.display = 'none';
-        trSelType = null; trSelModel = null;
+        trSelType = null; trSelCat = null; trSelModel = null;
+        document.getElementById('tr_catCard').style.display = 'none';
         document.getElementById('tr_modelCard').style.display = 'none';
+        document.getElementById('tr_priceBox')?.classList.remove('show');
         document.getElementById('tr_formCard').style.display = 'none';
     }
 }
@@ -1166,13 +1300,14 @@ async function tr_calcDist() {
     try {
         const r=await getDistance(fromEl, toEl);
         trDistKm=r.distance_km;
+        trDurationMins=r.duration_mins;
         document.getElementById('tr_distKmLbl').textContent=r.distance_text;
         document.getElementById('tr_driveLbl').textContent=r.drive_time;
         document.getElementById('tr_distRes').classList.add('show');
         /* Unlock vehicle type card */
         document.getElementById('tr_typeCard').style.display = 'block';
-        /* Update model prices if a type was already selected */
-        if (trSelType) { tr_renderModels(trSelType, trSelModel?.name||null); if(trSelModel) tr_buildDetail(trSelType, trSelModel); }
+        /* Recompute price if a category/model was already selected */
+        if (trSelModel) { tr_buildDetail(trSelType, trSelCat, trSelModel); } else { tr_calcPrice(); }
     } catch(e) { showErr('tr_alertA', e.message); }
     finally { document.getElementById('tr_calcSt').classList.remove('show'); }
 }
@@ -1228,9 +1363,9 @@ function openModal(tab) {
     if (tab === 'ch') {
         if (!chSelType || !chSelCat)  { showErr('ch_alertB', 'Please select a vehicle type and category.'); return; }
         if (!chSelModel)              { showErr('ch_alertB', 'Please select a car model.'); return; }
-        if (!chDistKm)                { showErr('ch_alertA', 'Please calculate the route distance first.'); return; }
+        if (!document.getElementById('ch_pickup').value.trim()) { showErr('ch_alertA', 'Please enter your pick-up location.'); return; }
         const hrs = parseFloat(document.getElementById('ch_hours').value) || 0;
-        if (!hrs)                     { showErr('ch_alertA', 'Please enter the rental duration in hours.'); return; }
+        if (!hrs)                     { showErr('ch_alertA', 'Please select or enter the rental duration first.'); return; }
         if (!chFinalPrice)            { showErr('ch_alertA', 'Price could not be calculated. Check your inputs.'); return; }
 
         const fields = [
@@ -1262,7 +1397,6 @@ function openModal(tab) {
                 ri('Type', typeName) +
                 ri('Category', esc(chSelCat.name)) +
                 ri('Model', esc(chSelModel)) +
-                ri('Distance', document.getElementById('ch_distKmLbl').textContent) +
                 ri('Duration', hrs + ' hour' + (hrs !== 1 ? 's' : '')) +
                 ri('Total Price', '₦' + chFinalPrice.toLocaleString(), true, true)
             ) +
@@ -1272,9 +1406,8 @@ function openModal(tab) {
                 ri('Phone',       esc(document.getElementById('ch_phone').value)) +
                 ri('Passengers',  document.getElementById('ch_pax').value)
             ) +
-            rsec('📍', 'Route',
-                ri('Pick-up',  esc(document.getElementById('ch_pickup').value),  true) +
-                ri('Drop-off', esc(document.getElementById('ch_dropoff').value), true) +
+            rsec('📍', 'Pick-up',
+                ri('Location', esc(document.getElementById('ch_pickup').value), true) +
                 ri('Date', fmtDate(document.getElementById('ch_date').value)) +
                 ri('Time', fmtTime(document.getElementById('ch_time').value))
             ) +
@@ -1290,8 +1423,8 @@ function openModal(tab) {
 
     } else {
         /* FIX 4: was using undefined trSelVehicle — now correctly uses trSelModel and trSelType */
-        if (!trSelType || !trSelModel) { showErr('tr_alertB', 'Please select a vehicle type and model first.'); return; }
-        if (!trDistKm)                 { showErr('tr_alertA', 'Please calculate the route distance first.'); return; }
+        if (!trSelType || !trSelCat || !trSelModel) { showErr('tr_alertB', 'Please select a vehicle type, category and model first.'); return; }
+        if (!trDistKm || !trDurationMins)           { showErr('tr_alertA', 'Please calculate the route distance first.'); return; }
 
         const fields = [
             { id:'tr_name',  l:'Full Name' },
@@ -1320,6 +1453,7 @@ function openModal(tab) {
         html =
             rsec('🚗', 'Transfer',
                 ri('Type',    typeName) +
+                ri('Category', esc(trSelCat.name)) +
                 ri('Vehicle', esc(trSelModel.name)) +
                 ri('Distance', document.getElementById('tr_distKmLbl').textContent) +
                 ri('Pick-up',  esc(document.getElementById('tr_from').value), true) +
@@ -1412,15 +1546,12 @@ function submitBooking() {
         document.getElementById('h_ch_type').value    = chSelType;
         document.getElementById('h_ch_cat').value     = chSelCat.name;
         document.getElementById('h_ch_model').value   = chSelModel;
-        document.getElementById('h_ch_price').value   = chFinalPrice;
-        document.getElementById('h_ch_dist').value    = chDistKm;
         document.getElementById('h_ch_hours').value   = document.getElementById('ch_hours').value;
         document.getElementById('h_ch_name').value    = document.getElementById('ch_name').value;
         document.getElementById('h_ch_email').value   = document.getElementById('ch_email').value;
         document.getElementById('h_ch_phone').value   = document.getElementById('ch_phone').value;
         document.getElementById('h_ch_pax').value     = document.getElementById('ch_pax').value;
         document.getElementById('h_ch_pickup').value  = document.getElementById('ch_pickup').value;
-        document.getElementById('h_ch_dropoff').value = document.getElementById('ch_dropoff').value;
         document.getElementById('h_ch_date').value    = document.getElementById('ch_date').value;
         document.getElementById('h_ch_time').value    = document.getElementById('ch_time').value;
         document.getElementById('h_ch_payment').value = chPayment;
@@ -1428,8 +1559,10 @@ function submitBooking() {
     } else {
         document.getElementById('h_tr_type').value    = trSelType;
         document.getElementById('h_tr_vname').value   = trSelModel.name;
+        document.getElementById('h_tr_cat').value     = trSelCat.name;
         document.getElementById('h_tr_price').value   = trFinalPrice;
         document.getElementById('h_tr_dist').value    = trDistKm;
+        document.getElementById('h_tr_duration').value = trDurationMins;
         document.getElementById('h_tr_from').value    = document.getElementById('tr_from').value;
         document.getElementById('h_tr_to').value      = document.getElementById('tr_to').value;
         document.getElementById('h_tr_name').value    = document.getElementById('tr_name').value;
@@ -1467,14 +1600,13 @@ document.addEventListener('DOMContentLoaded', generateTimeOptions);
 /* ══ GOOGLE PLACES AUTOCOMPLETE ══ */
 window.initAutocomplete = function () {
     const chPickup  = document.getElementById('ch_pickup');
-    const chDropoff = document.getElementById('ch_dropoff');
     const trFrom    = document.getElementById('tr_from');
     const trTo      = document.getElementById('tr_to');
 
     const options = { componentRestrictions: { country: "ng" } };
 
     /* Car hire — store lat/lng on place_changed */
-    [chPickup, chDropoff].forEach(input => {
+    [chPickup].forEach(input => {
         if (!input) return;
         const ac = new google.maps.places.Autocomplete(input, options);
         ac.addListener("place_changed", () => {

@@ -7,6 +7,7 @@ use App\Models\Transfer;
 use App\Services\BudPayPaymentService;
 use App\Services\CarFleetCatalogService;
 use App\Services\SeerbitPaymentService;
+use App\Services\TransferPricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -14,8 +15,10 @@ use Illuminate\Support\Facades\Mail;
 
 class CarController extends Controller
 {
-    public function __construct(private readonly CarFleetCatalogService $catalog)
-    {
+    public function __construct(
+        private readonly CarFleetCatalogService $catalog,
+        private readonly TransferPricingService $transferPricing,
+    ) {
     }
 
     /*
@@ -75,6 +78,7 @@ class CarController extends Controller
                 'distance_km' => $distanceKm,
                 'distance_text' => $element['distance']['text'],
                 'duration_text' => $element['duration']['text'],
+                'duration_mins' => $durationMins,
                 'drive_time' => trim($driveTime),
             ]);
         } catch (\Exception $e) {
@@ -93,17 +97,14 @@ class CarController extends Controller
     {
         $data = $request->validate([
             'car_type' => 'required|string',
-            'category' => 'required|string',
+            'category' => 'required|in:Regular,Standard,Executive',
             'car_model' => 'required|string|max:100',
-            'price' => 'required|numeric|min:0',
-            'distance_km' => 'required|numeric|min:1',
             'rental_hours' => 'required|numeric|min:1',
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
             'phone_number' => 'required|string|max:20',
             'passengers' => 'required|integer|min:1',
             'pickup_location' => 'required|string|max:255',
-            'dropoff_location' => 'required|string|max:255',
             'pickup_date' => 'required|date',
             'pickup_time' => 'required',
             'payment_option' => 'required|in:budpay,seerbit',
@@ -112,10 +113,11 @@ class CarController extends Controller
         $allCats = $this->catalog->categoriesData();
         $typeData = $allCats[$data['car_type']] ?? null;
         $catItem = collect($typeData['items'] ?? [])->firstWhere('name', $data['category']);
-        $basePrice = $catItem['price'] ?? 0;
-        $verifiedPrice = $basePrice
-            + ($data['distance_km'] * ($typeData['fuel_rate_per_km'] ?? 0))
-            + ($data['rental_hours'] * ($typeData['hourly_rate'] ?? 0));
+        $basePrice = (int) ($catItem['price'] ?? 0);
+        $durationMins = (int) round($data['rental_hours'] * 60);
+
+        $quote = $this->transferPricing->quoteForBaseFare($data['car_type'], $basePrice, $durationMins);
+        $verifiedPrice = $quote['total'];
 
         $reference = 'CARHIRE-' . strtoupper(bin2hex(random_bytes(5)));
 
@@ -128,12 +130,15 @@ class CarController extends Controller
             'phone_number' => $data['phone_number'],
             'passengers' => $data['passengers'],
             'pickup_location' => $data['pickup_location'],
-            'dropoff_location' => $data['dropoff_location'],
             'pickup_date' => $data['pickup_date'],
             'pickup_time' => $data['pickup_time'],
-            'distance_km' => $data['distance_km'],
             'rental_hours' => $data['rental_hours'],
+            'duration_mins' => $durationMins,
             'amount' => $verifiedPrice,
+            'base_fare' => $quote['base_fare'],
+            'tear_wear_amount' => $quote['tear_wear_amount'],
+            'fuel_amount' => $quote['fuel_amount'],
+            'admin_fee_amount' => $quote['admin_fee_amount'],
             'payment_option' => $data['payment_option'],
             'payment_reference' => $reference,
             'payment_status' => 'pending',
@@ -191,8 +196,9 @@ class CarController extends Controller
         $data = $request->validate([
             'vehicle_type' => 'required|string',
             'vehicle_name' => 'required|string',
-            'price' => 'required|numeric|min:0',
-            'distance_km' => 'required|numeric|min:1',
+            'category' => 'required|string|in:Regular,Standard,Executive',
+            'distance_km' => 'required|numeric|min:0.1',
+            'duration_mins' => 'required|integer|min:1',
             'pickup_location' => 'required|string|max:255',
             'dropoff_location' => 'required|string|max:255',
             'full_name' => 'required|string|max:255',
@@ -206,20 +212,26 @@ class CarController extends Controller
             'payment_option' => 'required|in:budpay,seerbit',
         ]);
 
-        $allModels = $this->catalog->transferVehiclesData();
-        $modelData = collect($allModels)->firstWhere('name', $data['vehicle_name']);
-        $ratePerKm = $modelData['rate_per_km'] ?? 0;
-        $verifiedPrice = $ratePerKm > 0
-            ? (int) round($data['distance_km'] * $ratePerKm)
-            : (int) $data['price'];
+        if (! $this->catalog->transferVehicleExists($data['vehicle_type'], $data['category'], $data['vehicle_name'])) {
+            return back()->with('error', 'The selected vehicle is no longer available. Please choose another.');
+        }
+
+        $quote = $this->transferPricing->quote($data['vehicle_type'], $data['category'], $data['duration_mins']);
+        $verifiedPrice = (int) round($quote['total']);
 
         $reference = 'TRANSFER-' . strtoupper(bin2hex(random_bytes(5)));
 
         Transfer::create([
             'vehicle_type' => $data['vehicle_type'],
             'vehicle_name' => $data['vehicle_name'],
+            'category' => $data['category'],
             'amount' => $verifiedPrice,
             'distance_km' => $data['distance_km'],
+            'duration_mins' => $data['duration_mins'],
+            'base_fare' => $quote['base_fare'],
+            'tear_wear_amount' => $quote['tear_wear_amount'],
+            'fuel_amount' => $quote['fuel_amount'],
+            'admin_fee_amount' => $quote['admin_fee_amount'],
             'pickup_location' => $data['pickup_location'],
             'dropoff_location' => $data['dropoff_location'],
             'full_name' => $data['full_name'],

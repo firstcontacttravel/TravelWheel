@@ -3,11 +3,14 @@
 namespace App\Services;
 
 use App\Models\FleetCar;
-use App\Models\TransportRate;
 
 class CarFleetCatalogService
 {
     public const VEHICLE_TYPES = ['saloon', 'suv', 'van', 'bus', 'luxury'];
+
+    public function __construct(private readonly TransferPricingService $transferPricing = new TransferPricingService())
+    {
+    }
 
     /**
      * Car-hire categories (Regular/Standard/Executive) per vehicle type, with
@@ -15,18 +18,14 @@ class CarFleetCatalogService
      */
     public function categories(): array
     {
-        $rates = TransportRate::whereIn('vehicle_type', self::VEHICLE_TYPES)->get()->keyBy('vehicle_type');
+        $ratesData = $this->transferPricing->ratesData();
         $fleetCars = FleetCar::active()->forHire()->get()->groupBy('vehicle_type');
 
         $categories = [];
 
         foreach (self::VEHICLE_TYPES as $vtype) {
-            $rate = $rates->get($vtype);
-            $priceMap = [
-                'Regular' => $rate->price_regular ?? 0,
-                'Standard' => $rate->price_standard ?? 0,
-                'Executive' => $rate->price_executive ?? 0,
-            ];
+            $rateInfo = $ratesData[$vtype] ?? null;
+            $priceMap = $rateInfo['base_fares'] ?? ['Regular' => 0, 'Standard' => 0, 'Executive' => 0];
 
             $carsForType = $fleetCars->get($vtype, collect());
             $items = [];
@@ -62,8 +61,10 @@ class CarFleetCatalogService
             }
 
             $categories[$vtype] = [
-                'fuel_rate_per_km' => (int) ($rate->fuel_rate_per_km ?? 1300),
-                'hourly_rate' => (int) ($rate->hourly_rate ?? 0),
+                'fuel_rate_per_minute' => (int) ($rateInfo['fuel_rate_per_minute'] ?? 0),
+                'admin_fee_percent' => (float) ($rateInfo['admin_fee_percent'] ?? 0),
+                'wear_items' => $rateInfo['wear_items'] ?? [],
+                'wear_percent' => (float) ($rateInfo['wear_percent'] ?? 0),
                 'items' => $items,
             ];
         }
@@ -72,43 +73,59 @@ class CarFleetCatalogService
     }
 
     /**
-     * Transfer vehicles per vehicle type, priced per km — used to render the
-     * public booking page.
+     * Transfer vehicles per vehicle type, grouped by category
+     * (Regular/Standard/Executive) with the rate data needed to compute the
+     * Base Fare + Tear & Wear + Fuel + Admin Fee formula — used to render
+     * the public booking page.
      */
     public function transferVehicles(): array
     {
-        $rates = TransportRate::whereIn('vehicle_type', self::VEHICLE_TYPES)->get()->keyBy('vehicle_type');
+        $ratesData = $this->transferPricing->ratesData();
         $fleetCars = FleetCar::active()->forTransfer()->get()->groupBy('vehicle_type');
 
         $transferVehicles = [];
 
         foreach (self::VEHICLE_TYPES as $vtype) {
-            $rate = $rates->get($vtype);
-            $ratePerKm = (int) ($rate->transfer_rate_per_km ?? 0);
+            $rateInfo = $ratesData[$vtype] ?? null;
             $carsForType = $fleetCars->get($vtype, collect());
 
-            $thumbCar = $carsForType->first();
-            $thumb = $thumbCar && $thumbCar->images && count($thumbCar->images) > 0
-                ? asset('storage/' . $thumbCar->images[0])
-                : $this->defaultVehicleImage($vtype);
+            $items = [];
+            foreach (['Regular', 'Standard', 'Executive'] as $catName) {
+                $modelsInCat = $carsForType->where('category', $catName);
+                $passengers = $modelsInCat->first()->passengers ?? $this->defaultPassengerLabel($vtype);
 
-            $models = $carsForType->map(function ($car) use ($ratePerKm, $vtype) {
-                $hasImages = $car->images && count($car->images) > 0;
+                $models = $modelsInCat->map(function ($car) use ($vtype) {
+                    $hasImages = $car->images && count($car->images) > 0;
 
-                return [
-                    'name' => $car->car_name,
-                    'rate_per_km' => $ratePerKm,
-                    'passengers' => $car->passengers ?? $this->defaultPassengerLabel($vtype),
-                    'images' => $hasImages
-                        ? collect($car->images)->map(fn ($img) => asset('storage/' . $img))->all()
-                        : [$this->defaultVehicleImage($vtype)],
-                    'features' => $car->features ?? [],
+                    return [
+                        'name' => $car->car_name,
+                        'image' => $hasImages ? asset('storage/' . $car->images[0]) : $this->defaultVehicleImage($vtype),
+                        'images' => $hasImages
+                            ? collect($car->images)->map(fn ($img) => asset('storage/' . $img))->all()
+                            : [$this->defaultVehicleImage($vtype)],
+                        'features' => $car->features ?? [],
+                    ];
+                })->values()->all();
+
+                $catImages = $modelsInCat->first() && $modelsInCat->first()->images
+                    ? collect($modelsInCat->first()->images)->map(fn ($img) => asset('storage/' . $img))->all()
+                    : [$this->defaultVehicleImage($vtype)];
+
+                $items[] = [
+                    'name' => $catName,
+                    'price' => (int) ($rateInfo['base_fares'][$catName] ?? 0),
+                    'passengers' => $passengers,
+                    'images' => $catImages,
+                    'models' => $models,
                 ];
-            })->values()->all();
+            }
 
             $transferVehicles[$vtype] = [
-                'thumb' => $thumb,
-                'models' => $models,
+                'fuel_rate_per_minute' => (int) ($rateInfo['fuel_rate_per_minute'] ?? 0),
+                'admin_fee_percent' => (float) ($rateInfo['admin_fee_percent'] ?? 0),
+                'wear_items' => $rateInfo['wear_items'] ?? [],
+                'wear_percent' => (float) ($rateInfo['wear_percent'] ?? 0),
+                'items' => $items,
             ];
         }
 
@@ -121,7 +138,7 @@ class CarFleetCatalogService
 
         foreach (self::VEHICLE_TYPES as $vtype) {
             $thumbs[$vtype] = $categories[$vtype]['items'][0]['images'][0]
-                ?? $transferVehicles[$vtype]['thumb']
+                ?? $transferVehicles[$vtype]['items'][0]['images'][0]
                 ?? $this->defaultVehicleImage($vtype);
         }
 
@@ -133,18 +150,16 @@ class CarFleetCatalogService
      */
     public function categoriesData(): array
     {
-        $rates = TransportRate::get()->keyBy('vehicle_type');
+        $ratesData = $this->transferPricing->ratesData();
         $data = [];
 
         foreach (self::VEHICLE_TYPES as $vtype) {
-            $r = $rates->get($vtype);
+            $baseFares = $ratesData[$vtype]['base_fares'] ?? ['Regular' => 0, 'Standard' => 0, 'Executive' => 0];
             $data[$vtype] = [
-                'fuel_rate_per_km' => (int) ($r->fuel_rate_per_km ?? 1300),
-                'hourly_rate' => (int) ($r->hourly_rate ?? 0),
                 'items' => [
-                    ['name' => 'Regular', 'price' => (int) ($r->price_regular ?? 0)],
-                    ['name' => 'Standard', 'price' => (int) ($r->price_standard ?? 0)],
-                    ['name' => 'Executive', 'price' => (int) ($r->price_executive ?? 0)],
+                    ['name' => 'Regular', 'price' => (int) ($baseFares['Regular'] ?? 0)],
+                    ['name' => 'Standard', 'price' => (int) ($baseFares['Standard'] ?? 0)],
+                    ['name' => 'Executive', 'price' => (int) ($baseFares['Executive'] ?? 0)],
                 ],
             ];
         }
@@ -152,22 +167,18 @@ class CarFleetCatalogService
         return $data;
     }
 
-    public function transferVehiclesData(): array
+    /**
+     * Whether an active Transfer fleet car exists for the given vehicle
+     * type + category + name — used to validate a Transfer submission
+     * before computing its (server-authoritative) price.
+     */
+    public function transferVehicleExists(string $vehicleType, string $category, string $carName): bool
     {
-        $rates = TransportRate::get()->keyBy('vehicle_type');
-        $cars = FleetCar::active()->forTransfer()->get();
-
-        $data = [];
-        foreach ($cars as $car) {
-            $ratePerKm = (int) ($rates->get($car->vehicle_type)->transfer_rate_per_km ?? 0);
-            $data[] = [
-                'type' => $car->vehicle_type,
-                'name' => $car->car_name,
-                'rate_per_km' => $ratePerKm,
-            ];
-        }
-
-        return $data;
+        return FleetCar::active()->forTransfer()
+            ->where('vehicle_type', $vehicleType)
+            ->where('category', $category)
+            ->where('car_name', $carName)
+            ->exists();
     }
 
     public function defaultPassengerLabel(string $vtype): string

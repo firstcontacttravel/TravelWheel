@@ -14,8 +14,14 @@ class Transfer extends Model
     protected $fillable = [
         'vehicle_type',
         'vehicle_name',
+        'category',
         'amount',
         'distance_km',
+        'duration_mins',
+        'base_fare',
+        'tear_wear_amount',
+        'fuel_amount',
+        'admin_fee_amount',
         'pickup_location',
         'dropoff_location',
         'full_name',
@@ -36,6 +42,11 @@ class Transfer extends Model
         'pickup_date' => 'string',
         'amount' => 'float',
         'distance_km' => 'float',
+        'duration_mins' => 'integer',
+        'base_fare' => 'float',
+        'tear_wear_amount' => 'float',
+        'fuel_amount' => 'float',
+        'admin_fee_amount' => 'float',
         'driver_assigned' => 'boolean',
     ];
 }

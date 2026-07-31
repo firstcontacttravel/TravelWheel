@@ -101,6 +101,10 @@
                             <input class="form-control" type="text" name="passport_no" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
+                            <label class="form-label">NIN <span class="text-danger">*</span></label>
+                            <input class="form-control" type="text" name="nin" inputmode="numeric" pattern="\d{11}" maxlength="11" placeholder="11-digit National Identification Number" required>
+                        </div>
+                        <div class="col-sm-6 insurance-field">
                             <label class="form-label">Occupation <span class="text-danger">*</span></label>
                             <input class="form-control" type="text" name="ocupation" required>
                         </div>

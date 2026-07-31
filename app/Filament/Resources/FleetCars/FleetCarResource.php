@@ -16,6 +16,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
@@ -48,10 +49,24 @@ class FleetCarResource extends Resource
             Select::make('vehicle_type')
                 ->options(['saloon' => 'Saloon', 'suv' => 'SUV', 'van' => 'Van', 'bus' => 'Bus', 'luxury' => 'Luxury'])
                 ->required(),
-            Select::make('category')
-                ->options(['Regular' => 'Regular', 'Standard' => 'Standard', 'Executive' => 'Executive'])
-                ->visible(fn (Get $get): bool => $get('service_type') === 'car_hire')
-                ->required(fn (Get $get): bool => $get('service_type') === 'car_hire'),
+            TextInput::make('year')
+                ->label('Year of Vehicle')
+                ->numeric()
+                ->minValue(2005)
+                ->maxValue(2026)
+                ->required()
+                ->live(onBlur: true)
+                ->afterStateUpdated(function (Get $get, Set $set): void {
+                    $year = (int) $get('year');
+                    $set('category', $year ? FleetCar::categoryForYear($year) : null);
+                })
+                ->helperText('Category is derived automatically: 2005–2015 Regular · 2016–2019 Standard · 2020–2026 Executive.'),
+            TextInput::make('category')
+                ->label('Category (auto)')
+                ->disabled()
+                ->dehydrated(false)
+                ->placeholder('Enter a year to compute')
+                ->helperText('Set automatically from Year of Vehicle when you save.'),
             TextInput::make('car_name')->required()->maxLength(100),
             TextInput::make('passengers')->maxLength(60)->helperText('e.g. "1 – 3 Passengers"'),
             Textarea::make('features')
@@ -79,6 +94,7 @@ class FleetCarResource extends Resource
                 TextColumn::make('car_name')->searchable()->sortable()->weight('bold'),
                 TextColumn::make('service_type')->badge()->sortable(),
                 TextColumn::make('vehicle_type')->badge()->sortable(),
+                TextColumn::make('year')->sortable()->placeholder('-'),
                 TextColumn::make('category')->placeholder('-'),
                 TextColumn::make('passengers')->placeholder('-'),
                 IconColumn::make('is_active')->boolean()->sortable(),

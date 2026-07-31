@@ -31,7 +31,7 @@ class CarHiresTable
                 TextColumn::make('full_name')->label('Customer')->searchable()->description(fn (CarHire $record): string => $record->email),
                 TextColumn::make('phone_number')->copyable(),
                 TextColumn::make('car_type')->badge()->description(fn (CarHire $record): string => $record->category . ' · ' . $record->car_model),
-                TextColumn::make('pickup_location')->label('Route')->description(fn (CarHire $record): string => '-> ' . $record->dropoff_location)->wrap(),
+                TextColumn::make('pickup_location')->label('Pick-up')->description(fn (CarHire $record): string => filled($record->dropoff_location) ? '-> ' . $record->dropoff_location : (($record->duration_mins ?? $record->rental_hours * 60) ? round(($record->duration_mins ?? $record->rental_hours * 60) / 60, 1) . 'h rental' : ''))->wrap(),
                 TextColumn::make('pickup_date')->label('Pickup')->description(fn (CarHire $record): string => (string) $record->pickup_time)->sortable(),
                 TextColumn::make('amount')->money('NGN')->sortable(),
                 TextColumn::make('payment_status')->badge()->color(fn (string $state): string => match ($state) {

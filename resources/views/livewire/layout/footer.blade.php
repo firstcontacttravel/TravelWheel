@@ -32,6 +32,8 @@
                     <li><a href="{{ route('air.lounge') }}" class="text-white hover:text-[var(--color-secondary)]">Airport Lounge</a></li>
                     <li><a href="{{ route('air.insurance') }}" class="text-white hover:text-[var(--color-secondary)]">Travel Insurance</a></li>
                     <li><a href="{{ route('air.visa') }}" class="text-white hover:text-[var(--color-secondary)]">Visa Assistance</a></li>
+                    <li><a href="{{ route('air.support') }}" class="text-white hover:text-[var(--color-secondary)]">Support Assitance</a></li>
+                    <li><a href="{{ route('air.carhire') }}" class="text-white hover:text-[var(--color-secondary)]">Car Hire</a></li>
                 </ul>
             </div>
             

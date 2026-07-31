@@ -68,6 +68,10 @@
                             <input class="form-control" type="text" name="passport_no">
                         </div>
                         <div class="col-sm-6 insurance-field">
+                            <label class="form-label">NIN</label>
+                            <input class="form-control" type="text" name="nin" inputmode="numeric" pattern="\d{11}" maxlength="11" placeholder="11-digit National Identification Number">
+                        </div>
+                        <div class="col-sm-6 insurance-field">
                             <label class="form-label">Email Address</label>
                             <input type="text" class="form-control" name="email" value="{{ $quote->email }}" required>
                         </div>
@@ -133,6 +137,10 @@
                         <div class="col-sm-6 insurance-field">
                             <label class="form-label">Passport No.</label>
                             <input class="form-control" type="text" name="passport_no2">
+                        </div>
+                        <div class="col-sm-6 insurance-field">
+                            <label class="form-label">NIN</label>
+                            <input class="form-control" type="text" name="nin2" inputmode="numeric" pattern="\d{11}" maxlength="11" placeholder="11-digit National Identification Number">
                         </div>
                         <div class="col-sm-6 insurance-field">
                             <label class="form-label">Email Address</label>
@@ -216,6 +224,10 @@
                         <div class="col-sm-3 insurance-field">
                             <label class="form-label">Passport No.</label>
                             <input class="form-control" type="text" name="passport_noC">
+                        </div>
+                        <div class="col-sm-3 insurance-field">
+                            <label class="form-label">NIN</label>
+                            <input class="form-control" type="text" name="ninC" inputmode="numeric" pattern="\d{11}" maxlength="11" placeholder="National Identification Number">
                         </div>
                         <div class="col-sm-3 insurance-field">
                             <label class="form-label">Nationality</label>

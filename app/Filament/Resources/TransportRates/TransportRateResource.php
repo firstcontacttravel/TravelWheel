@@ -33,12 +33,12 @@ class TransportRateResource extends Resource
     {
         return $schema->components([
             TextInput::make('vehicle_type')->disabled(),
-            TextInput::make('price_regular')->numeric()->required()->prefix('₦'),
-            TextInput::make('price_standard')->numeric()->required()->prefix('₦'),
-            TextInput::make('price_executive')->numeric()->required()->prefix('₦'),
-            TextInput::make('fuel_rate_per_km')->numeric()->required()->prefix('₦')->helperText('Per-km fuel surcharge added to car hire pricing.'),
-            TextInput::make('hourly_rate')->numeric()->required()->prefix('₦')->helperText('Per-hour rate added to car hire pricing.'),
-            TextInput::make('transfer_rate_per_km')->numeric()->required()->prefix('₦')->helperText('Per-km rate used for Transfer bookings.'),
+
+            TextInput::make('transfer_base_regular')->numeric()->required()->prefix('₦')->label('Base Fare — Regular')->helperText('Shared by Car Hire and Transfer.'),
+            TextInput::make('transfer_base_standard')->numeric()->required()->prefix('₦')->label('Base Fare — Standard')->helperText('Shared by Car Hire and Transfer.'),
+            TextInput::make('transfer_base_executive')->numeric()->required()->prefix('₦')->label('Base Fare — Executive')->helperText('Shared by Car Hire and Transfer.'),
+            TextInput::make('transfer_fuel_rate_per_minute')->numeric()->required()->prefix('₦')->label('Fuel Rate (per minute)')->helperText('Drive time for Transfer, rental duration for Car Hire.'),
+            TextInput::make('transfer_admin_fee_percent')->numeric()->step(0.1)->minValue(0)->maxValue(100)->required()->suffix('%')->label('Admin Fee')->helperText('Applied to (Base Fare + Tear & Wear + Fuel) for both products.'),
         ])->columns(2);
     }
 
@@ -48,12 +48,11 @@ class TransportRateResource extends Resource
             ->defaultSort('vehicle_type')
             ->columns([
                 TextColumn::make('vehicle_type')->badge()->sortable(),
-                TextColumn::make('price_regular')->money('NGN')->label('Regular'),
-                TextColumn::make('price_standard')->money('NGN')->label('Standard'),
-                TextColumn::make('price_executive')->money('NGN')->label('Executive'),
-                TextColumn::make('fuel_rate_per_km')->money('NGN')->label('Fuel /km'),
-                TextColumn::make('hourly_rate')->money('NGN')->label('Hourly'),
-                TextColumn::make('transfer_rate_per_km')->money('NGN')->label('Transfer /km'),
+                TextColumn::make('transfer_base_regular')->money('NGN')->label('Regular'),
+                TextColumn::make('transfer_base_standard')->money('NGN')->label('Standard'),
+                TextColumn::make('transfer_base_executive')->money('NGN')->label('Executive'),
+                TextColumn::make('transfer_fuel_rate_per_minute')->money('NGN')->label('Fuel /min'),
+                TextColumn::make('transfer_admin_fee_percent')->suffix('%')->label('Admin Fee'),
             ])
             ->recordActions([EditAction::make()]);
     }

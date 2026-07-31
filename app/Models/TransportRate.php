@@ -14,6 +14,11 @@ class TransportRate extends Model
         'fuel_rate_per_km',
         'hourly_rate',
         'transfer_rate_per_km',
+        'transfer_base_regular',
+        'transfer_base_standard',
+        'transfer_base_executive',
+        'transfer_fuel_rate_per_minute',
+        'transfer_admin_fee_percent',
     ];
 
     public static function allKeyed(): array
