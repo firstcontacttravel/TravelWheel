@@ -1,4 +1,4 @@
-@props(['title', 'updated' => 'July 2026', 'sections' => []])
+@props(['title', 'updated' => '31 July 2026', 'sections' => [], 'showAcknowledgement' => true])
 
 <div class="legal-doc">
     <div class="legal-doc__container">
@@ -19,7 +19,16 @@
                 <aside class="legal-doc__toc" aria-label="Table of contents for {{ $title }}">
                     <nav class="legal-doc__toc-card">
                         <span class="legal-doc__toc-heading">On this page</span>
-                        <ol class="legal-doc__toc-list">
+                        <button
+                            type="button"
+                            class="legal-doc__toc-toggle"
+                            aria-expanded="false"
+                            aria-controls="legal-doc-toc-list"
+                        >
+                            <span>On this page</span>
+                            <i class="ph ph-caret-down" aria-hidden="true"></i>
+                        </button>
+                        <ol class="legal-doc__toc-list" id="legal-doc-toc-list">
                             @foreach($sections as $section)
                                 <li><a href="#{{ $section['id'] }}">{{ $section['label'] }}</a></li>
                             @endforeach
@@ -31,9 +40,11 @@
             <div class="legal-doc__content">
                 {{ $slot }}
 
-                <x-legal.callout variant="success">
-                    <p>By using the TravelWheel website, mobile platforms, or any of our booking channels, or by making a booking or payment through TravelWheel, you acknowledge that you have read, understood, and agreed to be bound by this {{ $title }} together with our other applicable policies, including our Terms &amp; Conditions.</p>
-                </x-legal.callout>
+                @if($showAcknowledgement)
+                    <x-legal.callout variant="success">
+                        <p>By using TravelWheel's website, mobile platforms, or booking channels, or by making a booking or payment through TravelWheel, you acknowledge that you have read and understood the {{ $title }} and the other policies applicable to your use of our Services.</p>
+                    </x-legal.callout>
+                @endif
             </div>
         </div>
     </div>
@@ -157,6 +168,22 @@
             letter-spacing: var(--tracking-wider);
             text-transform: uppercase;
         }
+        .legal-doc__toc-toggle {
+            display: none;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--space-3);
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: var(--color-neutral-900);
+            font-size: var(--text-sm);
+            font-weight: var(--font-bold);
+            text-align: left;
+        }
+        .legal-doc__toc-toggle i { transition: transform .2s ease; }
+        .legal-doc__toc-card.is-open .legal-doc__toc-toggle i { transform: rotate(180deg); }
         .legal-doc__toc-list {
             margin: 0;
             padding: 0;
@@ -357,6 +384,29 @@
             .legal-doc__content { padding: var(--space-5); }
             .legal-doc__content h2 { font-size: var(--text-xl); }
             .legal-doc__anchor { display: none; }
+            .legal-doc__content p,
+            .legal-doc__content ul,
+            .legal-doc__content ol {
+                font-size: 16px;
+                line-height: 1.75;
+            }
+        }
+
+        @media (max-width: 1023px) {
+            .legal-doc__toc-heading { display: none; }
+            .legal-doc__toc-toggle { display: flex; }
+            .legal-doc__toc-list {
+                max-height: 0;
+                overflow: hidden;
+                opacity: 0;
+                transition: max-height .25s ease, opacity .2s ease, margin-top .2s ease;
+            }
+            .legal-doc__toc-card.is-open .legal-doc__toc-list {
+                max-height: 60vh;
+                margin-top: var(--space-3);
+                overflow-y: auto;
+                opacity: 1;
+            }
         }
 
         @media (min-width: 1024px) {
@@ -367,15 +417,30 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            var tocCard = document.querySelector('.legal-doc__toc-card');
+            var tocToggle = document.querySelector('.legal-doc__toc-toggle');
+
+            if (tocCard && tocToggle) {
+                tocToggle.addEventListener('click', function () {
+                    var isOpen = tocCard.classList.toggle('is-open');
+                    tocToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                });
+            }
+
             var links = document.querySelectorAll('.legal-doc__toc-list a');
             if (!links.length || !('IntersectionObserver' in window)) return;
 
             var linkByTargetId = {};
             links.forEach(function (link) {
                 linkByTargetId[link.getAttribute('href').slice(1)] = link;
+                link.addEventListener('click', function () {
+                    if (window.innerWidth >= 1024 || !tocCard || !tocToggle) return;
+                    tocCard.classList.remove('is-open');
+                    tocToggle.setAttribute('aria-expanded', 'false');
+                });
             });
 
-            var sections = document.querySelectorAll('.legal-doc__content section[id]');
+            var sections = document.querySelectorAll('.legal-doc__content section[id], .legal-doc__content h2[id], .legal-doc__content h4[id]');
             if (!sections.length) return;
 
             var observer = new IntersectionObserver(function (entries) {

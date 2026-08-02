@@ -55,7 +55,7 @@
                     <li><a href="{{ route('legal.refund') }}" class="text-white hover:text-[var(--color-secondary)]">Refund & Cancellation</a></li>
                     <li><a href="{{ route('legal.payment') }}" class="text-white hover:text-[var(--color-secondary)]">Payment Policy</a></li>
                     <li><a href="{{ route('legal.booking-agreement') }}" class="text-white hover:text-[var(--color-secondary)]">Booking Agreement</a></li>
-                    <li><a href="{{ route('legal.pay-small-small') }}" class="text-white hover:text-[var(--color-secondary)]">Pay Small Small</a></li>
+                    <li><a href="{{ route('legal.pay-small-small') }}" class="text-white hover:text-[var(--color-secondary)]">TravelFlex Agreement</a></li>
                     <li><a href="{{ route('legal.insurance-terms') }}" class="text-white hover:text-[var(--color-secondary)]">Insurance Terms</a></li>
                     <li><a href="{{ route('legal.protocol-terms') }}" class="text-white hover:text-[var(--color-secondary)]">Protocol Terms</a></li>
                     <li><a href="{{ route('legal.cookies') }}" class="text-white hover:text-[var(--color-secondary)]">Cookie Policy</a></li>

@@ -28,14 +28,17 @@
                             <h4>{{ $lounge->brand_name }}</h4>
                         </div>
                         <ul class="lounge-list-row">
-                            <li><x-ph-icon name="check-circle" /> {{ $lounge->facilities1 }}</li>
-                            <li><x-ph-icon name="check-circle" /> {{ $lounge->facilities2 }}</li>
-                            <li><x-ph-icon name="check-circle" /> {{ $lounge->facilities3 }}</li>
-                            <li><x-ph-icon name="check-circle" /> {{ $lounge->facilities4 }}</li>
-                            <li><x-ph-icon name="check-circle" /> {{ $lounge->facilities5 }}</li>
+                            <li><x-ph-icon name="check-circle" /><span class="lounge-list-row-text">{{ $lounge->facilities1 }}</span></li>
+                            <li><x-ph-icon name="check-circle" /><span class="lounge-list-row-text">{{ $lounge->facilities2 }}</span></li>
+                            <li><x-ph-icon name="check-circle" /><span class="lounge-list-row-text">{{ $lounge->facilities3 }}</span></li>
+                            <li><x-ph-icon name="check-circle" /><span class="lounge-list-row-text">{{ $lounge->facilities4 }}</span></li>
+                            <li><x-ph-icon name="check-circle" /><span class="lounge-list-row-text">{{ $lounge->facilities5 }}</span></li>
                         </ul>
                         <div>
-                            <p class="lounge-price"><sup>₦</sup>{{ number_format($lounge->priceA) }} <small>/ Passenger</small></p> 
+                            <p class="lounge-price">
+                                <span class="lounge-price-amount"><sup>₦</sup>{{ number_format($lounge->priceA) }}</span>
+                                <small>/ Passenger</small>
+                            </p>
                             <a href="{{ route('air.loungeplans', ['id' => $lounge->id]) }}" class="lounge-btn w-100 mt-3">
                                 Book Lounge <x-ph-icon name="arrow-right" />
                             </a>

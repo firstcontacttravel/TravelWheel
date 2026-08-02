@@ -14,7 +14,7 @@
 @endphp
 
 <div>
-    <x-legal.layout title="Travel Insurance Terms" updated="July 2026" :sections="$sections">
+    <x-legal.layout title="Travel Insurance Terms" updated="31 July 2026" :sections="$sections">
 
         <p>
             These Travel Insurance Terms apply whenever you purchase a travel insurance policy through TravelWheel.

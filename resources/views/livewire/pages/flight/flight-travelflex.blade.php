@@ -48,6 +48,14 @@
     $travelFlexAdministrationFeePercent = rtrim(rtrim(number_format($travelFlexAdministrationFeeRate * 100, 2), '0'), '.');
     $travelFlexInsuranceFeeRate = (float) config('travelwheel.travelflex_insurance_fee_rate', 0.015);
     $travelFlexInsuranceFeePercent = rtrim(rtrim(number_format($travelFlexInsuranceFeeRate * 100, 2), '0'), '.');
+    $riskAssessment = app(\App\Services\TravelFlexRiskAssessmentService::class)->assess($mappedFlight, $selectedExtras);
+    $minimumDownPercent = (int) ($riskAssessment['minimum_down_percent'] ?? 30);
+    $maximumDownPercent = (int) ($riskAssessment['maximum_down_percent'] ?? 90);
+    $downPercentStep = (int) ($riskAssessment['percentage_step'] ?? 10);
+    $downPercentOptions = [];
+    for ($percent = $minimumDownPercent; $percent <= $maximumDownPercent; $percent += $downPercentStep) {
+        $downPercentOptions[] = $percent;
+    }
 
     // Add these lines to define $isReturn, $isMulti, $multiLegs, $tripLabel
     $mf = $mappedFlight;
@@ -410,7 +418,7 @@
             </div>
             <div class="tf-hero-title">Pay for your flight in easy instalments</div>
             <div class="tf-hero-sub">
-                Secure your seat today with a 30% down payment.
+                Secure your seat today with a minimum {{ $minimumDownPercent }}% down payment for this fare.
                 Pay the balance over your chosen repayment period at a fixed {{ $travelFlexInterestPercent }}% interest rate.
                 Provided by a licensed third-party lender.
             </div>
@@ -520,18 +528,17 @@
                             </div>
                         </div>
 
-                        {{-- Down Payment % - pre-selected 30%, changeable --}}
+                        {{-- Down Payment % - risk-based minimum, customer may increase it --}}
                         <div class="tf-field">
                             <div class="tf-label">Down Payment % <span class="tf-req">*</span></div>
                             <select class="tf-select" x-model="downPercent" @change="onDownPercentChange()">
-                                <option value="30">30% (Minimum)</option>
-                                <option value="40">40%</option>
-                                <option value="50">50%</option>
-                                <option value="60">60%</option>
-                                <option value="70">70%</option>
-                                <option value="80">80%</option>
-                                <option value="90">90%</option>
+                                @foreach($downPercentOptions as $percent)
+                                    <option value="{{ $percent }}">{{ $percent }}%{{ $percent === $minimumDownPercent ? ' (Minimum for this fare)' : '' }}</option>
+                                @endforeach
                             </select>
+                            <div class="tf-locked-badge">
+                                Includes airline refund penalties, selected extras, and a cancellation-risk buffer.
+                            </div>
                         </div>
 
                         {{-- Down Payment Amount - computed --}}
@@ -584,6 +591,7 @@
                         <div class="tf-summary-strip">
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Ticket Cost</span><span class="tf-sum-val" x-text="formatCurrency(ticketCost)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Down Payment (<span x-text="downPercent"></span>%)</span><span class="tf-sum-val" x-text="formatCurrency(downPaymentAmount)"></span></div>
+                            <div class="tf-sum-row"><span class="tf-sum-lbl">Estimated Cancellation Cost</span><span class="tf-sum-val" x-text="formatCurrency(estimatedCancellationCost)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Remaining Balance</span><span class="tf-sum-val" x-text="formatCurrency(remainingBalance)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Administration Fee ({{ $travelFlexAdministrationFeePercent }}%)</span><span class="tf-sum-val" x-text="formatCurrency(administrationFee)"></span></div>
                             <div class="tf-sum-row"><span class="tf-sum-lbl">Insurance Fee ({{ $travelFlexInsuranceFeePercent }}%)</span><span class="tf-sum-val" x-text="formatCurrency(insuranceFee)"></span></div>
@@ -880,7 +888,7 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:8px;color:var(--tf-green)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-                    Minimum 30% down payment
+                    Minimum {{ $minimumDownPercent }}% down payment for this fare
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--gray-400)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -905,7 +913,9 @@ function travelFlex() {
         daysToDepart:      {{ $daysToDepart }},
         sym:               '{{ $sym }}',
 
-        downPercent:       30,
+        downPercent:       {{ $minimumDownPercent }},
+        minimumDownPercent: {{ $minimumDownPercent }},
+        estimatedCancellationCost: {{ (float) ($riskAssessment['estimated_cancellation_cost'] ?? 0) }},
         downPaymentAmount: 0,
         remainingBalance:  0,
         administrationFee: 0,

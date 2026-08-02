@@ -494,7 +494,7 @@ class FlightController extends Controller
                         'changeAllowed' => $fb['PenaltyDetails']['ChangeAllowed']       ?? false,
                         'changePenalty' => $fb['PenaltyDetails']['ChangePenaltyAmount'] ?? '0.00',
                         'refundAllowed' => $fb['PenaltyDetails']['RefundAllowed']       ?? false,
-                        'refundPenalty' => $fb['PenaltyDetails']['RefundPenaltyAmount'] ?? '0.00',
+                        'refundPenalty' => $fb['PenaltyDetails']['RefundPenaltyAmount'] ?? null,
                     ];
                 })->values()->toArray();
 

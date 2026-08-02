@@ -16,7 +16,7 @@
 @endphp
 
 <div>
-    <x-legal.layout title="Disclaimer" updated="July 2026" :sections="$sections">
+    <x-legal.layout title="Disclaimer" updated="31 July 2026" :sections="$sections">
 
         <p>
             This Disclaimer applies to your use of the TravelWheel website, mobile platforms, and Services, and

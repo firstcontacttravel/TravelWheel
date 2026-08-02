@@ -26,13 +26,13 @@
 @endphp
 
 <div>
-    <x-legal.layout title="Terms & Conditions" updated="July 2026" :sections="$sections">
+    <x-legal.layout title="Terms & Conditions" updated="31 July 2026" :sections="$sections">
 
         <p>
             These Terms &amp; Conditions ("Terms") govern your access to and use of the TravelWheel website, mobile
             platforms, customer support channels, and all travel-related services offered by TravelWheel, including
             Flight Booking, Airport Protocol &amp; Meet-and-Greet Services, Airport Transfers, Hotel Reservations,
-            Holiday &amp; Tour Packages, Visa Assistance, Travel Insurance, Pay Small Small (installment payment),
+            Holiday &amp; Tour Packages, Visa Assistance, Travel Insurance, TravelFlex financing,
             Group Bookings, Corporate Travel, Travel Consultation, and other related services (collectively, the
             "Services"). These Terms should be read together with our
             <a href="{{ route('legal.privacy') }}">Privacy Policy</a>,
@@ -54,7 +54,7 @@
                 <li><strong>"Customer", "User", "you", "your"</strong> refers to any individual, corporate entity, or group that accesses the website, creates an account, or makes a booking or payment through TravelWheel.</li>
                 <li><strong>"Supplier" or "Third-Party Supplier"</strong> refers to airlines, hotels, insurers, tour operators, ground transport providers, visa processing centres, immigration agencies, payment processors, and any other independent third party that provides the underlying travel product or service booked through TravelWheel.</li>
                 <li><strong>"Booking"</strong> refers to any reservation, purchase, or request for a Service made through TravelWheel's website, mobile platform, customer care team, or authorised agents.</li>
-                <li><strong>"Pay Small Small"</strong> refers to TravelWheel's installment payment plan, governed additionally by the <a href="{{ route('legal.pay-small-small') }}">Pay Small Small Agreement</a>.</li>
+                <li><strong>"TravelFlex"</strong> refers to the option through which an eligible customer may apply to Fast Credit Limited for financing connected with a TravelWheel booking. TravelWheel is not the lender. The finance terms are governed by the <a href="{{ route('legal.pay-small-small') }}">TravelFlex Fast Credit Loan Agreement</a>.</li>
                 <li><strong>"Services"</strong> refers collectively to all travel-related products and services made available by TravelWheel, whether provided directly or facilitated through Third-Party Suppliers.</li>
             </ul>
         </x-legal.section>
@@ -108,7 +108,7 @@
                 <li>Reviewing and confirming all booking details (names, dates, routing, fare rules) before completing payment;</li>
                 <li>Obtaining all travel documents required for your journey, including a valid passport, visas, and any transit or health documentation;</li>
                 <li>Arriving at the airport, hotel, or designated pick-up point within the time frames communicated by TravelWheel or the relevant Supplier;</li>
-                <li>Making all payments, including installment payments under Pay Small Small, in full and on time; and</li>
+                <li>Making all payments due to TravelWheel, and all loan instalments due to Fast Credit under TravelFlex, in full and on time; and</li>
                 <li>Promptly notifying TravelWheel of any changes to your travel plans or contact information.</li>
             </ul>
         </x-legal.section>
@@ -177,7 +177,7 @@
                 Requests to modify a confirmed booking (date change, name correction, routing change, or upgrade) are
                 subject to the availability and change fees of the relevant Supplier, in addition to any TravelWheel
                 administrative service fee. Tickets and booking confirmations are issued only after full payment (or,
-                where applicable, the required Pay Small Small down payment) has been received and verified.
+                where applicable, the required TravelFlex upfront payment following Fast Credit approval) has been received and verified.
                 TravelWheel reserves the right to withhold ticket issuance where payment verification is pending or
                 where fraud is suspected.
             </p>
@@ -224,9 +224,9 @@
                 All payments made through TravelWheel are subject to our
                 <a href="{{ route('legal.payment') }}">Payment Policy</a>, including provisions on payment
                 verification, fraud prevention, currency conversion, failed payments, and chargebacks. Where you elect
-                to pay using our Pay Small Small installment plan, the additional terms of the
-                <a href="{{ route('legal.pay-small-small') }}">Pay Small Small Agreement</a> apply and take precedence
-                on matters specific to installment payments.
+                to apply for financing through TravelFlex, the additional terms of the
+                <a href="{{ route('legal.pay-small-small') }}">TravelFlex Fast Credit Loan Agreement</a> apply to the
+                financing relationship between you and Fast Credit. TravelWheel's role is limited as described in that agreement.
             </p>
         </x-legal.section>
 
@@ -266,8 +266,8 @@
                 In the event of any dispute arising from these Terms or your use of our Services, you agree to first
                 notify TravelWheel in writing and attempt to resolve the matter amicably through our customer support
                 channels. If a dispute is not resolved within thirty (30) days of written notice, either party may
-                refer the dispute to arbitration in Lagos, Nigeria, in accordance with the Arbitration and Conciliation
-                Act (or any successor legislation) of the Federal Republic of Nigeria. The arbitration shall be
+                refer the dispute to arbitration seated in Lagos, Nigeria, in accordance with the Arbitration and Mediation Act 2023
+                (as amended or replaced). The arbitration shall be
                 conducted in English by a single arbitrator, and the arbitral award shall be final and binding on both
                 parties, subject to any right of appeal available under Nigerian law.
             </p>

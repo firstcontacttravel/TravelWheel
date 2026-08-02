@@ -7,23 +7,23 @@
         ['id' => 'currency-conversion', 'label' => '5. Currency Conversion & Exchange Rate Fluctuations'],
         ['id' => 'failed-payments', 'label' => '6. Failed Payments'],
         ['id' => 'chargeback-policy', 'label' => '7. Chargeback Policy'],
-        ['id' => 'installment-payments', 'label' => '8. Installment Payments (Pay Small Small)'],
-        ['id' => 'late-payment', 'label' => '9. Late Payment Consequences'],
-        ['id' => 'default-policy', 'label' => '10. Default Policy'],
+        ['id' => 'travelflex-financing', 'label' => '8. TravelFlex Financing'],
+        ['id' => 'late-payment', 'label' => '9. Late Loan Instalments'],
+        ['id' => 'default-policy', 'label' => '10. Loan Default and Booking Effects'],
         ['id' => 'outstanding-balances', 'label' => '11. Outstanding Balances'],
         ['id' => 'contact', 'label' => '12. Contact Information'],
     ];
 @endphp
 
 <div>
-    <x-legal.layout title="Payment Policy" updated="July 2026" :sections="$sections">
+    <x-legal.layout title="Payment Policy" updated="31 July 2026" :sections="$sections">
 
         <p>
             This Payment Policy sets out the terms on which TravelWheel accepts, verifies, and processes payments for
-            all Services booked on our platform. It applies to full upfront payments and to installment payments made
-            under our Pay Small Small plan, and should be read together with our
+            all Services booked on our platform. It also explains TravelWheel's limited payment-facilitation role where
+            a customer applies for Fast Credit financing through TravelFlex. It should be read together with our
             <a href="{{ route('legal.terms') }}">Terms &amp; Conditions</a> and
-            <a href="{{ route('legal.pay-small-small') }}">Pay Small Small Agreement</a>.
+            <a href="{{ route('legal.pay-small-small') }}">TravelFlex Fast Credit Loan Agreement</a>.
         </p>
 
         <x-legal.section id="accepted-payment-methods" title="1. Accepted Payment Methods">
@@ -60,9 +60,10 @@
         <x-legal.section id="payment-authorization" title="4. Payment Authorization">
             <p>
                 By submitting payment details, you authorise TravelWheel and our payment processors to charge the
-                specified amount to your chosen payment method, including any applicable service fees, taxes, and
-                (where relevant) subsequent installment amounts under a Pay Small Small plan you have enrolled in.
-                You confirm that you are authorised to use the payment method provided.
+                specified booking or upfront amount to your chosen payment method, including any applicable service
+                fees and taxes. Payroll deductions, recurring loan instalments, or other finance collections require
+                the separate authorisation stated in the Fast Credit loan agreement. You confirm that you are
+                authorised to use the payment method provided.
             </p>
         </x-legal.section>
 
@@ -99,42 +100,49 @@
             </p>
         </x-legal.section>
 
-        <x-legal.section id="installment-payments" title="8. Installment Payments (Pay Small Small)">
+        <x-legal.section id="travelflex-financing" title="8. TravelFlex Financing">
             <p>
-                TravelWheel's Pay Small Small plan allows eligible customers to pay for a booking in installments
-                rather than in full at the time of booking. Enrollment in Pay Small Small, down payment requirements,
-                installment schedules, and consequences of late or missed payments are governed in full by the
-                <a href="{{ route('legal.pay-small-small') }}">Pay Small Small Agreement</a>, which forms part of
-                these Terms once you enroll in the plan.
+                TravelFlex allows an eligible customer to apply to Fast Credit for financing connected with a
+                TravelWheel booking. Fast Credit is the lender and is solely responsible for credit assessment,
+                approval, final finance terms, loan administration, and recovery. TravelWheel may transmit application
+                information, communicate status updates, facilitate a designated payment channel, and apply verified
+                funds to the travel booking. These activities do not make TravelWheel the lender, a co-lender, or a
+                guarantor. The financing relationship is governed by the
+                <a href="{{ route('legal.pay-small-small') }}">TravelFlex Fast Credit Loan Agreement</a>.
             </p>
         </x-legal.section>
 
-        <x-legal.section id="late-payment" title="9. Late Payment Consequences">
+        <x-legal.section id="late-payment" title="9. Late Loan Instalments">
             <p>
-                Where any payment, including an installment payment, is not received by its due date, TravelWheel may
-                apply a late payment charge, suspend processing of your booking (including ticket issuance or travel
-                document release), and send payment reminders via email, SMS, or phone. Continued non-payment may
-                result in cancellation of the booking in accordance with our default policy below.
+                Fast Credit determines and administers the consequences of a late or missed loan instalment, including
+                any lawful interest, charge, reporting, collection, or revised repayment arrangement. TravelWheel does
+                not impose finance late fees. TravelWheel may send an administrative reminder or relay information
+                received from Fast Credit, but this does not transfer Fast Credit's lending responsibilities to
+                TravelWheel. A separate amount owed directly for the travel booking remains subject to TravelWheel's
+                booking and payment terms.
             </p>
         </x-legal.section>
 
-        <x-legal.section id="default-policy" title="10. Default Policy">
+        <x-legal.section id="default-policy" title="10. Loan Default and Booking Effects">
             <p>
-                A customer is considered in default where a scheduled payment remains outstanding beyond the grace
-                period communicated by TravelWheel. Upon default, TravelWheel reserves the right to cancel the
-                associated booking, apply the cancellation and administrative charges set out in our
-                <a href="{{ route('legal.refund') }}">Refund &amp; Cancellation Policy</a>, and retain part or all of
-                the amounts already paid to offset the value of services rendered, fees incurred, and any loss suffered
-                as a result of the default, before refunding any residual balance.
+                Fast Credit determines whether the Borrower is in default under the loan agreement and is responsible
+                for any finance-related enforcement or recovery. TravelWheel may cancel, withhold, or amend the related
+                travel booking only where a booking amount due to TravelWheel has not been received, the airline hold
+                has expired, a Supplier condition requires cancellation, or another right arises under TravelWheel's
+                <a href="{{ route('legal.terms') }}">Terms &amp; Conditions</a> or
+                <a href="{{ route('legal.refund') }}">Refund &amp; Cancellation Policy</a>. TravelWheel will not act as
+                Fast Credit's debt collector merely because the loan relates to a TravelWheel booking.
             </p>
         </x-legal.section>
 
         <x-legal.section id="outstanding-balances" title="11. Outstanding Balances">
             <p>
-                Any outstanding balance owed to TravelWheel, including unpaid installments, chargeback-related
-                shortfalls, or unpaid service fees, remains a debt due and payable by the customer. TravelWheel
-                reserves the right to withhold future bookings, travel documents, or services until outstanding
-                balances are settled, and to pursue lawful recovery of unpaid amounts.
+                An outstanding amount owed to TravelWheel for a booking, chargeback-related shortfall, or TravelWheel
+                service fee remains payable to TravelWheel. An outstanding loan principal, interest amount, insurance
+                charge, management fee, penalty, or recovery cost under TravelFlex is owed to Fast Credit and is
+                governed by the Fast Credit loan agreement. TravelWheel may withhold future bookings or services only
+                in relation to amounts properly owed to TravelWheel or where otherwise permitted by the applicable
+                booking terms and law.
             </p>
         </x-legal.section>
 

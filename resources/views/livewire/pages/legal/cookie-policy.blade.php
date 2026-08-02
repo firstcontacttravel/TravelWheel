@@ -13,7 +13,7 @@
 @endphp
 
 <div>
-    <x-legal.layout title="Cookie Policy" updated="July 2026" :sections="$sections">
+    <x-legal.layout title="Cookie Policy" updated="31 July 2026" :sections="$sections">
 
         <p>
             This Cookie Policy explains how TravelWheel uses cookies and similar tracking technologies on our website
@@ -35,15 +35,15 @@
                 <li>To keep you securely logged into your TravelWheel account;</li>
                 <li>To remember your search preferences, currency, and language settings;</li>
                 <li>To maintain your booking session as you move through the search, selection, and payment steps;</li>
-                <li>To analyse website traffic and usage patterns so we can improve our Services; and</li>
-                <li>To measure the performance of our marketing campaigns, where you have consented to marketing cookies.</li>
+                <li>Where enabled with the required consent, to analyse website traffic and improve our Services; and</li>
+                <li>Where enabled with the required consent, to measure marketing performance.</li>
             </ul>
         </x-legal.section>
 
         <x-legal.section id="types-of-cookies" title="3. Types of Cookies We Use">
             <ul>
                 <li><strong>Strictly necessary cookies:</strong> Required for core website functionality, such as security, session management, and completing a booking. These cannot be disabled without affecting the site's operation.</li>
-                <li><strong>Performance and analytics cookies:</strong> Help us understand how visitors interact with our website so we can improve performance and usability.</li>
+                <li><strong>Performance and analytics cookies:</strong> Where enabled, help us understand how visitors interact with our website so we can improve performance and usability.</li>
                 <li><strong>Functionality cookies:</strong> Remember your preferences, such as your preferred airport, currency, or previously searched routes.</li>
                 <li><strong>Marketing and advertising cookies:</strong> Used to deliver relevant offers and measure the effectiveness of our marketing, where you have provided consent.</li>
             </ul>
@@ -51,10 +51,10 @@
 
         <x-legal.section id="third-party-cookies" title="4. Third-Party Cookies">
             <p>
-                Some cookies on our website are set by trusted third parties, such as payment processors, analytics
-                providers, and advertising partners, to support functions like secure payment processing, traffic
-                analysis, and marketing measurement. These third parties are responsible for their own cookies and
-                privacy practices, and we encourage you to review their respective policies.
+                Some functions may involve cookies set by trusted third parties, such as payment processors. If
+                TravelWheel enables an analytics or advertising provider, any non-essential cookies associated with
+                that provider will be subject to the consent requirements described below. Third parties are
+                responsible for their own privacy practices, and we encourage you to review their policies.
             </p>
         </x-legal.section>
 
@@ -78,10 +78,12 @@
 
         <x-legal.section id="consent" title="7. Consent">
             <p>
-                By continuing to browse or use our website after being presented with our cookie notice, you consent
-                to our use of cookies as described in this Policy, except where your browser or device settings are
-                configured to block them. You may withdraw consent for non-essential cookies at any time through your
-                browser settings.
+                Strictly necessary cookies do not depend on consent where they are required to provide a service you
+                request, maintain security, or preserve a booking session. Where consent is legally required for an
+                analytics, functionality, marketing, or advertising cookie, consent must be given through an
+                affirmative choice and may be withdrawn at any time. Silence, inactivity, or merely continuing to browse does not constitute consent to non-essential cookies.
+                You may also block or delete cookies
+                through your browser settings.
             </p>
         </x-legal.section>
 

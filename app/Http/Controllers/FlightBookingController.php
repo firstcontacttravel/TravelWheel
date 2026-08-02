@@ -10,6 +10,7 @@ use App\Services\SeerbitPaymentService;
 use App\Services\TravelFlexApplicationPdfService;
 use App\Services\TravelFlexApplicationService;
 use App\Services\TravelFlexFlowService;
+use App\Services\TravelFlexRiskAssessmentService;
 use App\Support\FlightDisplay;
 use App\Support\FlightMarkup;
 use Carbon\Carbon;
@@ -329,7 +330,7 @@ class FlightBookingController extends Controller
                 'changeAllowed' => $fb['PenaltyDetails']['ChangeAllowed'] ?? false,
                 'changePenalty' => $fb['PenaltyDetails']['ChangePenaltyAmount'] ?? '0.00',
                 'refundAllowed' => $fb['PenaltyDetails']['RefundAllowed'] ?? false,
-                'refundPenalty' => $fb['PenaltyDetails']['RefundPenaltyAmount'] ?? '0.00',
+                'refundPenalty' => $fb['PenaltyDetails']['RefundPenaltyAmount'] ?? null,
             ];
         })->values()->toArray();
 
@@ -1731,7 +1732,20 @@ class FlightBookingController extends Controller
             ]);
         }
 
-        $downPercent = min(90, max(30, $downPercent));
+        $riskAssessment = app(TravelFlexRiskAssessmentService::class)->assess(
+            $mappedFlight,
+            session('selectedExtras', []),
+        );
+        $minimumDownPercent = (int) $riskAssessment['minimum_down_percent'];
+        $maximumDownPercent = (int) $riskAssessment['maximum_down_percent'];
+
+        if ($downPercent < $minimumDownPercent) {
+            throw ValidationException::withMessages([
+                'down_percent' => "This fare requires a minimum {$minimumDownPercent}% down payment to cover its estimated cancellation cost.",
+            ]);
+        }
+
+        $downPercent = min($maximumDownPercent, $downPercent);
         $repaymentPlan = trim($repaymentPlan);
         $paymentMethod = in_array($paymentMethod, ['bank_transfer', 'gateway'], true) ? $paymentMethod : 'gateway';
         $ticketCost = round(((float) ($mappedFlight['price'] ?? 0)) + $this->_selectedExtrasTotal(session('selectedExtras', [])), 2);
@@ -1747,7 +1761,9 @@ class FlightBookingController extends Controller
         $daysToDepart = $departureDate ? Carbon::today()->diffInDays($departureDate->copy()->startOfDay(), false) : null;
         $safeDays = $daysToDepart === null ? null : max(0, $daysToDepart - 14);
 
-        if ($safeDays !== null && $parsed['unit_days'] > $safeDays) {
+        $repaymentDurationDays = $parsed['unit_days'] * $parsed['count'];
+
+        if ($safeDays !== null && $repaymentDurationDays > $safeDays) {
             throw ValidationException::withMessages([
                 'repayment_plan' => 'Selected repayment plan does not fit within the TravelFlex eligibility window.',
             ]);
@@ -1807,10 +1823,13 @@ class FlightBookingController extends Controller
             'upfront_fee_total' => $upfrontFeeTotal,
             'upfront_payment_total' => $upfrontPaymentTotal,
             'down_percent' => $downPercent,
+            'minimum_down_percent' => $minimumDownPercent,
+            'minimum_down_payment' => $riskAssessment['minimum_down_payment'],
             'loan_amount' => $remainingBalance,
             'remaining_balance' => $remainingBalance,
             'repayment_plan' => $repaymentPlan,
             'repayment_interval_days' => $parsed['unit_days'],
+            'repayment_duration_days' => $repaymentDurationDays,
             'repayment_count' => count($schedule),
             'grand_total' => round($ticketCost + $totalInterest + $upfrontFeeTotal, 2),
             'total_interest' => $totalInterest,
@@ -1818,6 +1837,7 @@ class FlightBookingController extends Controller
             'interest_rate_percent' => round($rate * 100, 2),
             'schedule' => $schedule,
             'payment_method' => $paymentMethod,
+            'risk_assessment' => $riskAssessment,
             'normalized_at' => now()->toIso8601String(),
         ];
     }
@@ -2725,6 +2745,18 @@ class FlightBookingController extends Controller
             return [
                 'eligible' => false,
                 'reason' => 'TravelFlex is available when departure is at least 14 days away.',
+            ];
+        }
+
+        $riskAssessment = app(TravelFlexRiskAssessmentService::class)->assess(
+            $flight,
+            session('selectedExtras', []),
+        );
+
+        if (! $riskAssessment['eligible']) {
+            return [
+                'eligible' => false,
+                'reason' => $riskAssessment['reason'],
             ];
         }
 

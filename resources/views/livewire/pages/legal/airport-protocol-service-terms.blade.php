@@ -16,7 +16,7 @@
 @endphp
 
 <div>
-    <x-legal.layout title="Airport Protocol Service Terms" updated="July 2026" :sections="$sections">
+    <x-legal.layout title="Airport Protocol Service Terms" updated="31 July 2026" :sections="$sections">
 
         <p>
             These Airport Protocol Service Terms apply to all Airport Protocol and Meet-and-Greet Services booked

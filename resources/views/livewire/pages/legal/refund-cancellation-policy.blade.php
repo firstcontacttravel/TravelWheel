@@ -9,13 +9,13 @@
         ['id' => 'service-fees', 'label' => '7. Service Fees & Administrative Charges'],
         ['id' => 'processing-timelines', 'label' => '8. Processing Timelines'],
         ['id' => 'how-to-request', 'label' => '9. How to Request a Cancellation or Refund'],
-        ['id' => 'pay-small-small-cancellations', 'label' => '10. Cancellations Under Pay Small Small'],
+        ['id' => 'travelflex-cancellations', 'label' => '10. TravelFlex Cancellations'],
         ['id' => 'contact', 'label' => '11. Contact Information'],
     ];
 @endphp
 
 <div>
-    <x-legal.layout title="Refund & Cancellation Policy" updated="July 2026" :sections="$sections">
+    <x-legal.layout title="Refund & Cancellation Policy" updated="31 July 2026" :sections="$sections">
 
         <p>
             This Refund &amp; Cancellation Policy explains how cancellations, changes, and refunds are handled for
@@ -116,12 +116,15 @@
             </p>
         </x-legal.section>
 
-        <x-legal.section id="pay-small-small-cancellations" title="10. Cancellations Under Pay Small Small">
+        <x-legal.section id="travelflex-cancellations" title="10. TravelFlex Cancellations">
             <p>
-                If you cancel a booking made under our Pay Small Small installment plan before completing full
-                payment, refund eligibility on amounts already paid is subject to the cancellation and refund terms
-                of the <a href="{{ route('legal.pay-small-small') }}">Pay Small Small Agreement</a>, which take
-                precedence over this Policy on matters specific to installment bookings.
+                If you cancel a booking financed through TravelFlex, TravelWheel will determine the refundable amount,
+                if any, under the applicable Supplier rules and this Policy. Cancellation of the travel booking does
+                not automatically cancel or vary the separate loan with Fast Credit. Any finance balance, adjustment,
+                or repayment consequence is governed by the
+                <a href="{{ route('legal.pay-small-small') }}">TravelFlex Fast Credit Loan Agreement</a> and must be
+                resolved with Fast Credit. TravelWheel will provide booking and refund information reasonably required
+                to support that process.
             </p>
         </x-legal.section>
 

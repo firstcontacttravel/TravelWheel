@@ -390,14 +390,26 @@
         line-height: 1.6;
         font-size: 12.5px;
     }
-    .tfa-agreement-box h4 {
+    .tfa-agreement-box h2 {
         color: var(--tfa-ink);
         font-size: 12px;
         font-weight: 800;
         margin: 14px 0 6px;
     }
-    .tfa-agreement-box h4:first-child { margin-top: 0; }
+    .tfa-agreement-box h2:first-child { margin-top: 0; }
     .tfa-agreement-box p { margin: 0 0 8px; }
+    .tfa-agreement-box .fastcredit-role-disclosure {
+        margin-bottom: 18px;
+        padding: 14px;
+        border: 2px solid var(--indigo);
+        border-radius: 8px;
+        background: var(--indigo-lt);
+    }
+    .tfa-agreement-box .fastcredit-role-disclosure h2 {
+        margin-top: 0;
+        color: var(--indigo);
+    }
+    .tfa-agreement-box .fastcredit-role-disclosure p:last-child { margin-bottom: 0; }
     @media(max-width:640px) {
         body { margin-top: 0; }
         .tfa-wrap { padding: 14px 12px 64px; }
@@ -891,7 +903,7 @@
                 <div class="tfa-field tfa-full">
                     <label class="tf-agree-row" style="margin:0;">
                         <input type="checkbox" name="fast_credit_agreement" value="1" @checked(old('fast_credit_agreement'))>
-                        <span>I confirm that I have read, understood and agreed to the above terms and conditions. I also authorize my employer to deduct monthly instalments as per the agreement shown over leaf from my salary until the loan has been fully paid and to recover any outstanding instalments against my terminal dues in the event of termination of employment before the loan is fully recovered.</span>
+                        <span>I confirm that I have read and understood the terms and conditions above and agree to be bound by them. I acknowledge that Fast Credit Limited, not TravelWheel, is the finance provider and lender, and that TravelWheel's role is limited to the travel-booking and administrative services described above. I authorise my employer to deduct the agreed monthly instalments from my salary until the loan has been repaid in full and, if my employment ends before full repayment, to apply my terminal benefits toward any outstanding instalment, subject to applicable law.</span>
                     </label>
                     @error('fast_credit_agreement') <span class="tfa-error">{{ $message }}</span> @enderror
                 </div>

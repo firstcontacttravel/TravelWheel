@@ -4,30 +4,32 @@
         ['id' => 'information-we-collect', 'label' => '2. Information We Collect'],
         ['id' => 'identity-travel-documents', 'label' => '3. Identity & Travel Documents'],
         ['id' => 'payment-information', 'label' => '4. Payment Information'],
-        ['id' => 'device-information', 'label' => '5. Device & Usage Information'],
-        ['id' => 'cookies', 'label' => '6. Cookies'],
-        ['id' => 'how-we-use-information', 'label' => '7. How We Use Your Information'],
-        ['id' => 'marketing-communications', 'label' => '8. Marketing Communications'],
-        ['id' => 'document-handling', 'label' => '9. Document Handling & Confidentiality'],
-        ['id' => 'data-retention', 'label' => '10. Data Retention'],
-        ['id' => 'data-protection', 'label' => '11. Data Protection & Security'],
-        ['id' => 'third-party-sharing', 'label' => '12. Third-Party Sharing'],
-        ['id' => 'regulatory-compliance', 'label' => '13. Regulatory Compliance'],
-        ['id' => 'your-rights', 'label' => '14. Your Rights'],
-        ['id' => 'deletion-requests', 'label' => '15. Data Deletion Requests'],
-        ['id' => 'changes', 'label' => '16. Changes to this Policy'],
-        ['id' => 'contact', 'label' => '17. Contact Information'],
+        ['id' => 'travelflex-data', 'label' => '5. TravelFlex & Finance Referral Data'],
+        ['id' => 'device-information', 'label' => '6. Device & Usage Information'],
+        ['id' => 'cookies', 'label' => '7. Cookies'],
+        ['id' => 'how-we-use-information', 'label' => '8. How We Use Your Information'],
+        ['id' => 'lawful-bases', 'label' => '9. Lawful Bases for Processing'],
+        ['id' => 'marketing-communications', 'label' => '10. Marketing Communications'],
+        ['id' => 'document-handling', 'label' => '11. Document Handling & Confidentiality'],
+        ['id' => 'data-retention', 'label' => '12. Data Retention'],
+        ['id' => 'data-protection', 'label' => '13. Data Protection & Security'],
+        ['id' => 'third-party-sharing', 'label' => '14. Third-Party Sharing'],
+        ['id' => 'regulatory-compliance', 'label' => '15. Regulatory Compliance'],
+        ['id' => 'your-rights', 'label' => '16. Your Rights'],
+        ['id' => 'deletion-requests', 'label' => '17. Data Deletion Requests'],
+        ['id' => 'changes', 'label' => '18. Changes to this Policy'],
+        ['id' => 'contact', 'label' => '19. Contact Information'],
     ];
 @endphp
 
 <div>
-    <x-legal.layout title="Privacy Policy" updated="July 2026" :sections="$sections">
+    <x-legal.layout title="Privacy Policy" updated="31 July 2026" :sections="$sections">
 
         <p>
             This Privacy Policy explains how TravelWheel collects, uses, stores, shares, and protects your personal
             information when you use our website, mobile platforms, or any of our Services, including Flight Booking,
             Airport Protocol, Airport Transfers, Hotel Reservations, Holiday &amp; Tour Packages, Visa Assistance,
-            Travel Insurance, Pay Small Small, Group Bookings, Corporate Travel, and Travel Consultation. This Policy
+            Travel Insurance, TravelFlex, Group Bookings, Corporate Travel, and Travel Consultation. This Policy
             should be read together with our <a href="{{ route('legal.terms') }}">Terms &amp; Conditions</a> and
             <a href="{{ route('legal.cookies') }}">Cookie Policy</a>.
         </p>
@@ -74,7 +76,20 @@
             </p>
         </x-legal.section>
 
-        <x-legal.section id="device-information" title="5. Device & Usage Information">
+        <x-legal.section id="travelflex-data" title="5. TravelFlex & Finance Referral Data">
+            <p>
+                When you apply for financing through TravelFlex, TravelWheel collects the information and documents
+                required to prepare and refer your application to Fast Credit. Depending on the application, this may
+                include identification information, BVN and NIN, contact and residential details, employment or
+                company information, income and bank-statement information, next-of-kin details, supporting documents,
+                signatures, the proposed travel itinerary, and the requested finance amount and repayment schedule.
+                TravelWheel transmits this information to Fast Credit for independent credit assessment and, if the
+                application is approved, loan administration. Fast Credit processes the information under its own privacy obligations as the finance provider.
+                TravelWheel does not make the credit decision.
+            </p>
+        </x-legal.section>
+
+        <x-legal.section id="device-information" title="6. Device & Usage Information">
             <p>
                 When you access our website or mobile platforms, we automatically collect certain technical
                 information, including your IP address, browser type, device identifiers, operating system, referring
@@ -84,7 +99,7 @@
             </p>
         </x-legal.section>
 
-        <x-legal.section id="cookies" title="6. Cookies">
+        <x-legal.section id="cookies" title="7. Cookies">
             <p>
                 TravelWheel uses cookies and similar tracking technologies to operate our website, remember your
                 preferences, and analyse traffic. Full details of the categories of cookies we use, their purpose, and
@@ -93,10 +108,11 @@
             </p>
         </x-legal.section>
 
-        <x-legal.section id="how-we-use-information" title="7. How We Use Your Information">
+        <x-legal.section id="how-we-use-information" title="8. How We Use Your Information">
             <ul>
                 <li>To process bookings, payments, ticket issuance, visa applications, and insurance policies;</li>
                 <li>To verify your identity and prevent fraud;</li>
+                <li>To prepare and refer a TravelFlex application to Fast Credit at your request;</li>
                 <li>To communicate booking confirmations, schedule changes, payment reminders, and customer support responses;</li>
                 <li>To comply with legal, immigration, aviation security, and regulatory obligations;</li>
                 <li>To improve our website, products, and customer experience; and</li>
@@ -104,7 +120,18 @@
             </ul>
         </x-legal.section>
 
-        <x-legal.section id="marketing-communications" title="8. Marketing Communications">
+        <x-legal.section id="lawful-bases" title="9. Lawful Bases for Processing">
+            <p>Depending on the purpose and circumstances, TravelWheel relies on one or more of the following lawful bases:</p>
+            <ul>
+                <li><strong>Contract:</strong> processing necessary to provide a quotation, make or manage a booking, take payment, or carry out another service you request;</li>
+                <li><strong>Consent:</strong> marketing communications, optional cookies, and other processing for which the law requires your affirmative agreement; you may withdraw consent at any time;</li>
+                <li><strong>Legal obligation:</strong> tax, accounting, fraud-prevention, aviation-security, law-enforcement, and regulatory requirements;</li>
+                <li><strong>Legitimate interests:</strong> securing and improving our platform, preventing misuse, maintaining business records, and handling disputes, where those interests are not overridden by your rights; and</li>
+                <li><strong>Vital or public interests:</strong> limited circumstances involving safety, emergencies, or another legally recognised public-interest purpose.</li>
+            </ul>
+        </x-legal.section>
+
+        <x-legal.section id="marketing-communications" title="10. Marketing Communications">
             <p>
                 With your consent, TravelWheel may send you promotional offers, newsletters, and updates about our
                 Services via email, SMS, or WhatsApp. You may withdraw your consent and opt out of marketing
@@ -114,7 +141,7 @@
             </p>
         </x-legal.section>
 
-        <x-legal.section id="document-handling" title="9. Document Handling & Confidentiality">
+        <x-legal.section id="document-handling" title="11. Document Handling & Confidentiality">
             <ul>
                 <li><strong>Passport handling:</strong> Passport copies are used solely for booking, ticketing, visa, and insurance purposes and are stored securely with restricted, role-based staff access.</li>
                 <li><strong>Visa documentation:</strong> Application forms, supporting documents, and correspondence with embassies or visa processing centres are handled confidentially and shared only with the relevant authority processing your application.</li>
@@ -125,7 +152,7 @@
             </ul>
         </x-legal.section>
 
-        <x-legal.section id="data-retention" title="10. Data Retention">
+        <x-legal.section id="data-retention" title="12. Data Retention">
             <p>
                 We retain personal information for as long as necessary to fulfil the purposes described in this
                 Policy, including ongoing bookings, warranty or dispute periods, tax and financial record-keeping
@@ -135,7 +162,7 @@
             </p>
         </x-legal.section>
 
-        <x-legal.section id="data-protection" title="11. Data Protection & Security">
+        <x-legal.section id="data-protection" title="13. Data Protection & Security">
             <p>
                 TravelWheel implements administrative, technical, and physical safeguards designed to protect your
                 personal information against unauthorised access, alteration, disclosure, or destruction, including
@@ -145,18 +172,19 @@
             </p>
         </x-legal.section>
 
-        <x-legal.section id="third-party-sharing" title="12. Third-Party Sharing">
+        <x-legal.section id="third-party-sharing" title="14. Third-Party Sharing">
             <p>
                 We share personal information only where necessary to deliver the Services you have requested,
                 including with airlines, hotels, tour operators, insurers, visa processing centres and embassies,
-                payment processors and banks, identity verification providers, and regulatory or law enforcement
+                payment processors and banks, identity verification providers, Fast Credit for a TravelFlex application
+                you request, licensed credit bureaus where authorised and lawful, and regulatory or law-enforcement
                 authorities where legally required. We do not sell your personal information to third parties. Any
                 third party with whom we share your information is required to handle it in a manner consistent with
                 this Policy and applicable data protection law.
             </p>
         </x-legal.section>
 
-        <x-legal.section id="regulatory-compliance" title="13. Regulatory Compliance">
+        <x-legal.section id="regulatory-compliance" title="15. Regulatory Compliance">
             <p>
                 TravelWheel processes personal data in accordance with the Nigeria Data Protection Act 2023 and
                 applicable guidance from the Nigeria Data Protection Commission. Where your travel involves
@@ -166,18 +194,19 @@
             </p>
         </x-legal.section>
 
-        <x-legal.section id="your-rights" title="14. Your Rights">
+        <x-legal.section id="your-rights" title="16. Your Rights">
             <p>Subject to applicable law, you have the right to:</p>
             <ul>
                 <li>Request access to the personal information we hold about you;</li>
                 <li>Request correction of inaccurate or incomplete information;</li>
                 <li>Object to or restrict certain processing of your information, including for marketing purposes;</li>
-                <li>Request a copy of your data in a portable format, where technically feasible; and</li>
+                <li>Request a copy of your data in a portable format, where technically feasible;</li>
+                <li>Request human review of a decision based solely on automated processing where applicable; and</li>
                 <li>Lodge a complaint with the Nigeria Data Protection Commission if you believe your data protection rights have been infringed.</li>
             </ul>
         </x-legal.section>
 
-        <x-legal.section id="deletion-requests" title="15. Data Deletion Requests">
+        <x-legal.section id="deletion-requests" title="17. Data Deletion Requests">
             <p>
                 You may request the deletion of your personal information by contacting our support team. We will
                 honour such requests except where we are required or permitted by law to retain certain information,
@@ -187,20 +216,22 @@
             </p>
         </x-legal.section>
 
-        <x-legal.section id="changes" title="16. Changes to this Policy">
+        <x-legal.section id="changes" title="18. Changes to this Policy">
             <p>
                 We may update this Privacy Policy from time to time to reflect changes in our practices, technology,
                 or legal requirements. Material changes will be indicated by an updated "Last Updated" date at the top
-                of this page. Your continued use of our Services after such changes constitutes acceptance of the
-                revised Policy.
+                of this page and, where appropriate, communicated through the Services or directly to you. The revised
+                Policy will apply from its stated effective date. Where applicable law requires fresh consent for a
+                changed processing purpose, we will request that consent before relying on it.
             </p>
         </x-legal.section>
 
-        <x-legal.section id="contact" title="17. Contact Information">
+        <x-legal.section id="contact" title="19. Contact Information">
             <p>
                 For questions about this Privacy Policy or to exercise your data protection rights, please contact us
-                via our <a href="{{ route('help') }}">Contact / Help</a> page, or write to us at 74, Ayangburen Road,
-                Ikorodu, Lagos, Nigeria.
+                at <a href="mailto:support@travelwheel.ng">support@travelwheel.ng</a>, via our
+                <a href="{{ route('help') }}">Contact / Help</a> page, or write to us at 74, Ayangburen Road, Ikorodu,
+                Lagos, Nigeria. You may also lodge a complaint with the Nigeria Data Protection Commission.
             </p>
         </x-legal.section>
 

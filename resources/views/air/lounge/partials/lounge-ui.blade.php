@@ -218,15 +218,34 @@
     }
 
     .lounge-list-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px 18px;
-        margin-top: 16px;
+        display: grid;
+        gap: 10px;
+        min-width: 0;
+        padding: 0;
+        margin: 0;
+        list-style: none;
     }
 
     .lounge-list-row li {
-        flex: 0 0 auto;
-        font-size: 13px;
+        display: grid;
+        grid-template-columns: 16px minmax(0, 1fr);
+        align-items: start;
+        gap: 8px;
+        min-width: 0;
+        color: #26342d;
+        font-size: 14px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+    }
+
+    .lounge-list-row .ph-icon {
+        margin-top: .2em;
+        color: #0b7a42;
+    }
+
+    .lounge-list-row-text {
+        min-width: 0;
+        overflow-wrap: anywhere;
     }
 
     .lounge-plan-simple {
@@ -279,6 +298,12 @@
         display: flex;
         flex-direction: column;
         gap: 16px;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .lounge-plan > :last-child {
+        margin-top: auto;
     }
 
     .lounge-plan-featured {
@@ -304,6 +329,18 @@
         font-weight: 900;
         color: #102119;
         margin: 0;
+    }
+
+    .lounge-plan .lounge-price {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 4px 10px;
+        line-height: 1.1;
+    }
+
+    .lounge-price-amount {
+        white-space: nowrap;
     }
 
     .lounge-price small {

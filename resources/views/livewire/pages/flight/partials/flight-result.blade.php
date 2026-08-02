@@ -2770,7 +2770,7 @@
                                     </td>
                                     <template x-for="col in matrixAirlines" :key="col.code">
                                         <td>
-                                            <span x-show="row.prices[col.code]" @click.prevent="toggleAirline(col.code)" class="sr-matrix-price" :class="{ cheapest: row.prices[col.code] === cheapestPrice }" x-text="row.prices[col.code]"></span>
+                                            <span x-show="row.prices[col.code]" @click.prevent="selectMatrixCell(col.code, row.stops)" class="sr-matrix-price" :class="{ cheapest: row.prices[col.code] === cheapestPrice }" x-text="row.prices[col.code]"></span>
                                             <span x-show="!row.prices[col.code]" class="sr-matrix-empty">—</span>
                                         </td>
                                     </template>
@@ -3406,7 +3406,7 @@
             </div>
             <div class="sr-tip-card">
                 <div class="sr-tip-title"><span class="sr-tip-icon">💳</span> Travel Flex</div>
-                <div class="sr-tip-body">Split your payment into <span class="sr-tip-highlight">4 instalments</span> at no extra cost with our Pay Small Small plan — available at checkout.</div>
+                <div class="sr-tip-body">Apply for <span class="sr-tip-highlight">TravelFlex financing</span> through Fast Credit and spread eligible travel costs over an approved repayment plan — available at checkout.</div>
             </div>
             <div class="sr-tip-card">
                 <div class="sr-tip-title"><span class="sr-tip-icon">⏱️</span> Best Time to Fly</div>
@@ -3535,9 +3535,9 @@
                     .map(([code, d]) => ({ code, name: d.name, logo: d.logo }));
 
                 this.matrixRows = [
-                    { label: 'Non stop', style: 'color:var(--green)', prices: {} },
-                    { label: '1 Stop',   style: 'color:var(--amber)', prices: {} },
-                    { label: '1+ Stops', style: 'color:var(--red)',   prices: {} },
+                    { label: 'Non stop', stops: 0, style: 'color:var(--green)', prices: {} },
+                    { label: '1 Stop',   stops: 1, style: 'color:var(--amber)', prices: {} },
+                    { label: '1+ Stops', stops: 2, style: 'color:var(--red)',   prices: {} },
                 ];
 
                 this.allFlights.forEach(f => {
@@ -3579,6 +3579,12 @@
                     this.selectedAirlines = this.selectedAirlines.filter(c => c !== code);
                 else
                     this.selectedAirlines.push(code);
+            },
+
+            selectMatrixCell(code, stops) {
+                this.selectedAirlines = [code];
+                this.selectedStop = stops;
+                this.pageSize = 5;
             },
 
             resetAirlines() { this.selectedAirlines = []; },

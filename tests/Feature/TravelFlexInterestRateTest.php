@@ -17,6 +17,12 @@ class TravelFlexInterestRateTest extends TestCase
                     'price' => 100000,
                     'fareType' => 'Public',
                     'isRefundable' => true,
+                    'fareBreakdown' => [[
+                        'passengerType' => 'ADT',
+                        'qty' => 1,
+                        'refundAllowed' => true,
+                        'refundPenalty' => 10000,
+                    ]],
                     'segments' => [['departDT' => now()->addDays(30)->toIso8601String()]],
                 ],
             ],

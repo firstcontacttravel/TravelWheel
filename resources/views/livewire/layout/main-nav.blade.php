@@ -1,12 +1,14 @@
 <section class="navbarmain">
     <nav class="w-full bg-white shadow-base fixed left-0 z-[var(--z-fixed)] py-2 top-12">
         <div class="mx-auto pt-2 pb-2 flex items-center justify-between px-4">
-            <a class="flex items-center" href="{{ route('home') }}">
-                <img src="{{ asset('assets/travelwheel.png') }}" class="h-5 w-auto" alt="TravelWheel">
-                <sup class="ml-3">
+            <div class="tw-mainnav-brand-group flex items-center">
+                <a class="flex items-center" href="{{ route('home') }}">
+                    <img src="{{ asset('assets/travelwheel.png') }}" class="h-5 w-auto" alt="TravelWheel">
+                </a>
+                <sup class="ml-2">
                     <a href="{{ route('air') }}" class="text-gray-700 hover:text-[var(--color-secondary)]">Air</a>
                 </sup>
-            </a>
+            </div>
             
             <button id="mobile-menu-button" class="block md:hidden text-neutral-700 focus:outline-none" type="button" aria-label="Toggle navigation">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

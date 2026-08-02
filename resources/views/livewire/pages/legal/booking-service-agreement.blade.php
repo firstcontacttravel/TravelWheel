@@ -21,7 +21,7 @@
 @endphp
 
 <div>
-    <x-legal.layout title="Booking & Service Agreement" updated="July 2026" :sections="$sections">
+    <x-legal.layout title="Booking & Service Agreement" updated="31 July 2026" :sections="$sections">
 
         <p>
             This Booking &amp; Service Agreement sets out the specific operational terms that apply once you make a
@@ -46,7 +46,7 @@
         <x-legal.section id="booking-process" title="2. Booking Process & Confirmation">
             <p>
                 A booking request becomes a confirmed booking only once (a) TravelWheel has received and verified full
-                payment or the required Pay Small Small down payment, and (b) TravelWheel has issued a written booking
+                payment or, following Fast Credit approval, the required TravelFlex upfront payment, and (b) TravelWheel has issued a written booking
                 confirmation, itinerary, or e-ticket. Quoted fares, rates, and availability are not guaranteed until
                 this point and may change without notice.
             </p>
