@@ -3,7 +3,245 @@
 @endpush
 <div class="carhire-root">
 <link rel="stylesheet" href="{{ asset('css/visa-flow.css') }}">
+<style>
+    :where(.carhire-root, .carhire-root *, .carhire-root *::before, .carhire-root *::after) { box-sizing: border-box; margin: 0; padding: 0; }
+    .carhire-root { font-family: 'DM Sans', sans-serif; background: #f0f2f8; min-height: 100vh; color: #1a1a1a; }
+    .page { max-width: 1200px; margin: 0 auto; padding: 28px 16px 60px; }
 
+    /* ── Header ── */
+    .page-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
+    .page-icon { width: 50px; height: 50px; background: #0d1883; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .page-icon svg { width: 24px; height: 24px; fill: white; }
+    .page-header h1 { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 600; color: #0d1883; margin-bottom: 5px; }
+    .page-header p { font-size: 16px; color: #777; line-height: 1.6; max-width: 520px; }
+
+    /* ── State Selector ── */
+    .state-selector-wrap { background: #fff; border-radius: 16px; border: 1px solid #e0ddd6; padding: 20px 22px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+    .state-selector-wrap .ss-label { font-size: 10.5px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .state-selector-wrap .ss-label svg { width: 13px; height: 13px; fill: #0d1883; }
+    .state-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .state-select { flex: 1; min-width: 200px; max-width: 340px; padding: 10px 14px; border: 1.5px solid #dde0ee; border-radius: 10px; font-size: 13.5px; font-family: 'DM Sans', sans-serif; color: #1a1a1a; background: #fafbff; outline: none; transition: border-color .2s, box-shadow .2s; cursor: pointer; }
+    .state-select:focus { border-color: #0d1883; box-shadow: 0 0 0 3px rgba(13,24,131,.07); }
+    .state-badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .state-badge.available { background: #e8f8f0; color: #1a7a4e; border: 1px solid #a8e6c4; }
+    .state-badge.available svg { fill: #1a7a4e; }
+    .state-badge.unavailable { background: #fff0f0; color: #c0392b; border: 1px solid #ffc5c5; }
+    .state-badge.unavailable svg { fill: #c0392b; }
+    .state-badge svg { width: 13px; height: 13px; }
+    .state-badge span.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .state-badge.available .dot { background: #1a7a4e; }
+    .state-badge.unavailable .dot { background: #c0392b; }
+
+    /* ── Unavailable message ── */
+    .unavail-box { display: none; background: #fff; border-radius: 18px; border: 1.5px solid #ffc5c5; padding: 44px 28px; text-align: center; box-shadow: 0 4px 20px rgba(192,57,43,.08); }
+    .unavail-box.show { display: block; }
+    .unavail-icon { width: 64px; height: 64px; background: #fff0f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .unavail-icon svg { width: 30px; height: 30px; fill: #e74c3c; }
+    .unavail-box h3 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: #c0392b; margin-bottom: 8px; }
+    .unavail-box p { font-size: 13.5px; color: #777; line-height: 1.7; max-width: 440px; margin: 0 auto 18px; }
+    .unavail-states { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .unavail-states span { background: #eef1ff; color: #0d1883; font-size: 11.5px; font-weight: 600; padding: 4px 12px; border-radius: 20px; border: 1px solid #c5cef8; }
+
+    /* ── Main content (tabs + panels) — hidden until Lagos selected ── */
+    .main-content { display: none; }
+    .main-content.show { display: block; }
+
+    /* ── Tabs ── */
+    .tab-bar { display: flex; margin-bottom: 20px; background: #fff; border-radius: 14px; padding: 5px; border: 1px solid #e0ddd6; width: fit-content; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .tab-btn { display: flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 10px; border: none; font-size: 13.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .22s; color: #999; background: transparent; }
+    .tab-btn svg { width: 15px; height: 15px; fill: currentColor; }
+    .tab-btn.active { background: #0d1883; color: white; box-shadow: 0 4px 14px rgba(13,24,131,.25); }
+    .tab-btn:not(.active):hover { background: #f0f3ff; color: #0d1883; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Cards ── */
+    .outer-card { background: #fff; border-radius: 20px; border: 1px solid #e0ddd6; box-shadow: 0 4px 20px rgba(0,0,0,.06); }
+    .card-layout { display: grid; grid-template-columns: 210px 1fr; }
+    @media(max-width:768px) { .card-layout { grid-template-columns: 1fr; } }
+    .sidebar { background: #f7f8ff; border-right: 1px solid #e8eaf5; padding: 22px 16px; border-radius: 20px 0 0 20px; }
+    @media(max-width:768px) { .sidebar { border-right: none; border-bottom: 1px solid #e8eaf5; border-radius: 20px 20px 0 0; } }
+    .section-label { display: inline-flex; align-items: center; background: #eef1ff; color: #0d1883; font-size: 10px; font-weight: 700; letter-spacing: .07em; padding: 4px 10px; border-radius: 20px; margin-bottom: 14px; text-transform: uppercase; }
+    .content-area { padding: 22px 20px; display: flex; flex-direction: column; gap: 16px; }
+    .inner-card { background: #fff; border-radius: 14px; border: 1px solid #e4e6f0; padding: 18px; }
+    .inner-card.tinted { background: #fafbff; }
+
+    /* ── Type sidebar cards ── */
+    .type-card { display: flex; align-items: center; gap: 10px; padding: 10px 11px; border-radius: 10px; border: 1.5px solid #dde0f0; cursor: pointer; transition: border-color .2s, background .2s; margin-bottom: 7px; background: #fff; position: relative; overflow: hidden; user-select: none; }
+    .type-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #0d1883; opacity: 0; transition: opacity .2s; }
+    .type-card:hover { border-color: #0d1883; background: #f0f3ff; }
+    .type-card:hover::before { opacity: 1; }
+    .type-card.active { border-color: #0d1883; background: #eef1ff; }
+    .type-card.active::before { opacity: 1; }
+    .type-thumb { width: 52px; height: 33px; background: #e8ecff; border-radius: 6px; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .type-thumb img { width: 100%; height: 100%; object-fit: contain; }
+    .type-thumb svg { width: 36px; height: 22px; }
+    .type-info h6 { font-size: 12px; font-weight: 600; color: #1a1a1a; margin-bottom: 1px; }
+    .type-info small { font-size: 10px; color: #999; }
+    .type-check { margin-left: auto; width: 17px; height: 17px; border-radius: 50%; background: #0d1883; display: none; align-items: center; justify-content: center; flex-shrink: 0; }
+    .type-card.active .type-check { display: flex; }
+    .type-check svg { width: 9px; height: 9px; }
+
+    /* ── Transfer sidebar locked state ── */
+    .sidebar-locked { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 180px; gap: 10px; padding: 20px 10px; text-align: center; }
+    .sidebar-locked svg { width: 32px; height: 32px; fill: #c5cef8; }
+    .sidebar-locked p { font-size: 11.5px; color: #bbb; line-height: 1.5; }
+
+    /* ── Horizontal category/model cards ── */
+    .cat-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 120px; gap: 8px; }
+    .cat-empty svg { width: 32px; height: 32px; opacity: .3; fill: #aaa; }
+    .cat-empty p { font-size: 12.5px; color: #bbb; }
+    .cat-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .cat-thumb-card { flex: 1; min-width: 110px; max-width: 170px; border: 2px solid #e0e4f0; border-radius: 14px; padding: 13px 10px; cursor: pointer; transition: border-color .2s, background .2s, transform .2s, box-shadow .2s; background: #fff; text-align: center; position: relative; user-select: none; }
+    .cat-thumb-card:hover { border-color: #0d1883; background: #f5f7ff; transform: translateY(-3px); box-shadow: 0 6px 18px rgba(13,24,131,.1); }
+    .cat-thumb-card.active { border-color: #0d1883; background: #eef1ff; box-shadow: 0 6px 18px rgba(13,24,131,.15); }
+    .cat-thumb-card.dimmed { opacity: .35; transform: none; pointer-events: none; }
+    .ctc-img { width: 100%; height: 58px; background: #e8ecff; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-bottom: 9px; overflow: hidden; }
+    .ctc-img img { width: 100%; height: 100%; object-fit: contain; }
+    .ctc-img svg { width: 50px; height: 32px; }
+    .ctc-name { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 3px; }
+    .ctc-price { font-size: 11.5px; font-weight: 700; color: #0d1883; }
+    .ctc-pax { font-size: 10px; color: #999; margin-top: 2px; }
+    .ctc-check { position: absolute; top: 7px; right: 7px; width: 18px; height: 18px; background: #0d1883; border-radius: 50%; display: none; align-items: center; justify-content: center; }
+    .cat-thumb-card.active .ctc-check { display: flex; }
+    .ctc-check svg { width: 10px; height: 10px; fill: white; }
+
+    /* ── Detail / expand panel ── */
+    .cat-detail-panel { display: none; border: 2px solid #0d1883; border-radius: 16px; overflow: hidden; margin-top: 14px; animation: slideDown .28s cubic-bezier(.34,1.3,.64,1); }
+    .cat-detail-panel.visible { display: block; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .detail-inner { display: grid; grid-template-columns: 320px 1fr; }
+    @media(max-width:640px) { .detail-inner { grid-template-columns: 1fr; } }
+    .di-body { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+    .di-main { flex: 1 1 220px; min-width: 180px; }
+    .di-body .price-breakdown { flex: 0 0 250px; margin-top: 0; }
+    @media(max-width:760px) { .di-body .price-breakdown { flex: 1 1 100%; } }
+
+    /* ── Carousel ── */
+    .carousel-wrap { position: relative; background: #0a1060; overflow: hidden; min-height: 240px; }
+    .carousel-track { display: flex; transition: transform .4s cubic-bezier(.25,.46,.45,.94); }
+    .carousel-slide { min-width: 100%; height: 240px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #0d1883; }
+    .carousel-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .carousel-slide .slide-fb { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+    .carousel-slide .slide-fb svg { width: 120px; height: 80px; }
+    .car-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; background: #0a1f44; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .2s, transform .2s; z-index: 5; }
+    .car-nav:hover { background: #123a7a; transform: translateY(-50%) scale(1.1); }
+    .car-nav svg { width: 16px; height: 16px; fill: #ffffff; }
+    .car-nav.prev { left: 10px; }
+    .car-nav.next { right: 10px; }
+    .car-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
+    .car-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.4); cursor: pointer; transition: background .2s, transform .2s; border: none; }
+    .car-dot.active { background: white; transform: scale(1.3); }
+    .slide-label { position: absolute; bottom: 28px; left: 12px; background: rgba(0,0,0,.55); color: white; font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px; backdrop-filter: blur(4px); z-index: 5; }
+
+    /* ── Detail info panel ── */
+    .detail-info { padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; background: #fff; }
+    .di-cat-name { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 600; color: #0d1883; margin-bottom: 3px; }
+    .di-type-tag { display: inline-flex; background: #eef1ff; color: #0d1883; font-size: 9.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: .06em; }
+    .di-price { font-size: 20px; font-weight: 700; color: #0d1883; }
+    .di-price span { font-size: 11.5px; font-weight: 400; color: #999; margin-left: 3px; }
+    .di-pax { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666; margin-top: 4px; }
+    .di-pax svg { width: 13px; height: 13px; fill: #0d1883; opacity: .7; }
+    .feat-label { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: .09em; margin-bottom: 7px; }
+    .feat-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .feat-list li { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: #444; line-height: 1.4; }
+    .feat-list li svg { width: 12px; height: 12px; fill: #0d1883; flex-shrink: 0; margin-top: 1px; opacity: .85; }
+    .di-actions { display: flex; gap: 9px; margin-top: 4px; }
+    .btn-change { padding: 9px 13px; background: #f0f3ff; color: #0d1883; border: 1.5px solid #c5cef8; border-radius: 9px; font-size: 11.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+    .btn-change:hover { background: #e0e8ff; }
+    .btn-change svg { width: 11px; height: 11px; fill: #0d1883; }
+    .btn-proceed-cat { flex: 1; padding: 10px 13px; background: linear-gradient(135deg,#0d1883,#2d39b6); color: white; border: none; border-radius: 9px; font-size: 11.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .btn-proceed-cat:hover { background: linear-gradient(135deg,#0b1570,#1e2d9e); transform: translateY(-1px); }
+    .btn-proceed-cat svg { width: 11px; height: 11px; fill: white; }
+
+    /* ── Distance + pricing ── */
+    .dist-status { display: none; align-items: center; gap: 7px; font-size: 12px; color: #0d1883; padding: 8px 12px; background: #eef1ff; border-radius: 8px; margin-bottom: 10px; }
+    .dist-status.show { display: flex; }
+    .dist-status svg { width: 14px; height: 14px; fill: #0d1883; animation: spin .8s linear infinite; }
+    .dist-result { display: none; background: #eef1ff; border: 1px solid #c5cef8; border-radius: 9px; padding: 9px 13px; margin-bottom: 10px; font-size: 12px; color: #0d1883; font-weight: 600; }
+    .dist-result.show { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .price-breakdown { background: #f7f8ff; border: 1.5px solid #c5cef8; border-radius: 10px; padding: 13px 15px; display: none; margin-top: 8px; }
+    .price-breakdown.show { display: block; }
+    .pb-title { font-size: 9.5px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 9px; }
+    .pb-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; border-bottom: 1px solid #e8eaf5; }
+    .pb-row:last-of-type { border-bottom: none; }
+    .pb-row span { color: #666; } .pb-row strong { color: #1a1a1a; }
+    .pb-total { display: flex; justify-content: space-between; padding-top: 7px; margin-top: 3px; border-top: 1.5px solid #c5cef8; font-size: 13.5px; font-weight: 700; }
+    .pb-total span { color: #555; } .pb-total strong { color: #0d1883; }
+
+    /* ── Forms ── */
+    .form-section-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; color: #0d1883; margin-bottom: 4px; }
+    .form-chip { display: inline-flex; align-items: center; gap: 6px; background: #eef1ff; border: 1px solid #c5cef8; border-radius: 20px; padding: 4px 11px; font-size: 11px; font-weight: 600; color: #0d1883; margin-bottom: 14px; }
+    .form-chip svg { width: 11px; height: 11px; fill: #0d1883; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    @media(max-width:540px) { .form-row { grid-template-columns: 1fr; } }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-size: 10.5px; font-weight: 600; color: #555; letter-spacing: .04em; text-transform: uppercase; }
+    .form-group input, .form-group select { padding: 10px 12px; border: 1.5px solid #dde0ee; border-radius: 9px; font-size: 13px; font-family: 'DM Sans', sans-serif; color: #1a1a1a; background: #fafbff; transition: border-color .2s, box-shadow .2s; outline: none; }
+    .form-group input:focus, .form-group select:focus { border-color: #0d1883; box-shadow: 0 0 0 3px rgba(13,24,131,.07); background: #fff; }
+    .pay-title { font-size: 10.5px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; display: block; }
+    .pay-opts { display: flex; gap: 10px; margin-bottom: 15px; }
+    .pay-opt { flex: 1; border: 1.5px solid #dde0ee; border-radius: 10px; padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: border-color .2s, background .2s; background: #fafbff; user-select: none; }
+    .pay-opt:hover { border-color: #0d1883; background: #f0f3ff; }
+    .pay-opt.active { border-color: #0d1883; background: #eef1ff; }
+    .pay-opt input[type="radio"] { display: none; }
+    .pay-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pay-opt.active .pay-dot { border-color: #0d1883; }
+    .pay-dot-inner { width: 6px; height: 6px; border-radius: 50%; background: #0d1883; display: none; }
+    .pay-opt.active .pay-dot-inner { display: block; }
+    .pay-label { font-size: 12px; font-weight: 600; color: #1a1a1a; }
+    .pay-sub { font-size: 10px; color: #999; }
+    .btn-review { width: 100%; padding: 13px; background: linear-gradient(135deg,#0d1883,#2d39b6); color: white; border: none; border-radius: 11px; font-size: 13.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; letter-spacing: .02em; }
+    .btn-review:hover { background: linear-gradient(135deg,#0b1570,#1e2d9e); transform: translateY(-1px); }
+    .btn-calc { width: 100%; padding: 10px; background: #f0f3ff; color: #0d1883; border: 1.5px solid #c5cef8; border-radius: 9px; font-size: 12.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; margin-bottom: 12px; }
+    .btn-calc:hover { background: #e0e8ff; }
+    .btn-proceed-form { width: 100%; padding: 11px; background: linear-gradient(135deg,#0d1883,#2d39b6); color: white; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-proceed-form:hover { background: linear-gradient(135deg,#0b1570,#1e2d9e); transform: translateY(-1px); }
+    .btn-proceed-form svg { width: 12px; height: 12px; fill: white; }
+
+    /* ── Duration quick-pick chips ── */
+    .duration-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .duration-chip { padding: 9px 16px; border: 1.5px solid #dde0ee; border-radius: 20px; font-size: 12.5px; font-weight: 600; color: #555; background: #fafbff; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .15s; }
+    .duration-chip:hover { border-color: #c5cef8; background: #f0f3ff; }
+    .duration-chip.active { background: #0d1883; border-color: #0d1883; color: #fff; }
+    .duration-custom-input { width: 84px; padding: 9px 10px; border: 1.5px solid #0d1883; border-radius: 20px; font-size: 12.5px; font-family: 'DM Sans', sans-serif; color: #1a1a1a; outline: none; text-align: center; }
+
+    /* ── Single context-aware CTA (Get Quote → Proceed) ── */
+    .btn-cta { width: 100%; padding: 11px; background: #f0f3ff; color: #0d1883; border: 1.5px solid #c5cef8; border-radius: 10px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; margin-bottom: 12px; }
+    .btn-cta:hover { background: #e0e8ff; }
+    .btn-cta.is-ready { background: linear-gradient(135deg,#0d1883,#2d39b6); color: #fff; border-color: transparent; }
+    .btn-cta.is-ready:hover { background: linear-gradient(135deg,#0b1570,#1e2d9e); transform: translateY(-1px); }
+    .secure-note { text-align: center; font-size: 10.5px; color: #bbb; margin-top: 9px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .secure-note svg { width: 10px; height: 10px; opacity: .5; }
+    .alert-box { background: #fff0f0; border: 1px solid #ffc5c5; color: #c0392b; border-radius: 9px; padding: 9px 13px; font-size: 12px; margin-bottom: 12px; display: none; }
+
+    /* ── Transfer route grid ── */
+    .tr-loc-grid { display: grid; grid-template-columns: 1fr 32px 1fr; align-items: end; gap: 8px; margin-bottom: 12px; }
+    @media(max-width:500px) { .tr-loc-grid { grid-template-columns: 1fr; } .tr-arrow { display: none; } }
+    .tr-arrow { display: flex; align-items: center; justify-content: center; padding-bottom: 2px; }
+    .tr-arrow svg { width: 18px; height: 18px; fill: #0d1883; opacity: .4; }
+
+    /* ── Fare Rules (compact row + modal trigger, GetTransfer-style) ── */
+    .fare-rules-row { display: flex; flex-direction: column; gap: 7px; margin: 4px 0 14px; padding-top: 2px; }
+    .fr-free-cancel { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #1a7a4e; }
+    .fr-free-cancel svg { width: 13px; height: 13px; fill: #1a7a4e; flex-shrink: 0; }
+    .fare-rules-link { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; padding: 0; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 600; color: #6b86c9; transition: color .2s; width: fit-content; }
+    .fare-rules-link:hover { color: #0d1883; text-decoration: underline; }
+    .fare-rules-link svg { width: 14px; height: 14px; fill: #6b86c9; flex-shrink: 0; transition: fill .2s; }
+    .fare-rules-link:hover svg { fill: #0d1883; }
+
+    /* ── Fare Rules modal content (reused inside the shared overlay) ── */
+    .fr-section { margin-bottom: 14px; }
+    .fr-section:last-child { margin-bottom: 0; }
+    .fr-section h6 { font-size: 11.5px; font-weight: 700; color: #0d1883; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+    .fr-section ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .fr-section li { display: flex; align-items: flex-start; gap: 6px; font-size: 12.5px; color: #444; line-height: 1.55; }
+    .fr-section li::before { content: '•'; color: #0d1883; flex-shrink: 0; line-height: 1.55; }
+
+    /* ── Modal — entire overlay is built inline by openModal() in JS ── */
+    @keyframes modalIn { from { opacity: 0; transform: translateY(20px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+</style>
 <section class="vw-hero">
     <div class="vw-hero__inner">
         <h1>All Your Travel Needs In One Place</h1>
@@ -27,664 +265,414 @@
         </nav>
 
         <div class="vw-card">
-            <div class="vw-card__head">
-                <div>
-                    <span class="vw-kicker">Ground transport</span>
-                    <h2>Car Hire &amp; Airport Transfers</h2>
+            <div class="page" id="carhire-widget">
+
+                <div class="page-header">
+                    <div class="page-icon"><svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div>
+                    <div>
+                        <h2 style="font-size: 24px; font-weight: 700; color: #0d1883;">Ground Transport</h2>
+                        <p>Book a car hire or arrange a seamless airport transfer. Professional drivers, all vehicle types, across Nigeria.</p>
+                    </div>
                 </div>
-            </div>
-            <p style="margin:0 0 20px;color:#667085;font-size:13px;line-height:1.6;max-width:640px;">
-                Reserve a chauffeur-driven car by the hour, or book a fixed-price airport/port transfer — pick your vehicle, enter your pickup and drop-off, and get an instant price.
-            </p>
-            <div class="vw-card__footer">
-                <p>Every booking includes a professional driver and fuel. Choose Car Hire for flexible rental hours, or Transfer for a one-way point-to-point ride.</p>
-                <a href="#carhire-widget" class="vw-search-btn">Get Started</a>
-            </div>
+
+                {{-- ══ STATE SELECTOR ══ --}}
+                <div class="state-selector-wrap">
+                    <div class="ss-label">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                        Select your state
+                    </div>
+                    <div class="state-row">
+                        <select class="state-select" id="stateSelect" onchange="onStateChange(this.value)">
+                            <option value="">— Choose your state —</option>
+                            <optgroup label="South West">
+                                <option value="lagos">Lagos</option>
+                                <option value="ogun">Ogun</option>
+                                <option value="oyo">Oyo</option>
+                                <option value="osun">Osun</option>
+                                <option value="ondo">Ondo</option>
+                                <option value="ekiti">Ekiti</option>
+                            </optgroup>
+                            <optgroup label="South East">
+                                <option value="anambra">Anambra</option>
+                                <option value="enugu">Enugu</option>
+                                <option value="imo">Imo</option>
+                                <option value="abia">Abia</option>
+                                <option value="ebonyi">Ebonyi</option>
+                            </optgroup>
+                            <optgroup label="South South">
+                                <option value="rivers">Rivers</option>
+                                <option value="delta">Delta</option>
+                                <option value="edo">Edo</option>
+                                <option value="cross_river">Cross River</option>
+                                <option value="akwa_ibom">Akwa Ibom</option>
+                                <option value="bayelsa">Bayelsa</option>
+                            </optgroup>
+                            <optgroup label="North West">
+                                <option value="kano">Kano</option>
+                                <option value="kaduna">Kaduna</option>
+                                <option value="sokoto">Sokoto</option>
+                                <option value="katsina">Katsina</option>
+                                <option value="zamfara">Zamfara</option>
+                                <option value="kebbi">Kebbi</option>
+                                <option value="jigawa">Jigawa</option>
+                            </optgroup>
+                            <optgroup label="North East">
+                                <option value="borno">Borno</option>
+                                <option value="yobe">Yobe</option>
+                                <option value="adamawa">Adamawa</option>
+                                <option value="taraba">Taraba</option>
+                                <option value="bauchi">Bauchi</option>
+                                <option value="gombe">Gombe</option>
+                            </optgroup>
+                            <optgroup label="North Central">
+                                <option value="abuja">FCT Abuja</option>
+                                <option value="kogi">Kogi</option>
+                                <option value="kwara">Kwara</option>
+                                <option value="benue">Benue</option>
+                                <option value="plateau">Plateau</option>
+                                <option value="nasarawa">Nasarawa</option>
+                                <option value="niger">Niger</option>
+                            </optgroup>
+                        </select>
+                        <div id="stateBadge" style="display:none;"></div>
+                    </div>
+                </div>
+
+                {{-- Unavailable message --}}
+                <div class="unavail-box" id="unavailBox">
+                    <div class="unavail-icon">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    </div>
+                    <h3>Service Not Available Yet</h3>
+                    <p>We currently offer ground transport services only in <strong>Lagos State</strong>. We are actively expanding to other states across Nigeria.</p>
+                    <p style="margin-top:8px;font-size:12.5px;color:#aaa;">Currently available in:</p>
+                    <div class="unavail-states">
+                        <span>🟢 Lagos State</span>
+                    </div>
+                </div>
+
+                {{-- Main booking content — only shown for Lagos --}}
+                <div class="main-content" id="mainContent">
+                    <div class="tab-bar">
+                        <button class="tab-btn active" id="tab-ch" onclick="switchTab('ch')">
+                            <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/></svg>
+                            Car Rental
+                        </button>
+                        <button class="tab-btn" id="tab-tr" onclick="switchTab('tr')">
+                            <svg viewBox="0 0 24 24"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg>
+                            Pick up 'n' Drop off
+                        </button>
+                    </div>
+
+                    {{-- ════════ CAR HIRE ════════ --}}
+                    <div class="tab-panel active" id="panel-ch">
+                        <div class="outer-card">
+                            <div class="card-layout">
+
+                                <div class="sidebar">
+                                    <div class="section-label">1 · Vehicle type</div>
+                                    @foreach(['saloon','suv','van','bus','luxury'] as $vtype)
+                                    <div class="type-card" onclick="ch_setType('{{ $vtype }}',this)">
+                                        <div class="type-thumb">
+                                            <img src="{{ $typeThumbs[$vtype] }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" alt="{{ ucfirst($vtype) }}">
+                                            <svg style="display:none" viewBox="0 0 60 38" fill="none"><rect x="3" y="12" width="50" height="18" rx="3" fill="#0d1883" opacity="0.3"/><circle cx="14" cy="32" r="5" fill="#0d1883" opacity="0.7"/><circle cx="42" cy="32" r="5" fill="#0d1883" opacity="0.7"/></svg>
+                                        </div>
+                                        <div class="type-info">
+                                            <h6>{{ $vtype === 'van' ? 'Mini Van' : ucfirst($vtype) }}</h6>
+                                            <small>{{ $categories[$vtype]['items'][0]['passengers'] ?? '—' }}</small>
+                                        </div>
+                                        <div class="type-check"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5l3 3 7-7" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+                                    </div>
+                                    @endforeach
+                                </div>
+
+                                <div class="content-area">
+
+                                    <div class="inner-card tinted">
+                                        <div class="section-label">2 · Select category</div>
+                                        <div id="ch_typeLbl" style="font-size:12px;font-weight:500;color:#0d1883;margin-bottom:14px;display:none;"></div>
+                                        <div id="ch_catArea">
+                                            <div class="cat-empty">
+                                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
+                                                <p>Choose a vehicle type first</p>
+                                            </div>
+                                        </div>
+
+                                        {{-- Step 2.5: Model picker — shown after category selected, before detail panel --}}
+                                        <div id="ch_modelCard" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid #e4e6f0;">
+                                            <div class="section-label" style="margin-bottom:10px;">2.5 · Choose a model</div>
+                                            <p id="ch_modelIntro" style="font-size:12px;color:#888;margin-bottom:12px;"></p>
+                                            <div id="ch_modelArea" class="cat-row"></div>
+                                        </div>
+
+                                        <div id="ch_detailPanel" class="cat-detail-panel"></div>
+                                    </div>
+
+                                    <div class="inner-card" id="ch_pricingCard" style="display:none;">
+                                        <div class="section-label">3 · Pick-up &amp; duration</div>
+                                        <div id="ch_alertA" class="alert-box"></div>
+                                        <div class="form-group" style="margin-bottom:10px;">
+                                            <label>Pick-up Location</label>
+                                            <input type="text" id="ch_pickup" placeholder="e.g. Victoria Island, Lagos">
+                                        </div>
+                                        <div class="form-group" style="margin-bottom:10px;">
+                                            <label>Rental Duration</label>
+                                            <div class="duration-chips" id="ch_durationChips">
+                                                <button type="button" class="duration-chip" onclick="ch_setDuration(2,this)">2h</button>
+                                                <button type="button" class="duration-chip" onclick="ch_setDuration(4,this)">4h</button>
+                                                <button type="button" class="duration-chip" onclick="ch_setDuration(6,this)">6h</button>
+                                                <button type="button" class="duration-chip" onclick="ch_setDuration(8,this)">8h</button>
+                                                <button type="button" class="duration-chip" onclick="ch_setDuration(12,this)">12h</button>
+                                                <button type="button" class="duration-chip" id="ch_durationCustomChip" onclick="ch_setDurationCustom(this)">Custom</button>
+                                                <input type="number" id="ch_hours" class="duration-custom-input" placeholder="Hrs" min="1" oninput="ch_calcPrice()" style="display:none;">
+                                            </div>
+                                        </div>
+                                        <div class="price-breakdown" id="ch_priceBox">
+                                            <div class="pb-title">Price Breakdown</div>
+                                            <div class="pb-row"><span>Base Fare</span><strong id="pb_base">₦0</strong></div>
+                                            <div class="pb-row"><span>Tear &amp; Wear (<span id="pb_wearpct">0</span>%)</span><strong id="pb_wear">₦0</strong></div>
+                                            <div class="pb-row"><span>Fuel (<span id="pb_mins">0</span> mins × ₦<span id="pb_frate">0</span>/min)</span><strong id="pb_fuel">₦0</strong></div>
+                                            <div class="pb-row"><span>Admin Fee (<span id="pb_adminpct">0</span>%)</span><strong id="pb_admin">₦0</strong></div>
+                                            <div class="pb-total"><span>Total Estimate</span><strong id="pb_total">₦0</strong></div>
+                                        </div>
+                                        <button class="btn-cta" id="ch_ctaBtn" onclick="ch_ctaAction()">Proceed to Booking Form</button>
+                                    </div>
+
+                                    <div class="inner-card" id="ch_formCard" style="display:none;">
+                                        <div class="form-section-title">Booking Details</div>
+                                        <div class="form-chip">
+                                            <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/></svg>
+                                            <span id="ch_chipTxt"></span>
+                                        </div>
+                                        <div id="ch_alertB" class="alert-box"></div>
+                                        <div class="form-row">
+                                            <div class="form-group"><label>Full Name</label><input type="text" id="ch_name" placeholder="Enter your full name"></div>
+                                            <div class="form-group"><label>Email</label><input type="email" id="ch_email" placeholder="Enter your email"></div>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-group"><label>Phone Number</label><input type="tel" id="ch_phone" placeholder="Enter your phone"></div>
+                                            <div class="form-group"><label>Passengers</label><input type="number" id="ch_pax" placeholder="e.g. 2" min="1"></div>
+                                        </div>
+                                        <div class="form-row">
+                                            <div class="form-group"><label>Pick-up Date</label><input type="date" id="ch_date"></div>
+                                            <div class="form-group"><label>Pick-up Time</label><select id="ch_time"></select></div>
+                                        </div>
+
+                                        {{-- ══ FARE RULES ══ --}}
+                                        <div class="fare-rules-row">
+                                            <div class="fr-free-cancel">
+                                                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                                                Free cancellation 5h before the trip
+                                            </div>
+                                            <button type="button" class="fare-rules-link" onclick="openFareRulesModal()">
+                                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15h-1.5v-6H12v6zm0-7.75c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25zM12.75 17H11v-1h.75v-4.25H11v-1h1.75V17z"/></svg>
+                                                Fare Rules
+                                            </button>
+                                        </div>
+
+                                        <span class="pay-title">Payment Method</span>
+                                        <div class="pay-opts">
+                                            <label class="pay-opt active" id="ch_p_budpay" onclick="ch_pay('budpay')">
+                                                <input type="radio" checked>
+                                                <div class="pay-dot"><div class="pay-dot-inner"></div></div>
+                                                <div><div class="pay-label">BudPay</div><div class="pay-sub">Card, bank transfer</div></div>
+                                            </label>
+                                            <label class="pay-opt" id="ch_p_seerbit" onclick="ch_pay('seerbit')">
+                                                <input type="radio">
+                                                <div class="pay-dot"><div class="pay-dot-inner"></div></div>
+                                                <div><div class="pay-label">SeerBit</div><div class="pay-sub">Card, USSD, bank</div></div>
+                                            </label>
+                                        </div>
+                                        <button type="button" class="btn-review" onclick="openModal('ch')">Review &amp; Proceed to Payment</button>
+                                        <div class="secure-note"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Secured payment · Your data is protected</div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- ════════ TRANSFER ════════ --}}
+                    <div class="tab-panel" id="panel-tr">
+                        <div class="outer-card">
+                            {{-- No sidebar for transfer — single column content area --}}
+                            <div class="content-area" style="padding:22px 24px;">
+
+                                {{-- Step 1: Route --}}
+                                <div class="inner-card tinted">
+                                    <div class="section-label">1 · Your route</div>
+                                    <p style="font-size:12.5px;color:#888;margin-bottom:14px;">Enter pick-up and drop-off — Google Maps calculates the exact road distance automatically.</p>
+                                    <div class="tr-loc-grid">
+                                        <div class="form-group">
+                                            <label>Pick-up Location</label>
+                                            <input type="text" id="tr_from" placeholder="e.g. Murtala Muhammed Airport">
+                                        </div>
+                                        <div class="tr-arrow"><svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></div>
+                                        <div class="form-group">
+                                            <label>Drop-off Location</label>
+                                            <input type="text" id="tr_to" placeholder="e.g. Victoria Island, Lagos">
+                                        </div>
+                                    </div>
+                                    <button class="btn-calc" onclick="tr_calcDist()">📍 Get Final Quote</button>
+                                    <div class="dist-status" id="tr_calcSt">
+                                        <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                                        Calculating via Google Maps...
+                                    </div>
+                                    <div class="dist-result" id="tr_distRes">
+                                        <div>Distance: <strong id="tr_distKmLbl">—</strong> &nbsp;·&nbsp; Drive time: <strong id="tr_driveLbl">—</strong></div>
+                                        <span style="font-size:10.5px;color:#888;">via Google Maps</span>
+                                    </div>
+                                    <div id="tr_alertA" class="alert-box"></div>
+                                </div>
+
+                                {{-- Step 2: Vehicle type — shown after distance calculated --}}
+                                <div class="inner-card tinted" id="tr_typeCard" style="display:none;">
+                                    <div class="section-label">2 · Vehicle type</div>
+                                    <p style="font-size:12.5px;color:#888;margin-bottom:14px;">Select the type of vehicle you need.</p>
+                                    <div id="tr_typeCards" style="display:flex;gap:10px;flex-wrap:wrap;">
+                                        @foreach(['saloon','suv','van','bus','luxury'] as $vtype)
+                                        <div class="type-card" onclick="tr_setType('{{ $vtype }}',this)" style="flex:1;min-width:130px;max-width:200px;margin-bottom:0;">
+                                            <div class="type-thumb">
+                                                <img src="{{ $transferVehicles[$vtype]['items'][0]['images'][0] ?? '' }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" alt="{{ ucfirst($vtype) }}">
+                                                <svg style="display:none" viewBox="0 0 60 38" fill="none"><rect x="3" y="12" width="50" height="18" rx="3" fill="#0d1883" opacity="0.3"/><circle cx="14" cy="32" r="5" fill="#0d1883" opacity="0.7"/><circle cx="42" cy="32" r="5" fill="#0d1883" opacity="0.7"/></svg>
+                                            </div>
+                                            <div class="type-info">
+                                                <h6>{{ $vtype === 'van' ? 'Mini Van' : ucfirst($vtype) }}</h6>
+                                                <small>{{ collect($transferVehicles[$vtype]['items'])->sum(fn($i) => count($i['models'])) }} model{{ collect($transferVehicles[$vtype]['items'])->sum(fn($i) => count($i['models'])) > 1 ? 's' : '' }}</small>
+                                            </div>
+                                            <div class="type-check"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5l3 3 7-7" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+                                        </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+
+                                {{-- Step 3: Select category --}}
+                                <div class="inner-card tinted" id="tr_catCard" style="display:none;">
+                                    <div class="section-label">3 · Select category</div>
+                                    <div id="tr_catTypeLbl" style="font-size:12px;font-weight:500;color:#0d1883;margin-bottom:14px;"></div>
+                                    <div id="tr_catArea">
+                                        <div class="cat-empty">
+                                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
+                                            <p>Choose a vehicle type first</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Step 4: Select car model --}}
+                                <div class="inner-card tinted" id="tr_modelCard" style="display:none;">
+                                    <div class="section-label">4 · Select car</div>
+                                    <div id="tr_typeLbl" style="font-size:12px;font-weight:500;color:#0d1883;margin-bottom:14px;"></div>
+                                    <div id="tr_modelArea">
+                                        <div class="cat-empty">
+                                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
+                                            <p>Choose a category first</p>
+                                        </div>
+                                    </div>
+                                    <div id="tr_detailPanel" class="cat-detail-panel"></div>
+                                </div>
+
+                                {{-- Step 5: Booking form --}}
+                                <div class="inner-card" id="tr_formCard" style="display:none;">
+                                    <div class="form-section-title">Transfer Details</div>
+                                    <div class="form-chip"><svg viewBox="0 0 24 24"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg><span id="tr_chipTxt"></span></div>
+                                    <div id="tr_alertB" class="alert-box"></div>
+                                    <div class="form-row">
+                                        <div class="form-group"><label>Full Name</label><input type="text" id="tr_name" placeholder="Enter your full name"></div>
+                                        <div class="form-group"><label>Email</label><input type="email" id="tr_email" placeholder="Enter your email"></div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group"><label>Phone Number</label><input type="tel" id="tr_phone" placeholder="Enter your phone"></div>
+                                        <div class="form-group"><label>Passengers</label><input type="number" id="tr_pax" placeholder="e.g. 2" min="1"></div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group"><label>Flight / Vessel No. (optional)</label><input type="text" id="tr_flight" placeholder="e.g. LH 401"></div>
+                                        <div class="form-group"><label>Special Requests (optional)</label><input type="text" id="tr_notes" placeholder="e.g. child seat, extra luggage"></div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group"><label>Arrival / Pick-up Date</label><input type="date" id="tr_date"></div>
+                                        <div class="form-group"><label>Arrival / Pick-up Time</label><select id="tr_time"></select></div>
+                                    </div>
+
+                                    {{-- ══ FARE RULES ══ --}}
+                                    <div class="fare-rules-row">
+                                        <div class="fr-free-cancel">
+                                            <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+                                            Free cancellation 5h before the trip
+                                        </div>
+                                        <button type="button" class="fare-rules-link" onclick="openFareRulesModal()">
+                                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15h-1.5v-6H12v6zm0-7.75c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25zM12.75 17H11v-1h.75v-4.25H11v-1h1.75V17z"/></svg>
+                                            Fare Rules
+                                        </button>
+                                    </div>
+
+                                    <span class="pay-title">Payment Method</span>
+                                    <div class="pay-opts">
+                                        <label class="pay-opt active" id="tr_p_budpay" onclick="tr_pay('budpay')">
+                                            <input type="radio" checked>
+                                            <div class="pay-dot"><div class="pay-dot-inner"></div></div>
+                                            <div><div class="pay-label">BudPay</div><div class="pay-sub">Card, bank transfer</div></div>
+                                        </label>
+                                        <label class="pay-opt" id="tr_p_seerbit" onclick="tr_pay('seerbit')">
+                                            <input type="radio">
+                                            <div class="pay-dot"><div class="pay-dot-inner"></div></div>
+                                            <div><div class="pay-label">SeerBit</div><div class="pay-sub">Card, USSD, bank</div></div>
+                                        </label>
+                                    </div>
+                                    <button type="button" class="btn-review" onclick="openModal('tr')">Review &amp; Proceed to Payment</button>
+                                    <div class="secure-note"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Secured payment · Your data is protected</div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                </div>{{-- /main-content --}}
+
+            </div>{{-- /page --}}
+
+            {{-- Hidden submit forms --}}
+            <form id="ch_form" method="POST" action="{{ route('air.carhire.submit') }}" style="display:none">
+                @csrf
+                <input type="hidden" name="car_type"         id="h_ch_type">
+                <input type="hidden" name="category"          id="h_ch_cat">
+                <input type="hidden" name="car_model"         id="h_ch_model">
+                <input type="hidden" name="rental_hours"      id="h_ch_hours">
+                <input type="hidden" name="full_name"         id="h_ch_name">
+                <input type="hidden" name="email"             id="h_ch_email">
+                <input type="hidden" name="phone_number"      id="h_ch_phone">
+                <input type="hidden" name="passengers"        id="h_ch_pax">
+                <input type="hidden" name="pickup_location"   id="h_ch_pickup">
+                <input type="hidden" name="pickup_date"       id="h_ch_date">
+                <input type="hidden" name="pickup_time"       id="h_ch_time">
+                <input type="hidden" name="payment_option"    id="h_ch_payment">
+            </form>
+            <form id="tr_form" method="POST" action="{{ route('air.transfer.submit') }}" style="display:none">
+                @csrf
+                <input type="hidden" name="vehicle_type"      id="h_tr_type">
+                <input type="hidden" name="vehicle_name"      id="h_tr_vname">
+                <input type="hidden" name="category"          id="h_tr_cat">
+                <input type="hidden" name="price"             id="h_tr_price">
+                <input type="hidden" name="distance_km"       id="h_tr_dist">
+                <input type="hidden" name="duration_mins"     id="h_tr_duration">
+                <input type="hidden" name="pickup_location"   id="h_tr_from">
+                <input type="hidden" name="dropoff_location"  id="h_tr_to">
+                <input type="hidden" name="full_name"         id="h_tr_name">
+                <input type="hidden" name="email"             id="h_tr_email">
+                <input type="hidden" name="phone_number"      id="h_tr_phone">
+                <input type="hidden" name="passengers"        id="h_tr_pax">
+                <input type="hidden" name="flight_number"     id="h_tr_flight">
+                <input type="hidden" name="special_requests"  id="h_tr_notes">
+                <input type="hidden" name="pickup_date"       id="h_tr_date">
+                <input type="hidden" name="pickup_time"       id="h_tr_time">
+                <input type="hidden" name="payment_option"    id="h_tr_payment">
+            </form>
         </div>
     </div>
 </section>
 
-<style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'DM Sans', sans-serif; background: #f0f2f8; min-height: 100vh; color: #1a1a1a; }
-        .page { max-width: 1200px; margin: 0 auto; padding: 28px 16px 60px; }
 
-        /* ── Header ── */
-        .page-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; }
-        .page-icon { width: 50px; height: 50px; background: #0d1883; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .page-icon svg { width: 24px; height: 24px; fill: white; }
-        .page-header h1 { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 600; color: #0d1883; margin-bottom: 5px; }
-        .page-header p { font-size: 13px; color: #777; line-height: 1.6; max-width: 520px; }
 
-        /* ── State Selector ── */
-        .state-selector-wrap { background: #fff; border-radius: 16px; border: 1px solid #e0ddd6; padding: 20px 22px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
-        .state-selector-wrap .ss-label { font-size: 10.5px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-        .state-selector-wrap .ss-label svg { width: 13px; height: 13px; fill: #0d1883; }
-        .state-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .state-select { flex: 1; min-width: 200px; max-width: 340px; padding: 10px 14px; border: 1.5px solid #dde0ee; border-radius: 10px; font-size: 13.5px; font-family: 'DM Sans', sans-serif; color: #1a1a1a; background: #fafbff; outline: none; transition: border-color .2s, box-shadow .2s; cursor: pointer; }
-        .state-select:focus { border-color: #0d1883; box-shadow: 0 0 0 3px rgba(13,24,131,.07); }
-        .state-badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-        .state-badge.available { background: #e8f8f0; color: #1a7a4e; border: 1px solid #a8e6c4; }
-        .state-badge.available svg { fill: #1a7a4e; }
-        .state-badge.unavailable { background: #fff0f0; color: #c0392b; border: 1px solid #ffc5c5; }
-        .state-badge.unavailable svg { fill: #c0392b; }
-        .state-badge svg { width: 13px; height: 13px; }
-        .state-badge span.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .state-badge.available .dot { background: #1a7a4e; }
-        .state-badge.unavailable .dot { background: #c0392b; }
 
-        /* ── Unavailable message ── */
-        .unavail-box { display: none; background: #fff; border-radius: 18px; border: 1.5px solid #ffc5c5; padding: 44px 28px; text-align: center; box-shadow: 0 4px 20px rgba(192,57,43,.08); }
-        .unavail-box.show { display: block; }
-        .unavail-icon { width: 64px; height: 64px; background: #fff0f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
-        .unavail-icon svg { width: 30px; height: 30px; fill: #e74c3c; }
-        .unavail-box h3 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: #c0392b; margin-bottom: 8px; }
-        .unavail-box p { font-size: 13.5px; color: #777; line-height: 1.7; max-width: 440px; margin: 0 auto 18px; }
-        .unavail-states { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-        .unavail-states span { background: #eef1ff; color: #0d1883; font-size: 11.5px; font-weight: 600; padding: 4px 12px; border-radius: 20px; border: 1px solid #c5cef8; }
-
-        /* ── Main content (tabs + panels) — hidden until Lagos selected ── */
-        .main-content { display: none; }
-        .main-content.show { display: block; }
-
-        /* ── Tabs ── */
-        .tab-bar { display: flex; margin-bottom: 20px; background: #fff; border-radius: 14px; padding: 5px; border: 1px solid #e0ddd6; width: fit-content; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .tab-btn { display: flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 10px; border: none; font-size: 13.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .22s; color: #999; background: transparent; }
-        .tab-btn svg { width: 15px; height: 15px; fill: currentColor; }
-        .tab-btn.active { background: #0d1883; color: white; box-shadow: 0 4px 14px rgba(13,24,131,.25); }
-        .tab-btn:not(.active):hover { background: #f0f3ff; color: #0d1883; }
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
-
-        /* ── Cards ── */
-        .outer-card { background: #fff; border-radius: 20px; border: 1px solid #e0ddd6; box-shadow: 0 4px 20px rgba(0,0,0,.06); }
-        .card-layout { display: grid; grid-template-columns: 210px 1fr; }
-        @media(max-width:768px) { .card-layout { grid-template-columns: 1fr; } }
-        .sidebar { background: #f7f8ff; border-right: 1px solid #e8eaf5; padding: 22px 16px; border-radius: 20px 0 0 20px; }
-        @media(max-width:768px) { .sidebar { border-right: none; border-bottom: 1px solid #e8eaf5; border-radius: 20px 20px 0 0; } }
-        .section-label { display: inline-flex; align-items: center; background: #eef1ff; color: #0d1883; font-size: 10px; font-weight: 700; letter-spacing: .07em; padding: 4px 10px; border-radius: 20px; margin-bottom: 14px; text-transform: uppercase; }
-        .content-area { padding: 22px 20px; display: flex; flex-direction: column; gap: 16px; }
-        .inner-card { background: #fff; border-radius: 14px; border: 1px solid #e4e6f0; padding: 18px; }
-        .inner-card.tinted { background: #fafbff; }
-
-        /* ── Type sidebar cards ── */
-        .type-card { display: flex; align-items: center; gap: 10px; padding: 10px 11px; border-radius: 10px; border: 1.5px solid #dde0f0; cursor: pointer; transition: border-color .2s, background .2s; margin-bottom: 7px; background: #fff; position: relative; overflow: hidden; user-select: none; }
-        .type-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #0d1883; opacity: 0; transition: opacity .2s; }
-        .type-card:hover { border-color: #0d1883; background: #f0f3ff; }
-        .type-card:hover::before { opacity: 1; }
-        .type-card.active { border-color: #0d1883; background: #eef1ff; }
-        .type-card.active::before { opacity: 1; }
-        .type-thumb { width: 52px; height: 33px; background: #e8ecff; border-radius: 6px; overflow: hidden; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
-        .type-thumb img { width: 100%; height: 100%; object-fit: contain; }
-        .type-thumb svg { width: 36px; height: 22px; }
-        .type-info h6 { font-size: 12px; font-weight: 600; color: #1a1a1a; margin-bottom: 1px; }
-        .type-info small { font-size: 10px; color: #999; }
-        .type-check { margin-left: auto; width: 17px; height: 17px; border-radius: 50%; background: #0d1883; display: none; align-items: center; justify-content: center; flex-shrink: 0; }
-        .type-card.active .type-check { display: flex; }
-        .type-check svg { width: 9px; height: 9px; }
-
-        /* ── Transfer sidebar locked state ── */
-        .sidebar-locked { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 180px; gap: 10px; padding: 20px 10px; text-align: center; }
-        .sidebar-locked svg { width: 32px; height: 32px; fill: #c5cef8; }
-        .sidebar-locked p { font-size: 11.5px; color: #bbb; line-height: 1.5; }
-
-        /* ── Horizontal category/model cards ── */
-        .cat-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 120px; gap: 8px; }
-        .cat-empty svg { width: 32px; height: 32px; opacity: .3; fill: #aaa; }
-        .cat-empty p { font-size: 12.5px; color: #bbb; }
-        .cat-row { display: flex; gap: 12px; flex-wrap: wrap; }
-        .cat-thumb-card { flex: 1; min-width: 110px; max-width: 170px; border: 2px solid #e0e4f0; border-radius: 14px; padding: 13px 10px; cursor: pointer; transition: border-color .2s, background .2s, transform .2s, box-shadow .2s; background: #fff; text-align: center; position: relative; user-select: none; }
-        .cat-thumb-card:hover { border-color: #0d1883; background: #f5f7ff; transform: translateY(-3px); box-shadow: 0 6px 18px rgba(13,24,131,.1); }
-        .cat-thumb-card.active { border-color: #0d1883; background: #eef1ff; box-shadow: 0 6px 18px rgba(13,24,131,.15); }
-        .cat-thumb-card.dimmed { opacity: .35; transform: none; pointer-events: none; }
-        .ctc-img { width: 100%; height: 58px; background: #e8ecff; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-bottom: 9px; overflow: hidden; }
-        .ctc-img img { width: 100%; height: 100%; object-fit: contain; }
-        .ctc-img svg { width: 50px; height: 32px; }
-        .ctc-name { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 3px; }
-        .ctc-price { font-size: 11.5px; font-weight: 700; color: #0d1883; }
-        .ctc-pax { font-size: 10px; color: #999; margin-top: 2px; }
-        .ctc-check { position: absolute; top: 7px; right: 7px; width: 18px; height: 18px; background: #0d1883; border-radius: 50%; display: none; align-items: center; justify-content: center; }
-        .cat-thumb-card.active .ctc-check { display: flex; }
-        .ctc-check svg { width: 10px; height: 10px; fill: white; }
-
-        /* ── Detail / expand panel ── */
-        .cat-detail-panel { display: none; border: 2px solid #0d1883; border-radius: 16px; overflow: hidden; margin-top: 14px; animation: slideDown .28s cubic-bezier(.34,1.3,.64,1); }
-        .cat-detail-panel.visible { display: block; }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        .detail-inner { display: grid; grid-template-columns: 320px 1fr; }
-        @media(max-width:640px) { .detail-inner { grid-template-columns: 1fr; } }
-        .di-body { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
-        .di-main { flex: 1 1 220px; min-width: 180px; }
-        .di-body .price-breakdown { flex: 0 0 250px; margin-top: 0; }
-        @media(max-width:760px) { .di-body .price-breakdown { flex: 1 1 100%; } }
-
-        /* ── Carousel ── */
-        .carousel-wrap { position: relative; background: #0a1060; overflow: hidden; min-height: 240px; }
-        .carousel-track { display: flex; transition: transform .4s cubic-bezier(.25,.46,.45,.94); }
-        .carousel-slide { min-width: 100%; height: 240px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #0d1883; }
-        .carousel-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .carousel-slide .slide-fb { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-        .carousel-slide .slide-fb svg { width: 120px; height: 80px; }
-        .car-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; background: #0a1f44; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .2s, transform .2s; z-index: 5; }
-        .car-nav:hover { background: #123a7a; transform: translateY(-50%) scale(1.1); }
-        .car-nav svg { width: 16px; height: 16px; fill: #ffffff; }
-        .car-nav.prev { left: 10px; }
-        .car-nav.next { right: 10px; }
-        .car-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; z-index: 5; }
-        .car-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,.4); cursor: pointer; transition: background .2s, transform .2s; border: none; }
-        .car-dot.active { background: white; transform: scale(1.3); }
-        .slide-label { position: absolute; bottom: 28px; left: 12px; background: rgba(0,0,0,.55); color: white; font-size: 10.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px; backdrop-filter: blur(4px); z-index: 5; }
-
-        /* ── Detail info panel ── */
-        .detail-info { padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; background: #fff; }
-        .di-cat-name { font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 600; color: #0d1883; margin-bottom: 3px; }
-        .di-type-tag { display: inline-flex; background: #eef1ff; color: #0d1883; font-size: 9.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: .06em; }
-        .di-price { font-size: 20px; font-weight: 700; color: #0d1883; }
-        .di-price span { font-size: 11.5px; font-weight: 400; color: #999; margin-left: 3px; }
-        .di-pax { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666; margin-top: 4px; }
-        .di-pax svg { width: 13px; height: 13px; fill: #0d1883; opacity: .7; }
-        .feat-label { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: .09em; margin-bottom: 7px; }
-        .feat-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
-        .feat-list li { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: #444; line-height: 1.4; }
-        .feat-list li svg { width: 12px; height: 12px; fill: #0d1883; flex-shrink: 0; margin-top: 1px; opacity: .85; }
-        .di-actions { display: flex; gap: 9px; margin-top: 4px; }
-        .btn-change { padding: 9px 13px; background: #f0f3ff; color: #0d1883; border: 1.5px solid #c5cef8; border-radius: 9px; font-size: 11.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-        .btn-change:hover { background: #e0e8ff; }
-        .btn-change svg { width: 11px; height: 11px; fill: #0d1883; }
-        .btn-proceed-cat { flex: 1; padding: 10px 13px; background: linear-gradient(135deg,#0d1883,#2d39b6); color: white; border: none; border-radius: 9px; font-size: 11.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 5px; }
-        .btn-proceed-cat:hover { background: linear-gradient(135deg,#0b1570,#1e2d9e); transform: translateY(-1px); }
-        .btn-proceed-cat svg { width: 11px; height: 11px; fill: white; }
-
-        /* ── Distance + pricing ── */
-        .dist-status { display: none; align-items: center; gap: 7px; font-size: 12px; color: #0d1883; padding: 8px 12px; background: #eef1ff; border-radius: 8px; margin-bottom: 10px; }
-        .dist-status.show { display: flex; }
-        .dist-status svg { width: 14px; height: 14px; fill: #0d1883; animation: spin .8s linear infinite; }
-        .dist-result { display: none; background: #eef1ff; border: 1px solid #c5cef8; border-radius: 9px; padding: 9px 13px; margin-bottom: 10px; font-size: 12px; color: #0d1883; font-weight: 600; }
-        .dist-result.show { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px; }
-        .price-breakdown { background: #f7f8ff; border: 1.5px solid #c5cef8; border-radius: 10px; padding: 13px 15px; display: none; margin-top: 8px; }
-        .price-breakdown.show { display: block; }
-        .pb-title { font-size: 9.5px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 9px; }
-        .pb-row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; border-bottom: 1px solid #e8eaf5; }
-        .pb-row:last-of-type { border-bottom: none; }
-        .pb-row span { color: #666; } .pb-row strong { color: #1a1a1a; }
-        .pb-total { display: flex; justify-content: space-between; padding-top: 7px; margin-top: 3px; border-top: 1.5px solid #c5cef8; font-size: 13.5px; font-weight: 700; }
-        .pb-total span { color: #555; } .pb-total strong { color: #0d1883; }
-
-        /* ── Forms ── */
-        .form-section-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; color: #0d1883; margin-bottom: 4px; }
-        .form-chip { display: inline-flex; align-items: center; gap: 6px; background: #eef1ff; border: 1px solid #c5cef8; border-radius: 20px; padding: 4px 11px; font-size: 11px; font-weight: 600; color: #0d1883; margin-bottom: 14px; }
-        .form-chip svg { width: 11px; height: 11px; fill: #0d1883; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-        @media(max-width:540px) { .form-row { grid-template-columns: 1fr; } }
-        .form-group { display: flex; flex-direction: column; gap: 4px; }
-        .form-group label { font-size: 10.5px; font-weight: 600; color: #555; letter-spacing: .04em; text-transform: uppercase; }
-        .form-group input, .form-group select { padding: 10px 12px; border: 1.5px solid #dde0ee; border-radius: 9px; font-size: 13px; font-family: 'DM Sans', sans-serif; color: #1a1a1a; background: #fafbff; transition: border-color .2s, box-shadow .2s; outline: none; }
-        .form-group input:focus, .form-group select:focus { border-color: #0d1883; box-shadow: 0 0 0 3px rgba(13,24,131,.07); background: #fff; }
-        .pay-title { font-size: 10.5px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; display: block; }
-        .pay-opts { display: flex; gap: 10px; margin-bottom: 15px; }
-        .pay-opt { flex: 1; border: 1.5px solid #dde0ee; border-radius: 10px; padding: 10px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: border-color .2s, background .2s; background: #fafbff; user-select: none; }
-        .pay-opt:hover { border-color: #0d1883; background: #f0f3ff; }
-        .pay-opt.active { border-color: #0d1883; background: #eef1ff; }
-        .pay-opt input[type="radio"] { display: none; }
-        .pay-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .pay-opt.active .pay-dot { border-color: #0d1883; }
-        .pay-dot-inner { width: 6px; height: 6px; border-radius: 50%; background: #0d1883; display: none; }
-        .pay-opt.active .pay-dot-inner { display: block; }
-        .pay-label { font-size: 12px; font-weight: 600; color: #1a1a1a; }
-        .pay-sub { font-size: 10px; color: #999; }
-        .btn-review { width: 100%; padding: 13px; background: linear-gradient(135deg,#0d1883,#2d39b6); color: white; border: none; border-radius: 11px; font-size: 13.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; letter-spacing: .02em; }
-        .btn-review:hover { background: linear-gradient(135deg,#0b1570,#1e2d9e); transform: translateY(-1px); }
-        .btn-calc { width: 100%; padding: 10px; background: #f0f3ff; color: #0d1883; border: 1.5px solid #c5cef8; border-radius: 9px; font-size: 12.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; margin-bottom: 12px; }
-        .btn-calc:hover { background: #e0e8ff; }
-        .btn-proceed-form { width: 100%; padding: 11px; background: linear-gradient(135deg,#0d1883,#2d39b6); color: white; border: none; border-radius: 10px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .btn-proceed-form:hover { background: linear-gradient(135deg,#0b1570,#1e2d9e); transform: translateY(-1px); }
-        .btn-proceed-form svg { width: 12px; height: 12px; fill: white; }
-
-        /* ── Duration quick-pick chips ── */
-        .duration-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-        .duration-chip { padding: 9px 16px; border: 1.5px solid #dde0ee; border-radius: 20px; font-size: 12.5px; font-weight: 600; color: #555; background: #fafbff; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all .15s; }
-        .duration-chip:hover { border-color: #c5cef8; background: #f0f3ff; }
-        .duration-chip.active { background: #0d1883; border-color: #0d1883; color: #fff; }
-        .duration-custom-input { width: 84px; padding: 9px 10px; border: 1.5px solid #0d1883; border-radius: 20px; font-size: 12.5px; font-family: 'DM Sans', sans-serif; color: #1a1a1a; outline: none; text-align: center; }
-
-        /* ── Single context-aware CTA (Get Quote → Proceed) ── */
-        .btn-cta { width: 100%; padding: 11px; background: #f0f3ff; color: #0d1883; border: 1.5px solid #c5cef8; border-radius: 10px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; margin-bottom: 12px; }
-        .btn-cta:hover { background: #e0e8ff; }
-        .btn-cta.is-ready { background: linear-gradient(135deg,#0d1883,#2d39b6); color: #fff; border-color: transparent; }
-        .btn-cta.is-ready:hover { background: linear-gradient(135deg,#0b1570,#1e2d9e); transform: translateY(-1px); }
-        .secure-note { text-align: center; font-size: 10.5px; color: #bbb; margin-top: 9px; display: flex; align-items: center; justify-content: center; gap: 5px; }
-        .secure-note svg { width: 10px; height: 10px; opacity: .5; }
-        .alert-box { background: #fff0f0; border: 1px solid #ffc5c5; color: #c0392b; border-radius: 9px; padding: 9px 13px; font-size: 12px; margin-bottom: 12px; display: none; }
-
-        /* ── Transfer route grid ── */
-        .tr-loc-grid { display: grid; grid-template-columns: 1fr 32px 1fr; align-items: end; gap: 8px; margin-bottom: 12px; }
-        @media(max-width:500px) { .tr-loc-grid { grid-template-columns: 1fr; } .tr-arrow { display: none; } }
-        .tr-arrow { display: flex; align-items: center; justify-content: center; padding-bottom: 2px; }
-        .tr-arrow svg { width: 18px; height: 18px; fill: #0d1883; opacity: .4; }
-
-        /* ── Fare Rules (compact row + modal trigger, GetTransfer-style) ── */
-        .fare-rules-row { display: flex; flex-direction: column; gap: 7px; margin: 4px 0 14px; padding-top: 2px; }
-        .fr-free-cancel { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: #1a7a4e; }
-        .fr-free-cancel svg { width: 13px; height: 13px; fill: #1a7a4e; flex-shrink: 0; }
-        .fare-rules-link { display: inline-flex; align-items: center; gap: 6px; background: none; border: none; padding: 0; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 600; color: #6b86c9; transition: color .2s; width: fit-content; }
-        .fare-rules-link:hover { color: #0d1883; text-decoration: underline; }
-        .fare-rules-link svg { width: 14px; height: 14px; fill: #6b86c9; flex-shrink: 0; transition: fill .2s; }
-        .fare-rules-link:hover svg { fill: #0d1883; }
-
-        /* ── Fare Rules modal content (reused inside the shared overlay) ── */
-        .fr-section { margin-bottom: 14px; }
-        .fr-section:last-child { margin-bottom: 0; }
-        .fr-section h6 { font-size: 11.5px; font-weight: 700; color: #0d1883; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
-        .fr-section ul { list-style: none; display: flex; flex-direction: column; gap: 5px; }
-        .fr-section li { display: flex; align-items: flex-start; gap: 6px; font-size: 12.5px; color: #444; line-height: 1.55; }
-        .fr-section li::before { content: '•'; color: #0d1883; flex-shrink: 0; line-height: 1.55; }
-
-        /* ── Modal — entire overlay is built inline by openModal() in JS ── */
-        @keyframes modalIn { from { opacity: 0; transform: translateY(20px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
-
-<div class="page" id="carhire-widget">
-
-    <div class="page-header">
-        <div class="page-icon"><svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/></svg></div>
-        <div>
-            <h1>Ground Transport</h1>
-            <p>Book a car hire or arrange a seamless airport/port transfer. Professional drivers, all vehicle types, across Nigeria.</p>
-        </div>
-    </div>
-
-    {{-- ══ STATE SELECTOR ══ --}}
-    <div class="state-selector-wrap">
-        <div class="ss-label">
-            <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-            Select your state
-        </div>
-        <div class="state-row">
-            <select class="state-select" id="stateSelect" onchange="onStateChange(this.value)">
-                <option value="">— Choose your state —</option>
-                <optgroup label="South West">
-                    <option value="lagos">Lagos</option>
-                    <option value="ogun">Ogun</option>
-                    <option value="oyo">Oyo</option>
-                    <option value="osun">Osun</option>
-                    <option value="ondo">Ondo</option>
-                    <option value="ekiti">Ekiti</option>
-                </optgroup>
-                <optgroup label="South East">
-                    <option value="anambra">Anambra</option>
-                    <option value="enugu">Enugu</option>
-                    <option value="imo">Imo</option>
-                    <option value="abia">Abia</option>
-                    <option value="ebonyi">Ebonyi</option>
-                </optgroup>
-                <optgroup label="South South">
-                    <option value="rivers">Rivers</option>
-                    <option value="delta">Delta</option>
-                    <option value="edo">Edo</option>
-                    <option value="cross_river">Cross River</option>
-                    <option value="akwa_ibom">Akwa Ibom</option>
-                    <option value="bayelsa">Bayelsa</option>
-                </optgroup>
-                <optgroup label="North West">
-                    <option value="kano">Kano</option>
-                    <option value="kaduna">Kaduna</option>
-                    <option value="sokoto">Sokoto</option>
-                    <option value="katsina">Katsina</option>
-                    <option value="zamfara">Zamfara</option>
-                    <option value="kebbi">Kebbi</option>
-                    <option value="jigawa">Jigawa</option>
-                </optgroup>
-                <optgroup label="North East">
-                    <option value="borno">Borno</option>
-                    <option value="yobe">Yobe</option>
-                    <option value="adamawa">Adamawa</option>
-                    <option value="taraba">Taraba</option>
-                    <option value="bauchi">Bauchi</option>
-                    <option value="gombe">Gombe</option>
-                </optgroup>
-                <optgroup label="North Central">
-                    <option value="abuja">FCT Abuja</option>
-                    <option value="kogi">Kogi</option>
-                    <option value="kwara">Kwara</option>
-                    <option value="benue">Benue</option>
-                    <option value="plateau">Plateau</option>
-                    <option value="nasarawa">Nasarawa</option>
-                    <option value="niger">Niger</option>
-                </optgroup>
-            </select>
-            <div id="stateBadge" style="display:none;"></div>
-        </div>
-    </div>
-
-    {{-- Unavailable message --}}
-    <div class="unavail-box" id="unavailBox">
-        <div class="unavail-icon">
-            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-        </div>
-        <h3>Service Not Available Yet</h3>
-        <p>We currently offer ground transport services only in <strong>Lagos State</strong>. We are actively expanding to other states across Nigeria.</p>
-        <p style="margin-top:8px;font-size:12.5px;color:#aaa;">Currently available in:</p>
-        <div class="unavail-states">
-            <span>🟢 Lagos State</span>
-        </div>
-    </div>
-
-    {{-- Main booking content — only shown for Lagos --}}
-    <div class="main-content" id="mainContent">
-        <div class="tab-bar">
-            <button class="tab-btn active" id="tab-ch" onclick="switchTab('ch')">
-                <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/></svg>
-                Car Rental
-            </button>
-            <button class="tab-btn" id="tab-tr" onclick="switchTab('tr')">
-                <svg viewBox="0 0 24 24"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg>
-                Pick up 'n' Drop off
-            </button>
-        </div>
-
-        {{-- ════════ CAR HIRE ════════ --}}
-        <div class="tab-panel active" id="panel-ch">
-            <div class="outer-card">
-                <div class="card-layout">
-
-                    <div class="sidebar">
-                        <div class="section-label">1 · Vehicle type</div>
-                        @foreach(['saloon','suv','van','bus','luxury'] as $vtype)
-                        <div class="type-card" onclick="ch_setType('{{ $vtype }}',this)">
-                            <div class="type-thumb">
-                                <img src="{{ $typeThumbs[$vtype] }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" alt="{{ ucfirst($vtype) }}">
-                                <svg style="display:none" viewBox="0 0 60 38" fill="none"><rect x="3" y="12" width="50" height="18" rx="3" fill="#0d1883" opacity="0.3"/><circle cx="14" cy="32" r="5" fill="#0d1883" opacity="0.7"/><circle cx="42" cy="32" r="5" fill="#0d1883" opacity="0.7"/></svg>
-                            </div>
-                            <div class="type-info">
-                                <h6>{{ $vtype === 'van' ? 'Mini Van' : ucfirst($vtype) }}</h6>
-                                <small>{{ $categories[$vtype]['items'][0]['passengers'] ?? '—' }}</small>
-                            </div>
-                            <div class="type-check"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5l3 3 7-7" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-                        </div>
-                        @endforeach
-                    </div>
-
-                    <div class="content-area">
-
-                        <div class="inner-card tinted">
-                            <div class="section-label">2 · Select category</div>
-                            <div id="ch_typeLbl" style="font-size:12px;font-weight:500;color:#0d1883;margin-bottom:14px;display:none;"></div>
-                            <div id="ch_catArea">
-                                <div class="cat-empty">
-                                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
-                                    <p>Choose a vehicle type first</p>
-                                </div>
-                            </div>
-
-                            {{-- Step 2.5: Model picker — shown after category selected, before detail panel --}}
-                            <div id="ch_modelCard" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid #e4e6f0;">
-                                <div class="section-label" style="margin-bottom:10px;">2.5 · Choose a model</div>
-                                <p id="ch_modelIntro" style="font-size:12px;color:#888;margin-bottom:12px;"></p>
-                                <div id="ch_modelArea" class="cat-row"></div>
-                            </div>
-
-                            <div id="ch_detailPanel" class="cat-detail-panel"></div>
-                        </div>
-
-                        <div class="inner-card" id="ch_pricingCard" style="display:none;">
-                            <div class="section-label">3 · Pick-up &amp; duration</div>
-                            <div id="ch_alertA" class="alert-box"></div>
-                            <div class="form-group" style="margin-bottom:10px;">
-                                <label>Pick-up Location</label>
-                                <input type="text" id="ch_pickup" placeholder="e.g. Victoria Island, Lagos">
-                            </div>
-                            <div class="form-group" style="margin-bottom:10px;">
-                                <label>Rental Duration</label>
-                                <div class="duration-chips" id="ch_durationChips">
-                                    <button type="button" class="duration-chip" onclick="ch_setDuration(2,this)">2h</button>
-                                    <button type="button" class="duration-chip" onclick="ch_setDuration(4,this)">4h</button>
-                                    <button type="button" class="duration-chip" onclick="ch_setDuration(6,this)">6h</button>
-                                    <button type="button" class="duration-chip" onclick="ch_setDuration(8,this)">8h</button>
-                                    <button type="button" class="duration-chip" onclick="ch_setDuration(12,this)">12h</button>
-                                    <button type="button" class="duration-chip" id="ch_durationCustomChip" onclick="ch_setDurationCustom(this)">Custom</button>
-                                    <input type="number" id="ch_hours" class="duration-custom-input" placeholder="Hrs" min="1" oninput="ch_calcPrice()" style="display:none;">
-                                </div>
-                            </div>
-                            <div class="price-breakdown" id="ch_priceBox">
-                                <div class="pb-title">Price Breakdown</div>
-                                <div class="pb-row"><span>Base Fare</span><strong id="pb_base">₦0</strong></div>
-                                <div class="pb-row"><span>Tear &amp; Wear (<span id="pb_wearpct">0</span>%)</span><strong id="pb_wear">₦0</strong></div>
-                                <div class="pb-row"><span>Fuel (<span id="pb_mins">0</span> mins × ₦<span id="pb_frate">0</span>/min)</span><strong id="pb_fuel">₦0</strong></div>
-                                <div class="pb-row"><span>Admin Fee (<span id="pb_adminpct">0</span>%)</span><strong id="pb_admin">₦0</strong></div>
-                                <div class="pb-total"><span>Total Estimate</span><strong id="pb_total">₦0</strong></div>
-                            </div>
-                            <button class="btn-cta" id="ch_ctaBtn" onclick="ch_ctaAction()">Proceed to Booking Form</button>
-                        </div>
-
-                        <div class="inner-card" id="ch_formCard" style="display:none;">
-                            <div class="form-section-title">Booking Details</div>
-                            <div class="form-chip">
-                                <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/></svg>
-                                <span id="ch_chipTxt"></span>
-                            </div>
-                            <div id="ch_alertB" class="alert-box"></div>
-                            <div class="form-row">
-                                <div class="form-group"><label>Full Name</label><input type="text" id="ch_name" placeholder="Enter your full name"></div>
-                                <div class="form-group"><label>Email</label><input type="email" id="ch_email" placeholder="Enter your email"></div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group"><label>Phone Number</label><input type="tel" id="ch_phone" placeholder="Enter your phone"></div>
-                                <div class="form-group"><label>Passengers</label><input type="number" id="ch_pax" placeholder="e.g. 2" min="1"></div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group"><label>Pick-up Date</label><input type="date" id="ch_date"></div>
-                                <div class="form-group"><label>Pick-up Time</label><select id="ch_time"></select></div>
-                            </div>
-
-                            {{-- ══ FARE RULES ══ --}}
-                            <div class="fare-rules-row">
-                                <div class="fr-free-cancel">
-                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
-                                    Free cancellation 5h before the trip
-                                </div>
-                                <button type="button" class="fare-rules-link" onclick="openFareRulesModal()">
-                                    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15h-1.5v-6H12v6zm0-7.75c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25zM12.75 17H11v-1h.75v-4.25H11v-1h1.75V17z"/></svg>
-                                    Fare Rules
-                                </button>
-                            </div>
-
-                            <span class="pay-title">Payment Method</span>
-                            <div class="pay-opts">
-                                <label class="pay-opt active" id="ch_p_budpay" onclick="ch_pay('budpay')">
-                                    <input type="radio" checked>
-                                    <div class="pay-dot"><div class="pay-dot-inner"></div></div>
-                                    <div><div class="pay-label">BudPay</div><div class="pay-sub">Card, bank transfer</div></div>
-                                </label>
-                                <label class="pay-opt" id="ch_p_seerbit" onclick="ch_pay('seerbit')">
-                                    <input type="radio">
-                                    <div class="pay-dot"><div class="pay-dot-inner"></div></div>
-                                    <div><div class="pay-label">SeerBit</div><div class="pay-sub">Card, USSD, bank</div></div>
-                                </label>
-                            </div>
-                            <button type="button" class="btn-review" onclick="openModal('ch')">Review &amp; Proceed to Payment</button>
-                            <div class="secure-note"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Secured payment · Your data is protected</div>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- ════════ TRANSFER ════════ --}}
-        <div class="tab-panel" id="panel-tr">
-            <div class="outer-card">
-                {{-- No sidebar for transfer — single column content area --}}
-                <div class="content-area" style="padding:22px 24px;">
-
-                    {{-- Step 1: Route --}}
-                    <div class="inner-card tinted">
-                        <div class="section-label">1 · Your route</div>
-                        <p style="font-size:12.5px;color:#888;margin-bottom:14px;">Enter pick-up and drop-off — Google Maps calculates the exact road distance automatically.</p>
-                        <div class="tr-loc-grid">
-                            <div class="form-group">
-                                <label>Pick-up Location</label>
-                                <input type="text" id="tr_from" placeholder="e.g. Murtala Muhammed Airport">
-                            </div>
-                            <div class="tr-arrow"><svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></div>
-                            <div class="form-group">
-                                <label>Drop-off Location</label>
-                                <input type="text" id="tr_to" placeholder="e.g. Victoria Island, Lagos">
-                            </div>
-                        </div>
-                        <button class="btn-calc" onclick="tr_calcDist()">📍 Get Final Quote</button>
-                        <div class="dist-status" id="tr_calcSt">
-                            <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
-                            Calculating via Google Maps...
-                        </div>
-                        <div class="dist-result" id="tr_distRes">
-                            <div>Distance: <strong id="tr_distKmLbl">—</strong> &nbsp;·&nbsp; Drive time: <strong id="tr_driveLbl">—</strong></div>
-                            <span style="font-size:10.5px;color:#888;">via Google Maps</span>
-                        </div>
-                        <div id="tr_alertA" class="alert-box"></div>
-                    </div>
-
-                    {{-- Step 2: Vehicle type — shown after distance calculated --}}
-                    <div class="inner-card tinted" id="tr_typeCard" style="display:none;">
-                        <div class="section-label">2 · Vehicle type</div>
-                        <p style="font-size:12.5px;color:#888;margin-bottom:14px;">Select the type of vehicle you need.</p>
-                        <div id="tr_typeCards" style="display:flex;gap:10px;flex-wrap:wrap;">
-                            @foreach(['saloon','suv','van','bus','luxury'] as $vtype)
-                            <div class="type-card" onclick="tr_setType('{{ $vtype }}',this)" style="flex:1;min-width:130px;max-width:200px;margin-bottom:0;">
-                                <div class="type-thumb">
-                                    <img src="{{ $transferVehicles[$vtype]['items'][0]['images'][0] ?? '' }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" alt="{{ ucfirst($vtype) }}">
-                                    <svg style="display:none" viewBox="0 0 60 38" fill="none"><rect x="3" y="12" width="50" height="18" rx="3" fill="#0d1883" opacity="0.3"/><circle cx="14" cy="32" r="5" fill="#0d1883" opacity="0.7"/><circle cx="42" cy="32" r="5" fill="#0d1883" opacity="0.7"/></svg>
-                                </div>
-                                <div class="type-info">
-                                    <h6>{{ $vtype === 'van' ? 'Mini Van' : ucfirst($vtype) }}</h6>
-                                    <small>{{ collect($transferVehicles[$vtype]['items'])->sum(fn($i) => count($i['models'])) }} model{{ collect($transferVehicles[$vtype]['items'])->sum(fn($i) => count($i['models'])) > 1 ? 's' : '' }}</small>
-                                </div>
-                                <div class="type-check"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5l3 3 7-7" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-                            </div>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    {{-- Step 3: Select category --}}
-                    <div class="inner-card tinted" id="tr_catCard" style="display:none;">
-                        <div class="section-label">3 · Select category</div>
-                        <div id="tr_catTypeLbl" style="font-size:12px;font-weight:500;color:#0d1883;margin-bottom:14px;"></div>
-                        <div id="tr_catArea">
-                            <div class="cat-empty">
-                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
-                                <p>Choose a vehicle type first</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Step 4: Select car model --}}
-                    <div class="inner-card tinted" id="tr_modelCard" style="display:none;">
-                        <div class="section-label">4 · Select car</div>
-                        <div id="tr_typeLbl" style="font-size:12px;font-weight:500;color:#0d1883;margin-bottom:14px;"></div>
-                        <div id="tr_modelArea">
-                            <div class="cat-empty">
-                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
-                                <p>Choose a category first</p>
-                            </div>
-                        </div>
-                        <div id="tr_detailPanel" class="cat-detail-panel"></div>
-                    </div>
-
-                    {{-- Step 5: Booking form --}}
-                    <div class="inner-card" id="tr_formCard" style="display:none;">
-                        <div class="form-section-title">Transfer Details</div>
-                        <div class="form-chip"><svg viewBox="0 0 24 24"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg><span id="tr_chipTxt"></span></div>
-                        <div id="tr_alertB" class="alert-box"></div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Full Name</label><input type="text" id="tr_name" placeholder="Enter your full name"></div>
-                            <div class="form-group"><label>Email</label><input type="email" id="tr_email" placeholder="Enter your email"></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Phone Number</label><input type="tel" id="tr_phone" placeholder="Enter your phone"></div>
-                            <div class="form-group"><label>Passengers</label><input type="number" id="tr_pax" placeholder="e.g. 2" min="1"></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Flight / Vessel No. (optional)</label><input type="text" id="tr_flight" placeholder="e.g. LH 401"></div>
-                            <div class="form-group"><label>Special Requests (optional)</label><input type="text" id="tr_notes" placeholder="e.g. child seat, extra luggage"></div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group"><label>Arrival / Pick-up Date</label><input type="date" id="tr_date"></div>
-                            <div class="form-group"><label>Arrival / Pick-up Time</label><select id="tr_time"></select></div>
-                        </div>
-
-                        {{-- ══ FARE RULES ══ --}}
-                        <div class="fare-rules-row">
-                            <div class="fr-free-cancel">
-                                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
-                                Free cancellation 5h before the trip
-                            </div>
-                            <button type="button" class="fare-rules-link" onclick="openFareRulesModal()">
-                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15h-1.5v-6H12v6zm0-7.75c-.69 0-1.25-.56-1.25-1.25s.56-1.25 1.25-1.25 1.25.56 1.25 1.25-.56 1.25-1.25 1.25zM12.75 17H11v-1h.75v-4.25H11v-1h1.75V17z"/></svg>
-                                Fare Rules
-                            </button>
-                        </div>
-
-                        <span class="pay-title">Payment Method</span>
-                        <div class="pay-opts">
-                            <label class="pay-opt active" id="tr_p_budpay" onclick="tr_pay('budpay')">
-                                <input type="radio" checked>
-                                <div class="pay-dot"><div class="pay-dot-inner"></div></div>
-                                <div><div class="pay-label">BudPay</div><div class="pay-sub">Card, bank transfer</div></div>
-                            </label>
-                            <label class="pay-opt" id="tr_p_seerbit" onclick="tr_pay('seerbit')">
-                                <input type="radio">
-                                <div class="pay-dot"><div class="pay-dot-inner"></div></div>
-                                <div><div class="pay-label">SeerBit</div><div class="pay-sub">Card, USSD, bank</div></div>
-                            </label>
-                        </div>
-                        <button type="button" class="btn-review" onclick="openModal('tr')">Review &amp; Proceed to Payment</button>
-                        <div class="secure-note"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Secured payment · Your data is protected</div>
-                    </div>
-
-                </div>
-            </div>
-        </div>
-
-    </div>{{-- /main-content --}}
-
-</div>{{-- /page --}}
-
-{{-- Hidden submit forms --}}
-<form id="ch_form" method="POST" action="{{ route('air.carhire.submit') }}" style="display:none">
-    @csrf
-    <input type="hidden" name="car_type"         id="h_ch_type">
-    <input type="hidden" name="category"          id="h_ch_cat">
-    <input type="hidden" name="car_model"         id="h_ch_model">
-    <input type="hidden" name="rental_hours"      id="h_ch_hours">
-    <input type="hidden" name="full_name"         id="h_ch_name">
-    <input type="hidden" name="email"             id="h_ch_email">
-    <input type="hidden" name="phone_number"      id="h_ch_phone">
-    <input type="hidden" name="passengers"        id="h_ch_pax">
-    <input type="hidden" name="pickup_location"   id="h_ch_pickup">
-    <input type="hidden" name="pickup_date"       id="h_ch_date">
-    <input type="hidden" name="pickup_time"       id="h_ch_time">
-    <input type="hidden" name="payment_option"    id="h_ch_payment">
-</form>
-<form id="tr_form" method="POST" action="{{ route('air.transfer.submit') }}" style="display:none">
-    @csrf
-    <input type="hidden" name="vehicle_type"      id="h_tr_type">
-    <input type="hidden" name="vehicle_name"      id="h_tr_vname">
-    <input type="hidden" name="category"          id="h_tr_cat">
-    <input type="hidden" name="price"             id="h_tr_price">
-    <input type="hidden" name="distance_km"       id="h_tr_dist">
-    <input type="hidden" name="duration_mins"     id="h_tr_duration">
-    <input type="hidden" name="pickup_location"   id="h_tr_from">
-    <input type="hidden" name="dropoff_location"  id="h_tr_to">
-    <input type="hidden" name="full_name"         id="h_tr_name">
-    <input type="hidden" name="email"             id="h_tr_email">
-    <input type="hidden" name="phone_number"      id="h_tr_phone">
-    <input type="hidden" name="passengers"        id="h_tr_pax">
-    <input type="hidden" name="flight_number"     id="h_tr_flight">
-    <input type="hidden" name="special_requests"  id="h_tr_notes">
-    <input type="hidden" name="pickup_date"       id="h_tr_date">
-    <input type="hidden" name="pickup_time"       id="h_tr_time">
-    <input type="hidden" name="payment_option"    id="h_tr_payment">
-</form>
 
 <script>
 /* ══ ALL DATA FROM BACKEND ══ */
@@ -1037,9 +1025,10 @@ function ch_setCtaReady(ready) {
     document.getElementById('ch_ctaBtn').classList.toggle('is-ready', ready);
 }
 
-/* Base Fare + Tear & Wear + Fuel + Admin Fee — same formula (and same
-   per-vehicle-type rates) as the Pick up 'n' Drop off (Transfer) tab, using
-   the rental duration in place of a route's drive time. */
+/* Base Fare + Tear & Wear + Fuel + Admin Fee — same formula as the Pick up
+   'n' Drop off (Transfer) tab, using the rental duration in place of a
+   route's drive time. Base Fare is Car Hire's own rate; Fuel Rate and Admin
+   Fee are shared with Transfer. */
 function ch_computePricing() {
     const hrs=parseFloat(document.getElementById('ch_hours').value)||0;
     if (!chSelCat||!chSelType||!hrs) { chFinalPrice=0; return null; }

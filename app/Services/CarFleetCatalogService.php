@@ -25,7 +25,7 @@ class CarFleetCatalogService
 
         foreach (self::VEHICLE_TYPES as $vtype) {
             $rateInfo = $ratesData[$vtype] ?? null;
-            $priceMap = $rateInfo['base_fares'] ?? ['Regular' => 0, 'Standard' => 0, 'Executive' => 0];
+            $priceMap = $rateInfo['car_hire_base_fares'] ?? ['Regular' => 0, 'Standard' => 0, 'Executive' => 0];
 
             $carsForType = $fleetCars->get($vtype, collect());
             $items = [];
@@ -113,7 +113,7 @@ class CarFleetCatalogService
 
                 $items[] = [
                     'name' => $catName,
-                    'price' => (int) ($rateInfo['base_fares'][$catName] ?? 0),
+                    'price' => (int) ($rateInfo['transfer_base_fares'][$catName] ?? 0),
                     'passengers' => $passengers,
                     'images' => $catImages,
                     'models' => $models,
@@ -154,7 +154,7 @@ class CarFleetCatalogService
         $data = [];
 
         foreach (self::VEHICLE_TYPES as $vtype) {
-            $baseFares = $ratesData[$vtype]['base_fares'] ?? ['Regular' => 0, 'Standard' => 0, 'Executive' => 0];
+            $baseFares = $ratesData[$vtype]['car_hire_base_fares'] ?? ['Regular' => 0, 'Standard' => 0, 'Executive' => 0];
             $data[$vtype] = [
                 'items' => [
                     ['name' => 'Regular', 'price' => (int) ($baseFares['Regular'] ?? 0)],

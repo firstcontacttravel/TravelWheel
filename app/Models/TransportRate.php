@@ -19,6 +19,9 @@ class TransportRate extends Model
         'transfer_base_executive',
         'transfer_fuel_rate_per_minute',
         'transfer_admin_fee_percent',
+        'carhire_base_regular',
+        'carhire_base_standard',
+        'carhire_base_executive',
     ];
 
     public static function allKeyed(): array

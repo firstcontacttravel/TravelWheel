@@ -89,8 +89,8 @@
         display: flex; align-items: center; justify-content: center;
         font-size: 16px;
     }
-    .support-product-card h4 { color: rgba(13, 24, 131, 1); font-weight: 700; font-size: 13px; margin-bottom: 3px; }
-    .support-product-card p { color: #667085; font-size: 10.5px; line-height: 1.4; margin-bottom: 6px; }
-    .support-product-card .spc-price { display: inline-block; color: #0d1883; font-weight: 700; font-size: 11px; background: #eef1ff; padding: 3px 10px; border-radius: 999px; }
+    .support-product-card h4 { color: rgba(13, 24, 131, 1); font-weight: 700; font-size: 18px; margin-bottom: 3px; }
+    .support-product-card p { color: #667085; font-size: 16px; line-height: 1.4; margin-bottom: 6px; }
+    .support-product-card .spc-price { display: inline-block; color: #0d1883; font-weight: 700; font-size: 16px; background: #eef1ff; padding: 3px 10px; border-radius: 999px; }
 </style>
 </div>

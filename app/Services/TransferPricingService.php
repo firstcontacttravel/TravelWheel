@@ -89,10 +89,15 @@ class TransferPricingService
 
         foreach ($rates as $vehicleType => $rate) {
             $data[$vehicleType] = [
-                'base_fares' => [
+                'transfer_base_fares' => [
                     'Regular' => (int) $rate->transfer_base_regular,
                     'Standard' => (int) $rate->transfer_base_standard,
                     'Executive' => (int) $rate->transfer_base_executive,
+                ],
+                'car_hire_base_fares' => [
+                    'Regular' => (int) $rate->carhire_base_regular,
+                    'Standard' => (int) $rate->carhire_base_standard,
+                    'Executive' => (int) $rate->carhire_base_executive,
                 ],
                 'fuel_rate_per_minute' => (int) $rate->transfer_fuel_rate_per_minute,
                 'admin_fee_percent' => (float) $rate->transfer_admin_fee_percent,
