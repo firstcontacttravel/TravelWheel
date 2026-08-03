@@ -55,7 +55,7 @@ class AdminReplacementFlightSearchService
             ];
 
             $response = Http::connectTimeout(10)->timeout(60)
-                ->post('https://travelnext.works/api/aeroVE5/availability', $payload);
+                ->post(config('services.travelnext.base_url').'availability', $payload);
 
             if ($response->failed()) {
                 return [];
@@ -163,7 +163,7 @@ class AdminReplacementFlightSearchService
             ];
 
             $response = Http::connectTimeout(10)->timeout(60)
-                ->post('https://travelnext.works/api/aeroVE5/airport_list', $payload);
+                ->post(config('services.travelnext.base_url').'airport_list', $payload);
 
             $airports = $response->failed() ? [] : $this->normalizeAirportResponse($response->json() ?: []);
 

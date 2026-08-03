@@ -632,7 +632,8 @@ class SystemHealthService
         $reachable = null;
 
         if ($includeConnectivity && $missing === []) {
-            $probe = $this->socketProbe('travelnext.works', 443, true);
+            $host = parse_url(config('services.travelnext.base_url'), PHP_URL_HOST) ?? 'travelnext.works';
+            $probe = $this->socketProbe($host, 443, true);
             $reachable = $probe['reachable'];
             $details['Network connection'] = $probe['message'];
         } elseif (! $includeConnectivity) {

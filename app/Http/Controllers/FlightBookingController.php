@@ -47,7 +47,7 @@ class FlightBookingController extends Controller
         // ── 1. Revalidate ─────────────────────────────────────────────────────────
         try {
             $revalidateResponse = Http::connectTimeout(10)->timeout(60)
-                ->post('https://travelnext.works/api/aeroVE5/revalidate', $payload);
+                ->post(config('services.travelnext.base_url').'revalidate', $payload);
         } catch (\Throwable $exception) {
             Log::error('Flight revalidation request failed', [
                 'error' => $exception->getMessage(),
@@ -391,9 +391,9 @@ class FlightBookingController extends Controller
         try {
             $responses = Http::pool(fn (Pool $pool): array => [
                 $pool->as('extras')->connectTimeout(10)->timeout(60)
-                    ->post('https://travelnext.works/api/aeroVE5/extra_services', $payload1),
+                    ->post(config('services.travelnext.base_url').'extra_services', $payload1),
                 $pool->as('rules')->connectTimeout(10)->timeout(60)
-                    ->post('https://travelnext.works/api/aeroVE5/fare_rules', $payload1),
+                    ->post(config('services.travelnext.base_url').'fare_rules', $payload1),
             ]);
             $extraResponse = $responses['extras'];
             $fareRulesResponse = $responses['rules'];
@@ -2264,7 +2264,7 @@ class FlightBookingController extends Controller
             ],
         ];
         try {
-            $response = Http::connectTimeout(10)->timeout(90)->post('https://travelnext.works/api/aeroVE5/booking', $payload);
+            $response = Http::connectTimeout(10)->timeout(90)->post(config('services.travelnext.base_url').'booking', $payload);
             if ($response->failed()) {
                 return ['error' => true, 'message' => 'Booking request failed. Please try again.', 'data' => []];
             }
@@ -2611,7 +2611,7 @@ class FlightBookingController extends Controller
         ];
 
         try {
-            $response = Http::connectTimeout(10)->timeout(30)->post('https://travelnext.works/api/aeroVE5/trip_details', $payload);
+            $response = Http::connectTimeout(10)->timeout(30)->post(config('services.travelnext.base_url').'trip_details', $payload);
             if ($response->failed()) {
                 return [];
             }

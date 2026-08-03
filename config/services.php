@@ -35,6 +35,7 @@ return [
         ],
     ],
     'travelnext' => [
+        'base_url' => env('TRAVELNEXT_BASE_URL', 'https://travelnext.works/api/aeroVE5/'),
         'user_id' => env('TRAVELNEXT_USER_ID'),
         'password' => env('TRAVELNEXT_PASSWORD'),
         'access' => env('TRAVELNEXT_ACCESS'),

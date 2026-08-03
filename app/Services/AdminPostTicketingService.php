@@ -71,7 +71,7 @@ class AdminPostTicketingService
         }
 
         $response = Http::connectTimeout(10)->timeout(60)
-            ->post('https://travelnext.works/api/aeroVE5/'.$endpoint, $apiPayload);
+            ->post(config('services.travelnext.base_url').$endpoint, $apiPayload);
 
         $data = $response->json() ?: [];
         $ok = ! $response->failed() && $this->extractSuccess($data);

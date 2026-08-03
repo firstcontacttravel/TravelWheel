@@ -81,7 +81,7 @@ class AdminTicketingService
 
         try {
             $response = Http::connectTimeout(10)->timeout(60)
-                ->post('https://travelnext.works/api/aeroVE5/ticket_order', $payload);
+                ->post(config('services.travelnext.base_url').'ticket_order', $payload);
         } catch (\Throwable $exception) {
             Log::error('Admin ticket order request failed', [
                 'booking_id' => $booking->id,
@@ -125,7 +125,7 @@ class AdminTicketingService
 
         try {
             $response = Http::connectTimeout(10)->timeout(30)
-                ->post('https://travelnext.works/api/aeroVE5/trip_details', $payload);
+                ->post(config('services.travelnext.base_url').'trip_details', $payload);
         } catch (\Throwable $exception) {
             Log::error('Admin trip details request failed', [
                 'booking_id' => $booking->id,
