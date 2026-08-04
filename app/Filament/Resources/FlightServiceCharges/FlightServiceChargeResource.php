@@ -96,6 +96,7 @@ class FlightServiceChargeResource extends Resource
     private static function routeLabel(string $category): string
     {
         return match ($category) {
+            'domestic' => 'Domestic (within Nigeria)',
             'from_nigeria' => 'Starts in Nigeria',
             'touches_nigeria' => 'Inbound / touches Nigeria',
             'not_nigeria' => 'Outside Nigeria',

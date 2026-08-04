@@ -113,6 +113,57 @@ class FlightMarkupTest extends TestCase
         $this->assertSame('not_nigeria', $flight['markupCategory']);
     }
 
+    public function test_domestic_route_uses_domestic_markup(): void
+    {
+        $flight = FlightMarkup::apply([
+            'price' => 100000,
+            'cabinCode' => 'Y',
+            'segments' => [
+                ['fromCountry' => 'Nigeria', 'toCountry' => 'Nigeria'],
+            ],
+        ]);
+
+        $this->assertSame(20000.0, $flight['markupAmount']);
+        $this->assertSame(120000.0, $flight['price']);
+        $this->assertSame('domestic', $flight['markupCategory']);
+    }
+
+    public function test_domestic_round_trip_uses_domestic_markup(): void
+    {
+        $flight = FlightMarkup::apply([
+            'price' => 100000,
+            'cabinCode' => 'Y',
+            'segments' => [
+                ['fromCountry' => 'Nigeria', 'toCountry' => 'Nigeria'],
+            ],
+            'returnSegments' => [
+                ['fromCountry' => 'Nigeria', 'toCountry' => 'Nigeria'],
+            ],
+        ]);
+
+        $this->assertSame(20000.0, $flight['markupAmount']);
+        $this->assertSame('domestic', $flight['markupCategory']);
+    }
+
+    public function test_domestic_leg_that_also_leaves_nigeria_uses_touching_markup(): void
+    {
+        // One leg starts and ends in Nigeria, but the itinerary isn't
+        // entirely domestic — the return leg leaves the country — so this
+        // must not be priced as 'domestic'.
+        $flight = FlightMarkup::apply([
+            'price' => 100000,
+            'cabinCode' => 'Y',
+            'segments' => [
+                ['fromCountry' => 'Nigeria', 'toCountry' => 'Nigeria'],
+            ],
+            'returnSegments' => [
+                ['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom'],
+            ],
+        ]);
+
+        $this->assertSame('touches_nigeria', $flight['markupCategory']);
+    }
+
     public function test_multi_city_touching_nigeria_uses_touching_markup(): void
     {
         $flight = FlightMarkup::apply([

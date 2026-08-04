@@ -40,10 +40,11 @@ class PricingAdminConfigurationTest extends TestCase
         $this->actingAs($admin)
             ->get(FlightServiceChargeResource::getUrl('index'))
             ->assertOk()
+            ->assertSee('Domestic (within Nigeria)')
             ->assertSee('Starts in Nigeria')
             ->assertSee('Inbound / touches Nigeria')
             ->assertSee('Per passenger');
 
-        $this->assertDatabaseCount('flight_service_charges', 12);
+        $this->assertDatabaseCount('flight_service_charges', 16);
     }
 }

@@ -15,6 +15,12 @@ class FlightMarkup
     private static ?float $cachedUsdRate = null;
 
     private const DEFAULT_CHARGES = [
+        'domestic' => [
+            'economy' => 20000.0,
+            'premium_economy' => 30000.0,
+            'business' => 40000.0,
+            'first' => 50000.0,
+        ],
         'from_nigeria' => [
             'economy' => 30000.0,
             'premium_economy' => 60000.0,
@@ -120,6 +126,10 @@ class FlightMarkup
         $legs = self::segments($flight);
         $first = $legs[0] ?? [];
 
+        if ($legs !== [] && self::allSegmentsWithinNigeria($legs)) {
+            return 'domestic';
+        }
+
         $originNigeria = self::isNigeria($first['fromCountry'] ?? null);
         $firstDestinationNigeria = self::isNigeria($first['toCountry'] ?? null);
 
@@ -134,6 +144,17 @@ class FlightMarkup
         }
 
         return 'not_nigeria';
+    }
+
+    private static function allSegmentsWithinNigeria(array $legs): bool
+    {
+        foreach ($legs as $segment) {
+            if (! self::isNigeria($segment['fromCountry'] ?? null) || ! self::isNigeria($segment['toCountry'] ?? null)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static function cabinCategory(array $flight): string
