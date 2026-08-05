@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ExchangeRate;
 use App\Models\FlightBooking;
 use App\Models\TravelFlexApplication;
 use App\Services\AdminTicketingService;
@@ -315,9 +316,36 @@ class FlightBookingController extends Controller
         $validatingAirline = $airlines->get($validatingCode);
 
         // ── 7. Fare breakdown ─────────────────────────────────────────────────────
-        $breakdown = collect($fareInfo['FareBreakdown'] ?? [])->map(function ($fb) {
+        // TravelNext's `revalidate` response does not repeat `PenaltyDetails` per
+        // passenger type — only `availability` (the search step) does. Fall back to
+        // the penalty details already captured at search time so refund/TravelFlex
+        // eligibility isn't lost just because revalidate omitted the field.
+        //
+        // The search-stage breakdown was already run through FlightMarkup::apply()
+        // (USD → NGN), and $mappedFlight goes through apply() again below, so the
+        // fallback amounts are un-converted back to USD here to avoid double conversion.
+        $usdToNgnRate = ExchangeRate::rateFor('USD') ?: 1.0;
+        $searchedFareBreakdown = collect(session('flightResultsStore', []))
+            ->firstWhere('fareSourceCode', $validated['fare_source_code'])['fareBreakdown'] ?? [];
+        $searchedFareBreakdown = collect($searchedFareBreakdown)
+            ->keyBy('passengerType')
+            ->map(function ($fb) use ($usdToNgnRate) {
+                foreach (['changePenalty', 'refundPenalty'] as $field) {
+                    if (isset($fb[$field]) && is_numeric($fb[$field])) {
+                        $fb[$field] = round(((float) $fb[$field]) / $usdToNgnRate, 2);
+                    }
+                }
+
+                return $fb;
+            });
+
+        $breakdown = collect($fareInfo['FareBreakdown'] ?? [])->map(function ($fb) use ($searchedFareBreakdown) {
+            $passengerType = $fb['PassengerTypeQuantity']['Code'];
+            $penaltyDetails = $fb['PenaltyDetails'] ?? null;
+            $fallback = $searchedFareBreakdown->get($passengerType, []);
+
             return [
-                'passengerType' => $fb['PassengerTypeQuantity']['Code'],
+                'passengerType' => $passengerType,
                 'qty' => (int) $fb['PassengerTypeQuantity']['Quantity'],
                 'baseFare' => (float) $fb['PassengerFare']['BaseFare']['Amount'],
                 'totalFare' => (float) $fb['PassengerFare']['TotalFare']['Amount'],
@@ -327,10 +355,10 @@ class FlightBookingController extends Controller
                 'taxes' => $fb['PassengerFare']['Taxes'] ?? [],
                 'serviceTax' => (float) ($fb['PassengerFare']['ServiceTax']['Amount'] ?? 0),
                 'surcharges' => (float) ($fb['PassengerFare']['Surcharges']['Amount'] ?? 0),
-                'changeAllowed' => $fb['PenaltyDetails']['ChangeAllowed'] ?? false,
-                'changePenalty' => $fb['PenaltyDetails']['ChangePenaltyAmount'] ?? '0.00',
-                'refundAllowed' => $fb['PenaltyDetails']['RefundAllowed'] ?? false,
-                'refundPenalty' => $fb['PenaltyDetails']['RefundPenaltyAmount'] ?? null,
+                'changeAllowed' => $penaltyDetails['ChangeAllowed'] ?? $fallback['changeAllowed'] ?? false,
+                'changePenalty' => $penaltyDetails['ChangePenaltyAmount'] ?? $fallback['changePenalty'] ?? '0.00',
+                'refundAllowed' => $penaltyDetails['RefundAllowed'] ?? $fallback['refundAllowed'] ?? false,
+                'refundPenalty' => $penaltyDetails['RefundPenaltyAmount'] ?? $fallback['refundPenalty'] ?? null,
             ];
         })->values()->toArray();
 
