@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Payment Successful - TravelWheel</title>
+  <title>Request Received - TravelWheel</title>
 </head>
 <body style="margin:0; padding:0; background-color:#f4f6f8; font-family:'Segoe UI', Arial, sans-serif; color:#333;">
   <table role="presentation" style="width:100%; border-collapse:collapse; background-color:#f4f6f8; padding:30px 0;">
     <tr>
       <td align="center">
         <table role="presentation" style="width:100%; max-width:600px; background:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-          
+
           <!-- Header -->
           <tr>
             <td style="background:#1369FF; padding:25px; text-align:center;">
               <img src="{{ asset('assets/twlogo.png') }}" alt="TravelWheel" width="120" style="margin-bottom:8px;">
-              <h1 style="color:#ffffff; font-size:22px; margin:0;">Payment Successful 🎉</h1>
+              <h1 style="color:#ffffff; font-size:22px; margin:0;">Request Received 🎉</h1>
             </td>
           </tr>
 
@@ -24,17 +24,17 @@
             <td style="padding:30px;">
               <p style="font-size:16px;">Dear <strong>{{ $name }}</strong>,</p>
               <p style="font-size:15px; line-height:1.6;">
-                Thank you for your payment for <strong>{{ $service }}</strong>.  
-                We’re excited to let you know your transaction was completed successfully.
+                Thank you for submitting your <strong>{{ $service }}</strong> request.
+                We’ve received it and our support team will begin processing it shortly.
               </p>
 
               <table style="width:100%; border-collapse:collapse; margin:20px 0;">
                 <tr>
                   <td style="padding:10px 0; border-bottom:1px solid #eee;">
-                    <strong>Amount Paid:</strong>
+                    <strong>Service Fee:</strong>
                   </td>
                   <td style="padding:10px 0; border-bottom:1px solid #eee; text-align:right;">
-                    ₦{{ $amount }}
+                    ₦{{ $amount }} (billed with your main flight fee)
                   </td>
                 </tr>
                 <tr>
@@ -56,7 +56,7 @@
               </table>
 
               <p style="font-size:15px; line-height:1.6;">
-                Our support team has been notified and will begin processing your request shortly.
+                No payment is required from you now — this fee will be charged together with your main flight booking fee.
               </p>
 
               <p style="font-size:15px;">Thank you for choosing <strong>TravelWheel</strong> — we’re always here to make your journey smoother.</p>

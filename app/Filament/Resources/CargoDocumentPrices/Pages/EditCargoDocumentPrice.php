@@ -2,16 +2,13 @@
 
 namespace App\Filament\Resources\CargoDocumentPrices\Pages;
 
+use App\Filament\Concerns\HasBackHeaderActionAndInlineDelete;
 use App\Filament\Resources\CargoDocumentPrices\CargoDocumentPriceResource;
-use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditCargoDocumentPrice extends EditRecord
 {
-    protected static string $resource = CargoDocumentPriceResource::class;
+    use HasBackHeaderActionAndInlineDelete;
 
-    protected function getHeaderActions(): array
-    {
-        return [DeleteAction::make()];
-    }
+    protected static string $resource = CargoDocumentPriceResource::class;
 }

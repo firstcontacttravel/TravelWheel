@@ -20,7 +20,7 @@ class SupportFlightAssistSuccessMail extends Mailable
 
     public function build()
     {
-        return $this->subject('Payment Successful - Support Request Received')
+        return $this->subject('Request Received - Flight Assist')
             ->view('emails.support-flight-assist-success')
             ->with([
                 'name' => $this->support->name_on_ticket ?? 'Customer',

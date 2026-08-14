@@ -2,18 +2,15 @@
 
 namespace App\Filament\Resources\CountryGroups\Pages;
 
+use App\Filament\Concerns\HasBackHeaderActionAndInlineDelete;
 use App\Filament\Resources\CountryGroups\CountryGroupResource;
-use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditCountryGroup extends EditRecord
 {
-    protected static string $resource = CountryGroupResource::class;
+    use HasBackHeaderActionAndInlineDelete;
 
-    protected function getHeaderActions(): array
-    {
-        return [DeleteAction::make()];
-    }
+    protected static string $resource = CountryGroupResource::class;
 
     protected function afterSave(): void
     {

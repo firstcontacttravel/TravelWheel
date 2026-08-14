@@ -580,15 +580,32 @@ function flightWidget() {
         },
 
         // ── Airport search ──
+        // Ranks matches so exact/prefix IATA-code hits (e.g. "IST", "MAN") always
+        // come first — a plain filter().slice(0,8) let unrelated substring matches
+        // (city/name/country containing the query) push the real airport out of
+        // the first 8 results whenever it sorted later alphabetically in the list.
+        airportRank(a, q) {
+            const iata = (a.iata || '').toLowerCase();
+            const city = (a.city || '').toLowerCase();
+            const name = (a.name || '').toLowerCase();
+            const country = (a.country || '').toLowerCase();
+            if (iata === q) return 0;
+            if (iata.startsWith(q)) return 1;
+            if (city.startsWith(q)) return 2;
+            if (name.startsWith(q)) return 3;
+            if (city.includes(q)) return 4;
+            if (name.includes(q)) return 5;
+            if (country.startsWith(q)) return 6;
+            if (country.includes(q)) return 7;
+            return 99;
+        },
         airportSearch(q) {
             q = q.toLowerCase().trim();
             if (q.length < 2) return [];
-            return this.airports.filter(a =>
-                (a.iata    && a.iata.toLowerCase().startsWith(q))  ||
-                (a.city    && a.city.toLowerCase().includes(q))    ||
-                (a.name    && a.name.toLowerCase().includes(q))    ||
-                (a.country && a.country.toLowerCase().includes(q))
-            ).slice(0, 8);
+            return this.airports
+                .filter(a => this.airportRank(a, q) < 99)
+                .sort((a, b) => this.airportRank(a, q) - this.airportRank(b, q))
+                .slice(0, 8);
         },
 
         searchAirport(val, target) {

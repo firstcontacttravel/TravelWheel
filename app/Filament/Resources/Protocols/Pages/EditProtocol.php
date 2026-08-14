@@ -2,16 +2,13 @@
 
 namespace App\Filament\Resources\Protocols\Pages;
 
+use App\Filament\Concerns\HasBackHeaderActionAndInlineDelete;
 use App\Filament\Resources\Protocols\ProtocolResource;
-use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditProtocol extends EditRecord
 {
-    protected static string $resource = ProtocolResource::class;
+    use HasBackHeaderActionAndInlineDelete;
 
-    protected function getHeaderActions(): array
-    {
-        return [DeleteAction::make()];
-    }
+    protected static string $resource = ProtocolResource::class;
 }

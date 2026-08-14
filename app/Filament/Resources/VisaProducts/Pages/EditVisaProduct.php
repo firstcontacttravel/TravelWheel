@@ -26,6 +26,11 @@ class EditVisaProduct extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('back')
+                ->label('Back')
+                ->icon('heroicon-o-arrow-left')
+                ->color('gray')
+                ->url(fn (): string => static::getResource()::getUrl('index')),
             Action::make('publish')
                 ->label('Validate and publish')
                 ->icon('heroicon-o-check-badge')
@@ -54,6 +59,14 @@ class EditVisaProduct extends EditRecord
                     Notification::make()->title('Visa product returned to draft')->success()->send();
                     $this->redirect(static::getResource()::getUrl('edit', ['record' => $this->record]));
                 }),
+        ];
+    }
+
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getSaveFormAction(),
+            $this->getCancelFormAction(),
             DeleteAction::make(),
         ];
     }

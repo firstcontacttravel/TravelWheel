@@ -24,9 +24,13 @@ class SupportFlightAssistsTable
                 TextColumn::make('booking_source')->badge(),
                 TextColumn::make('airline')->placeholder('-'),
                 TextColumn::make('amount')->money('NGN')->sortable(),
-                TextColumn::make('payment_status')->badge()->color(fn (string $state): string => match ($state) {
+                TextColumn::make('payment_status')->badge()->formatStateUsing(fn (string $state): string => match ($state) {
+                    'billed_with_main_fee' => 'Billed with main fee',
+                    default => ucfirst($state),
+                })->color(fn (string $state): string => match ($state) {
                     'paid', 'confirmed', 'completed' => 'success',
                     'failed', 'cancelled' => 'danger',
+                    'billed_with_main_fee' => 'info',
                     default => 'warning',
                 })->sortable(),
                 TextColumn::make('created_at')->since()->sortable(),
@@ -34,6 +38,7 @@ class SupportFlightAssistsTable
             ->filters([
                 SelectFilter::make('payment_status')->options([
                     'pending' => 'Pending',
+                    'billed_with_main_fee' => 'Billed with main fee',
                     'paid' => 'Paid',
                     'confirmed' => 'Confirmed',
                     'cancelled' => 'Cancelled',
@@ -61,6 +66,7 @@ class SupportFlightAssistsTable
                     ->label('Payment status')
                     ->options([
                         'pending' => 'Pending',
+                        'billed_with_main_fee' => 'Billed with main fee',
                         'paid' => 'Paid',
                         'confirmed' => 'Confirmed',
                         'cancelled' => 'Cancelled',

@@ -2,16 +2,13 @@
 
 namespace App\Filament\Resources\TransferWearItems\Pages;
 
+use App\Filament\Concerns\HasBackHeaderActionAndInlineDelete;
 use App\Filament\Resources\TransferWearItems\TransferWearItemResource;
-use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditTransferWearItem extends EditRecord
 {
-    protected static string $resource = TransferWearItemResource::class;
+    use HasBackHeaderActionAndInlineDelete;
 
-    protected function getHeaderActions(): array
-    {
-        return [DeleteAction::make()];
-    }
+    protected static string $resource = TransferWearItemResource::class;
 }

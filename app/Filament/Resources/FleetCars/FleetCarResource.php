@@ -80,6 +80,7 @@ class FleetCarResource extends Resource
                 ->reorderable()
                 ->disk('public')
                 ->directory('fleet')
+                ->helperText('Exterior photos only (no interior/dashboard shots). Upload in this order so the public page labels them correctly: 1) Front view, 2) Back view, 3) Side view. Any extra photos after those three are shown without a label.')
                 ->columnSpanFull(),
             Toggle::make('is_active')->default(true),
         ])->columns(2);

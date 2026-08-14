@@ -680,7 +680,7 @@ const CH_DATA     = @json($categories);
 const TR_VEHICLES = @json($transferVehicles);
 const CSRF_TOKEN  = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 const DIST_URL    = '{{ route("air.carhire.distance") }}';
-const SLIDE_LABELS = ['Front', 'Rear', 'Interior'];
+const SLIDE_LABELS = ['Front View', 'Back View', 'Side View'];
 const PAX_LIMITS = { saloon:3, suv:3, van:5, bus:12, luxury:4 };
 const SVG_FB = `<svg viewBox="0 0 60 38" fill="none"><rect x="3" y="10" width="50" height="22" rx="3" fill="#0d1883" opacity="0.3"/><circle cx="14" cy="34" r="5" fill="#0d1883" opacity="0.6"/><circle cx="42" cy="34" r="5" fill="#0d1883" opacity="0.6"/></svg>`;
 

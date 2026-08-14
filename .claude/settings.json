@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -H 'User-Agent: __TRACKED_VAR__' -o coaster37_side_c1.jpg https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Toyota_Cosater_of_Dayeh_University_Left_Side_View_in_Chengkungling_20150606.jpg/960px-Toyota_Cosater_of_Dayeh_University_Left_Side_View_in_Chengkungling_20150606.jpg)",
+      "Bash(curl -s -H 'User-Agent: __TRACKED_VAR__' 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=Toyota%20Camry%20XSE%20profile&gsrnamespace=6&gsrlimit=20&prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=960&format=json' -o camry_side3.json)",
+      "Bash(php parse.php camry_side3.json)",
+      "Bash(curl -s -H 'User-Agent: __TRACKED_VAR__' 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=Toyota%20Camry%20XSE%20AWD%20Cavalry%20Blue&gsrnamespace=6&gsrlimit=20&prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=960&format=json' -o camry_cavalry.json)",
+      "Bash(php parse.php camry_cavalry.json)",
+      "Bash(curl -s 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=Toyota%20Camry%20XV80%20side%20profile%20wikipedia%20infobox&gsrnamespace=6&gsrlimit=20&prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=960&format=json' -o /c/Users/User/AppData/Local/Temp/claude/c--xampp-htdocs-laravel-travelwheel/b65cd2f9-2e4c-4ee2-8793-67bab19b6d73/scratchpad/fleet_photos/groupD/camry_infobox.json)",
+      "Bash(php /c/Users/User/AppData/Local/Temp/claude/c--xampp-htdocs-laravel-travelwheel/b65cd2f9-2e4c-4ee2-8793-67bab19b6d73/scratchpad/fleet_photos/groupD/parse.php /c/Users/User/AppData/Local/Temp/claude/c--xampp-htdocs-laravel-travelwheel/b65cd2f9-2e4c-4ee2-8793-67bab19b6d73/scratchpad/fleet_photos/groupD/camry_infobox.json)",
+      "Bash(curl -s -H 'User-Agent: __TRACKED_VAR__' -o camry_side_cand1.jpg https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/2023_Toyota_Camry_XSE_AWD_in_Cavalry_Blue%2C_front_left%2C_2026-06-14.jpg/960px-2023_Toyota_Camry_XSE_AWD_in_Cavalry_Blue%2C_front_left%2C_2026-06-14.jpg)",
+      "Bash(curl -s 'https://commons.wikimedia.org/w/api.php?action=query&generator=categorymembers&gcmtitle=Category:Toyota%20Camry%20\\(XV80\\)%20taxis&gcmtype=file&gcmlimit=50&prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=960&format=json' -o /c/Users/User/AppData/Local/Temp/claude/c--xampp-htdocs-laravel-travelwheel/b65cd2f9-2e4c-4ee2-8793-67bab19b6d73/scratchpad/fleet_photos/groupD/camry_taxi.json)",
+      "Bash(php /c/Users/User/AppData/Local/Temp/claude/c--xampp-htdocs-laravel-travelwheel/b65cd2f9-2e4c-4ee2-8793-67bab19b6d73/scratchpad/fleet_photos/groupD/parse.php /c/Users/User/AppData/Local/Temp/claude/c--xampp-htdocs-laravel-travelwheel/b65cd2f9-2e4c-4ee2-8793-67bab19b6d73/scratchpad/fleet_photos/groupD/camry_taxi.json)",
+      "Bash(cp \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--xampp-htdocs-laravel-travelwheel\\\\b65cd2f9-2e4c-4ee2-8793-67bab19b6d73\\\\scratchpad\\\\fleet_photos\\\\groupE\\\\crv_rear_alt.jpg\" \"C:\\\\xampp\\\\htdocs\\\\laravel\\\\travelwheel\\\\storage\\\\app\\\\public\\\\fleet\\\\models\\\\honda-cr-v-back.jpg\")",
+      "Bash(cp \"C:\\\\Users\\\\User\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--xampp-htdocs-laravel-travelwheel\\\\b65cd2f9-2e4c-4ee2-8793-67bab19b6d73\\\\scratchpad\\\\fleet_photos\\\\groupE\\\\crv_2.jpg\" \"C:\\\\xampp\\\\htdocs\\\\laravel\\\\travelwheel\\\\storage\\\\app\\\\public\\\\fleet\\\\models\\\\honda-cr-v-side.jpg\")",
+      "Bash(curl -s 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=Mercedes-Benz%20Sprinter%20panel%20van%20right%20side&gsrnamespace=6&gsrlimit=20&prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=960&format=json' -H 'User-Agent: __TRACKED_VAR__' -o sprinter38_side2.json)",
+      "Bash(node parse.js sprinter38_side2.json)",
+      "Bash(python search.py \"Hyundai Tucson 2022 rear\" 15)",
+      "Bash(python search.py \"Hyundai Tucson 2022 side profile\" 15)"
+    ]
+  }
+}

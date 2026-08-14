@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SupportExtraLuggage;
 use App\Models\SupportFlightAssist;
+use App\Models\SupportProductPrice;
 use App\Models\SupportVisaConfirmation;
 use App\Models\SupportYellowCard;
 use App\Services\BudPayPaymentService;
@@ -21,7 +22,9 @@ class SupportController extends Controller
     */
     public function flightAssistForm()
     {
-        return view('air.support.flight-assist');
+        return view('air.support.flight-assist', [
+            'flightAssistPrice' => SupportProductPrice::amountFor('flight_assist', 25000),
+        ]);
     }
 
     public function extraLuggageForm()
@@ -62,26 +65,27 @@ class SupportController extends Controller
             'preferred_time' => 'nullable|string|max:255',
             'phone' => 'required|string|max:20',
             'email' => 'required|email|max:255',
-            'payment_option' => 'required|in:budpay,seerbit',
-            'amount' => 'required|integer|in:25000',
             'additional_info' => 'nullable|string',
         ]);
 
         $reference = 'SPA-' . strtoupper(bin2hex(random_bytes(6)));
 
-        SupportFlightAssist::create(array_merge($data, [
+        // Flight Assist isn't paid for here — the fee is billed together with
+        // the client's main flight booking fee, so this just records the
+        // request and notifies both the client and support team directly.
+        // The amount is looked up server-side (not trusted from the form) so
+        // it always reflects the admin-configured price at submission time.
+        $record = SupportFlightAssist::create(array_merge($data, [
+            'amount' => SupportProductPrice::amountFor('flight_assist', 25000),
+            'payment_option' => 'not_required',
             'payment_reference' => $reference,
-            'payment_status' => 'pending',
+            'payment_status' => 'billed_with_main_fee',
         ]));
 
-        return $this->launchPayment(
-            payment_option: $data['payment_option'],
-            amount: $data['amount'],
-            email: $data['email'],
-            customerName: $data['name_on_ticket'] ?? 'Customer',
-            reference: $reference,
-            product_title: 'Flight Assist',
-        );
+        $this->sendMails($record, 'flight_assist');
+
+        return redirect()->route('air.support.success')
+            ->with('success', $this->successMessage('flight_assist'));
     }
 
     /*

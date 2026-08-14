@@ -12,6 +12,7 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\ImageColumn;
@@ -49,9 +50,45 @@ class LoungeResource extends Resource
             TextInput::make('facilities3')->label('Facility 3')->required(),
             TextInput::make('facilities4')->label('Facility 4')->required(),
             TextInput::make('facilities5')->label('Facility 5')->required(),
-            TextInput::make('priceA')->label('Adult Price')->numeric()->required()->prefix('₦'),
-            TextInput::make('priceB')->label('Child Price')->numeric()->required()->prefix('₦'),
-            TextInput::make('priceC')->label('Infant Price')->numeric()->required()->prefix('₦'),
+            Section::make('Pricing')
+                ->description('Vendor price is what the lounge charges us per passenger type. Markup is our service charge, applied on top of every tier. The public sees Vendor + Markup — that total is calculated automatically and is not stored separately.')
+                ->columns(4)
+                ->columnSpanFull()
+                ->schema([
+                    TextInput::make('given_PriceA')
+                        ->label('Vendor Price (Adult)')
+                        ->numeric()->required()->minValue(0)->prefix('₦')
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(fn ($state, callable $set, callable $get) => $set('priceA', Lounge::totalPrice($state, $get('markup_price')))),
+                    TextInput::make('given_PriceB')
+                        ->label('Vendor Price (Child)')
+                        ->numeric()->required()->minValue(0)->prefix('₦')
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(fn ($state, callable $set, callable $get) => $set('priceB', Lounge::totalPrice($state, $get('markup_price')))),
+                    TextInput::make('given_PriceC')
+                        ->label('Vendor Price (Infant)')
+                        ->numeric()->required()->minValue(0)->prefix('₦')
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(fn ($state, callable $set, callable $get) => $set('priceC', Lounge::totalPrice($state, $get('markup_price')))),
+                    TextInput::make('markup_price')
+                        ->label('Markup (all tiers)')
+                        ->numeric()->required()->minValue(0)->prefix('₦')
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                            $set('priceA', Lounge::totalPrice($get('given_PriceA'), $state));
+                            $set('priceB', Lounge::totalPrice($get('given_PriceB'), $state));
+                            $set('priceC', Lounge::totalPrice($get('given_PriceC'), $state));
+                        }),
+                    TextInput::make('priceA')
+                        ->label('Total (Adult) — shown to public')
+                        ->numeric()->prefix('₦')->disabled()->dehydrated(false),
+                    TextInput::make('priceB')
+                        ->label('Total (Child) — shown to public')
+                        ->numeric()->prefix('₦')->disabled()->dehydrated(false),
+                    TextInput::make('priceC')
+                        ->label('Total (Infant) — shown to public')
+                        ->numeric()->prefix('₦')->disabled()->dehydrated(false),
+                ]),
             TextInput::make('pics1')->label('Image 1 filename')->required()->helperText('Filename only, e.g. lounge1.jpg — file must exist in public/assets/lounge/'),
             TextInput::make('pics2')->label('Image 2 filename')->required(),
             TextInput::make('pics3')->label('Image 3 filename')->required(),
@@ -69,9 +106,13 @@ class LoungeResource extends Resource
                 TextColumn::make('brand_name')->searchable()->description(fn (Lounge $record): string => $record->location),
                 TextColumn::make('airport')->searchable(),
                 TextColumn::make('terminal'),
-                TextColumn::make('priceA')->label('Adult')->money('NGN'),
-                TextColumn::make('priceB')->label('Child')->money('NGN'),
-                TextColumn::make('priceC')->label('Infant')->money('NGN'),
+                TextColumn::make('given_PriceA')->label('Vendor (Adult)')->money('NGN'),
+                TextColumn::make('given_PriceB')->label('Vendor (Child)')->money('NGN'),
+                TextColumn::make('given_PriceC')->label('Vendor (Infant)')->money('NGN'),
+                TextColumn::make('markup_price')->label('Markup')->money('NGN'),
+                TextColumn::make('priceA')->label('Total (Adult)')->money('NGN')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('priceB')->label('Total (Child)')->money('NGN')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('priceC')->label('Total (Infant)')->money('NGN')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->recordActions([
                 EditAction::make(),

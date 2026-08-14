@@ -20,7 +20,7 @@ class SupportFlightAssistNotificationMail extends Mailable
 
     public function build()
     {
-        return $this->subject('New Support Request Payment - ' . ($this->support->name_on_ticket ?? 'Client'))
+        return $this->subject('New Flight Assist Request - ' . ($this->support->name_on_ticket ?? 'Client'))
             ->view('emails.support-flight-assist-notification')
             ->with([
                 'name' => $this->support->name_on_ticket ?? 'N/A',

@@ -2,16 +2,13 @@
 
 namespace App\Filament\Resources\FleetCars\Pages;
 
+use App\Filament\Concerns\HasBackHeaderActionAndInlineDelete;
 use App\Filament\Resources\FleetCars\FleetCarResource;
-use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditFleetCar extends EditRecord
 {
-    protected static string $resource = FleetCarResource::class;
+    use HasBackHeaderActionAndInlineDelete;
 
-    protected function getHeaderActions(): array
-    {
-        return [DeleteAction::make()];
-    }
+    protected static string $resource = FleetCarResource::class;
 }

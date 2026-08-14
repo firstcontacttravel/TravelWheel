@@ -26,13 +26,17 @@
       display: none;
       transition: all 0.4s ease;
     }
-    .price-display {
-      font-size: 2.5rem;
-      font-weight: bolder;
-      text-align: center;
+    .price-note {
+      background: #eef1ff;
+      border: 1px solid rgba(13, 24, 131, .15);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-top: .5rem;
+      font-size: .9rem;
       color: rgba(13, 24, 131, 1);
-      margin-top: 1.5rem;
+      line-height: 1.5;
     }
+    .price-note strong { font-weight: 700; }
     .card-body > .card {
       margin-bottom: 1rem;
     }
@@ -179,36 +183,26 @@
                 <input type="email" name="email" class="form-control" required>
               </div>
 
-              <div class="col-md-6">
-                <label for="paymentOption" class="form-label fw-bold main-color">Select Payment Option</label>
-                <select class="form-select" id="paymentOption" name="payment_option" required>
-                  <option value="" selected disabled>-- Choose Payment Option --</option>
-                  <option value="budpay">BudPay</option>
-                  <option value="seerbit">SeerBit</option>
-                </select>
-              </div>
-
-              <div class="col-md-6">
+              <div class="col-md-12">
                 <label class="form-label">Additional Information</label>
                 <textarea name="additional_info" class="form-control" rows="1" placeholder="Provide more details if needed..."></textarea>
               </div>
 
-              {{-- First price-display --}}
-              <div class="price-display">
-                <input type="hidden" name="amount" id="hiddenAmountInput" value="25000">
+              {{-- Pricing info — no payment collected here, it's billed with the main fee.
+                   The amount is admin-configurable (Support Requests > Product Prices);
+                   the server re-reads it at submission time, so nothing here is trusted. --}}
+              <div class="col-md-12">
+                <div class="price-note">
+                  This service costs <strong>₦{{ number_format($flightAssistPrice) }}</strong>. No payment is required now — the fee will be charged together with your main flight booking fee.
+                </div>
               </div>
 
-            </div>
-
-            <div class="price-display mt-2" id="price_display">
-              ₦25,000
-              <input type="hidden" name="amount" value="25000">
             </div>
 
             {{-- Submit button --}}
             <div class="text-center mt-3">
               <button type="submit" class="btn btn-main px-5 py-2 rounded-pill">
-                Proceed to Payment
+                Submit Request
               </button>
             </div>
 

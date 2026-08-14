@@ -1001,7 +1001,7 @@
         position: relative;
         width: 835px;
         max-width: 100%;
-        height: 217px;
+        height: 258px;
         border: 0;
         border-radius: 10px;
         background: #303191;
@@ -1035,7 +1035,7 @@
     }
     .sr-matrix-scroll {
         width: 100%;
-        height: 187px;
+        height: 228px;
         overflow-x: auto;
         overflow-y: hidden;
         border-radius: 10px;
@@ -1045,7 +1045,7 @@
     .sr-matrix table {
         width: 835px;
         min-width: 835px;
-        height: 187px;
+        height: 228px;
         border-collapse: collapse;
         table-layout: fixed;
         background: #fff;
@@ -1065,11 +1065,11 @@
         white-space: nowrap;
     }
     .sr-matrix thead th {
-        height: 50px;
+        height: 64px;
         background: #fff;
     }
     .sr-matrix tbody tr:last-child td {
-        height: 43px;
+        height: 70px;
         border-bottom: 0;
     }
     .sr-matrix th:first-child,
@@ -1119,17 +1119,24 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        height: 50px;
+        height: 64px;
     }
     .sr-mat-img {
         display: block;
-        width: 32px;
-        height: 32px;
+        height: 36px;
+        width: auto;
+        max-width: 100px;
         margin: 0 auto;
         padding: 0;
         border-radius: 0;
         background: transparent;
         object-fit: contain;
+        /* airline logos come from the data provider as small (70x30) GIFs —
+           crisp-edges keeps them looking defined instead of smoothed/blurry
+           when the browser scales them up to display size. */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: crisp-edges;
     }
     .sr-matrix .airline-name,
     .sr-matrix .sr-next-btn {

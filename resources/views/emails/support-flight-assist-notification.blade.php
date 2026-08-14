@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Support Request - Payment Received</title>
+  <title>New Flight Assist Request</title>
 </head>
 <body style="margin:0; padding:0; background-color:#f5f7fa; font-family:'Segoe UI', Arial, sans-serif; color:#333;">
   <table role="presentation" style="width:100%; border-collapse:collapse; background-color:#f5f7fa; padding:30px 0;">
     <tr>
       <td align="center">
         <table role="presentation" style="width:100%; max-width:650px; background:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.08);">
-          
+
           <!-- Header -->
           <tr>
             <td style="background:#1369FF; padding:20px; text-align:center;">
               <img src="https://your-travelwheel-logo-url.png" alt="TravelWheel" width="120" style="margin-bottom:8px;">
-              <h2 style="color:#ffffff; font-size:20px; margin:0;">New Support Request - Payment Confirmed</h2>
+              <h2 style="color:#ffffff; font-size:20px; margin:0;">New Flight Assist Request</h2>
             </td>
           </tr>
 
@@ -27,8 +27,8 @@
               </p>
 
               <p style="font-size:15px; line-height:1.6; margin-bottom:20px;">
-                A client has successfully made a payment for a <strong>{{ $service }}</strong> support request.  
-                Below are the transaction and request details:
+                A client has submitted a <strong>{{ $service }}</strong> support request. The ₦{{ $amount }} fee is
+                not paid yet — it will be billed together with the client's main flight fee. Below are the request details:
               </p>
 
               <!-- Details Table -->
@@ -54,11 +54,11 @@
                   <td style="padding:8px; border-bottom:1px solid #eee;">{{ $booking_source }}</td>
                 </tr>
                 <tr>
-                  <td style="padding:8px; border-bottom:1px solid #eee;"><strong>Amount Paid:</strong></td>
+                  <td style="padding:8px; border-bottom:1px solid #eee;"><strong>Fee (billed with main fee):</strong></td>
                   <td style="padding:8px; border-bottom:1px solid #eee;">₦{{ $amount }}</td>
                 </tr>
                 <tr>
-                  <td style="padding:8px; border-bottom:1px solid #eee;"><strong>Payment Reference:</strong></td>
+                  <td style="padding:8px; border-bottom:1px solid #eee;"><strong>Reference:</strong></td>
                   <td style="padding:8px; border-bottom:1px solid #eee;">{{ $reference }}</td>
                 </tr>
                 <tr>

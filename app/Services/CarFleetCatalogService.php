@@ -107,15 +107,11 @@ class CarFleetCatalogService
                     ];
                 })->values()->all();
 
-                $catImages = $modelsInCat->first() && $modelsInCat->first()->images
-                    ? collect($modelsInCat->first()->images)->map(fn ($img) => asset('storage/' . $img))->all()
-                    : [$this->defaultVehicleImage($vtype)];
-
                 $items[] = [
                     'name' => $catName,
                     'price' => (int) ($rateInfo['transfer_base_fares'][$catName] ?? 0),
                     'passengers' => $passengers,
-                    'images' => $catImages,
+                    'images' => [$this->defaultVehicleImage($vtype)],
                     'models' => $models,
                 ];
             }

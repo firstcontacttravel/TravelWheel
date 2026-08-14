@@ -29,30 +29,38 @@
             <div class="support-cards-grid">
                 <a href="{{ route('air.support.flight-assist.form') }}" class="support-product-card">
                     <div class="spc-icon">✈️</div>
-                    <h4>Flight Assist</h4>
-                    <p>Date changes &amp; rerouting help for an existing booking.</p>
-                    <span class="spc-price">₦25,000</span>
+                    <div class="spc-content">
+                        <h4>Flight Assist</h4>
+                        <p>Date changes &amp; rerouting help for an existing booking.</p>
+                    </div>
+                    <div class="spc-arrow" aria-hidden="true">→</div>
                 </a>
                 {{--
                 <a href="{{ route('air.support.extra-luggage.form') }}" class="support-product-card">
                     <div class="spc-icon">🧳</div>
-                    <h4>Extra Luggage</h4>
-                    <p>Add extra luggage allowance to your flight.</p>
-                    <span class="spc-price">₦25,000</span>
+                    <div class="spc-content">
+                        <h4>Extra Luggage</h4>
+                        <p>Add extra luggage allowance to your flight.</p>
+                    </div>
+                    <div class="spc-arrow" aria-hidden="true">→</div>
                 </a>
 
                 <a href="{{ route('air.support.visa-confirmation.form') }}" class="support-product-card">
                     <div class="spc-icon">📄</div>
-                    <h4>Visa Confirmation</h4>
-                    <p>Get a visa confirmation letter processed.</p>
-                    <span class="spc-price">₦50,000</span>
+                    <div class="spc-content">
+                        <h4>Visa Confirmation</h4>
+                        <p>Get a visa confirmation letter processed.</p>
+                    </div>
+                    <div class="spc-arrow" aria-hidden="true">→</div>
                 </a>--}}
 
                 <a href="{{ route('air.support.yellow-card.form') }}" class="support-product-card">
                     <div class="spc-icon">💛</div>
-                    <h4>Yellow Card Assistance</h4>
-                    <p>Standard or fast-track Yellow Card application.</p>
-                    <span class="spc-price">From ₦30,000</span>
+                    <div class="spc-content">
+                        <h4>Yellow Card Assistance</h4>
+                        <p>Standard or fast-track Yellow Card application.</p>
+                    </div>
+                    <div class="spc-arrow" aria-hidden="true">→</div>
                 </a>
             </div>
         </div>
@@ -63,14 +71,16 @@
     .support-root .vw-card { padding: 18px 22px 20px; }
     .support-heading { text-align: center; color: rgba(13, 24, 131, 1); font-weight: 700; font-size: 16px; margin-bottom: 4px; }
     .support-subheading { text-align: center; color: #667085; font-size: 12.5px; margin-bottom: 16px; }
-    .support-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+    .support-cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
     .support-product-card {
-        display: block;
+        display: flex;
+        align-items: center;
+        gap: 16px;
         background: #fff;
         border: 1px solid #e6e8ee;
-        border-radius: 12px;
-        padding: 14px 12px;
-        text-align: center;
+        border-radius: 14px;
+        padding: 18px 20px;
+        text-align: left;
         text-decoration: none;
         color: inherit;
         box-shadow: 0 4px 14px rgba(16,24,40,.06);
@@ -82,15 +92,31 @@
         border-color: rgba(13, 24, 131, .25);
         color: inherit;
     }
+    .support-product-card:hover .spc-arrow {
+        background: rgba(13, 24, 131, 1);
+        color: #fff;
+        transform: translateX(3px);
+    }
     .support-product-card .spc-icon {
-        width: 36px; height: 36px; margin: 0 auto 8px;
+        flex: 0 0 auto;
+        width: 48px; height: 48px;
         border-radius: 50%;
         background: #eef1ff;
         display: flex; align-items: center; justify-content: center;
-        font-size: 16px;
+        font-size: 22px;
     }
-    .support-product-card h4 { color: rgba(13, 24, 131, 1); font-weight: 700; font-size: 18px; margin-bottom: 3px; }
-    .support-product-card p { color: #667085; font-size: 16px; line-height: 1.4; margin-bottom: 6px; }
-    .support-product-card .spc-price { display: inline-block; color: #0d1883; font-weight: 700; font-size: 16px; background: #eef1ff; padding: 3px 10px; border-radius: 999px; }
+    .support-product-card .spc-content { flex: 1 1 auto; min-width: 0; }
+    .support-product-card h4 { color: rgba(13, 24, 131, 1); font-weight: 700; font-size: 17px; margin-bottom: 3px; }
+    .support-product-card p { color: #667085; font-size: 14px; line-height: 1.4; }
+    .support-product-card .spc-arrow {
+        flex: 0 0 auto;
+        width: 34px; height: 34px;
+        border-radius: 50%;
+        background: #eef1ff;
+        color: rgba(13, 24, 131, 1);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 16px;
+        transition: transform .2s ease, background .2s ease, color .2s ease;
+    }
 </style>
 </div>
