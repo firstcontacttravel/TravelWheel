@@ -400,7 +400,7 @@ class FlightController extends Controller
                         'arriveDT' => $fs['ArrivalDateTime'],
                         'duration' => (int) $fs['JourneyDuration'],
                         'flightNo' => $airlineCode.$fs['FlightNumber'],
-                        'airline' => $fs['MarketingAirlineName'],
+                        'airline' => $fs['MarketingAirlineName'] ?? ($airline['AirLineName'] ?? $airlineCode),
                         'airlineCode' => $airlineCode,
                         'airlineLogo' => $airline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
                         'equipment' => $fs['OperatingAirline']['Equipment'] ?? '',
