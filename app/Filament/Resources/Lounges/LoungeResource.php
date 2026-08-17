@@ -9,6 +9,7 @@ use App\Models\Lounge;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
@@ -89,11 +90,11 @@ class LoungeResource extends Resource
                         ->label('Total (Infant) — shown to public')
                         ->numeric()->prefix('₦')->disabled()->dehydrated(false),
                 ]),
-            TextInput::make('pics1')->label('Image 1 filename')->required()->helperText('Filename only, e.g. lounge1.jpg — file must exist in public/assets/lounge/'),
-            TextInput::make('pics2')->label('Image 2 filename')->required(),
-            TextInput::make('pics3')->label('Image 3 filename')->required(),
-            TextInput::make('pics4')->label('Image 4 filename')->required(),
-            TextInput::make('pics5')->label('Image 5 filename')->required(),
+            FileUpload::make('pics1')->label('Image 1')->image()->previewable(false)->disk('lounge_assets')->visibility('public')->required(),
+            FileUpload::make('pics2')->label('Image 2')->image()->previewable(false)->disk('lounge_assets')->visibility('public')->required(),
+            FileUpload::make('pics3')->label('Image 3')->image()->previewable(false)->disk('lounge_assets')->visibility('public')->required(),
+            FileUpload::make('pics4')->label('Image 4')->image()->previewable(false)->disk('lounge_assets')->visibility('public')->required(),
+            FileUpload::make('pics5')->label('Image 5')->image()->previewable(false)->disk('lounge_assets')->visibility('public')->required(),
         ])->columns(2);
     }
 
