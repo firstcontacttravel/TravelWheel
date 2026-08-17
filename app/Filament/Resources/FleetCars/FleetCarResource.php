@@ -78,7 +78,7 @@ class FleetCarResource extends Resource
                 ->multiple()
                 ->image()
                 ->reorderable()
-                ->disk('public')
+                ->disk('fleet_assets')
                 ->directory('fleet')
                 ->helperText('Exterior photos only (no interior/dashboard shots). Upload in this order so the public page labels them correctly: 1) Front view, 2) Back view, 3) Side view. Any extra photos after those three are shown without a label.')
                 ->columnSpanFull(),
@@ -91,7 +91,7 @@ class FleetCarResource extends Resource
         return $table
             ->defaultSort('vehicle_type')
             ->columns([
-                ImageColumn::make('images')->label('Photo')->getStateUsing(fn (FleetCar $record) => $record->images[0] ?? null)->disk('public'),
+                ImageColumn::make('images')->label('Photo')->getStateUsing(fn (FleetCar $record) => $record->images[0] ?? null)->disk('fleet_assets'),
                 TextColumn::make('car_name')->searchable()->sortable()->weight('bold'),
                 TextColumn::make('service_type')->badge()->sortable(),
                 TextColumn::make('vehicle_type')->badge()->sortable(),

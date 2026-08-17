@@ -85,7 +85,7 @@ class CarHiresTable
                 TextInput::make('car_model')->default($record->car_model)->required()->maxLength(100),
                 TextInput::make('car_colour')->required()->maxLength(60),
                 TextInput::make('plate_number')->required()->maxLength(20),
-                FileUpload::make('car_images')->multiple()->image()->disk('public')->directory('fleet/assigned'),
+                FileUpload::make('car_images')->multiple()->image()->disk('fleet_assets')->directory('fleet/assigned'),
                 Toggle::make('send_email')->label('Email the customer now')->default(true),
             ])
             ->action(function (CarHire $record, array $data): void {

@@ -39,16 +39,16 @@ class CarFleetCatalogService
 
                     return [
                         'name' => $car->car_name,
-                        'image' => $hasImages ? asset('storage/' . $car->images[0]) : $this->defaultVehicleImage($vtype),
+                        'image' => $hasImages ? asset('assets/' . $car->images[0]) : $this->defaultVehicleImage($vtype),
                         'images' => $hasImages
-                            ? collect($car->images)->map(fn ($img) => asset('storage/' . $img))->all()
+                            ? collect($car->images)->map(fn ($img) => asset('assets/' . $img))->all()
                             : [$this->defaultVehicleImage($vtype)],
                         'features' => $car->features ?? [],
                     ];
                 })->values()->all();
 
                 $catImages = $modelsInCat->first() && $modelsInCat->first()->images
-                    ? collect($modelsInCat->first()->images)->map(fn ($img) => asset('storage/' . $img))->all()
+                    ? collect($modelsInCat->first()->images)->map(fn ($img) => asset('assets/' . $img))->all()
                     : [$this->defaultVehicleImage($vtype)];
 
                 $items[] = [
@@ -99,9 +99,9 @@ class CarFleetCatalogService
 
                     return [
                         'name' => $car->car_name,
-                        'image' => $hasImages ? asset('storage/' . $car->images[0]) : $this->defaultVehicleImage($vtype),
+                        'image' => $hasImages ? asset('assets/' . $car->images[0]) : $this->defaultVehicleImage($vtype),
                         'images' => $hasImages
-                            ? collect($car->images)->map(fn ($img) => asset('storage/' . $img))->all()
+                            ? collect($car->images)->map(fn ($img) => asset('assets/' . $img))->all()
                             : [$this->defaultVehicleImage($vtype)],
                         'features' => $car->features ?? [],
                     ];

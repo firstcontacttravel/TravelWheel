@@ -78,7 +78,7 @@ class FleetCar extends Model
     public function imageUrls(): array
     {
         return collect($this->images ?? [])
-            ->map(fn ($path) => asset('storage/' . $path))
+            ->map(fn ($path) => asset('assets/' . $path))
             ->all();
     }
 }

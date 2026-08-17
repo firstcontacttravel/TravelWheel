@@ -57,7 +57,7 @@ class DriverAssignment extends Model
             return [];
         }
 
-        return array_map(fn ($path) => asset('storage/' . $path), $this->car_images);
+        return array_map(fn ($path) => asset('assets/' . $path), $this->car_images);
     }
 
     public function emailSent(): bool
