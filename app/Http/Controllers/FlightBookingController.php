@@ -2277,6 +2277,11 @@ class FlightBookingController extends Controller
         }
 
         $payload = [
+            'user_id' => config('services.travelnext.user_id'),
+            'user_password' => config('services.travelnext.password'),
+            'access' => config('services.travelnext.access'),
+            'ip_address' => config('services.travelnext.ip'),
+
             'flightBookingInfo' => [
                 'flight_session_id' => $validated['session_id'] ?? session('bookingSessionId'),
                 'fare_source_code' => $fareSourceCode,
@@ -2291,13 +2296,39 @@ class FlightBookingController extends Controller
                 'paxDetails' => $paxDetails,
             ],
         ];
+
+        // Credentials are stripped before logging, same convention as the search payload.
+        $loggablePayload = $payload;
+        unset(
+            $loggablePayload['user_id'],
+            $loggablePayload['user_password'],
+            $loggablePayload['access'],
+            $loggablePayload['ip_address']
+        );
+
         try {
             $response = Http::connectTimeout(10)->timeout(90)->post(config('services.travelnext.base_url').'booking', $payload);
             if ($response->failed()) {
+                Log::error('FlightBooking API request failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'payload' => $loggablePayload,
+                ]);
+
                 return ['error' => true, 'message' => 'Booking request failed. Please try again.', 'data' => []];
             }
 
-            return ['error' => false, 'message' => '', 'data' => $response->json()];
+            $data = $response->json();
+            $bookResult = $data['BookFlightResponse']['BookFlightResult'] ?? [];
+            $success = filter_var($bookResult['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if (! $success) {
+                Log::warning('FlightBooking API returned unsuccessful result', [
+                    'response' => $data,
+                    'payload' => $loggablePayload,
+                ]);
+            }
+
+            return ['error' => false, 'message' => '', 'data' => $data];
         } catch (\Throwable $e) {
             Log::error('FlightBooking API error', ['message' => $e->getMessage()]);
 
