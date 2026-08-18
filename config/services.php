@@ -62,4 +62,10 @@ return [
         'quote_ttl_minutes' => env('VISA_QUOTE_TTL_MINUTES', 30),
     ],
 
+    'sanlam' => [
+        'base_url' => env('SANLAM_BASE_URL', 'https://web-app.sanlamallianz.com.ng'),
+        'username' => env('SANLAM_USERNAME'),
+        'password' => env('SANLAM_PASSWORD'),
+    ],
+
 ];

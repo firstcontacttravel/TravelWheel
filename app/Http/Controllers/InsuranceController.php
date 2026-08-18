@@ -15,11 +15,16 @@ use Illuminate\Support\Facades\Session;
 
 class InsuranceController extends Controller
 {
+    private function sanlaBaseUrl(): string
+    {
+        return rtrim((string) config('services.sanlam.base_url', 'https://web-app.sanlamallianz.com.ng'), '/');
+    }
+
     private function sanlaToken(): string
     {
-        $response = Http::asForm()->post('https://web-app.sanlamallianz.com.ng/Travel/token', [
-            'username'   => 'lightaydot@yahoo.com',
-            'password'   => 'Travelwheel@15',
+        $response = Http::asForm()->post($this->sanlaBaseUrl() . '/Travel/token', [
+            'username'   => config('services.sanlam.username'),
+            'password'   => config('services.sanlam.password'),
             'grant_type' => 'password',
         ]);
         $data = $response->json();
@@ -59,7 +64,7 @@ class InsuranceController extends Controller
             ];
 
             $client   = new Client();
-            $response = $client->request('POST', 'https://web-app.sanlamallianz.com.ng/Travel/api/Quote', [
+            $response = $client->request('POST', $this->sanlaBaseUrl() . '/Travel/api/Quote', [
                 'headers' => ['Authorization' => 'Bearer ' . $token, 'Accept' => 'application/json'],
                 'json'    => $payload,
             ]);
@@ -270,7 +275,7 @@ class InsuranceController extends Controller
         ];
 
         $client   = new Client();
-        $response = $client->request('POST', 'https://web-app.sanlamallianz.com.ng/Travel/api/IndividualBooking', [
+        $response = $client->request('POST', $this->sanlaBaseUrl() . '/Travel/api/IndividualBooking', [
             'headers' => ['Authorization' => 'Bearer ' . $token, 'Accept' => 'application/json'],
             'json'    => $payload,
         ]);
@@ -369,7 +374,7 @@ class InsuranceController extends Controller
         }
 
         $client   = new Client();
-        $response = $client->request('POST', 'https://web-app.sanlamallianz.com.ng/Travel/api/FamilyBooking', [
+        $response = $client->request('POST', $this->sanlaBaseUrl() . '/Travel/api/FamilyBooking', [
             'headers' => ['Authorization' => 'Bearer ' . $token, 'Accept' => 'application/json'],
             'json'    => $payload,
         ]);
