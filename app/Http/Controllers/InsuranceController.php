@@ -187,58 +187,83 @@ class InsuranceController extends Controller
             return redirect()->route('air.insurance')->with('error', 'Session expired. Please rebook.');
         }
 
+        $bookingTypeId = (int) ($dataform['bookingTypeId'] ?? 1);
+
         try {
             $token = $this->sanlaToken();
-            $bookingTypeId = (int) ($dataform['bookingTypeId'] ?? 1);
 
-            if ($bookingTypeId === 2) {
-                $coverId = $this->familyBooking($token, $dataform, $dataform2);
-            } else {
-                $coverId = $this->individualBooking($token, $dataform, $dataform2);
-            }
+            $coverId = $bookingTypeId === 2
+                ? $this->familyBooking($token, $dataform, $dataform2)
+                : $this->individualBooking($token, $dataform, $dataform2);
 
-            InsurancePurchase::create([
-                'trans_id'       => $paymentReference,
-                'ref_id'         => $paymentReference,
-                'qoute_id'       => $dataform['qouteId'] ?? null,
-                'cover_id'       => $coverId,
-                'bookingtype_id' => $bookingTypeId,
-                'c_amount'       => $dataform['amount'] ?? null,
-                'vat'            => $dataform2['vat'] ?? null,
-                't_amount'       => $dataform2['p_amount'] ?? null,
-                'payment_option' => 'seerbit',
-                'surname'        => $dataform['surname'] ?? null,
-                'middlename'     => $bookingTypeId === 2 ? ($dataform['middlename1'] ?? null) : ($dataform['middlename'] ?? null),
-                'firstname'      => $dataform['firstname'] ?? null,
-                'gender'         => $bookingTypeId === 2 ? ($dataform['gender1'] ?? null) : ($dataform['gender'] ?? null),
-                'title'          => $bookingTypeId === 2 ? ($dataform['title1'] ?? null) : ($dataform['title'] ?? null),
-                'dob'            => $bookingTypeId === 2 ? ($dataform['dob1'] ?? null) : ($dataform['dob'] ?? null),
-                'email'          => $dataform['email'] ?? null,
-                'phone_no'       => $dataform['phone_no'] ?? null,
-                'state'          => $dataform['state'] ?? null,
-                'address'        => $dataform['address'] ?? null,
-                'zipcode'        => $dataform['zipcode'] ?? null,
-                'passport_no'    => $dataform['passport_no'] ?? null,
-                'nin'            => $dataform['nin'] ?? null,
-                'occupation'     => $bookingTypeId === 2 ? ($dataform['ocupation1'] ?? null) : ($dataform['ocupation'] ?? null),
-                'nationalty'     => $bookingTypeId === 2 ? ($dataform['nationalty1'] ?? null) : ($dataform['nationalty'] ?? null),
-                'marital_status' => $bookingTypeId === 2 ? ($dataform['marital_status1'] ?? null) : ($dataform['marital_status'] ?? null),
-                'noc'            => $dataform['noc'] ?? 0,
-                'medicalCondition' => $bookingTypeId === 2 ? ($dataform['MedicalCondition1'] ?? null) : ($dataform['MedicalCondition'] ?? null),
-                'nok_fullname'   => $dataform2['fullname'] ?? null,
-                'nok_address'    => $dataform2['address'] ?? null,
-                'nok_phone'      => $dataform2['phone_no'] ?? null,
-                'nok_relationship' => $dataform2['relationship'] ?? null,
-                'status'         => 'Successful',
-            ]);
+            InsurancePurchase::create($this->purchaseAttributes(
+                $dataform, $dataform2, $paymentReference, $bookingTypeId, $coverId, 'Successful',
+            ));
 
             Session::forget(['insurance_data_form', 'insurance_data_form2']);
             return redirect()->route('air.insurance.success');
 
         } catch (\Exception $e) {
             Log::error('Sanla booking error: ' . $e->getMessage());
-            return redirect()->route('air.insurance.success');
+
+            // The customer already paid via SeerBit at this point, but the Sanlam
+            // policy could not be confirmed — record it as failed so ops can follow
+            // up, instead of silently telling a paying customer they're covered.
+            if (! InsurancePurchase::where('trans_id', $paymentReference)->exists()) {
+                InsurancePurchase::create($this->purchaseAttributes(
+                    $dataform, $dataform2, $paymentReference, $bookingTypeId, null, 'Failed',
+                ));
+            }
+
+            return redirect()->route('air.insurance.success')->with([
+                'insurance_pending_review' => true,
+                'message' => "Your payment was received, but we couldn't confirm your policy automatically. Our team has been notified and will email your policy documents shortly. If you don't hear from us within 24 hours, please contact support with reference {$paymentReference}.",
+            ]);
         }
+    }
+
+    private function purchaseAttributes(
+        array $dataform,
+        array $dataform2,
+        string $paymentReference,
+        int $bookingTypeId,
+        ?string $coverId,
+        string $status,
+    ): array {
+        return [
+            'trans_id'       => $paymentReference,
+            'ref_id'         => $paymentReference,
+            'qoute_id'       => $dataform['qouteId'] ?? null,
+            'cover_id'       => $coverId,
+            'bookingtype_id' => $bookingTypeId,
+            'c_amount'       => $dataform['amount'] ?? null,
+            'vat'            => $dataform2['vat'] ?? null,
+            't_amount'       => $dataform2['p_amount'] ?? null,
+            'payment_option' => 'seerbit',
+            'surname'        => $dataform['surname'] ?? null,
+            'middlename'     => $bookingTypeId === 2 ? ($dataform['middlename1'] ?? null) : ($dataform['middlename'] ?? null),
+            'firstname'      => $dataform['firstname'] ?? null,
+            'gender'         => $bookingTypeId === 2 ? ($dataform['gender1'] ?? null) : ($dataform['gender'] ?? null),
+            'title'          => $bookingTypeId === 2 ? ($dataform['title1'] ?? null) : ($dataform['title'] ?? null),
+            'dob'            => $bookingTypeId === 2 ? ($dataform['dob1'] ?? null) : ($dataform['dob'] ?? null),
+            'email'          => $dataform['email'] ?? null,
+            'phone_no'       => $dataform['phone_no'] ?? null,
+            'state'          => $dataform['state'] ?? null,
+            'address'        => $dataform['address'] ?? null,
+            'zipcode'        => $dataform['zipcode'] ?? null,
+            'passport_no'    => $dataform['passport_no'] ?? null,
+            'nin'            => $dataform['nin'] ?? null,
+            'occupation'     => $bookingTypeId === 2 ? ($dataform['ocupation1'] ?? null) : ($dataform['ocupation'] ?? null),
+            'nationalty'     => $bookingTypeId === 2 ? ($dataform['nationalty1'] ?? null) : ($dataform['nationalty'] ?? null),
+            'marital_status' => $bookingTypeId === 2 ? ($dataform['marital_status1'] ?? null) : ($dataform['marital_status'] ?? null),
+            'noc'            => $dataform['noc'] ?? 0,
+            'medicalCondition' => $bookingTypeId === 2 ? ($dataform['MedicalCondition1'] ?? null) : ($dataform['MedicalCondition'] ?? null),
+            'nok_fullname'   => $dataform2['nok_fullname'] ?? null,
+            'nok_address'    => $dataform2['nok_address'] ?? null,
+            'nok_phone'      => $dataform2['nok_phone'] ?? null,
+            'nok_relationship' => $dataform2['nok_relationship'] ?? null,
+            'status'         => $status,
+        ];
     }
 
     private function individualBooking(string $token, array $dataform, array $dataform2): string
@@ -267,10 +292,10 @@ class InsuranceController extends Controller
             'PreExistingMedicalCondition'=> false,
             'MedicalCondition'           => null,
             'NextOfKin'                  => [
-                'FullName'     => $dataform2['fullname'],
-                'Address'      => $dataform2['address'],
-                'Relationship' => $dataform2['relationship'],
-                'Telephone'    => $dataform2['phone_no'],
+                'FullName'     => $dataform2['nok_fullname'] ?? '',
+                'Address'      => $dataform2['nok_address'] ?? '',
+                'Relationship' => $dataform2['nok_relationship'] ?? '',
+                'Telephone'    => $dataform2['nok_phone'] ?? '',
             ],
         ];
 
@@ -289,10 +314,10 @@ class InsuranceController extends Controller
         $dob2 = Carbon::createFromFormat('Y-m-d', $dataform['dob2'])->format('d-M-Y');
 
         $nokPayload = [
-            'FullName'     => $dataform2['fullname'],
-            'Address'      => $dataform2['address'],
-            'Relationship' => $dataform2['relationship'],
-            'Telephone'    => $dataform2['phone_no'],
+            'FullName'     => $dataform2['nok_fullname'] ?? '',
+            'Address'      => $dataform2['nok_address'] ?? '',
+            'Relationship' => $dataform2['nok_relationship'] ?? '',
+            'Telephone'    => $dataform2['nok_phone'] ?? '',
         ];
 
         $payload = [
