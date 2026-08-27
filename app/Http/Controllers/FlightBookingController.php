@@ -961,6 +961,7 @@ class FlightBookingController extends Controller
             'webfare_full' => $this->_completeWebfarePayment($booking, $request),
             'held_ticket_full' => $this->_completeHeldTicketPayment($booking),
             'travelflex_down_payment' => $this->_completeTravelFlexPayment($booking, $request),
+            'travelflex_fees_payment' => $this->_completeTravelFlexFeesPayment($booking, $request),
             default => redirect()->route('air.flight-s')->withErrors(['error' => 'Unknown payment flow.']),
         };
 
@@ -1032,19 +1033,30 @@ class FlightBookingController extends Controller
         );
         session(['travelFlexPlan' => $tfPlan]);
 
+        // Two separate transfers: the deposit (equity) reference comes first, then
+        // the admin + insurance fees reference, submitted back-to-back in one visit.
+        $feesOwed = round((float) ($tfPlan['administration_fee'] ?? 0) + (float) ($tfPlan['insurance_fee'] ?? 0), 2);
+        $isDepositStage = ! in_array($application->deposit_status, ['pending', 'paid'], true);
+        $reference = (string) $request->input('payment_reference');
+
+        $application->update($isDepositStage
+            ? ['deposit_status' => 'pending', 'deposit_reference' => $reference]
+            : ['fees_status' => 'pending', 'fees_reference' => $reference]);
+
         // ── Update DB record if it exists (from the hold booking) ─────────────
         $dbId = session('flightBookingDbId');
         if ($dbId && $dbBooking = \App\Models\FlightBooking::find($dbId)) {
             $dbBooking->update([
                 'payment_method' => 'flex_bank_transfer',
                 'payment_status' => 'awaiting_bank_transfer',
-                'bank_transfer_reference' => $request->input('payment_reference'),
+                'bank_transfer_reference' => $reference,
                 'bank_transfer_notified_at' => now(),
                 'extra_services_snapshot' => session('selectedExtras', []),
             ]);
             $this->_syncTravelFlexApplicationBooking($dbBooking);
-            // Send pending email
-            $this->_sendPendingEmail($dbBooking, 'bank_transfer');
+            if ($isDepositStage) {
+                $this->_sendPendingEmail($dbBooking, 'bank_transfer');
+            }
         } else {
             // No existing DB record yet (booking hasn't been called yet for non-LCC)
             // Persist a new one
@@ -1061,7 +1073,7 @@ class FlightBookingController extends Controller
                 'booking_status' => 'on_hold',
                 'payment_method' => 'flex_bank_transfer',
                 'payment_status' => 'awaiting_bank_transfer',
-                'bank_transfer_reference' => $request->input('payment_reference'),
+                'bank_transfer_reference' => $reference,
                 'bank_transfer_notified_at' => now(),
                 'tkt_time_limit' => session('bookingTktTimeLimit'),
                 'extra_services_snapshot' => session('selectedExtras', []),
@@ -1073,6 +1085,10 @@ class FlightBookingController extends Controller
         }
 
         session(['paymentMethod' => 'flex_bank_transfer']);
+
+        if ($isDepositStage && $feesOwed > 0) {
+            return redirect()->route('flights.travelflex.bank-transfer-form');
+        }
 
         return redirect()->route('flights.travelflex.pending');
     }
@@ -1316,7 +1332,7 @@ class FlightBookingController extends Controller
                 'payment_flow' => $flow,
                 'payment_amount' => $amount,
                 'payment_currency' => $currency,
-                'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
+                'payment_method' => in_array($flow, ['travelflex_down_payment', 'travelflex_fees_payment'], true) ? 'flex_gateway' : 'gateway',
                 'payment_status' => 'pending',
                 'payment_initializing_at' => now(),
             ]);
@@ -1395,7 +1411,7 @@ class FlightBookingController extends Controller
                 'unique_id' => session('bookingUniqueId', ''),
                 'booking_status' => 'pending_payment',
                 'payment_status' => 'pending',
-                'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
+                'payment_method' => in_array($flow, ['travelflex_down_payment', 'travelflex_fees_payment'], true) ? 'flex_gateway' : 'gateway',
                 'extra_services_snapshot' => session('selectedExtras', []),
             ]);
         } else {
@@ -1403,12 +1419,12 @@ class FlightBookingController extends Controller
                 $this->_assertHeldBookingPayable($booking);
             }
             $booking->update([
-                'payment_method' => $flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway',
+                'payment_method' => in_array($flow, ['travelflex_down_payment', 'travelflex_fees_payment'], true) ? 'flex_gateway' : 'gateway',
                 'extra_services_snapshot' => session('selectedExtras', $booking->extra_services_snapshot ?? []),
             ]);
         }
 
-        if ($flow === 'travelflex_down_payment') {
+        if (in_array($flow, ['travelflex_down_payment', 'travelflex_fees_payment'], true)) {
             $this->_syncTravelFlexApplicationBooking($booking);
         }
 
@@ -1540,6 +1556,9 @@ class FlightBookingController extends Controller
         return redirect()->route('flights.confirmation');
     }
 
+    // Leg 1 of 2: the equity/down payment. Clearing this does NOT ticket the booking —
+    // it immediately starts the second SeerBit charge for the admin + insurance fees.
+    // Ticketing only happens once _completeTravelFlexFeesPayment() sees both legs paid.
     private function _completeTravelFlexPayment(FlightBooking $booking, Request $request)
     {
         $tfPlan = session('travelFlexPlan', []);
@@ -1555,6 +1574,13 @@ class FlightBookingController extends Controller
 
         if ($booking->ticket_ordered || $booking->booking_status === 'ticketed') {
             return redirect()->route('flights.travelflex.confirmation');
+        }
+
+        if ($application->deposit_status === 'paid') {
+            // Duplicate/retried callback for a deposit already recorded — resume at the fees leg.
+            return $application->fees_status === 'paid'
+                ? redirect()->route('flights.travelflex.confirmation')
+                : $this->_startSeerbitPayment('travelflex_fees_payment');
         }
 
         try {
@@ -1575,71 +1601,100 @@ class FlightBookingController extends Controller
 
         $application->update([
             'deposit_status' => 'paid',
-            'payment_status' => 'paid',
+            'payment_status' => 'partially_paid',
             'deposit_reference' => $booking->payment_reference,
             'deposit_paid_at' => now(),
         ]);
 
-        if ($booking->unique_id) {
-            $ticketResult = app(AdminTicketingService::class)->ticketOrder($booking);
-            $ticketResponse = $ticketResult['response'] ?? [];
-            $ticketSuccess = (bool) ($ticketResult['ok'] ?? false);
+        $booking->update([
+            'payment_method' => 'flex_gateway',
+            'payment_status' => 'partially_paid',
+        ]);
 
+        $this->_syncTravelFlexApplicationBooking($booking->fresh(), [
+            'deposit_status' => 'paid',
+            'payment_status' => 'partially_paid',
+            'deposit_reference' => $booking->payment_reference,
+            'deposit_paid_at' => now(),
+        ]);
+
+        session(['paymentMethod' => 'flex_gateway', 'travelFlexPlan' => $tfPlan]);
+
+        // Same-visit, back-to-back: immediately send the customer to pay the
+        // administration + insurance fees before anything gets ticketed.
+        return $this->_startSeerbitPayment('travelflex_fees_payment');
+    }
+
+    // Leg 2 of 2: administration + insurance fees. Only once this clears (with the
+    // deposit already paid) does the booking actually get ticketed.
+    private function _completeTravelFlexFeesPayment(FlightBooking $booking, Request $request)
+    {
+        $tfPlan = session('travelFlexPlan', []);
+
+        if (empty($tfPlan)) {
+            return redirect()->route('flights.travelflex')->withErrors(['error' => 'TravelFlex plan missing.']);
+        }
+
+        $application = app(TravelFlexFlowService::class)->applicationForBooking($booking);
+        if (! $application) {
+            return redirect()->route('flights.travelflex.pending')->withErrors(['error' => 'Payment was received, but the TravelFlex application could not be matched. Ticketing has been stopped for manual review.']);
+        }
+
+        if ($booking->ticket_ordered || $booking->booking_status === 'ticketed') {
+            return redirect()->route('flights.travelflex.confirmation');
+        }
+
+        if ($application->fees_status !== 'paid') {
+            $application->update([
+                'fees_status' => 'paid',
+                'fees_reference' => $booking->payment_reference,
+                'fees_paid_at' => now(),
+            ]);
+        }
+
+        if ($application->fresh()->deposit_status !== 'paid') {
+            // Fees cleared before the deposit was recorded — hold ticketing until both legs are confirmed.
+            return redirect()->route('flights.travelflex.pending')->withErrors([
+                'error' => 'The administration and insurance fees were received, but the down payment is still outstanding. Please complete the down payment to continue.',
+            ]);
+        }
+
+        try {
+            app(TravelFlexFlowService::class)->assertApprovedForDeposit($application->load('booking'));
+        } catch (ValidationException $exception) {
+            return redirect()->route('flights.travelflex.pending')->withErrors([
+                'error' => 'Both payments were received, but ticketing was stopped because the approval or airline hold is no longer valid. TravelWheel will review the payment immediately.',
+            ]);
+        }
+
+        if ($booking->unique_id) {
+            // Both legs are paid. Ticketing is no longer automatic here — an admin
+            // must trigger "Order ticket" in Filament (same as the bank transfer
+            // path) once they've reviewed the booking.
             $booking->update([
                 'payment_method' => 'flex_gateway',
-                'payment_status' => 'partially_paid',
+                'payment_status' => 'paid',
+                'booking_status' => 'awaiting_ticketing',
             ]);
-
-            if ($ticketSuccess) {
-                $this->_sendConfirmedEmail($booking->fresh());
-            } else {
-                $this->_sendTicketingFailureAlert($booking->fresh(), $ticketResult['message'] ?: $this->_extractTicketOrderErrorMessage($ticketResponse), $ticketResponse);
-            }
-
-            session([
-                'ticketOrderResult' => $ticketResponse,
-                'ticketSuccess' => $ticketSuccess,
-                'bookingUniqueId' => $ticketSuccess
-                    ? (data_get($ticketResponse, 'AirOrderTicketRS.TicketOrderResult.UniqueID', $booking->unique_id) ?: $booking->unique_id)
-                    : $booking->unique_id,
-            ]);
-
-            if (! $ticketSuccess) {
-                $this->_clearCheckoutSession($booking->fresh(), [
-                    'ticketOrderResult' => $ticketResponse,
-                    'ticketSuccess' => false,
-                    'travelFlexPlan' => $tfPlan,
-                    'bookingStatus' => 'TICKETING_FAILED',
-                    'bookingFlight' => ['flight' => $booking->flight_snapshot ?? []],
-                    'bookingContact' => [
-                        'email' => $booking->contact_email,
-                        'phone' => $booking->contact_phone,
-                    ],
-                    'bookingPassengers' => $booking->passengers_snapshot ?? [],
-                    'selectedExtras' => $booking->extra_services_snapshot ?? [],
-                ]);
-
-                return redirect()->route('flights.travelflex.confirmation')->withErrors([
-                    'error' => 'Down payment received, but ticket issuance needs manual processing. Our team has been notified.',
-                ]);
-            }
         } else {
             if ($message = $this->_completeTravelFlexWebfareBooking($booking, $request)) {
                 return redirect()->route('flights.travelflex')->withErrors(['error' => $message]);
             }
         }
 
+        $application = $application->fresh();
         $this->_syncTravelFlexApplicationBooking($booking->fresh(), [
             'deposit_status' => 'paid',
+            'fees_status' => 'paid',
             'payment_status' => 'paid',
-            'deposit_reference' => $booking->payment_reference,
-            'deposit_paid_at' => now(),
+            'deposit_reference' => $application->deposit_reference,
+            'deposit_paid_at' => $application->deposit_paid_at,
         ]);
 
         session(['paymentMethod' => 'flex_gateway']);
 
         $this->_clearCheckoutSession($booking->fresh(), [
-            'ticketSuccess' => true,
+            'ticketSuccess' => false,
             'travelFlexPlan' => $tfPlan,
         ]);
 
@@ -1696,17 +1751,23 @@ class FlightBookingController extends Controller
 
     private function _paymentAmountForFlow(string $flow, FlightBooking $booking): float
     {
-        if ($flow === 'travelflex_down_payment') {
+        if (in_array($flow, ['travelflex_down_payment', 'travelflex_fees_payment'], true)) {
             $tfPlan = session('travelFlexPlan', []);
             $tfPlan = $this->_normalizeTravelFlexPlan(
                 (int) data_get($tfPlan, 'down_percent', 30),
                 (string) data_get($tfPlan, 'repayment_plan', '1 month'),
                 (string) data_get($tfPlan, 'payment_method', 'gateway'),
             );
-            $amount = round((float) data_get($tfPlan, 'upfront_payment_total', data_get($tfPlan, 'down_payment', 0)), 2);
             session(['travelFlexPlan' => $tfPlan]);
 
-            return $amount;
+            if ($flow === 'travelflex_fees_payment') {
+                return round(
+                    (float) data_get($tfPlan, 'administration_fee', 0) + (float) data_get($tfPlan, 'insurance_fee', 0),
+                    2,
+                );
+            }
+
+            return round((float) data_get($tfPlan, 'down_payment', 0), 2);
         }
 
         return $this->_fullPayableAmount($booking);
@@ -1806,18 +1867,21 @@ class FlightBookingController extends Controller
         $insuranceFee = round($remainingBalance * $insuranceFeeRate, 2);
         $upfrontFeeTotal = round($administrationFee + $insuranceFee, 2);
         $upfrontPaymentTotal = round($downPayment + $upfrontFeeTotal, 2);
+        $instalmentPlanCount = max(1, min(12, $parsed['count']));
         $proportions = [
             1 => [1.0],
             2 => [0.5, 0.5],
             3 => [0.4, 0.3, 0.3],
             4 => [0.25, 0.25, 0.25, 0.25],
             5 => [0.2, 0.2, 0.2, 0.2, 0.2],
-        ][$parsed['count']] ?? [1.0];
+        ][$instalmentPlanCount] ?? array_fill(0, $instalmentPlanCount, 1 / $instalmentPlanCount);
 
         $dueDate = Carbon::today()->addDays($parsed['unit_days']);
         $ordinals = ['1st', '2nd', '3rd', '4th', '5th'];
         $totalInterest = 0.0;
+        $principalAllocated = 0.0;
         $schedule = [];
+        $instalmentCount = count($proportions);
 
         foreach ($proportions as $index => $portion) {
             if ($index > 0) {
@@ -1825,7 +1889,11 @@ class FlightBookingController extends Controller
             }
 
             $interest = round($remainingBalance * $rate, 2);
-            $principal = round($remainingBalance * $portion, 2);
+            $isLastInstalment = $index === $instalmentCount - 1;
+            $principal = $isLastInstalment
+                ? round($remainingBalance - $principalAllocated, 2)
+                : round($remainingBalance * $portion, 2);
+            $principalAllocated = round($principalAllocated + $principal, 2);
             $total = round($principal + $interest, 2);
             $totalInterest = round($totalInterest + $interest, 2);
 
@@ -1875,7 +1943,15 @@ class FlightBookingController extends Controller
         $normalized = strtolower(trim($label));
 
         if (preg_match('/(\d+)\s*month/', $normalized, $matches)) {
-            return ['count' => max(1, (int) $matches[1]), 'unit_days' => 30];
+            $count = max(1, (int) $matches[1]);
+
+            if ($count > 12) {
+                throw ValidationException::withMessages([
+                    'repayment_plan' => 'TravelFlex repayment plans are limited to a maximum of 12 months.',
+                ]);
+            }
+
+            return ['count' => $count, 'unit_days' => 30];
         }
 
         if (preg_match('/(\d+)\s*week/', $normalized, $matches)) {
@@ -1916,6 +1992,7 @@ class FlightBookingController extends Controller
     {
         return match ($flow) {
             'travelflex_down_payment' => 'TravelFlex down payment for booking '.$booking->booking_ref,
+            'travelflex_fees_payment' => 'TravelFlex administration & insurance fees for booking '.$booking->booking_ref,
             'held_ticket_full' => 'Flight ticket payment for booking '.$booking->booking_ref,
             default => 'Flight payment for booking '.$booking->booking_ref,
         };
@@ -1926,6 +2003,7 @@ class FlightBookingController extends Controller
         return match ($booking?->payment_flow) {
             'held_ticket_full' => redirect()->route('flights.payment.options')->withErrors(['error' => $message]),
             'travelflex_down_payment' => redirect()->route('flights.travelflex')->withErrors(['error' => $message]),
+            'travelflex_fees_payment' => redirect()->route('flights.travelflex.pending')->withErrors(['error' => $message]),
             default => redirect()->route('flights.payment.gateway')->withErrors(['error' => $message]),
         };
     }
@@ -1937,7 +2015,7 @@ class FlightBookingController extends Controller
 
     private function _seerbitRedirectUrl(FlightBooking $booking): string
     {
-        return $booking->payment_flow === 'travelflex_down_payment'
+        return in_array($booking->payment_flow, ['travelflex_down_payment', 'travelflex_fees_payment'], true)
             ? route('flights.travelflex.confirmation')
             : route('flights.confirmation');
     }
@@ -1965,7 +2043,7 @@ class FlightBookingController extends Controller
             'seerbitPaymentReference' => $reference,
             'seerbitPaymentFlow' => $booking->payment_flow,
             'paymentMethod' => $booking->payment_method ?: (
-                $booking->payment_flow === 'travelflex_down_payment' ? 'flex_gateway' : 'gateway'
+                in_array($booking->payment_flow, ['travelflex_down_payment', 'travelflex_fees_payment'], true) ? 'flex_gateway' : 'gateway'
             ),
             'bookingConfirmation' => $booking->booking_api_response ?? session('bookingConfirmation', []),
             'ticketOrderResult' => $booking->ticket_api_response ?? session('ticketOrderResult', []),
@@ -3111,25 +3189,34 @@ class FlightBookingController extends Controller
             ]);
         }
 
-        try {
-            app(TravelFlexApplicationService::class)->sendProviderEmail($travelFlexApplication->fresh(['booking']));
-        } catch (\Throwable $exception) {
-            $travelFlexApplication->update([
-                'provider_status' => 'failed',
-                'provider_email_error' => $exception->getMessage(),
-            ]);
-            Log::error('TravelFlex provider handoff failed', ['application_id' => $travelFlexApplication->id, 'error' => $exception->getMessage()]);
-        }
+        // Provider handoff and the customer confirmation email both attach a
+        // dompdf-rendered itinerary/Fast Credit PDF, which can be slow (remote
+        // airline-logo fetches, font rendering) and has previously exceeded
+        // PHP's max_execution_time — a fatal that a try/catch cannot stop, since
+        // it kills the request before any catch block runs. Deferring both to
+        // run after the response has already reached the browser means a slow
+        // or failing render can no longer block or crash the form submission.
+        dispatch(function () use ($travelFlexApplication): void {
+            try {
+                app(TravelFlexApplicationService::class)->sendProviderEmail($travelFlexApplication->fresh(['booking']));
+            } catch (\Throwable $exception) {
+                $travelFlexApplication->update([
+                    'provider_status' => 'failed',
+                    'provider_email_error' => $exception->getMessage(),
+                ]);
+                Log::error('TravelFlex provider handoff failed', ['application_id' => $travelFlexApplication->id, 'error' => $exception->getMessage()]);
+            }
 
-        try {
-            app(TravelFlexApplicationService::class)->notifyCustomerStatus(
-                $travelFlexApplication->fresh(['booking']),
-                'submitted',
-                'Fast Credit will contact you and provide a decision within 24 hours.',
-            );
-        } catch (\Throwable $exception) {
-            Log::error('TravelFlex submission email failed', ['application_id' => $travelFlexApplication->id, 'error' => $exception->getMessage()]);
-        }
+            try {
+                app(TravelFlexApplicationService::class)->notifyCustomerStatus(
+                    $travelFlexApplication->fresh(['booking']),
+                    'submitted',
+                    'Fast Credit will contact you and provide a decision within 24 hours.',
+                );
+            } catch (\Throwable $exception) {
+                Log::error('TravelFlex submission email failed', ['application_id' => $travelFlexApplication->id, 'error' => $exception->getMessage()]);
+            }
+        })->afterResponse();
 
         return redirect()->route('flights.travelflex.pending');
     }
@@ -3168,7 +3255,10 @@ class FlightBookingController extends Controller
         $application->update([
             'repayment_plan' => $plan,
             'payment_method' => $validated['pay_method'],
-            'deposit_status' => 'pending',
+            // Gateway payment is about to start immediately; bank transfer deposit_status
+            // stays 'not_due' until the customer actually submits a transfer reference,
+            // so the bank-transfer step can tell "not started" apart from "reference submitted".
+            'deposit_status' => $validated['pay_method'] === 'gateway' ? 'pending' : $application->deposit_status,
             'pricing_revalidated_at' => now(),
         ]);
         $booking->update(['booking_status' => 'awaiting_deposit']);
@@ -3209,7 +3299,17 @@ class FlightBookingController extends Controller
             ]);
         }
 
-        return view('livewire.pages.flight.flight-travelflex-bank-transfer', compact('bankAccounts'));
+        $feesOwed = round((float) ($tfPlan['administration_fee'] ?? 0) + (float) ($tfPlan['insurance_fee'] ?? 0), 2);
+        $depositSubmitted = in_array($application->deposit_status, ['pending', 'paid'], true);
+        $feesSubmitted = in_array($application->fees_status, ['pending', 'paid'], true);
+
+        if ($depositSubmitted && ($feesSubmitted || $feesOwed <= 0)) {
+            return redirect()->route('flights.travelflex.pending');
+        }
+
+        $stage = $depositSubmitted ? 'fees' : 'deposit';
+
+        return view('livewire.pages.flight.flight-travelflex-bank-transfer', compact('bankAccounts', 'stage'));
     }
 
     // =========================================================================
@@ -3392,6 +3492,7 @@ class FlightBookingController extends Controller
                 'application_status' => 'submitted',
                 'financing_status' => 'pending',
                 'deposit_status' => 'not_due',
+                'fees_status' => 'not_due',
             ],
         );
 

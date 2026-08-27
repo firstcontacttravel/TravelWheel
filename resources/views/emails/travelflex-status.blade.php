@@ -53,8 +53,10 @@
             <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="border-collapse:collapse;font-size:13px;">
                 @php($plan = $application->repayment_plan ?? [])
                 @php($upfrontPaymentTotal = (float) ($plan['upfront_payment_total'] ?? ((float) $application->down_payment + (float) ($plan['administration_fee'] ?? 0) + (float) ($plan['insurance_fee'] ?? 0))))
-                <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f4;color:{{ $muted }};">Due after approval</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef0f4;font-weight:800;">{{ $money($upfrontPaymentTotal) }}</td></tr>
-                <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f4;color:{{ $muted }};">Down payment</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef0f4;font-weight:800;">{{ $money($application->down_payment) }}</td></tr>
+                @php($feesTotal = (float) ($plan['administration_fee'] ?? 0) + (float) ($plan['insurance_fee'] ?? 0))
+                <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f4;color:{{ $muted }};">Payment 1 &middot; Down payment</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef0f4;font-weight:800;">{{ $money($application->down_payment) }}</td></tr>
+                <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f4;color:{{ $muted }};">Payment 2 &middot; Admin &amp; insurance fees</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef0f4;font-weight:800;">{{ $money($feesTotal) }}</td></tr>
+                <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f4;color:{{ $muted }};">Total due now</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef0f4;font-weight:800;">{{ $money($upfrontPaymentTotal) }}</td></tr>
                 <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f4;color:{{ $muted }};">Total payable</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef0f4;font-weight:800;">{{ $money($application->grand_total) }}</td></tr>
                 <tr><td style="padding:10px 0;border-bottom:1px solid #eef0f4;color:{{ $muted }};">Payment status</td><td align="right" style="padding:10px 0;border-bottom:1px solid #eef0f4;font-weight:800;">{{ str((string) $application->payment_status)->replace('_', ' ')->headline() }}</td></tr>
             </table>
@@ -73,9 +75,9 @@
     <tr>
         <td style="padding:22px 30px 0;text-align:center;">
             <div style="font-size:13px;line-height:1.7;color:{{ $muted }};margin-bottom:14px;">
-                Your held fare is available until <strong style="color:{{ $ink }};">{{ $paymentDeadline?->timezone('Africa/Lagos')->format('D, d M Y H:i') }} WAT</strong>. Complete the down payment before this deadline so TravelWheel can issue your ticket.
+                Your held fare is available until <strong style="color:{{ $ink }};">{{ $paymentDeadline?->timezone('Africa/Lagos')->format('D, d M Y H:i') }} WAT</strong>. Complete both payments before this deadline so TravelWheel can issue your ticket: your down payment first, then the administration &amp; insurance fees right after, in the same visit.
             </div>
-            <a href="{{ $paymentUrl }}" style="display:inline-block;background:{{ $primary }};color:#ffffff;text-decoration:none;font-size:14px;font-weight:900;padding:13px 22px;border-radius:8px;">Continue to down payment</a>
+            <a href="{{ $paymentUrl }}" style="display:inline-block;background:{{ $primary }};color:#ffffff;text-decoration:none;font-size:14px;font-weight:900;padding:13px 22px;border-radius:8px;">Continue to payment</a>
         </td>
     </tr>
     @elseif($status === 'approved')

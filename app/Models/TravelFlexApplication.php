@@ -39,6 +39,9 @@ class TravelFlexApplication extends Model
         'deposit_status',
         'deposit_reference',
         'deposit_paid_at',
+        'fees_status',
+        'fees_reference',
+        'fees_paid_at',
         'provider_status',
         'provider_email_sent_at',
         'provider_email_error',
@@ -73,6 +76,7 @@ class TravelFlexApplication extends Model
         'approval_expires_at' => 'datetime',
         'pricing_revalidated_at' => 'datetime',
         'deposit_paid_at' => 'datetime',
+        'fees_paid_at' => 'datetime',
         'rejected_at' => 'datetime',
     ];
 

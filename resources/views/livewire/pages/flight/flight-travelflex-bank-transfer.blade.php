@@ -13,6 +13,11 @@
     $lastSeg = !empty($segments) ? $segments[count($segments) - 1] : [];
     $route = trim(($firstSeg['from'] ?? '') . ' → ' . ($lastSeg['to'] ?? ''), ' →');
     $upfrontPaymentTotal = (float) ($tfPlan['upfront_payment_total'] ?? (($tfPlan['down_payment'] ?? 0) + ($tfPlan['administration_fee'] ?? 0) + ($tfPlan['insurance_fee'] ?? 0)));
+    $stage = $stage ?? 'deposit';
+    $feesAmount = (float) (($tfPlan['administration_fee'] ?? 0) + ($tfPlan['insurance_fee'] ?? 0));
+    $depositAmount = (float) ($tfPlan['down_payment'] ?? 0);
+    $stageAmount = $stage === 'fees' ? $feesAmount : $depositAmount;
+    $stageLabel = $stage === 'fees' ? 'Administration & insurance fees' : 'Down payment';
 @endphp
 
 <style>
@@ -75,20 +80,33 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-6 9 6"/><path d="M5 10v9"/><path d="M19 10v9"/><path d="M3 19h18"/></svg>
         </div>
         <div>
-            <div class="tfb-kicker">TravelFlex Down Payment</div>
-            <div class="tfb-title">Transfer Your TravelFlex Upfront Payment</div>
-            <div class="tfb-sub">Send the exact upfront amount to one of the accounts below, then submit your transaction reference so our team can verify the payment and continue ticketing.</div>
+            <div class="tfb-kicker">{{ $stage === 'fees' ? 'Step 2 of 2 — Administration & Insurance Fees' : 'Step 1 of 2 — TravelFlex Down Payment' }}</div>
+            <div class="tfb-title">{{ $stage === 'fees' ? 'Transfer Your Administration & Insurance Fees' : 'Transfer Your TravelFlex Down Payment' }}</div>
+            <div class="tfb-sub">
+                @if($stage === 'fees')
+                    Your down payment reference has been received. Now send the administration &amp; insurance fees to one of the accounts below, then submit your transaction reference. Your ticket is issued only after both transfers are verified.
+                @else
+                    Send the exact down payment amount to one of the accounts below, then submit your transaction reference. You'll be asked to transfer the administration &amp; insurance fees separately right after this step.
+                @endif
+            </div>
         </div>
     </section>
 
     <div class="tfb-grid">
         <main>
             <section class="tfb-card">
-                <div class="tfb-card-title">Payment Amount</div>
+                <div class="tfb-card-title">Transfer This Amount Now</div>
                 <div class="tfb-amount">
-                    <div><div class="tfb-label">Due after approval</div><div class="tfb-value" style="color:var(--tf-green);">{{ $fmt($upfrontPaymentTotal) }}</div></div>
-                    <div><div class="tfb-label">Down payment</div><div class="tfb-value">{{ $fmt($tfPlan['down_payment'] ?? 0) }}</div></div>
-                    <div><div class="tfb-label">Admin + insurance</div><div class="tfb-value">{{ $fmt(($tfPlan['administration_fee'] ?? 0) + ($tfPlan['insurance_fee'] ?? 0)) }}</div></div>
+                    <div style="flex-basis:100%;"><div class="tfb-label">{{ $stageLabel }} (transfer now)</div><div class="tfb-value" style="color:var(--tf-green);font-size:24px;">{{ $fmt($stageAmount) }}</div></div>
+                </div>
+            </section>
+
+            <section class="tfb-card">
+                <div class="tfb-card-title">Full Payment Breakdown</div>
+                <div class="tfb-amount">
+                    <div><div class="tfb-label">Due after approval</div><div class="tfb-value">{{ $fmt($upfrontPaymentTotal) }}</div></div>
+                    <div><div class="tfb-label">Down payment</div><div class="tfb-value">{{ $fmt($depositAmount) }} @if($stage !== 'fees')<span style="color:var(--tf-green);">(now)</span>@endif</div></div>
+                    <div><div class="tfb-label">Admin + insurance</div><div class="tfb-value">{{ $fmt($feesAmount) }} @if($stage === 'fees')<span style="color:var(--tf-green);">(now)</span>@endif</div></div>
                     <div><div class="tfb-label">Remaining balance</div><div class="tfb-value">{{ $fmt($tfPlan['remaining_balance'] ?? 0) }}</div></div>
                 </div>
             </section>
@@ -106,12 +124,15 @@
             </section>
 
             <section class="tfb-card">
-                <div class="tfb-card-title">Submit Transfer Reference</div>
+                <div class="tfb-card-title">Submit {{ $stage === 'fees' ? 'Fees' : 'Down Payment' }} Transfer Reference</div>
                 <form class="tfb-form" method="POST" action="{{ route('flights.travelflex.bank-transfer') }}">
                     @csrf
                     <input class="tfb-input" type="text" name="payment_reference" required minlength="3" maxlength="100" placeholder="Transaction ref, depositor name, or bank narration" value="{{ old('payment_reference') }}">
                     @error('payment_reference') <div style="font-size:12px;color:#dc2626;">{{ $message }}</div> @enderror
                     <button class="tfb-btn" type="submit">I Have Made This Transfer</button>
+                    @if($stage !== 'fees' && $feesAmount > 0)
+                        <div style="font-size:12px;color:var(--tf-muted);text-align:center;">Next: you'll be asked to transfer the {{ $fmt($feesAmount) }} administration &amp; insurance fees separately.</div>
+                    @endif
                 </form>
             </section>
         </main>

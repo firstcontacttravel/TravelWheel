@@ -280,6 +280,7 @@ class FlightBookingsTable
                     ->label('Open'),
                 ActionGroup::make([
                     self::markBankTransferPaidAction(),
+                    self::markFeesTransferPaidAction(),
                     self::verifySeerbitPaymentAction(),
                     self::sendPaymentReceiptAction(),
                     self::orderTicketAction(),
@@ -673,6 +674,91 @@ class FlightBookingsTable
             });
     }
 
+    public static function markFeesTransferPaidAction(): Action
+    {
+        return Action::make('markFeesTransferPaid')
+            ->label('Mark fees paid')
+            ->icon('heroicon-o-shield-check')
+            ->color('success')
+            ->visible(function (FlightBooking $record): bool {
+                if ($record->payment_method !== 'flex_bank_transfer') {
+                    return false;
+                }
+
+                $application = $record->travelFlexApplications()->latest()->first();
+
+                return $application?->fees_status === 'pending';
+            })
+            ->modalHeading(fn (FlightBooking $record): string => 'Verify TravelFlex fees transfer for '.($record->booking_ref ?: 'booking'))
+            ->modalDescription('Use this only after confirming that the administration + insurance fee transfer has reached the company bank account. This is separate from the down payment — ticketing proceeds automatically once both the deposit and fees are marked paid.')
+            ->modalIcon('heroicon-o-shield-check')
+            ->modalIconColor('success')
+            ->modalSubmitActionLabel('Mark fees as verified')
+            ->modalWidth('lg')
+            ->form(function (FlightBooking $record): array {
+                $application = $record->travelFlexApplications()->latest()->first();
+                $plan = $application?->repayment_plan ?? [];
+                $feesAmount = round((float) ($plan['administration_fee'] ?? 0) + (float) ($plan['insurance_fee'] ?? 0), 2);
+
+                return [
+                    Placeholder::make('booking_context')
+                        ->hiddenLabel()
+                        ->content(fn () => self::actionContext($record, 'TravelFlex fees verification')),
+                    TextInput::make('payment_reference')
+                        ->label('Payment reference')
+                        ->default($application?->fees_reference)
+                        ->helperText('Use the customer transfer reference, bank narration, or internal reconciliation reference.')
+                        ->maxLength(255),
+                    TextInput::make('amount_received')
+                        ->label('Amount received')
+                        ->numeric()
+                        ->minValue(1)
+                        ->required()
+                        ->helperText('Confirm this against the bank credit before marking the fees paid.')
+                        ->default($feesAmount),
+                    Textarea::make('verification_note')
+                        ->label('Verification note')
+                        ->required()
+                        ->rows(4)
+                        ->helperText('Add enough detail for another admin to understand how the transfer was verified.')
+                        ->maxLength(2000),
+                ];
+            })
+            ->action(function (FlightBooking $record, array $data): void {
+                $application = $record->travelFlexApplications()->latest()->first();
+
+                if (! $application || $application->fees_status === 'paid') {
+                    Notification::make()->title('Nothing to verify')->body('No pending fees transfer was found for this booking.')->warning()->send();
+
+                    return;
+                }
+
+                $application->update([
+                    'fees_status' => 'paid',
+                    'fees_reference' => $data['payment_reference'] ?: $application->fees_reference,
+                    'fees_paid_at' => now(),
+                ]);
+
+                self::recordPaymentVerification($record->fresh(), [
+                    'action' => 'travelflex_fees_marked_paid',
+                    'previous_payment_status' => $record->payment_status,
+                    'new_payment_status' => $record->payment_status,
+                    'payment_reference' => $data['payment_reference'] ?: $application->fees_reference,
+                    'amount_received' => round((float) $data['amount_received'], 2),
+                    'currency' => $record->payment_currency ?: $record->currency ?: 'NGN',
+                    'verification_note' => $data['verification_note'],
+                ]);
+
+                Notification::make()
+                    ->title('TravelFlex fees marked as paid')
+                    ->body($application->fresh()->deposit_status === 'paid'
+                        ? 'Both the deposit and fees are now verified. This booking is ready for the "Order ticket" action.'
+                        : 'Fees verified, but the down payment is still outstanding. Ticketing will remain blocked until both are paid.')
+                    ->success()
+                    ->send();
+            });
+    }
+
     public static function verifySeerbitPaymentAction(): Action
     {
         return Action::make('verifySeerbitPayment')
@@ -898,9 +984,36 @@ class FlightBookingsTable
                     'response_payload' => $result['response'] ?? [],
                 ]);
 
+                $isTravelFlex = in_array($record->payment_method, ['flex_gateway', 'flex_bank_transfer'], true);
+
+                if ($result['ok'] && $isTravelFlex) {
+                    // TravelFlex tickets don't go to the client — the full e-ticket goes
+                    // to the ticketing support mailbox, and the client only gets a
+                    // "your ticket has been booked" notice with no ticket attached.
+                    app(DurableMailService::class)->sendNowOrStore(
+                        DurableMailService::FLIGHT_ETICKET,
+                        (string) config('mail.travelflex_ticket_support'),
+                        $record,
+                        [],
+                        'travelflex-ticket-support:'.$record->id,
+                    );
+
+                    if (filled($record->contact_email)) {
+                        app(DurableMailService::class)->sendNowOrStore(
+                            DurableMailService::TRAVELFLEX_TICKET_BOOKED,
+                            (string) $record->contact_email,
+                            $record,
+                            [],
+                            'travelflex-ticket-booked:'.$record->id,
+                        );
+                    }
+
+                    $record->update(['confirmation_email_sent' => true]);
+                }
+
                 Notification::make()
                     ->title($result['ok'] ? 'Ticket ordered' : 'Ticket order failed')
-                    ->body(($result['message'] ?? 'Ticket order completed.').' Ticketing action was recorded.')
+                    ->body(($result['message'] ?? 'Ticket order completed.').' Ticketing action was recorded.'.($result['ok'] && $isTravelFlex ? ' E-ticket sent to support, customer notified.' : ''))
                     ->{$result['ok'] ? 'success' : 'danger'}()
                     ->send();
             });
@@ -1082,10 +1195,11 @@ class FlightBookingsTable
         $paymentReady = $record->payment_status === 'paid';
         if (in_array($record->payment_method, ['flex_gateway', 'flex_bank_transfer'], true)) {
             $application = $record->travelFlexApplications()->latest()->first();
-            $paymentReady = $record->payment_status === 'partially_paid'
+            $paymentReady = in_array($record->payment_status, ['partially_paid', 'paid'], true)
                 && $application?->application_status === 'approved'
                 && $application?->financing_status === 'approved'
-                && $application?->deposit_status === 'paid';
+                && $application?->deposit_status === 'paid'
+                && $application?->fees_status === 'paid';
         }
 
         return $paymentReady
@@ -1093,7 +1207,7 @@ class FlightBookingsTable
             && (! $record->tkt_time_limit || $record->tkt_time_limit->isFuture())
             && ! $record->ticket_ordered
             && $record->booking_status !== 'ticketed'
-            && in_array($record->booking_status, ['on_hold', 'confirmed', 'awaiting_deposit', 'failed', 'ticketing_failed'], true);
+            && in_array($record->booking_status, ['on_hold', 'confirmed', 'awaiting_deposit', 'awaiting_ticketing', 'failed', 'ticketing_failed'], true);
     }
 
     private static function recordTicketing(FlightBooking $record, array $data): void

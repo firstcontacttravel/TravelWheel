@@ -116,6 +116,7 @@ return [
     ],
 
     'travelflex_provider' => env('MAIL_TRAVELFLEX_PROVIDER', 'loans@travelwheel.com'),
+    'travelflex_ticket_support' => env('MAIL_TRAVELFLEX_TICKET_SUPPORT', 'damilola@travelwheel.ng'),
     'travelwheel_address' => env('MAIL_TRAVELWHEEL_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
     'support_address' => env('MAIL_SUPPORT_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
 

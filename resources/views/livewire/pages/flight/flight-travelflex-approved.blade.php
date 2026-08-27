@@ -16,7 +16,7 @@
     <section class="tfa-hero">
         <div class="tfa-kicker">Fast Credit decision</div>
         <div class="tfa-title">Your TravelFlex application is approved</div>
-        <p class="tfa-copy">Review the held itinerary and complete the down payment before the airline deadline. Your ticket is issued only after the payment is verified.</p>
+        <p class="tfa-copy">Review the held itinerary and complete payment in two steps: your down payment first, then the administration &amp; insurance fees. Your ticket is issued only after both payments are verified.</p>
         <div class="tfa-alert">Complete payment by <strong>{{ $paymentDeadline?->timezone('Africa/Lagos')->format('D, d M Y H:i') }} WAT</strong>. We reserve two hours before the airline deadline for payment verification and ticketing.</div>
     </section>
     @if($errors->any())<div class="tfa-alert">{{ $errors->first() }}</div>@endif
@@ -27,24 +27,29 @@
             <div class="tfa-row"><span>Airline</span><strong>{{ $flight['airline'] ?? $booking->airline ?? '-' }}</strong></div>
             <div class="tfa-row"><span>Booking reference</span><strong>{{ $booking->booking_ref }}</strong></div>
             <div class="tfa-row"><span>Ticket cost</span><strong>{{ $money($plan['ticket_cost'] ?? $booking->total_price) }}</strong></div>
-            <div class="tfa-row"><span>Down payment</span><strong>{{ $money($plan['down_payment'] ?? $application->down_payment) }}</strong></div>
-            <div class="tfa-row"><span>Administration fee</span><strong>{{ $money($plan['administration_fee'] ?? 0) }}</strong></div>
-            <div class="tfa-row"><span>Insurance fee</span><strong>{{ $money($plan['insurance_fee'] ?? 0) }}</strong></div>
-            <div class="tfa-row"><span>Due after approval</span><strong style="color:#049a63">{{ $money($upfrontPaymentTotal) }}</strong></div>
+            <div class="tfa-row" style="background:#f0fdf4;margin:0 -22px;padding-left:22px;padding-right:22px;"><span>Payment 1 &middot; Down payment</span><strong style="color:#049a63">{{ $money($plan['down_payment'] ?? $application->down_payment) }}</strong></div>
+            <div class="tfa-row" style="background:#f0fdf4;margin:0 -22px;padding-left:22px;padding-right:22px;"><span>Payment 2 &middot; Administration &amp; insurance fees</span><strong style="color:#049a63">{{ $money(((float) ($plan['administration_fee'] ?? 0)) + ((float) ($plan['insurance_fee'] ?? 0))) }}</strong></div>
+            <div class="tfa-row"><span>Total due now</span><strong>{{ $money($upfrontPaymentTotal) }}</strong></div>
             <div class="tfa-row"><span>Financed amount</span><strong>{{ $money($plan['loan_amount'] ?? $plan['remaining_balance'] ?? 0) }}</strong></div>
             <div class="tfa-row"><span>Repayment plan</span><strong>{{ $plan['repayment_plan'] ?? '-' }}</strong></div>
         </section>
-        <form class="tfa-card" method="POST" action="{{ route('flights.travelflex.approved.payment') }}">
-            @csrf
-            <h2 style="font-size:18px;margin:0;">Down payment method</h2>
-            <div class="tfa-options">
-                <label class="tfa-option"><input type="radio" name="pay_method" value="gateway" checked><span><strong>Pay online</strong><small>Card, transfer or USSD through SeerBit.</small></span></label>
-                @if($bankTransferAvailable)
-                    <label class="tfa-option"><input type="radio" name="pay_method" value="bank_transfer"><span><strong>Bank transfer</strong><small>Transfer manually and submit your reference for verification.</small></span></label>
-                @endif
-            </div>
-            <button class="tfa-submit" type="submit">Continue to down payment</button>
-        </form>
+        @if($bankTransferAvailable)
+            <form class="tfa-card" method="POST" action="{{ route('flights.travelflex.approved.payment') }}">
+                @csrf
+                <input type="hidden" name="pay_method" value="bank_transfer">
+                <h2 style="font-size:18px;margin:0;">Payment method</h2>
+                <p style="font-size:12px;color:#667085;margin:6px 0 0;">Pay by bank transfer. This starts with Payment 1 (down payment). You'll be taken straight to Payment 2 (administration &amp; insurance fees) right after.</p>
+                <div class="tfa-options">
+                    <label class="tfa-option"><input type="radio" checked disabled><span><strong>Bank transfer</strong><small>Transfer manually and submit a reference for each payment for verification.</small></span></label>
+                </div>
+                <button class="tfa-submit" type="submit">Continue to Payment 1 &middot; down payment</button>
+            </form>
+        @else
+            <section class="tfa-card">
+                <h2 style="font-size:18px;margin:0 0 8px;">Payment method</h2>
+                <div class="tfa-alert">Bank transfer details aren't configured yet. Please contact TravelWheel support to complete your payment.</div>
+            </section>
+        @endif
     </div>
 </main>
 @endcomponent

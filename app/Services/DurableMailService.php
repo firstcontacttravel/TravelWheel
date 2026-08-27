@@ -7,6 +7,7 @@ use App\Mail\ETicketMail;
 use App\Mail\PaymentReceiptMail;
 use App\Mail\TravelFlexRepaymentReminderMail;
 use App\Mail\TravelFlexStatusMail;
+use App\Mail\TravelFlexTicketBookedMail;
 use App\Mail\UnTicketedConfirmationAlert;
 use App\Models\FlightBooking;
 use App\Models\NotificationOutbox;
@@ -34,6 +35,8 @@ class DurableMailService
     public const TRAVELFLEX_STATUS = 'travelflex_status';
 
     public const TRAVELFLEX_REPAYMENT = 'travelflex_repayment';
+
+    public const TRAVELFLEX_TICKET_BOOKED = 'travelflex_ticket_booked';
 
     public function sendNowOrStore(
         string $kind,
@@ -204,6 +207,7 @@ class DurableMailService
                 (array) ($payload['instalment'] ?? []),
                 (string) ($payload['timing'] ?? 'due'),
             ),
+            self::TRAVELFLEX_TICKET_BOOKED => new TravelFlexTicketBookedMail($this->flight($related)),
             default => throw new \RuntimeException("Unsupported durable email kind [{$message->kind}]."),
         };
     }

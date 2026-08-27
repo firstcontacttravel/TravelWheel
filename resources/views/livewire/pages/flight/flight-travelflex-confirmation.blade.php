@@ -404,9 +404,9 @@
             <div class="tf-confirm-title">{{ $isTicketed ? 'Flight Booked & TravelFlex Plan Live' : 'TravelFlex Activated - E-Ticket Processing' }}</div>
             <div class="tf-confirm-sub">
                 @if($isTicketed)
-                    Your down payment has been processed, your seat is confirmed, and your e-ticket has been issued. Keep your repayment schedule active to keep your booking in good standing.
+                    Your down payment and fees have been processed, and your ticket has been booked. You'll receive a booking confirmation by email — keep your repayment schedule active to keep your booking in good standing.
                 @else
-                    Your TravelFlex plan is active and your down payment has been processed. Your e-ticket is being processed and will be emailed to <strong>{{ $contact['email'] ?? '' }}</strong> within 15-30 minutes.
+                    Your TravelFlex plan is active and both your down payment and fees have been processed. Our team is now finalizing your booking — you'll get a notification at <strong>{{ $contact['email'] ?? '' }}</strong> as soon as your ticket is booked.
                 @endif
             </div>
             @if($uniqueId)
@@ -449,13 +449,13 @@
             </div>
             <div class="tf-hero-sub">
                 @if($isTicketed)
-                    Your down payment has been processed. Your seat is confirmed and your e-ticket has been issued.
+                    Your down payment and fees have been processed, and your ticket has been booked.
                     Stick to your repayment schedule to keep your booking active.
-                    All details have been sent to <strong style="color: white;">{{ $contact['email'] ?? '' }}</strong>.
+                    A booking confirmation has been sent to <strong style="color: white;">{{ $contact['email'] ?? '' }}</strong>.
                 @else
-                    Your TravelFlex plan is now active and your down payment has been processed. Your seat is confirmed.
-                    Your e-ticket is being processed and will be emailed to <strong style="color:white;">{{ $contact['email'] ?? '' }}</strong>
-                    within 15-30 minutes. Your repayment schedule is locked in.
+                    Your TravelFlex plan is now active — both your down payment and fees have been processed.
+                    Our team is finalizing your booking and will notify <strong style="color:white;">{{ $contact['email'] ?? '' }}</strong>
+                    as soon as your ticket is booked. Your repayment schedule is locked in.
                 @endif
             </div>
             @if($uniqueId)
@@ -770,8 +770,8 @@
                 <div class="notice purple">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     <span>
-                        <strong>Repayment Reminders:</strong> You will receive a reminder email 3 days before each instalment due date.
-                        Missing payments may result in booking cancellation and affect your credit record.
+                        <strong>Balance must be cleared before travel:</strong> Your full remaining balance of {{ $fmt($remainingBal) }} must be paid off before your travel date.
+                        You will receive a reminder email 3 days before each instalment due date. Missing payments may result in booking cancellation and affect your credit record.
                     </span>
                 </div>
                 @if(!$isTicketed)

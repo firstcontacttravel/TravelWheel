@@ -55,7 +55,18 @@
         </td>
     </tr>
     <tr>
-        <td style="padding:22px 30px 28px;font-size:12px;line-height:1.7;color:{{ $muted }};">
+        <td style="padding:0 30px;">
+            <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;">
+                <tr>
+                    <td style="padding:14px 16px;font-size:12px;line-height:1.6;color:#9a3412;font-weight:700;">
+                        Reminder: your full TravelFlex balance must be settled before your travel date to keep your booking active.
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding:16px 30px 28px;font-size:12px;line-height:1.7;color:{{ $muted }};">
             Please complete this repayment using the agreed TravelFlex payment channel. For help, email
             <a href="mailto:support@travelwheel.ng" style="color:{{ $primary }};font-weight:800;text-decoration:none;">support@travelwheel.ng</a>
             or call <strong style="color:{{ $ink }};">+2348056265618</strong>.

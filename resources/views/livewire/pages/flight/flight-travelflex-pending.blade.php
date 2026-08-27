@@ -415,7 +415,7 @@
 
             <div class="notice purple">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                <span>Repayment schedule begins from plan activation date. You'll receive reminder emails 3 days before each due date. Missed payments may result in cancellation.</span>
+                <span>Repayment schedule begins from plan activation date and your <strong>full balance must be settled before your travel date</strong>. You'll receive reminder emails 3 days before each due date. Missed payments may result in cancellation.</span>
             </div>
 
             <div style="display:flex;gap:12px;flex-wrap:wrap;" class="btn-row">

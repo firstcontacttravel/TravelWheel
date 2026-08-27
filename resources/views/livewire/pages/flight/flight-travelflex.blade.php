@@ -625,20 +625,32 @@
                 <div class="tf-card">
                     <div class="tf-step-label"><span>3</span> Review Plan &amp; Apply</div>
 
-                    <div class="tf-downpay-box">
-                        <div>
-                            <div class="tf-downpay-label">Due After Approval</div>
-                            <div class="tf-downpay-sub">Down payment plus Fast Credit administration and insurance fees</div>
+                    <div class="tf-downpay-box" style="flex-direction:column;align-items:stretch;gap:0;">
+                        <div class="tf-downpay-label" style="margin-bottom:10px;">Due After Approval</div>
+                        <div style="display:flex;flex-direction:column;">
+                            <div class="tf-sum-row" style="border-bottom:1px solid #bee9d3;">
+                                <span class="tf-sum-lbl" style="color:var(--tf-green);">Down payment</span>
+                                <span class="tf-sum-val" style="color:var(--tf-green);" x-text="formatCurrency(downPaymentAmount)"></span>
+                            </div>
+                            <div class="tf-sum-row" style="border-bottom:none;">
+                                <span class="tf-sum-lbl" style="color:var(--tf-green);">Fast Credit administration &amp; insurance fees</span>
+                                <span class="tf-sum-val" style="color:var(--tf-green);" x-text="formatCurrency(administrationFee + insuranceFee)"></span>
+                            </div>
                         </div>
-                        <div>
-                            <div class="tf-downpay-value" x-text="formatCurrency(upfrontPaymentTotal)"></div>
-                            <div style="font-size:11px;color:var(--tf-green);text-align:right;" x-text="formatCurrency(downPaymentAmount) + ' down + fees'"></div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1.5px solid #a7f3d0;">
+                            <span class="tf-downpay-sub">Total due now</span>
+                            <span class="tf-downpay-value" x-text="formatCurrency(upfrontPaymentTotal)"></span>
                         </div>
                     </div>
 
                     <div class="tf-notice warn">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                         <span>This down payment is <strong>non-refundable</strong> once confirmed. Your flight will be booked and held immediately after payment.</span>
+                    </div>
+
+                    <div class="tf-notice warn">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Your remaining balance (<strong x-text="formatCurrency(remainingBalance)"></strong>) must be paid in full <strong>before your travel date</strong>. Your repayment schedule is structured to complete at least 14 days before departure.</span>
                     </div>
 
                     {{-- Plan recap --}}
@@ -969,6 +981,13 @@ function travelFlex() {
                 { label: '3 months',  value: '3 months',  days: 90  },
                 { label: '4 months',  value: '4 months',  days: 120 },
                 { label: '5 months',  value: '5 months',  days: 150 },
+                { label: '6 months',  value: '6 months',  days: 180 },
+                { label: '7 months',  value: '7 months',  days: 210 },
+                { label: '8 months',  value: '8 months',  days: 240 },
+                { label: '9 months',  value: '9 months',  days: 270 },
+                { label: '10 months', value: '10 months', days: 300 },
+                { label: '11 months', value: '11 months', days: 330 },
+                { label: '12 months', value: '12 months', days: 360 },
             ];
             this.repaymentOptions = allOptions.filter(o => safedays >= o.days);
         },
@@ -1013,31 +1032,39 @@ function travelFlex() {
             const numPeriods  = parsed.count;
             const RATE        = {{ $travelFlexInterestRate }};
 
-            // Instalment schedule proportions
-            const proportions = {
+            // Instalment schedule proportions (must mirror _normalizeTravelFlexPlan on the server)
+            const fixedProportions = {
                 1: [1.0],
                 2: [0.5, 0.5],
                 3: [0.4, 0.3, 0.3],
                 4: [0.25, 0.25, 0.25, 0.25],
                 5: [0.2, 0.2, 0.2, 0.2, 0.2],
             };
-            const schedule = proportions[numPeriods] || [1.0];
+            const instalmentCount = Math.max(1, Math.min(12, numPeriods));
+            const schedule = fixedProportions[instalmentCount]
+                || Array(instalmentCount).fill(1 / instalmentCount);
 
             const ordinals = ['1st', '2nd', '3rd', '4th', '5th'];
             let   dueDate  = new Date();
             dueDate.setDate(dueDate.getDate() + intervalDays);
 
             let totalInterest = 0;
+            let principalAllocated = 0;
             this.schedule = schedule.map((portion, i) => {
                 if (i > 0) dueDate.setDate(dueDate.getDate() + intervalDays);
-                const interest  = this.remainingBalance * RATE;
-                const principal = portion * this.remainingBalance;
-                const total     = principal + interest;
-                totalInterest  += interest;
+                const isLast   = i === schedule.length - 1;
+                const interest = this.remainingBalance * RATE;
+                let principal  = isLast
+                    ? this.remainingBalance - principalAllocated
+                    : portion * this.remainingBalance;
+                principal = Math.round(principal * 100) / 100;
+                principalAllocated += principal;
+                const total    = principal + interest;
+                totalInterest += interest;
                 return {
                     label:     (ordinals[i] || (i+1)+'th') + ' Payment',
                     dueDate:   dueDate.toDateString(),
-                    principal: Math.round(principal * 100) / 100,
+                    principal: principal,
                     interest:  Math.round(interest  * 100) / 100,
                     total:     Math.round(total      * 100) / 100,
                 };

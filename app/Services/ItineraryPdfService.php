@@ -250,21 +250,35 @@ class ItineraryPdfService
             return $this->imageCache[$source] = (is_file($source) ? $this->imageDataUri($source) : null);
         }
 
-        $embedded = Cache::remember('pdf-airline-logo:' . sha1($source), now()->addDays(30), function () use ($source): ?string {
-            try {
-                $response = Http::timeout(4)->get($source);
-                if (! $response->successful()) return null;
-                $mime = strtolower((string) $response->header('Content-Type'));
-                if (! str_starts_with($mime, 'image/')) return null;
-                $requiresGd = str_contains($mime, 'png')
-                    || str_contains($mime, 'gif')
-                    || str_contains($mime, 'webp');
-                if ($requiresGd && ! extension_loaded('gd')) return null;
-                return 'data:' . strtok($mime, ';') . ';base64,' . base64_encode($response->body());
-            } catch (\Throwable) {
-                return null;
-            }
-        });
+        // Cache::remember() treats a cached null as a cache miss and recomputes
+        // on every call, so a logo URL that fails once (timeout, 404, wrong
+        // content-type) would otherwise trigger a fresh 4s HTTP fetch on every
+        // single PDF render, forever. Cache a sentinel for failures instead so
+        // they're remembered too (with a shorter TTL, in case it's transient).
+        $cacheKey = 'pdf-airline-logo:'.sha1($source);
+        $cached = Cache::get($cacheKey);
+
+        if ($cached !== null) {
+            $embedded = $cached === 'FETCH_FAILED' ? null : $cached;
+        } else {
+            $embedded = (function () use ($source): ?string {
+                try {
+                    $response = Http::timeout(4)->get($source);
+                    if (! $response->successful()) return null;
+                    $mime = strtolower((string) $response->header('Content-Type'));
+                    if (! str_starts_with($mime, 'image/')) return null;
+                    $requiresGd = str_contains($mime, 'png')
+                        || str_contains($mime, 'gif')
+                        || str_contains($mime, 'webp');
+                    if ($requiresGd && ! extension_loaded('gd')) return null;
+                    return 'data:'.strtok($mime, ';').';base64,'.base64_encode($response->body());
+                } catch (\Throwable) {
+                    return null;
+                }
+            })();
+
+            Cache::put($cacheKey, $embedded ?? 'FETCH_FAILED', $embedded ? now()->addDays(30) : now()->addHours(1));
+        }
 
         if (! extension_loaded('gd') && is_string($embedded) && preg_match('#^data:image/(png|gif|webp)#i', $embedded)) {
             $embedded = null;
