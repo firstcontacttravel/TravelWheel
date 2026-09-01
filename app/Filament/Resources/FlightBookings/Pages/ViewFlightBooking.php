@@ -16,6 +16,7 @@ class ViewFlightBooking extends ViewRecord
         return [
             ActionGroup::make([
                 FlightBookingsTable::markBankTransferPaidAction(),
+                FlightBookingsTable::markFeesTransferPaidAction(),
                 FlightBookingsTable::verifySeerbitPaymentAction(),
                 FlightBookingsTable::sendPaymentReceiptAction(),
             ])

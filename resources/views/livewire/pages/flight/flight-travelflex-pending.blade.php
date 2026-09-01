@@ -35,6 +35,59 @@
     $schedule      = $tfPlan['schedule']               ?? [];
     $ticketCost    = (float) ($tfPlan['ticket_cost'] ?? $total);
     $remainingBal  = (float) ($tfPlan['loan_amount'] ?? $tfPlan['remaining_balance'] ?? max(0, $ticketCost - $downPayment));
+    $applicationStatus = (string) ($application?->application_status ?? 'submitted');
+    $financingStatus = (string) ($application?->financing_status ?? 'pending');
+    $depositStatus = (string) ($application?->deposit_status ?? 'not_due');
+    $feesStatus = (string) ($application?->fees_status ?? 'not_due');
+    $isApproved = $applicationStatus === 'approved' && $financingStatus === 'approved';
+    $isRejected = $applicationStatus === 'rejected' || $financingStatus === 'rejected';
+    $depositSubmitted = $depositStatus === 'paid' || filled($application?->deposit_reference);
+    $feesOwed = round($administrationFee + $insuranceFee, 2);
+    $feesSubmitted = $feesOwed <= 0 || $feesStatus === 'paid' || filled($application?->fees_reference);
+    $depositPaid = $depositStatus === 'paid';
+    $feesPaid = $feesOwed <= 0 || $feesStatus === 'paid';
+    $paymentsSubmitted = $depositSubmitted && $feesSubmitted;
+    $paymentsVerified = $depositPaid && $feesPaid;
+    $isTicketed = (bool) ($application?->booking?->ticket_ordered ?? false)
+        || ($application?->booking?->booking_status ?? null) === 'ticketed';
+
+    if ($isTicketed) {
+        $heroTitle = 'Your TravelFlex flight has been booked';
+        $heroCopy = 'Your upfront payments were verified and ticketing is complete. Your TravelFlex repayment plan remains active according to the schedule below.';
+        $summaryStatus = 'Ticketed';
+    } elseif ($paymentsVerified) {
+        $heroTitle = 'Payments verified — awaiting ticketing';
+        $heroCopy = 'Your down payment and administration and insurance fees have both been verified. TravelWheel is now preparing the held booking for ticket issuance.';
+        $summaryStatus = 'Awaiting ticketing';
+    } elseif ($paymentsSubmitted) {
+        $heroTitle = 'Bank transfers submitted';
+        $heroCopy = 'We received both transfer references. Our team must confirm the down payment and the administration and insurance fees against the bank credits before ticketing can begin.';
+        $summaryStatus = 'Verification pending';
+    } elseif ($depositSubmitted) {
+        $heroTitle = 'Down payment reference received';
+        $heroCopy = 'Your down payment reference has been saved. Complete the separate administration and insurance fee transfer so both payments can be verified before ticketing.';
+        $summaryStatus = 'Fees payment required';
+    } elseif ($isApproved) {
+        $heroTitle = 'TravelFlex application approved';
+        $heroCopy = 'Complete the down payment first, followed by the separate administration and insurance fee payment, before the airline hold deadline.';
+        $summaryStatus = 'Payment required';
+    } elseif ($isRejected) {
+        $heroTitle = 'TravelFlex application update';
+        $heroCopy = 'This application was not approved. Please contact TravelWheel if you need help with another payment option.';
+        $summaryStatus = 'Not approved';
+    } else {
+        $heroTitle = 'Application submitted to Fast Credit';
+        $heroCopy = 'Fast Credit will contact you and provide an approval decision within 24 hours. No down payment is due and no ticket will be issued until the application is approved.';
+        $summaryStatus = 'Under review';
+    }
+
+    $timeline = [
+        ['done', '1', 'Application Submitted', 'Your TravelFlex application, documents, and repayment plan have been received.'],
+        [$isApproved || $isRejected ? 'done' : 'current', '2', 'Fast Credit Review', $isApproved ? 'Your TravelFlex financing was approved.' : ($isRejected ? 'The application was not approved.' : 'Fast Credit will contact you and provide a decision within 24 hours.')],
+        [$depositPaid ? 'done' : ($isApproved ? 'current' : 'pending'), '3', 'Down Payment', $depositPaid ? 'Your down payment has been verified.' : ($depositSubmitted ? 'Your reference was received and is awaiting bank verification.' : 'Transfer the down payment after approval and submit its reference.')],
+        [$feesPaid ? 'done' : ($depositSubmitted ? 'current' : 'pending'), '4', 'Administration & Insurance Fees', $feesPaid ? 'The separate fees payment has been verified.' : ($feesSubmitted ? 'Your fees reference was received and is awaiting bank verification.' : 'Pay these fees separately after submitting the down payment reference.')],
+        [$isTicketed ? 'done' : ($paymentsVerified ? 'current' : 'pending'), '5', 'Ticketing', $isTicketed ? 'Your flight ticket has been issued.' : ($paymentsVerified ? 'Both upfront payments are verified and the booking is ready for ticketing.' : 'Ticketing begins only after both upfront payments are verified.')],
+    ];
     $tktFmt = ''; $tktHours = 0;
     if ($tktLimit) { try { $td=\Carbon\Carbon::parse($tktLimit); $tktFmt=$td->timezone('Africa/Lagos')->format('D, d M Y \a\t H:i'); $tktHours=max(0,(int)now()->diffInHours($td,false)); } catch (\Throwable $e) {} }
     $equipMap = ['73H'=>'Boeing 737-800','738'=>'Boeing 737-800','320'=>'Airbus A320','321'=>'Airbus A321','789'=>'Boeing 787-9','332'=>'Airbus A330-200'];
@@ -239,10 +292,8 @@
         <div class="tf-pnd-hero-icon"></div>
         <div>
             <div class="tf-pnd-kicker">TravelFlex Plan</div>
-            <div class="tf-pnd-title">Application submitted to Fast Credit</div>
-            <div class="tf-pnd-sub">
-                Fast Credit will contact you and provide an approval decision within <strong>24 hours</strong>. No down payment is due and no ticket will be issued until the application is approved.
-            </div>
+            <div class="tf-pnd-title">{{ $heroTitle }}</div>
+            <div class="tf-pnd-sub">{{ $heroCopy }}</div>
             @if($uniqueId)<div class="tf-pnd-ref">{{ $uniqueId }}</div>@endif
         </div>
     </div>
@@ -257,12 +308,7 @@
                     <div><div class="pc-title">What Happens Next</div></div>
                 </div>
                 <div class="pc-body" style="padding:14px 20px 4px;">
-                    @foreach([
-                        ['done','1','Application Submitted','Your TravelFlex application, documents, and repayment plan have been received.'],
-                        ['current','2','Fast Credit Review','Fast Credit will contact you and provide a decision within 24 hours.'],
-                        ['pending','3','Pay Down Payment','If approved, we will email you a secure payment link before the airline hold expires.'],
-                        ['pending','4','Ticketing','TravelWheel issues your ticket only after approval and verified down payment.'],
-                    ] as [$cls,$num,$title,$sub])
+                    @foreach($timeline as [$cls,$num,$title,$sub])
                     <div class="tl-step">
                         <div class="tl-num {{ $cls }}">{{ $num }}</div>
                         <div>
@@ -282,7 +328,7 @@
                 <span class="tf-pnd-alert-icon" aria-hidden="true"></span>
                 <div>
                     <div style="font-size:13px;font-weight:800;color:#92400e;margin-bottom:3px;">Booking Hold Expires</div>
-                    <div style="font-size:12.5px;color:#78350f;line-height:1.55;">Your held fare expires <strong>{{ $tktFmt }}</strong>@if($tktHours>0) ({{ $tktHours }}h remaining)@endif. If Fast Credit approves the application, payment must be completed before the secure deadline in your approval email.</div>
+                    <div style="font-size:12.5px;color:#78350f;line-height:1.55;">Your held fare expires <strong>{{ $tktFmt }}</strong>@if($tktHours>0) ({{ $tktHours }}h remaining)@endif. {{ $isApproved ? 'Both upfront payments must be submitted and verified before ticketing can proceed.' : 'If Fast Credit approves the application, both upfront payments must be completed before the deadline in your approval email.' }}</div>
                 </div>
             </div>
             @endif
@@ -419,6 +465,9 @@
             </div>
 
             <div style="display:flex;gap:12px;flex-wrap:wrap;" class="btn-row">
+                @if($isApproved && !$paymentsSubmitted && ($application?->payment_method === 'bank_transfer' || session('paymentMethod') === 'flex_bank_transfer'))
+                    <a href="{{ route('flights.travelflex.bank-transfer-form') }}" class="btn-primary" style="background:linear-gradient(135deg,var(--green),#047857);">Continue Bank Transfer</a>
+                @endif
                 <a href="{{ route('home') }}" class="btn-primary" style="background:linear-gradient(135deg,var(--indigo),var(--purple));">Back to Home</a>
                 <a href="#" onclick="window.print()" class="btn-ghost">Print / Save</a>
             </div>
@@ -440,7 +489,7 @@
                     <div class="dr"><span class="dr-lbl">Admin + insurance</span><span class="dr-val">{{ $fmt($administrationFee + $insuranceFee) }}</span></div>
                     <div class="dr"><span class="dr-lbl">Balance</span><span class="dr-val">{{ $fmt($remainingBal) }}</span></div>
                     <div class="dr"><span class="dr-lbl">Repayment</span><span class="dr-val">{{ $repaymentPlan }}</span></div>
-                    <div class="dr"><span class="dr-lbl">Status</span><span class="dr-val"><span class="status-badge status-pending" style="font-size:10px;">Pending</span></span></div>
+                    <div class="dr"><span class="dr-lbl">Status</span><span class="dr-val"><span class="status-badge status-pending" style="font-size:10px;">{{ $summaryStatus }}</span></span></div>
                 </div>
                 <div class="fare-total"><span class="fare-total-lbl">Grand Total</span><span class="fare-total-val">{{ $fmt($grandTotal) }}</span></div>
             </div>

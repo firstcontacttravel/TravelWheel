@@ -266,7 +266,10 @@ class TravelFlexApplicationsTable
                 $record->update([
                     'application_status' => 'approved',
                     'financing_status' => 'approved',
-                    'deposit_status' => $requiresRebooking ? 'rebooking_required' : 'pending',
+                    // The payment method is chosen after approval. Keep the deposit
+                    // not due until the customer actually starts a payment so bank
+                    // transfer can distinguish "not started" from "reference sent".
+                    'deposit_status' => $requiresRebooking ? 'rebooking_required' : 'not_due',
                     'approved_at' => now(),
                     'approval_expires_at' => $requiresRebooking ? null : $paymentDeadline,
                     'rejected_at' => null,

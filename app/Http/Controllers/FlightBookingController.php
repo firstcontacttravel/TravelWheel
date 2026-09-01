@@ -1036,7 +1036,14 @@ class FlightBookingController extends Controller
         // Two separate transfers: the deposit (equity) reference comes first, then
         // the admin + insurance fees reference, submitted back-to-back in one visit.
         $feesOwed = round((float) ($tfPlan['administration_fee'] ?? 0) + (float) ($tfPlan['insurance_fee'] ?? 0), 2);
-        $isDepositStage = ! in_array($application->deposit_status, ['pending', 'paid'], true);
+        $downPaymentOwed = round((float) ($tfPlan['down_payment'] ?? 0), 2);
+        $bookingFlight = session('bookingFlight', []);
+        $paymentCurrency = strtoupper((string) data_get($bookingFlight, 'flight.currency', data_get($bookingFlight, 'currency', 'NGN')));
+        // Approval may leave a legacy application in `pending` before the customer
+        // has submitted anything. A reference (or a paid status), rather than the
+        // status alone, is the reliable signal that the deposit step is complete.
+        $isDepositStage = $application->deposit_status !== 'paid'
+            && blank($application->deposit_reference);
         $reference = (string) $request->input('payment_reference');
 
         $application->update($isDepositStage
@@ -1046,13 +1053,18 @@ class FlightBookingController extends Controller
         // ── Update DB record if it exists (from the hold booking) ─────────────
         $dbId = session('flightBookingDbId');
         if ($dbId && $dbBooking = \App\Models\FlightBooking::find($dbId)) {
-            $dbBooking->update([
+            $bookingPaymentUpdates = [
                 'payment_method' => 'flex_bank_transfer',
                 'payment_status' => 'awaiting_bank_transfer',
-                'bank_transfer_reference' => $reference,
                 'bank_transfer_notified_at' => now(),
                 'extra_services_snapshot' => session('selectedExtras', []),
-            ]);
+            ];
+            if ($isDepositStage) {
+                $bookingPaymentUpdates['bank_transfer_reference'] = $reference;
+                $bookingPaymentUpdates['payment_amount'] = $downPaymentOwed;
+                $bookingPaymentUpdates['payment_currency'] = $paymentCurrency;
+            }
+            $dbBooking->update($bookingPaymentUpdates);
             $this->_syncTravelFlexApplicationBooking($dbBooking);
             if ($isDepositStage) {
                 $this->_sendPendingEmail($dbBooking, 'bank_transfer');
@@ -1074,6 +1086,8 @@ class FlightBookingController extends Controller
                 'payment_method' => 'flex_bank_transfer',
                 'payment_status' => 'awaiting_bank_transfer',
                 'bank_transfer_reference' => $reference,
+                'payment_amount' => $downPaymentOwed,
+                'payment_currency' => $paymentCurrency,
                 'bank_transfer_notified_at' => now(),
                 'tkt_time_limit' => session('bookingTktTimeLimit'),
                 'extra_services_snapshot' => session('selectedExtras', []),
@@ -3300,8 +3314,10 @@ class FlightBookingController extends Controller
         }
 
         $feesOwed = round((float) ($tfPlan['administration_fee'] ?? 0) + (float) ($tfPlan['insurance_fee'] ?? 0), 2);
-        $depositSubmitted = in_array($application->deposit_status, ['pending', 'paid'], true);
-        $feesSubmitted = in_array($application->fees_status, ['pending', 'paid'], true);
+        $depositSubmitted = $application->deposit_status === 'paid'
+            || filled($application->deposit_reference);
+        $feesSubmitted = $application->fees_status === 'paid'
+            || filled($application->fees_reference);
 
         if ($depositSubmitted && ($feesSubmitted || $feesOwed <= 0)) {
             return redirect()->route('flights.travelflex.pending');

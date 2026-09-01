@@ -524,51 +524,60 @@ class FlightBookingsTable
             ->modalIconColor('success')
             ->modalSubmitActionLabel('Mark payment as verified')
             ->modalWidth('lg')
-            ->form(fn (FlightBooking $record): array => [
-                Placeholder::make('booking_context')
-                    ->hiddenLabel()
-                    ->content(fn () => self::actionContext($record, 'Bank transfer verification')),
-                TextInput::make('payment_reference')
-                    ->label('Payment reference')
-                    ->default($record->bank_transfer_reference ?: $record->payment_reference)
-                    ->helperText('Use the customer transfer reference, bank narration, or internal reconciliation reference.')
-                    ->maxLength(255),
-                TextInput::make('amount_received')
-                    ->label('Amount received')
-                    ->numeric()
-                    ->minValue(1)
-                    ->required()
-                    ->helperText('Confirm this against the bank credit before marking the booking paid.')
-                    ->default($record->payment_amount ?: $record->total_price),
-                Select::make('currency')
-                    ->options([
-                        'NGN' => 'NGN',
-                        'USD' => 'USD',
-                        'GBP' => 'GBP',
-                        'EUR' => 'EUR',
-                    ])
-                    ->default($record->payment_currency ?: $record->currency ?: 'NGN')
-                    ->required(),
-                Textarea::make('verification_note')
-                    ->label('Verification note')
-                    ->required()
-                    ->rows(4)
-                    ->helperText('Add enough detail for another admin to understand how the transfer was verified.')
-                    ->maxLength(2000),
-                Toggle::make('send_receipt')
-                    ->label('Send payment receipt now')
-                    ->default(false),
-                Toggle::make('allow_mismatch')
-                    ->label('Authorised amount/currency override')
-                    ->helperText('Use only after a supervisor has approved the difference.')
-                    ->live()
-                    ->default(false),
-                Textarea::make('override_reason')
-                    ->label('Override reason')
-                    ->required(fn (Get $get): bool => (bool) $get('allow_mismatch'))
-                    ->visible(fn (Get $get): bool => (bool) $get('allow_mismatch'))
-                    ->maxLength(2000),
-            ])
+            ->form(function (FlightBooking $record): array {
+                $application = $record->payment_method === 'flex_bank_transfer'
+                    ? $record->travelFlexApplications()->latest()->first()
+                    : null;
+                $expectedAmount = $application
+                    ? (float) data_get($application->repayment_plan, 'down_payment', $application->down_payment)
+                    : (float) ($record->payment_amount ?: $record->total_price);
+
+                return [
+                    Placeholder::make('booking_context')
+                        ->hiddenLabel()
+                        ->content(fn () => self::actionContext($record, 'Bank transfer verification')),
+                    TextInput::make('payment_reference')
+                        ->label('Payment reference')
+                        ->default($application?->deposit_reference ?: $record->bank_transfer_reference ?: $record->payment_reference)
+                        ->helperText('Use the customer transfer reference, bank narration, or internal reconciliation reference.')
+                        ->maxLength(255),
+                    TextInput::make('amount_received')
+                        ->label('Amount received')
+                        ->numeric()
+                        ->minValue(1)
+                        ->required()
+                        ->helperText('Confirm this against the bank credit before marking the booking paid.')
+                        ->default($expectedAmount),
+                    Select::make('currency')
+                        ->options([
+                            'NGN' => 'NGN',
+                            'USD' => 'USD',
+                            'GBP' => 'GBP',
+                            'EUR' => 'EUR',
+                        ])
+                        ->default($record->payment_currency ?: $record->currency ?: 'NGN')
+                        ->required(),
+                    Textarea::make('verification_note')
+                        ->label('Verification note')
+                        ->required()
+                        ->rows(4)
+                        ->helperText('Add enough detail for another admin to understand how the transfer was verified.')
+                        ->maxLength(2000),
+                    Toggle::make('send_receipt')
+                        ->label('Send payment receipt now')
+                        ->default(false),
+                    Toggle::make('allow_mismatch')
+                        ->label('Authorised amount/currency override')
+                        ->helperText('Use only after a supervisor has approved the difference.')
+                        ->live()
+                        ->default(false),
+                    Textarea::make('override_reason')
+                        ->label('Override reason')
+                        ->required(fn (Get $get): bool => (bool) $get('allow_mismatch'))
+                        ->visible(fn (Get $get): bool => (bool) $get('allow_mismatch'))
+                        ->maxLength(2000),
+                ];
+            })
             ->action(function (FlightBooking $record, array $data): void {
                 $isTravelFlex = $record->payment_method === 'flex_bank_transfer';
                 $travelFlexApplication = $isTravelFlex
@@ -595,7 +604,9 @@ class FlightBookingsTable
                     }
                 }
 
-                $expectedAmount = round((float) ($record->payment_amount ?: $record->total_price), 2);
+                $expectedAmount = round($travelFlexApplication
+                    ? (float) data_get($travelFlexApplication->repayment_plan, 'down_payment', $travelFlexApplication->down_payment)
+                    : (float) ($record->payment_amount ?: $record->total_price), 2);
                 $receivedAmount = round((float) $data['amount_received'], 2);
                 $expectedCurrency = strtoupper((string) ($record->payment_currency ?: $record->currency ?: 'NGN'));
                 $receivedCurrency = strtoupper((string) $data['currency']);
@@ -618,7 +629,7 @@ class FlightBookingsTable
                     'payment_status' => $isTravelFlex ? 'partially_paid' : 'paid',
                     'payment_method' => $record->payment_method ?: 'bank_transfer',
                     'payment_reference' => $data['payment_reference'] ?: $record->payment_reference,
-                    'payment_amount' => $record->payment_amount ?: $record->total_price,
+                    'payment_amount' => $isTravelFlex ? $expectedAmount : ($record->payment_amount ?: $record->total_price),
                     'payment_charged_amount' => $receivedAmount,
                     'payment_currency' => $expectedCurrency,
                     'payment_verified_at' => now(),
@@ -733,16 +744,29 @@ class FlightBookingsTable
                     return;
                 }
 
+                $previousPaymentStatus = $record->payment_status;
+                $depositPaid = $application->deposit_status === 'paid';
+
                 $application->update([
                     'fees_status' => 'paid',
                     'fees_reference' => $data['payment_reference'] ?: $application->fees_reference,
                     'fees_paid_at' => now(),
+                    'payment_status' => $depositPaid ? 'paid' : $application->payment_status,
                 ]);
+
+                if ($depositPaid) {
+                    $record->update([
+                        'payment_status' => 'paid',
+                        'booking_status' => in_array($record->booking_status, ['on_hold', 'confirmed', 'awaiting_deposit'], true)
+                            ? 'awaiting_ticketing'
+                            : $record->booking_status,
+                    ]);
+                }
 
                 self::recordPaymentVerification($record->fresh(), [
                     'action' => 'travelflex_fees_marked_paid',
-                    'previous_payment_status' => $record->payment_status,
-                    'new_payment_status' => $record->payment_status,
+                    'previous_payment_status' => $previousPaymentStatus,
+                    'new_payment_status' => $depositPaid ? 'paid' : $previousPaymentStatus,
                     'payment_reference' => $data['payment_reference'] ?: $application->fees_reference,
                     'amount_received' => round((float) $data['amount_received'], 2),
                     'currency' => $record->payment_currency ?: $record->currency ?: 'NGN',
