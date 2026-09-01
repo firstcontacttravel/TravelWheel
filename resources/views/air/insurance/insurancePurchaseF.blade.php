@@ -18,7 +18,7 @@
             </p>
         </div>
 
-        <form action="{{ route('air.insurance.purchase') }}" method="POST">
+        <form action="{{ route('air.insurance.purchase') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="noc" id="numberOfDuplicates" value="{{ $quote->noOfChildren }}">
             <input type="hidden" name="bookingTypeId" value="{{ $quote->bookingTypeId }}">
@@ -68,8 +68,18 @@
                             <input class="form-control" type="text" name="passport_no">
                         </div>
                         <div class="col-sm-6 insurance-field">
+                            <label class="form-label">Nationality</label>
+                            <select class="form-select nationality-select" name="nationalty1" data-target="1" required>
+                                @include('air.insurance._sanla_countries')
+                            </select>
+                        </div>
+                        <div class="col-sm-6 insurance-field nin-field" id="nin-field-1" style="display:none;">
                             <label class="form-label">NIN</label>
                             <input class="form-control" type="text" name="nin" inputmode="numeric" pattern="\d{11}" maxlength="11" placeholder="11-digit National Identification Number">
+                        </div>
+                        <div class="col-sm-6 insurance-field passport-upload-field" id="passport-upload-field-1" style="display:none;">
+                            <label class="form-label">International Passport</label>
+                            <input class="form-control" type="file" name="international_passport1" accept=".jpg,.jpeg,.png,.pdf">
                         </div>
                         <div class="col-sm-6 insurance-field">
                             <label class="form-label">Email Address</label>
@@ -93,10 +103,6 @@
                                 <option value="4">Widowed</option>
                                 <option value="5">Separated</option>
                             </select>
-                        </div>
-                        <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Nationality</label>
-                            <input class="form-control" type="text" name="nationalty1" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
                             <label class="form-label">Pre-Existing Medical Conditions</label>
@@ -139,8 +145,18 @@
                             <input class="form-control" type="text" name="passport_no2">
                         </div>
                         <div class="col-sm-6 insurance-field">
+                            <label class="form-label">Nationality</label>
+                            <select class="form-select nationality-select" name="nationalty2" data-target="2" required>
+                                @include('air.insurance._sanla_countries')
+                            </select>
+                        </div>
+                        <div class="col-sm-6 insurance-field nin-field" id="nin-field-2" style="display:none;">
                             <label class="form-label">NIN</label>
                             <input class="form-control" type="text" name="nin2" inputmode="numeric" pattern="\d{11}" maxlength="11" placeholder="11-digit National Identification Number">
+                        </div>
+                        <div class="col-sm-6 insurance-field passport-upload-field" id="passport-upload-field-2" style="display:none;">
+                            <label class="form-label">International Passport</label>
+                            <input class="form-control" type="file" name="international_passport2" accept=".jpg,.jpeg,.png,.pdf">
                         </div>
                         <div class="col-sm-6 insurance-field">
                             <label class="form-label">Email Address</label>
@@ -153,10 +169,6 @@
                         <div class="col-sm-6 insurance-field">
                             <label class="form-label">Occupation</label>
                             <input class="form-control" type="text" name="ocupation2" required>
-                        </div>
-                        <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Nationality</label>
-                            <input class="form-control" type="text" name="nationalty2" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
                             <label class="form-label">Pre-Existing Medical Conditions</label>
@@ -226,13 +238,20 @@
                             <input class="form-control" type="text" name="passport_noC">
                         </div>
                         <div class="col-sm-3 insurance-field">
+                            <label class="form-label">Nationality</label>
+                            <select class="form-select nationality-select" name="nationaltyC" data-target="C">
+                                @include('air.insurance._sanla_countries')
+                            </select>
+                        </div>
+                        <div class="col-sm-3 insurance-field nin-field" id="nin-field-C" style="display:none;">
                             <label class="form-label">NIN</label>
                             <input class="form-control" type="text" name="ninC" inputmode="numeric" pattern="\d{11}" maxlength="11" placeholder="National Identification Number">
                         </div>
-                        <div class="col-sm-3 insurance-field">
-                            <label class="form-label">Nationality</label>
-                            <input class="form-control" type="text" name="nationaltyC">
+                        <div class="col-sm-3 insurance-field passport-upload-field" id="passport-upload-field-C" style="display:none;">
+                            <label class="form-label">International Passport</label>
+                            <input class="form-control" type="file" name="international_passportC" accept=".jpg,.jpeg,.png,.pdf">
                         </div>
+                        
                         <div class="col-sm-3 insurance-field">
                             <label class="form-label">Medical Conditions</label>
                             <input class="form-control" name="MedicalConditionC" type="text" maxlength="100" placeholder="None if N/A">
@@ -252,6 +271,34 @@
 </section>
 
 <script>
+    const NIGERIA_VALUE = '57';
+
+    function toggleNationalityFields(select) {
+        const target = select.getAttribute('data-target');
+        const ninField = document.getElementById('nin-field-' + target);
+        const passportField = document.getElementById('passport-upload-field-' + target);
+
+        if (!ninField || !passportField) return;
+
+        if (select.value === NIGERIA_VALUE) {
+            ninField.style.display = '';
+            passportField.style.display = 'none';
+            passportField.querySelector('input[type="file"]').value = '';
+        } else if (select.value !== '') {
+            ninField.style.display = 'none';
+            ninField.querySelector('input').value = '';
+            passportField.style.display = '';
+        } else {
+            ninField.style.display = 'none';
+            passportField.style.display = 'none';
+        }
+    }
+
+    // Bind parent nationality selects
+    document.querySelectorAll('.nationality-select').forEach(function(sel) {
+        sel.addEventListener('change', function() { toggleNationalityFields(this); });
+    });
+
     function duplicateFormElements() {
         const n = parseInt(document.getElementById('numberOfDuplicates').value);
         if (isNaN(n) || n <= 0) return;
@@ -263,8 +310,22 @@
         for (let i = 1; i <= n; i++) {
             const card = original.cloneNode(true);
             card.querySelector('.insurance-panel-title').lastChild.textContent = ' Child ' + i;
+
+            // Append index to input/select names and update IDs for toggling
             card.querySelectorAll('input').forEach(el => el.setAttribute('name', el.getAttribute('name') + i));
             card.querySelectorAll('select').forEach(el => el.setAttribute('name', el.getAttribute('name') + i));
+
+            const ninDiv = card.querySelector('.nin-field');
+            const passDiv = card.querySelector('.passport-upload-field');
+            if (ninDiv) ninDiv.id = 'nin-field-C' + i;
+            if (passDiv) passDiv.id = 'passport-upload-field-C' + i;
+
+            const natSelect = card.querySelector('.nationality-select');
+            if (natSelect) {
+                natSelect.setAttribute('data-target', 'C' + i);
+                natSelect.addEventListener('change', function() { toggleNationalityFields(this); });
+            }
+
             container.appendChild(card);
         }
     }

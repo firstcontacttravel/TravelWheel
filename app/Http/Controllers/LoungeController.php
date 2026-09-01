@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\LoungeBookingMail;
 use App\Models\Lounge;
 use App\Models\LoungeBooking;
+use App\Services\LoungePairCatalogueSyncService;
 use App\Services\SeerbitPaymentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -15,37 +16,21 @@ class LoungeController extends Controller
 {
     public function lounges(Request $request)
     {
-        $data = $request->all();
-        $location = $data['state'] ?? null;
-        $service  = $data['service'] ?? null;
+        $iata = strtoupper(trim((string) $request->input('iata')));
 
-        if (!$location) {
-            return back()->with('error', 'Invalid location selected');
+        if (! preg_match('/^[A-Z]{3}$/', $iata)) {
+            return back()->withInput()->with('error', 'Enter a valid three-letter airport IATA code, e.g. SYD, LOS, or ABV.');
         }
 
-        if (!in_array($service, ['Departure', 'Arrival'])) {
-            return back()->with('error', 'Invalid service segment selected');
+        try {
+            app(LoungePairCatalogueSyncService::class)->sync($iata);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->withInput()->with('error', 'We could not retrieve lounges for that airport right now. Please try again shortly.');
         }
 
-        $airportType = null;
-
-        if ($location === 'Abuja') {
-            $airportType = $data['airports'] ?? null;
-        } elseif ($location === 'Kano') {
-            $airportType = $data['airports2'] ?? null;
-        } elseif ($location === 'Lagos') {
-            $airportType = $data['airports1'] ?? null;
-        }
-
-        if (!in_array($airportType, [1, 2])) {
-            return back()->with('error', 'Invalid airport selection');
-        }
-
-        return redirect()->route('air.lounges.results', [
-            'state'   => $location,
-            'airport' => $airportType,
-            'service' => $service,
-        ]);
+        return redirect()->route('air.lounges.results', ['iata' => $iata]);
     }
 
     public function loungeBooking($id)

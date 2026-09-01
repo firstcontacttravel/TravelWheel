@@ -91,7 +91,9 @@ Route::get('/air/protocol/success', [ProtocolController::class, 'protocol_succes
 
 // Lounge routes
 Route::get('/air/lounge', LoungePage::class)->name('air.lounge');
-Route::post('/air/lounge/search', [LoungeController::class, 'lounges'])->name('air.lounges');
+Route::post('/air/lounge/search', [LoungeController::class, 'lounges'])
+    ->middleware('throttle:10,1')
+    ->name('air.lounges');
 Route::get('/air/lounge/results', LoungeResults::class)->name('air.lounges.results');
 Route::get('/air/lounge/plans/{id}', LoungePlan::class)->name('air.loungeplans');
 Route::get('/air/lounge/booking/{id}', [LoungeController::class, 'loungeBooking'])->name('air.loungebooking');

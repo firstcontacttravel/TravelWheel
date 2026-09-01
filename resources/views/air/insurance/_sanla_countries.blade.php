@@ -128,6 +128,7 @@
 <option value="62">New Zealand</option>
 <option value="58">Nicaragua</option>
 <option value="56">Niger</option>
+<option value="57">Nigeria</option>
 <option value="60">Norway</option>
 <option value="63">Oman</option>
 <option value="189">Pacific Islands</option>

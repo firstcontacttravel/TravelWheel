@@ -4,7 +4,7 @@
     <div class="lounge-wrap">
         <div class="lounge-hero-main mb-4">
             <div class="lounge-kicker"><x-ph-icon name="couch" /> Available Lounges</div>
-            <h1 class="lounge-title">Choose a lounge</h1>
+            <h1 class="lounge-title">Choose a lounge{{ $iata ? ' at '.$iata : '' }}</h1>
             <p class="lounge-copy">Pick the lounge that matches your terminal and budget.</p>
         </div>
 
@@ -23,7 +23,7 @@
             <div class="lounge-plan-grid">
                 @foreach($lounges as $lounge)
                     <div class="lounge-plan">
-                        <img src="{{ asset('assets/lounge/' . $lounge->pics1) }}" alt="{{ $lounge->brand_name }}" style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:8px;">
+                        <img src="{{ $lounge->imageUrl() }}" alt="{{ $lounge->brand_name }}" style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:8px;">
                         <div class="lounge-plan-head">
                             <h4>{{ $lounge->brand_name }}</h4>
                         </div>
@@ -36,12 +36,22 @@
                         </ul>
                         <div>
                             <p class="lounge-price">
+                                @if($lounge->provider !== 'loungepair')
                                 <span class="lounge-price-amount"><sup>₦</sup>{{ number_format($lounge->priceA) }}</span>
+                                @else
+                                    <span class="lounge-price-amount"><small>{{ $lounge->provider_currency ?: 'From' }}</small> {{ number_format($lounge->given_PriceA ?? 0, 2) }}</span>
+                                @endif
                                 <small>/ Passenger</small>
                             </p>
+                            @if($lounge->isProviderBooking())
+                                <a href="{{ $lounge->provider_url }}" class="lounge-btn w-100 mt-3" target="_blank" rel="noopener noreferrer">
+                                    Book with LoungePair <x-ph-icon name="arrow-right" />
+                                </a>
+                            @else
                             <a href="{{ route('air.loungeplans', ['id' => $lounge->id]) }}" class="lounge-btn w-100 mt-3">
                                 Book Lounge <x-ph-icon name="arrow-right" />
                             </a>
+                            @endif
                         </div>
                     </div>
                 @endforeach

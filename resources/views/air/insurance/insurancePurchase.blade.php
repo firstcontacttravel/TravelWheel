@@ -30,7 +30,7 @@
             <div class="insurance-panel">
                 <div class="insurance-panel-title"><x-ph-icon name="identification-card" /> Customer Details</div>
 
-                <form action="{{ route('air.insurance.purchase') }}" method="POST">
+                <form action="{{ route('air.insurance.purchase') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="bookingTypeId" value="{{ $quote->bookingTypeId }}">
                     <input type="hidden" name="qouteId" value="{{ $quote->quoteRequestId }}">
@@ -101,17 +101,24 @@
                             <input class="form-control" type="text" name="passport_no" required>
                         </div>
                         <div class="col-sm-6 insurance-field">
+                            <label class="form-label">Nationality <span class="text-danger">*</span></label>
+                            <select class="form-select nationality-select" name="nationalty" id="nationality-select" required>
+                                @include('air.insurance._sanla_countries')
+                            </select>
+                        </div>
+                        <div class="col-sm-6 insurance-field nin-field" id="nin-field" style="display:none;">
                             <label class="form-label">NIN <span class="text-danger">*</span></label>
-                            <input class="form-control" type="text" name="nin" inputmode="numeric" pattern="\d{11}" maxlength="11" placeholder="11-digit National Identification Number" required>
+                            <input class="form-control" type="text" name="nin" inputmode="numeric" pattern="\d{11}" maxlength="11" placeholder="11-digit National Identification Number">
+                        </div>
+                        <div class="col-sm-6 insurance-field passport-upload-field" id="passport-upload-field" style="display:none;">
+                            <label class="form-label">International Passport <span class="text-danger">*</span></label>
+                            <input class="form-control" type="file" name="international_passport" accept=".jpg,.jpeg,.png,.pdf">
                         </div>
                         <div class="col-sm-6 insurance-field">
                             <label class="form-label">Occupation <span class="text-danger">*</span></label>
                             <input class="form-control" type="text" name="ocupation" required>
                         </div>
-                        <div class="col-sm-6 insurance-field">
-                            <label class="form-label">Nationality <span class="text-danger">*</span></label>
-                            <input class="form-control" type="text" name="nationalty" required>
-                        </div>
+                        
                         <div class="col-sm-6 insurance-field">
                             <label class="form-label">Marital Status <span class="text-danger">*</span></label>
                             <select class="form-select" name="marital_status" required>
@@ -149,6 +156,34 @@
     document.getElementById('medical').addEventListener('change', function () {
         document.getElementById('medicalhid').classList.toggle('insurance-hide', !this.checked);
     });
+
+    const NIGERIA_VALUE = '57';
+    const nationalitySelect = document.getElementById('nationality-select');
+    const ninField = document.getElementById('nin-field');
+    const passportField = document.getElementById('passport-upload-field');
+
+    if (nationalitySelect) {
+        nationalitySelect.addEventListener('change', function() {
+            if (this.value === NIGERIA_VALUE) {
+                ninField.style.display = '';
+                ninField.querySelector('input').setAttribute('required', 'required');
+                passportField.style.display = 'none';
+                passportField.querySelector('input').removeAttribute('required');
+                passportField.querySelector('input').value = '';
+            } else if (this.value !== '') {
+                ninField.style.display = 'none';
+                ninField.querySelector('input').removeAttribute('required');
+                ninField.querySelector('input').value = '';
+                passportField.style.display = '';
+                passportField.querySelector('input').setAttribute('required', 'required');
+            } else {
+                ninField.style.display = 'none';
+                ninField.querySelector('input').removeAttribute('required');
+                passportField.style.display = 'none';
+                passportField.querySelector('input').removeAttribute('required');
+            }
+        });
+    }
 </script>
 
 @endcomponent

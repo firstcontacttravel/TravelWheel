@@ -8,31 +8,21 @@ use Livewire\Component;
 
 class LoungeResults extends Component
 {
-    public string $location = '';
-
-    public ?int $airportType = null;
-
-    public ?string $service = null;
+    public string $iata = '';
 
     public Collection $lounges;
 
     public function mount(): void
     {
-        $this->location = (string) request()->query('state', '');
-        $airport = request()->query('airport');
-        $this->airportType = $airport !== null ? (int) $airport : null;
-        $this->service = request()->query('service');
+        $iata = strtoupper((string) request()->query('iata', ''));
+        abort_unless(preg_match('/^[A-Z]{3}$/', $iata), 404);
 
-        $query = LoungeProduct::where('location', $this->location)
-            ->where('airport', $this->airportType);
-
-        if ($this->service) {
-            $query->where(function ($q) {
-                $q->where('service', $this->service)->orWhereNull('service');
-            });
-        }
-
-        $this->lounges = $query->latest()->get();
+        $this->iata = $iata;
+        $this->lounges = LoungeProduct::query()
+            ->where('provider', 'loungepair')
+            ->where('provider_airport_iata', $this->iata)
+            ->latest('provider_synced_at')
+            ->get();
     }
 
     public function render()
