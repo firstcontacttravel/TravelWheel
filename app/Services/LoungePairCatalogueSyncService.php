@@ -113,7 +113,10 @@ class LoungePairCatalogueSyncService
     /** @param array<string, mixed> $record */
     private function imageUrls(array $record): array
     {
-        $images = $this->value($record, ['images', 'image_urls', 'photos', 'media']);
+        // LoungePair's airport payload returns a single 'image' string per
+        // lounge (confirmed against their live API); the plural keys are
+        // kept as fallbacks in case a gallery shape shows up elsewhere.
+        $images = $this->value($record, ['image', 'images', 'image_urls', 'photos', 'media']);
 
         return collect(is_array($images) ? $images : [$images])
             ->map(fn ($image) => is_array($image) ? Arr::first($image, fn ($value, $key) => in_array($key, ['url', 'src', 'original'], true)) : $image)
