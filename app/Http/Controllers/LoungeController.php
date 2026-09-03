@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\LoungeBookingMail;
 use App\Models\Lounge;
 use App\Models\LoungeBooking;
+use App\Services\LoungePairCatalogueSyncService;
 use App\Services\SeerbitPaymentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -46,6 +47,30 @@ class LoungeController extends Controller
             'airport' => $airportType,
             'service' => $service,
         ]);
+    }
+
+    /**
+     * Separate entry point for the LoungePair-backed global lounge search —
+     * intentionally isolated from lounges() above so it can never affect the
+     * existing state/airport/service flow or its results.
+     */
+    public function loungePairSearch(Request $request)
+    {
+        $iata = strtoupper(trim((string) $request->input('iata')));
+
+        if (! preg_match('/^[A-Z]{3}$/', $iata)) {
+            return back()->withInput()->with('error', 'Enter a valid three-letter airport IATA code, e.g. SYD, LOS, or ABV.');
+        }
+
+        try {
+            app(LoungePairCatalogueSyncService::class)->sync($iata);
+        } catch (\Throwable $exception) {
+            report($exception);
+
+            return back()->withInput()->with('error', 'We could not retrieve lounges for that airport right now. Please try again shortly.');
+        }
+
+        return redirect()->route('air.lounge.global.results', ['iata' => $iata]);
     }
 
     public function loungeBooking($id)

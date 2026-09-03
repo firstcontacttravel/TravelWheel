@@ -91,6 +91,10 @@
                     </button>
                 </div>
             </form>
+
+            <p class="vw-hero__subtitle" style="margin-top:12px;">
+                Traveling through an airport outside Abuja, Lagos, or Kano? <a href="{{ route('air.lounge.global') }}" style="color:inherit; text-decoration:underline;">Search lounges worldwide</a>.
+            </p>
         </div>
     </section>
 

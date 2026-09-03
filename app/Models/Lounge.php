@@ -10,6 +10,9 @@ class Lounge extends Model
 
     protected $fillable = [
         'lounge_id',
+        'provider',
+        'provider_lounge_id',
+        'provider_airport_iata',
         'brand_name',
         'email',
         'phone_no',
@@ -27,6 +30,11 @@ class Lounge extends Model
         'given_PriceB',
         'given_PriceC',
         'markup_price',
+        'provider_currency',
+        'provider_url',
+        'provider_images',
+        'provider_payload',
+        'provider_synced_at',
         'pics1',
         'pics2',
         'pics3',
@@ -43,6 +51,36 @@ class Lounge extends Model
         'priceB',
         'priceC',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'provider_images' => 'array',
+            'provider_payload' => 'array',
+            'provider_synced_at' => 'datetime',
+        ];
+    }
+
+    /** Return a LoungePair image URL when supplied, otherwise the local asset. */
+    public function imageUrl(int $position = 0): string
+    {
+        $remoteImage = $this->provider_images[$position] ?? null;
+
+        if (is_string($remoteImage) && $remoteImage !== '') {
+            return $remoteImage;
+        }
+
+        $localImage = $this->{'pics'.($position + 1)} ?? '';
+
+        return str_starts_with($localImage, 'http') ? $localImage : asset('assets/lounge/'.$localImage);
+    }
+
+    public function isProviderBooking(): bool
+    {
+        return $this->provider === 'loungepair'
+            && is_string($this->provider_url)
+            && filter_var($this->provider_url, FILTER_VALIDATE_URL) !== false;
+    }
 
     public function getPriceAAttribute(): float
     {

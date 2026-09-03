@@ -36,6 +36,8 @@ use App\Livewire\Pages\HomePage;
 use App\Livewire\Pages\Insurance\Insurance as InsurancePage;
 use App\Livewire\Pages\Insurance\InsuranceQuote as InsuranceQuotePage;
 use App\Livewire\Pages\Lounge\Lounge as LoungePage;
+use App\Livewire\Pages\Lounge\LoungeGlobal;
+use App\Livewire\Pages\Lounge\LoungePairResults;
 use App\Livewire\Pages\Lounge\LoungePlan;
 use App\Livewire\Pages\Lounge\LoungeResults;
 use App\Livewire\Pages\Protocol\Protocol as ProtocolPage;
@@ -103,6 +105,12 @@ Route::get('/air/lounge/payment/callback', [LoungeController::class, 'callbackSe
 Route::get('/air/lounge/payment/{trans_id}', [LoungeController::class, 'lounge_payment'])->name('air.lounge_payment');
 Route::get('/air/lounge/generate/{trans_id}', [LoungeController::class, 'generateLoungePass'])->name('air.lounge_generate');
 Route::get('/air/lounge/success', [LoungeController::class, 'lounge_success'])->name('air.lounge_success');
+// LoungePair worldwide lounge search — separate flow, does not touch the routes above.
+Route::get('/air/lounge/global', LoungeGlobal::class)->name('air.lounge.global');
+Route::post('/air/lounge/global/search', [LoungeController::class, 'loungePairSearch'])
+    ->middleware('throttle:10,1')
+    ->name('air.lounge.global.search');
+Route::get('/air/lounge/global/results', LoungePairResults::class)->name('air.lounge.global.results');
 // Insurance (Sanla/Allianz) routes
 Route::get('/air/insurance', InsurancePage::class)->name('air.insurance');
 Route::post('/air/insurance/quote', [InsuranceController::class, 'makeRequestQuote'])->name('air.insurance.quote');
