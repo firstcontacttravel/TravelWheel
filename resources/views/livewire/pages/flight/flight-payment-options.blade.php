@@ -15,8 +15,6 @@
 
     $selectedExtras = $selectedExtras ?? session('selectedExtras', []);
     $extrasTotal = (float) ($extrasTotal ?? 0);
-    $markupAmount = (float) ($flight['markupAmount'] ?? 0);
-    $markupPassengerCount = (int) ($flight['markupPassengerCount'] ?? 1);
     $baseTotal = (float) ($flight['price'] ?? 0);
     $total = $baseTotal + $extrasTotal;
 
@@ -836,10 +834,6 @@
                                 <strong>{{ $fmt(((float) ($fb['totalFare'] ?? 0)) * $qty) }}</strong>
                             </div>
                         @endforeach
-                    @endif
-
-                    @if($markupAmount > 0)
-                        <div class="pay-row"><span>Service charge ({{ $markupPassengerCount }} {{ \Illuminate\Support\Str::plural('passenger', $markupPassengerCount) }})</span><strong>{{ $fmt($markupAmount) }}</strong></div>
                     @endif
 
                     @if($extrasTotal > 0)
