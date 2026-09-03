@@ -38,6 +38,8 @@
                             <p class="lounge-price">
                                 @if($lounge->provider !== 'loungepair')
                                     <span class="lounge-price-amount"><sup>₦</sup>{{ number_format($lounge->priceA) }}</span>
+                                @elseif($lounge->priceInNgn() !== null)
+                                    <span class="lounge-price-amount"><sup>₦</sup>{{ number_format($lounge->priceInNgn()) }}</span>
                                 @else
                                     <span class="lounge-price-amount"><small>{{ $lounge->provider_currency ?: 'From' }}</small> {{ number_format($lounge->given_PriceA ?? 0, 2) }}</span>
                                 @endif

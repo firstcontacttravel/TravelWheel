@@ -82,6 +82,24 @@ class Lounge extends Model
             && filter_var($this->provider_url, FILTER_VALIDATE_URL) !== false;
     }
 
+    /**
+     * Convert a LoungePair price (given_PriceA is stored in provider_currency,
+     * not NGN) using the project's own exchange rate — the same table flight
+     * pricing reads from. Returns null when there's nothing to convert; we
+     * never charge our own markup on these since checkout happens on
+     * LoungePair's site, not ours.
+     */
+    public function priceInNgn(): ?float
+    {
+        if ($this->provider !== 'loungepair' || (float) $this->given_PriceA <= 0) {
+            return null;
+        }
+
+        $currency = $this->provider_currency ?: 'USD';
+
+        return round(((float) $this->given_PriceA) * ExchangeRate::rateFor($currency), 2);
+    }
+
     public function getPriceAAttribute(): float
     {
         return self::totalPrice($this->given_PriceA, $this->markup_price);
