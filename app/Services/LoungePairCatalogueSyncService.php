@@ -4,6 +4,9 @@ namespace App\Services;
 
 use App\Models\Lounge;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class LoungePairCatalogueSyncService
@@ -62,6 +65,18 @@ class LoungePairCatalogueSyncService
         $facilities = $this->strings($this->value($record, ['facilities', 'amenities', 'features', 'services']));
         $images = $this->imageUrls($record);
         $prices = $this->arrayValue($record, ['prices', 'pricing', 'price']);
+        $pageUrl = $this->value($record, ['url', 'deepLink', 'deep_link', 'link']);
+
+        // The airport-list payload LoungePair grants us access to doesn't
+        // include amenities (the lounge-detail endpoint that would requires
+        // a 'lounges:read' scope our credentials don't have). Fall back to
+        // the public lounge page's embedded Schema.org data, but only for
+        // lounges that don't already have real facilities on file, so a
+        // routine re-sync doesn't re-fetch every page every time.
+        $alreadyHasFacilities = $existing && $existing->facilities1 !== null && $existing->facilities1 !== 'Not specified';
+        if ($facilities === [] && ! $alreadyHasFacilities && is_string($pageUrl) && $pageUrl !== '') {
+            $facilities = $this->amenitiesFromPublicPage($pageUrl);
+        }
 
         return [
             // Preserve a compact local ID for legacy screens; the full provider
@@ -96,7 +111,7 @@ class LoungePairCatalogueSyncService
             // a locally configured markup during a catalogue refresh.
             'markup_price' => $existing?->markup_price ?? 0,
             'provider_currency' => Str::upper($this->value($record, ['currency', 'prices.currency', 'pricing.currency']) ?: $this->headlineCurrency($record) ?: (string) config('services.loungepair.currency')) ?: null,
-            'provider_url' => $this->value($record, ['url', 'deepLink', 'deep_link', 'link']),
+            'provider_url' => $pageUrl,
             'provider_images' => $images ?: null,
             'provider_payload' => $record,
             'provider_synced_at' => now(),
@@ -108,6 +123,64 @@ class LoungePairCatalogueSyncService
             'pics4' => $existing?->pics4 ?? '',
             'pics5' => $existing?->pics5 ?? '',
         ];
+    }
+
+    /**
+     * Scrape amenities from a lounge's public LoungePair page. That page
+     * embeds a Schema.org JSON-LD block (a 'Place' node with an
+     * amenityFeature list) meant for search engines — it's structured data,
+     * not screen-scraped text, but it's still an unofficial fallback: cached
+     * for a week per URL, and any failure just yields an empty list rather
+     * than breaking the sync.
+     *
+     * @return array<int, string>
+     */
+    private function amenitiesFromPublicPage(string $url): array
+    {
+        return Cache::remember('loungepair:amenities:'.md5($url), now()->addWeek(), function () use ($url): array {
+            try {
+                $response = Http::timeout(10)->connectTimeout(5)->get($url);
+            } catch (\Throwable $exception) {
+                Log::warning('LoungePair amenities scrape failed', ['url' => $url, 'error' => $exception->getMessage()]);
+
+                return [];
+            }
+
+            if ($response->failed()) {
+                return [];
+            }
+
+            if (! preg_match_all('#<script type="application/ld\+json">(.*?)</script>#s', $response->body(), $matches)) {
+                return [];
+            }
+
+            foreach ($matches[1] as $json) {
+                $data = json_decode($json, true);
+                $nodes = is_array($data['@graph'] ?? null) ? $data['@graph'] : [$data];
+
+                foreach ($nodes as $node) {
+                    $features = $node['amenityFeature'] ?? null;
+
+                    if (! is_array($features)) {
+                        continue;
+                    }
+
+                    $names = collect($features)
+                        ->filter(fn ($feature) => is_array($feature) && ($feature['value'] ?? false))
+                        ->map(fn ($feature) => is_string($feature['name'] ?? null) ? $feature['name'] : null)
+                        ->filter()
+                        ->take(5)
+                        ->values()
+                        ->all();
+
+                    if ($names !== []) {
+                        return $names;
+                    }
+                }
+            }
+
+            return [];
+        });
     }
 
     /** @param array<string, mixed> $record */
