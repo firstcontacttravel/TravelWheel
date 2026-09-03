@@ -103,7 +103,7 @@ class LoungeResource extends Resource
         return $table
             ->defaultSort('brand_name')
             ->columns([
-                ImageColumn::make('pics1')->label('')->getStateUsing(fn (Lounge $record): string => $record->imageUrl()),
+                ImageColumn::make('pics1')->label('')->getStateUsing(fn (Lounge $record): string => asset('assets/lounge/' . $record->pics1)),
                 TextColumn::make('brand_name')->searchable()->description(fn (Lounge $record): string => $record->location),
                 TextColumn::make('airport')->searchable(),
                 TextColumn::make('terminal'),

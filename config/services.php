@@ -68,12 +68,4 @@ return [
         'password' => env('SANLAM_PASSWORD'),
     ],
 
-    'loungepair' => [
-        'base_url' => env('LOUNGEPAIR_BASE_URL', 'https://www.loungepair.com'),
-        'client_id' => env('LOUNGEPAIR_CLIENT_ID') ?: env('LP_CLIENT_ID'),
-        'client_secret' => env('LOUNGEPAIR_CLIENT_SECRET') ?: env('LP_CLIENT_SECRET'),
-        'currency' => env('LOUNGEPAIR_CURRENCY') ?: env('LP_CURRENCY'),
-        'airport_path' => env('LOUNGEPAIR_AIRPORT_PATH', '/api/v1/at'),
-    ],
-
 ];

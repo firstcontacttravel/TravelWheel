@@ -34,11 +34,50 @@
                     </div>
                 </div>
 
-                <div class="vw-fields lounge-vw-fields" style="grid-template-columns:minmax(0, 1fr);">
-                    <label class="vw-field" for="iata">
-                        <span>Airport IATA code</span>
-                        <input id="iata" name="iata" type="text" maxlength="3" value="{{ old('iata') }}" placeholder="e.g. LOS, ABV, SYD, LHR" style="text-transform:uppercase" autocomplete="off" required>
-                        <small class="text-muted">Enter the three-letter airport code to search LoungePair lounges worldwide.</small>
+                <div class="vw-fields lounge-vw-fields">
+                    <label class="vw-field" for="stateselect">
+                        <span>State</span>
+                        <select id="stateselect" name="state" required>
+                            <option value="">-- Select State --</option>
+                            <option value="Abuja">FCT - Abuja</option>
+                            <option value="Lagos">Lagos - Ikeja</option>
+                            <option value="Kano">Kano - Kano</option>
+                        </select>
+                    </label>
+
+                    <label class="vw-field" for="serviceSelect">
+                        <span>Service segment</span>
+                        <select id="serviceSelect" name="service" required>
+                            <option value="">-- Select segment --</option>
+                            <option value="Departure">Departure</option>
+                            <option value="Arrival">Arrival</option>
+                        </select>
+                    </label>
+
+                    <label class="vw-field lounge-hide" id="airport1" for="airportSelect1">
+                        <span>Airports In Abuja</span>
+                        <select class="form-select" id="airportSelect1" name="airports">
+                            <option value="">-- Choose Airport --</option>
+                            <option value="1">International Airport</option>
+                            <option value="2">Local Airport</option>
+                        </select>
+                    </label>
+
+                    <label class="vw-field lounge-hide" id="airport2" for="airportSelect2">
+                        <span>Airport In Lagos</span>
+                        <select class="form-select" id="airportSelect2" name="airports1">
+                            <option value="">-- Choose Airport --</option>
+                            <option value="1">International Airport</option>
+                            <option value="2">Local Airport</option>
+                        </select>
+                    </label>
+
+                    <label class="vw-field lounge-hide" id="airport3" for="airportSelect3">
+                        <span>Airport In Kano</span>
+                        <select class="form-select" id="airportSelect3" name="airports2">
+                            <option value="">-- Choose Airport --</option>
+                            <option value="1">International Airport</option>
+                        </select>
                     </label>
                 </div>
 
@@ -84,4 +123,32 @@
         </div>
     </div>
 
+    <script>
+        const stateselect   = document.getElementById('stateselect');
+        const airport1      = document.getElementById('airport1');
+        const airport2      = document.getElementById('airport2');
+        const airport3      = document.getElementById('airport3');
+        const airportSelect2 = document.getElementById('airportSelect2');
+
+        stateselect.addEventListener('change', function () {
+            airport1.classList.add('lounge-hide');
+            airport2.classList.add('lounge-hide');
+            airport3.classList.add('lounge-hide');
+            if (this.value === 'Abuja') airport1.classList.remove('lounge-hide');
+            else if (this.value === 'Lagos') airport2.classList.remove('lounge-hide');
+            else if (this.value === 'Kano') airport3.classList.remove('lounge-hide');
+        });
+
+        document.getElementById('bookingForm').addEventListener('submit', function (e) {
+            let valid = true;
+            if (!stateselect.value) valid = false;
+            if (!document.getElementById('serviceSelect').value) valid = false;
+
+            if (stateselect.value === 'Abuja' && !document.getElementById('airportSelect1').value) valid = false;
+            if (stateselect.value === 'Lagos' && !airportSelect2.value) valid = false;
+            if (stateselect.value === 'Kano' && !document.getElementById('airportSelect3').value) valid = false;
+
+            if (!valid) e.preventDefault();
+        });
+    </script>
 </div>
