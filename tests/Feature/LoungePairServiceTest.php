@@ -33,7 +33,7 @@ class LoungePairServiceTest extends TestCase
             return $request->url() === 'https://loungepair.test/api/v1/auth/token'
                 && $request['client_id'] === 'client-id'
                 && $request['client_secret'] === 'client-secret'
-                && $request['scope'] === 'airports:read lounges:read';
+                && $request['scope'] === 'airports:read';
         });
         Http::assertSent(fn ($request): bool => $request->hasHeader('Authorization', 'Bearer test-token')
             && str_contains($request->url(), '/api/v1/at/SYD'));

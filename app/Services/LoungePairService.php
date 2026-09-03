@@ -30,7 +30,10 @@ class LoungePairService
                 'client_id' => $clientId,
                 'client_secret' => $clientSecret,
                 'grant_type' => 'client_credentials',
-                'scope' => 'airports:read lounges:read',
+                // LoungePair rejects 'lounges:read' as an invalid scope for this
+                // tenant — 'airports:read' alone is sufficient, since lounge data
+                // is returned as part of the airport payload (GET /api/v1/at/{IATA}).
+                'scope' => 'airports:read',
             ]);
 
             try {

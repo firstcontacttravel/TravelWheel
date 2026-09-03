@@ -95,7 +95,7 @@ class LoungePairCatalogueSyncService
             // Pricing and settlement are provider-controlled; never overwrite
             // a locally configured markup during a catalogue refresh.
             'markup_price' => $existing?->markup_price ?? 0,
-            'provider_currency' => Str::upper($this->value($record, ['currency', 'fromPrice.currency', 'prices.currency', 'pricing.currency']) ?: (string) config('services.loungepair.currency')) ?: null,
+            'provider_currency' => Str::upper($this->value($record, ['currency', 'prices.currency', 'pricing.currency']) ?: $this->headlineCurrency($record) ?: (string) config('services.loungepair.currency')) ?: null,
             'provider_url' => $this->value($record, ['url', 'deepLink', 'deep_link', 'link']),
             'provider_images' => $images ?: null,
             'provider_payload' => $record,
@@ -170,7 +170,26 @@ class LoungePairCatalogueSyncService
             return null;
         }
 
-        return $this->numericValue($fromPrice, ['amount', 'value', 'price']);
+        // LoungePair returns fromPrice as a list of tiers (one per audience/
+        // duration), e.g. [{"amount":24,"currency":"USD",...}] — use the
+        // first tier when the array is a list rather than a flat object.
+        $tier = array_is_list($fromPrice) ? ($fromPrice[0] ?? null) : $fromPrice;
+
+        return is_array($tier) ? $this->numericValue($tier, ['amount', 'value', 'price']) : null;
+    }
+
+    /** @param array<string, mixed> $record */
+    private function headlineCurrency(array $record): ?string
+    {
+        $fromPrice = data_get($record, 'fromPrice');
+
+        if (! is_array($fromPrice)) {
+            return null;
+        }
+
+        $tier = array_is_list($fromPrice) ? ($fromPrice[0] ?? null) : $fromPrice;
+
+        return is_array($tier) ? $this->value($tier, ['currency']) : null;
     }
 
     /** @param array<string, mixed> $record */
