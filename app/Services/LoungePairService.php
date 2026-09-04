@@ -6,6 +6,7 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class LoungePairService
@@ -22,10 +23,18 @@ class LoungePairService
         $clientSecret = (string) config('services.loungepair.client_secret');
 
         if ($clientId === '' || $clientSecret === '') {
+            Log::error('[LoungePair] credentials not configured — set LOUNGEPAIR_CLIENT_ID and LOUNGEPAIR_CLIENT_SECRET.');
+
             throw new RuntimeException('LoungePair credentials are not configured. Set LOUNGEPAIR_CLIENT_ID and LOUNGEPAIR_CLIENT_SECRET.');
         }
 
+        if (Cache::has(self::TOKEN_CACHE_KEY)) {
+            Log::info('[LoungePair] step 1/4: using cached access token');
+        }
+
         return Cache::remember(self::TOKEN_CACHE_KEY, now()->addMinutes(55), function () use ($clientId, $clientSecret): string {
+            Log::info('[LoungePair] step 1/4: requesting new access token', ['client_id' => $clientId]);
+
             $response = $this->client()->post('/api/v1/auth/token', [
                 'client_id' => $clientId,
                 'client_secret' => $clientSecret,
@@ -39,14 +48,23 @@ class LoungePairService
             try {
                 $response->throw();
             } catch (RequestException $exception) {
+                Log::error('[LoungePair] step 1/4 FAILED: token request rejected', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
                 throw new RuntimeException('LoungePair authentication failed: '.$exception->getMessage(), previous: $exception);
             }
 
             $token = $response->json('access_token');
 
             if (! is_string($token) || $token === '') {
+                Log::error('[LoungePair] step 1/4 FAILED: response had no access_token', ['body' => $response->body()]);
+
                 throw new RuntimeException('LoungePair authentication response did not include an access_token.');
             }
+
+            Log::info('[LoungePair] step 1/4: access token acquired');
 
             return $token;
         });
@@ -73,9 +91,14 @@ class LoungePairService
         }
 
         $path = rtrim((string) config('services.loungepair.airport_path'), '/').'/'.$iata;
+
+        Log::info('[LoungePair] step 2/4: requesting airport lounges', ['iata' => $iata, 'path' => $path, 'query' => $query]);
+
         $payload = $this->getPayload($path, $query);
         $airport = is_array($payload['airport'] ?? null) ? $payload['airport'] : ['iata' => $iata];
         $lounges = is_array($payload['lounges'] ?? null) ? $payload['lounges'] : [];
+
+        Log::info('[LoungePair] step 2/4: airport lounges received', ['iata' => $iata, 'lounge_count' => count($lounges)]);
 
         return collect($lounges)
             ->filter(fn ($lounge) => is_array($lounge))
@@ -99,12 +122,20 @@ class LoungePairService
         try {
             $response->throw();
         } catch (RequestException $exception) {
+            Log::error('[LoungePair] step 2/4 FAILED: catalogue request rejected', [
+                'path' => $path,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
             throw new RuntimeException('LoungePair catalogue request failed: '.$exception->getMessage(), previous: $exception);
         }
 
         $payload = $response->json();
 
         if (! is_array($payload)) {
+            Log::error('[LoungePair] step 2/4 FAILED: response was not valid JSON', ['path' => $path, 'body' => $response->body()]);
+
             throw new RuntimeException('LoungePair catalogue response was not valid JSON.');
         }
 

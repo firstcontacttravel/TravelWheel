@@ -18,15 +18,22 @@ class LoungePairCatalogueSyncService
     /** @return array{created: int, updated: int, skipped: int} */
     public function sync(string $iata): array
     {
+        Log::info('[LoungePair] sync started', ['iata' => $iata]);
+
         $created = 0;
         $updated = 0;
         $skipped = 0;
 
-        foreach ($this->loungePair->loungesForAirport($iata) as $remoteLounge) {
+        $remoteLounges = $this->loungePair->loungesForAirport($iata);
+
+        Log::info('[LoungePair] step 3/4: saving lounges to the local catalogue', ['iata' => $iata, 'lounge_count' => count($remoteLounges)]);
+
+        foreach ($remoteLounges as $remoteLounge) {
             $providerId = $this->stringValue($remoteLounge, ['id', 'slug', 'lounge_id', 'loungeId', 'uuid', 'code']);
 
             if ($providerId === '') {
                 $skipped++;
+                Log::warning('[LoungePair] step 3/4: lounge skipped, no usable id/slug in record', ['iata' => $iata, 'record' => $remoteLounge]);
                 continue;
             }
 
@@ -45,6 +52,8 @@ class LoungePairCatalogueSyncService
                 $created++;
             }
         }
+
+        Log::info('[LoungePair] step 4/4: sync finished', ['iata' => $iata, 'created' => $created, 'updated' => $updated, 'skipped' => $skipped]);
 
         return compact('created', 'updated', 'skipped');
     }

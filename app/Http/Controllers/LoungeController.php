@@ -9,6 +9,7 @@ use App\Services\LoungePairCatalogueSyncService;
 use App\Services\SeerbitPaymentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
 
@@ -62,9 +63,17 @@ class LoungeController extends Controller
             return back()->withInput()->with('error', 'Enter a valid three-letter airport IATA code, e.g. SYD, LOS, or ABV.');
         }
 
+        Log::info('[LoungePair] search requested', ['iata' => $iata]);
+
         try {
-            app(LoungePairCatalogueSyncService::class)->sync($iata);
+            $result = app(LoungePairCatalogueSyncService::class)->sync($iata);
+            Log::info('[LoungePair] search completed', ['iata' => $iata] + $result);
         } catch (\Throwable $exception) {
+            Log::error('[LoungePair] search failed — showing generic error to the user', [
+                'iata' => $iata,
+                'exception' => get_class($exception),
+                'message' => $exception->getMessage(),
+            ]);
             report($exception);
 
             return back()->withInput()->with('error', 'We could not retrieve lounges for that airport right now. Please try again shortly.');
