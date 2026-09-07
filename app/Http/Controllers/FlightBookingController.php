@@ -35,13 +35,22 @@ class FlightBookingController extends Controller
 
         $validated = $request->validate([
             'fare_source_code' => 'required|string',
-            'session_id' => 'required|string',
+            // TravelNext's revalidate call needs this (it's their own
+            // AirSearchResponse.session_id); SkyLink never uses it at all —
+            // it's only ever carried along as a bookkeeping value there. Was
+            // 'required', which broke every SkyLink booking whenever
+            // TravelNext returned nothing for a search (searchSessionId then
+            // defaults to '', which fails `required` and threw a validation
+            // exception before _selectSkylinkFare() was ever reached — found
+            // via live testing).
+            'session_id' => 'nullable|string',
             'intent' => 'nullable|in:booking,travelflex',
             // Internal routing hint set by the results page's own form — never
             // customer-visible. Defaults to 'travelnext' so an old cached page
             // (or any request that omits it) keeps today's behavior exactly.
             'source' => 'nullable|in:travelnext,skylink',
         ]);
+        $validated['session_id'] = $validated['session_id'] ?? '';
 
         $checkoutIntent = $validated['intent'] ?? 'booking';
 

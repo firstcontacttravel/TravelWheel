@@ -3468,11 +3468,12 @@
             // Ids of flights merged in from the supplement, for the brief
             // highlight animation and the "+N more offers found" message.
             newlyAddedIds: [],
-            // Flip to true only once Phase 3 makes SkyLink fares bookable.
-            // Until then, selectFlight() refuses SkyLink-sourced flights,
-            // and a duplicate offer always keeps its bookable (TravelNext)
-            // copy rather than a cheaper-but-unbookable SkyLink one.
-            skylinkBookable: false,
+            // Phase 3's gateway-only booking flow (passenger details → pay →
+            // SkylinkFlightService::reserve() only fires after payment is
+            // verified) is live — see FlightBookingController::book()/
+            // _completeSkylinkReservation(). A duplicate offer now keeps
+            // whichever supplier is genuinely cheaper, same as any other.
+            skylinkBookable: true,
 
             expandedId: null,
             activeTab:  {},
@@ -3588,12 +3589,12 @@
             },
 
             // Merges incoming (SkyLink) flights into the existing list.
-            // Duplicates of an existing flight are resolved by price EXCEPT
-            // while skylinkBookable is false: a customer must never be shown
-            // a lower price they cannot actually select, so a SkyLink
-            // duplicate can't displace an already-bookable TravelNext offer
-            // until Phase 3 ships. Non-duplicate SkyLink flights are always
-            // added — that's the real inventory expansion this phase adds.
+            // Duplicates of an existing flight are resolved by price — the
+            // cheaper supplier wins, since both are bookable (skylinkBookable
+            // gates this: while false, a duplicate would keep its bookable
+            // TravelNext copy instead, so a customer is never shown a lower
+            // price they can't actually select). Non-duplicate SkyLink
+            // flights are always added — the real inventory expansion.
             _dedupeMerge(existing, incoming) {
                 const bySignature = new Map(existing.map(f => [this._flightSignature(f), f]));
                 const merged = [...existing];
@@ -3808,11 +3809,12 @@
             },
 
             selectFlight(flight, intent = 'booking') {
-                // SkyLink-sourced cards are shown for comparison in this phase
-                // but aren't bookable until Phase 3 wires the pricing/payment
-                // path — never expose *why* (that would leak which flights
-                // came from which supplier), just a generic, could-happen-to-
-                // any-fare message.
+                // Kept as a live kill switch, not dead code: if skylinkBookable
+                // is ever flipped back to false (e.g. rolling back live SkyLink
+                // testing), this re-activates automatically with no other
+                // change needed. Never expose *why* a fare can't be booked —
+                // that would leak which flights came from which supplier —
+                // just a generic, could-happen-to-any-fare message.
                 if (flight.source === 'skylink' && !this.skylinkBookable) {
                     window.dispatchEvent(new CustomEvent('flight-toast', {
                         detail: { message: 'This fare could not be confirmed right now. Please select another option.', type: 'error' },

@@ -21,6 +21,42 @@ class SkylinkBookingFlowTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_select_works_when_travelnext_left_session_id_empty(): void
+    {
+        // searchSessionId defaults to '' whenever TravelNext's own search
+        // returned nothing (data_get(..., 'AirSearchResponse.session_id', ''))
+        // — which happens whenever TravelNext has no results for a route
+        // SkyLink does. session_id has no meaning for SkyLink at all, but the
+        // form still submits it verbatim from session('searchSessionId', '').
+        // This used to be a hard `required` rule, which threw a validation
+        // exception before _selectSkylinkFare() was ever reached — found via
+        // live testing (every SkyLink "Book Now" silently bounced back to
+        // the results page whenever TravelNext had zero results).
+        $this->configureSkylink();
+
+        session([
+            'searchParamsStore' => ['trip' => 'oneway', 'adults' => 1, 'childs' => 0, 'kids' => 0],
+            'skylinkResultsStore' => [$this->searchedSkylinkFlight()],
+        ]);
+
+        Http::fake([
+            '*/api/login' => Http::response($this->loginResponse()),
+            '*/api/flights/pricing' => Http::response([
+                'success' => true,
+                'data' => ['booking_token' => 'btk_refreshed', 'verified' => true, 'verified_price' => 750000, 'original_price' => 750000, 'currency' => 'NGN'],
+            ]),
+        ]);
+
+        $this->post(route('flights.select'), [
+            'fare_source_code' => 'btk_original',
+            'session_id' => '',
+            'source' => 'skylink',
+        ])->assertRedirect(route('flights.booking'))
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('skylink', session('bookingFlight')['source']);
+    }
+
     public function test_select_re_verifies_price_and_stores_a_bookable_skylink_flight(): void
     {
         $this->configureSkylink();
