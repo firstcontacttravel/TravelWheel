@@ -1,5 +1,6 @@
 ﻿<div>
     <link rel="stylesheet" href="{{ asset('css/visa-flow.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/flight-widget.css') }}">
 
     @include('air.lounge.partials.lounge-ui')
 
@@ -88,9 +89,13 @@
                         </select>
                     </label>
 
-                    <label class="vw-field lounge-hide" id="globalIata" for="iata">
-                        <span>Airport IATA code</span>
-                        <input id="iata" name="iata" type="text" maxlength="3" placeholder="e.g. SYD, LHR, JFK" style="text-transform:uppercase" autocomplete="off">
+                    <label class="vw-field lounge-hide" id="globalIata" for="iataDisplay" style="position:relative;">
+                        <span>Airport, city, or IATA code</span>
+                        <div class="fw-input-wrap">
+                            <input id="iataDisplay" type="text" placeholder="e.g. Lagos, Sydney, or LOS" autocomplete="off">
+                            <div class="fw-ac-dropdown" id="iataDropdown"></div>
+                        </div>
+                        <input type="hidden" id="iataCode" name="iata" value="">
                     </label>
                 </div>
 
@@ -144,7 +149,9 @@
         const globalIata     = document.getElementById('globalIata');
         const stateselect    = document.getElementById('stateselect');
         const serviceSelect  = document.getElementById('serviceSelect');
-        const iataInput      = document.getElementById('iata');
+        const iataDisplay    = document.getElementById('iataDisplay');
+        const iataCode       = document.getElementById('iataCode');
+        const iataDropdown   = document.getElementById('iataDropdown');
         const airport1       = document.getElementById('airport1');
         const airport2       = document.getElementById('airport2');
         const airport3       = document.getElementById('airport3');
@@ -173,7 +180,7 @@
 
             stateselect.required = !isGlobal;
             serviceSelect.required = !isGlobal;
-            iataInput.required = isGlobal;
+            iataDisplay.required = isGlobal;
 
             if (isGlobal) {
                 airport1.classList.add('lounge-hide');
@@ -189,11 +196,105 @@
         scopeSelect.addEventListener('change', applyScope);
         stateselect.addEventListener('change', updateAirportVisibility);
 
+        // ── Airport/city autocomplete for the "Outside Nigeria" IATA field ──
+        // Same ranked-search approach as the flight search widget: exact/prefix
+        // IATA hits first, then city/name/country matches. The visible input
+        // can show a city or airport name; only a picked (or exactly-typed)
+        // 3-letter code ever reaches the hidden #iataCode field that's actually
+        // submitted.
+        let iataAirports = [];
+        fetch('{{ asset('assets/data/airports.json') }}')
+            .then(r => r.json())
+            .then(d => { iataAirports = d; })
+            .catch(e => console.error('[Lounge] airports.json:', e));
+
+        function airportRank(a, q) {
+            const iata = (a.iata || '').toLowerCase();
+            const city = (a.city || '').toLowerCase();
+            const name = (a.name || '').toLowerCase();
+            const country = (a.country || '').toLowerCase();
+            if (iata === q) return 0;
+            if (iata.startsWith(q)) return 1;
+            if (city.startsWith(q)) return 2;
+            if (name.startsWith(q)) return 3;
+            if (city.includes(q)) return 4;
+            if (name.includes(q)) return 5;
+            if (country.startsWith(q)) return 6;
+            if (country.includes(q)) return 7;
+            return 99;
+        }
+
+        function airportSearch(q) {
+            q = q.toLowerCase().trim();
+            if (q.length < 2) return [];
+            return iataAirports
+                .filter(a => airportRank(a, q) < 99)
+                .sort((a, b) => airportRank(a, q) - airportRank(b, q))
+                .slice(0, 8);
+        }
+
+        function selectIata(a) {
+            iataDisplay.value = (a.city || a.name) + ' (' + a.iata + ')';
+            iataCode.value = a.iata;
+            iataDropdown.classList.remove('fw-open');
+            iataDropdown.innerHTML = '';
+        }
+
+        function renderIataDropdown(results) {
+            iataDropdown.innerHTML = '';
+
+            if (results.length === 0) {
+                if (iataDisplay.value.trim().length >= 2) {
+                    const empty = document.createElement('div');
+                    empty.className = 'fw-ac-empty';
+                    empty.textContent = 'No airports found';
+                    iataDropdown.appendChild(empty);
+                    iataDropdown.classList.add('fw-open');
+                } else {
+                    iataDropdown.classList.remove('fw-open');
+                }
+                return;
+            }
+
+            results.forEach((a, i) => {
+                const item = document.createElement('div');
+                item.className = 'fw-ac-item' + (i === 0 ? ' fw-hi' : '');
+                item.innerHTML = '<span class="fw-ac-iata"></span>'
+                    + '<span class="fw-ac-info"><span class="fw-ac-name"></span><span class="fw-ac-city"></span></span>';
+                item.querySelector('.fw-ac-iata').textContent = a.iata;
+                item.querySelector('.fw-ac-name').textContent = a.name;
+                item.querySelector('.fw-ac-city').textContent = [a.city, a.country].filter(Boolean).join(', ');
+                item.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    selectIata(a);
+                });
+                iataDropdown.appendChild(item);
+            });
+
+            iataDropdown.classList.add('fw-open');
+        }
+
+        iataDisplay.addEventListener('input', function () {
+            iataCode.value = '';
+            renderIataDropdown(airportSearch(iataDisplay.value));
+        });
+        iataDisplay.addEventListener('focus', function () {
+            renderIataDropdown(airportSearch(iataDisplay.value));
+        });
+        document.addEventListener('click', function (e) {
+            if (e.target !== iataDisplay && !iataDropdown.contains(e.target)) {
+                iataDropdown.classList.remove('fw-open');
+            }
+        });
+
         bookingForm.addEventListener('submit', function (e) {
             let valid = true;
 
             if (scopeSelect.value === 'global') {
-                if (!/^[A-Za-z]{3}$/.test(iataInput.value.trim())) valid = false;
+                if (!iataCode.value && /^[A-Za-z]{3}$/.test(iataDisplay.value.trim())) {
+                    iataCode.value = iataDisplay.value.trim().toUpperCase();
+                }
+                if (!/^[A-Z]{3}$/.test(iataCode.value)) valid = false;
             } else {
                 if (!stateselect.value) valid = false;
                 if (!serviceSelect.value) valid = false;
