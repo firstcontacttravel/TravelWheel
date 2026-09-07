@@ -35,7 +35,15 @@
                 </div>
 
                 <div class="vw-fields lounge-vw-fields">
-                    <label class="vw-field" for="stateselect">
+                    <label class="vw-field" for="scopeSelect">
+                        <span>Lounge location</span>
+                        <select id="scopeSelect" name="scope">
+                            <option value="local">Within Nigeria</option>
+                            <option value="global">Outside Nigeria</option>
+                        </select>
+                    </label>
+
+                    <label class="vw-field" id="localState" for="stateselect">
                         <span>State</span>
                         <select id="stateselect" name="state" required>
                             <option value="">-- Select State --</option>
@@ -45,7 +53,7 @@
                         </select>
                     </label>
 
-                    <label class="vw-field" for="serviceSelect">
+                    <label class="vw-field" id="localService" for="serviceSelect">
                         <span>Service segment</span>
                         <select id="serviceSelect" name="service" required>
                             <option value="">-- Select segment --</option>
@@ -79,6 +87,11 @@
                             <option value="1">International Airport</option>
                         </select>
                     </label>
+
+                    <label class="vw-field lounge-hide" id="globalIata" for="iata">
+                        <span>Airport IATA code</span>
+                        <input id="iata" name="iata" type="text" maxlength="3" placeholder="e.g. SYD, LHR, JFK" style="text-transform:uppercase" autocomplete="off">
+                    </label>
                 </div>
 
                 <div class="lounge-vw-actions">
@@ -91,10 +104,6 @@
                     </button>
                 </div>
             </form>
-
-            <p class="vw-hero__subtitle" style="margin-top:12px;">
-                Traveling through an airport outside Abuja, Lagos, or Kano? <a href="{{ route('air.lounge.global') }}" style="color:inherit; text-decoration:underline;">Search lounges worldwide</a>.
-            </p>
         </div>
     </section>
 
@@ -128,31 +137,74 @@
     </div>
 
     <script>
-        const stateselect   = document.getElementById('stateselect');
-        const airport1      = document.getElementById('airport1');
-        const airport2      = document.getElementById('airport2');
-        const airport3      = document.getElementById('airport3');
+        const bookingForm    = document.getElementById('bookingForm');
+        const scopeSelect    = document.getElementById('scopeSelect');
+        const localState     = document.getElementById('localState');
+        const localService   = document.getElementById('localService');
+        const globalIata     = document.getElementById('globalIata');
+        const stateselect    = document.getElementById('stateselect');
+        const serviceSelect  = document.getElementById('serviceSelect');
+        const iataInput      = document.getElementById('iata');
+        const airport1       = document.getElementById('airport1');
+        const airport2       = document.getElementById('airport2');
+        const airport3       = document.getElementById('airport3');
+        const airportSelect1 = document.getElementById('airportSelect1');
         const airportSelect2 = document.getElementById('airportSelect2');
+        const airportSelect3 = document.getElementById('airportSelect3');
 
-        stateselect.addEventListener('change', function () {
+        const LOCAL_SEARCH_URL  = '{{ route('air.lounges') }}';
+        const GLOBAL_SEARCH_URL = '{{ route('air.lounge.global.search') }}';
+
+        function updateAirportVisibility() {
             airport1.classList.add('lounge-hide');
             airport2.classList.add('lounge-hide');
             airport3.classList.add('lounge-hide');
-            if (this.value === 'Abuja') airport1.classList.remove('lounge-hide');
-            else if (this.value === 'Lagos') airport2.classList.remove('lounge-hide');
-            else if (this.value === 'Kano') airport3.classList.remove('lounge-hide');
-        });
+            if (stateselect.value === 'Abuja') airport1.classList.remove('lounge-hide');
+            else if (stateselect.value === 'Lagos') airport2.classList.remove('lounge-hide');
+            else if (stateselect.value === 'Kano') airport3.classList.remove('lounge-hide');
+        }
 
-        document.getElementById('bookingForm').addEventListener('submit', function (e) {
+        function applyScope() {
+            const isGlobal = scopeSelect.value === 'global';
+
+            localState.classList.toggle('lounge-hide', isGlobal);
+            localService.classList.toggle('lounge-hide', isGlobal);
+            globalIata.classList.toggle('lounge-hide', !isGlobal);
+
+            stateselect.required = !isGlobal;
+            serviceSelect.required = !isGlobal;
+            iataInput.required = isGlobal;
+
+            if (isGlobal) {
+                airport1.classList.add('lounge-hide');
+                airport2.classList.add('lounge-hide');
+                airport3.classList.add('lounge-hide');
+            } else {
+                updateAirportVisibility();
+            }
+
+            bookingForm.action = isGlobal ? GLOBAL_SEARCH_URL : LOCAL_SEARCH_URL;
+        }
+
+        scopeSelect.addEventListener('change', applyScope);
+        stateselect.addEventListener('change', updateAirportVisibility);
+
+        bookingForm.addEventListener('submit', function (e) {
             let valid = true;
-            if (!stateselect.value) valid = false;
-            if (!document.getElementById('serviceSelect').value) valid = false;
 
-            if (stateselect.value === 'Abuja' && !document.getElementById('airportSelect1').value) valid = false;
-            if (stateselect.value === 'Lagos' && !airportSelect2.value) valid = false;
-            if (stateselect.value === 'Kano' && !document.getElementById('airportSelect3').value) valid = false;
+            if (scopeSelect.value === 'global') {
+                if (!/^[A-Za-z]{3}$/.test(iataInput.value.trim())) valid = false;
+            } else {
+                if (!stateselect.value) valid = false;
+                if (!serviceSelect.value) valid = false;
+                if (stateselect.value === 'Abuja' && !airportSelect1.value) valid = false;
+                if (stateselect.value === 'Lagos' && !airportSelect2.value) valid = false;
+                if (stateselect.value === 'Kano' && !airportSelect3.value) valid = false;
+            }
 
             if (!valid) e.preventDefault();
         });
+
+        applyScope();
     </script>
 </div>
