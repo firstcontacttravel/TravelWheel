@@ -493,7 +493,7 @@
     }
 
     .lounge-vw-fields {
-        grid-template-columns: 1.2fr 1fr 1fr;
+        grid-template-columns: 1fr 1.2fr 1fr 1fr;
     }
 
     .lounge-vw-actions {
