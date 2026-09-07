@@ -42,6 +42,19 @@ return [
         'ip' => env('TRAVELNEXT_IP'),
     ],
 
+    'skylink' => [
+        'base_url' => env('SKYLINK_BASE_URL', 'https://247travels.com/api/'),
+        'email' => env('SKYLINK_EMAIL'),
+        'password' => env('SKYLINK_PASSWORD'),
+        // Kill switch for the live search-results merge (see FlightPage::
+        // loadSkylinkResults()) — same convention as VISA_PRODUCT_ENABLED
+        // (config/visa.php). Defaults OFF so deploying this code changes
+        // nothing for real customers until explicitly turned on, and turning
+        // it back off is instant — no redeploy, just an env change (plus
+        // `php artisan config:clear` if the target env caches config).
+        'enabled' => env('SKYLINK_ENABLED', false),
+    ],
+
     'seerbit' => [
         'base_url' => env('SEERBIT_BASE_URL', 'https://seerbitapi.com'),
         'public_key' => env('SEERBIT_PUBLIC_KEY'),

@@ -196,6 +196,17 @@
     .sr-fare-option-price { font-size: 17px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); }
     .sr-fare-option.active .sr-fare-option-price { color: var(--blue); }
 
+    /* Supplemental-supplier loading indicator */
+    .sr-supplement-status { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--gray-500); padding: 2px 0; }
+    .sr-supplement-status--done { color: var(--green); }
+    .sr-supplement-spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--gray-200); border-top-color: var(--blue); animation: sr-spin .7s linear infinite; }
+    @keyframes sr-spin { to { transform: rotate(360deg); } }
+    @keyframes sr-card-highlight {
+        0% { box-shadow: 0 0 0 2px var(--blue-md); background-color: var(--blue-lt); }
+        100% { box-shadow: none; background-color: transparent; }
+    }
+    .sr-card-new { animation: sr-card-highlight 2.4s ease-out; }
+
     /* Sort bar */
     .sr-sort-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .sr-sort-label { font-size: 12px; color: var(--gray-500); font-weight: 600; }
@@ -2321,9 +2332,10 @@
     }
 @endphp
 
-<div 
+<div
     x-data="toast()"
     x-init="init()"
+    x-on:flight-toast.window="showToast($event.detail.message, $event.detail.type)"
     class="tw-toast-container"
 >
     <div 
@@ -2347,7 +2359,7 @@
 
 
 {{-- ══ SINGLE ALPINE SCOPE wraps EVERYTHING ══ --}}
-<div x-data="flightResults()" x-init="init()" x-effect="document.body.classList.toggle('sr-filter-open', filterSheetOpen)" class="sr-results-shell">
+<div x-data="flightResults()" x-init="init()" x-effect="document.body.classList.toggle('sr-filter-open', filterSheetOpen)" x-on:skylink-results-ready.window="onSkylinkResults($event.detail.flights)" class="sr-results-shell">
 
     {{-- ══ TOPBAR ══ --}}
     <div class="sr-topbar">
@@ -2847,12 +2859,20 @@
                 <span class="sr-result-count" x-text="filteredFlights.length + ' result' + (filteredFlights.length !== 1 ? 's' : '')"></span>
             </div>
 
+            <div class="sr-supplement-status" x-show="searchingMore" x-cloak>
+                <span class="sr-supplement-spinner" aria-hidden="true"></span>
+                <span>Searching more airlines…</span>
+            </div>
+            <div class="sr-supplement-status sr-supplement-status--done" x-show="!searchingMore && newlyAddedIds.length > 0" x-transition x-cloak
+                 x-text="'+' + newlyAddedIds.length + ' more offer' + (newlyAddedIds.length !== 1 ? 's' : '') + ' found'"></div>
+
             {{-- ══ Flight Cards ══ --}}
             <template x-for="(flight, fi) in paginatedFlights" :key="flight.id">
                 <div class="sr-card" :class="{
                     'sr-card-expanded': expandedId === flight.id,
                     'sr-card-multi': flight.multiLegs && flight.multiLegs.length > 0,
-                    'sr-card-round': flight.returnSegments && flight.returnSegments.length > 0
+                    'sr-card-round': flight.returnSegments && flight.returnSegments.length > 0,
+                    'sr-card-new': newlyAddedIds.includes(flight.id)
                 }" :style="'animation-delay:' + (fi * 60) + 'ms'">
 
                     {{-- Card Head --}}
@@ -3441,6 +3461,19 @@
             activeFare: 'recommended',
             pageSize: 5,
 
+            // ── SkyLink live supplement (Phase 2) ──────────────────────────
+            // True until the loadSkylinkResults() event fires (success or
+            // failure) — see FlightPage::loadSkylinkResults().
+            searchingMore: true,
+            // Ids of flights merged in from the supplement, for the brief
+            // highlight animation and the "+N more offers found" message.
+            newlyAddedIds: [],
+            // Flip to true only once Phase 3 makes SkyLink fares bookable.
+            // Until then, selectFlight() refuses SkyLink-sourced flights,
+            // and a duplicate offer always keeps its bookable (TravelNext)
+            // copy rather than a cheaper-but-unbookable SkyLink one.
+            skylinkBookable: false,
+
             expandedId: null,
             activeTab:  {},
 
@@ -3491,6 +3524,8 @@
                     flights.sort((a, b) => a.totalDuration - b.totalDuration);
                 else if (this.sortBy === 'depart')
                     flights.sort((a, b) => a.departTime.localeCompare(b.departTime));
+                else if (this.sortBy === 'recommended')
+                    this._sortByRecommended(flights);
                 return flights;
             },
 
@@ -3500,6 +3535,101 @@
 
             init() {
                 this._buildDerivedData();
+            },
+
+            // ── SkyLink live supplement ─────────────────────────────────────
+            // Called from the x-on:skylink-results-ready.window listener once
+            // FlightPage::loadSkylinkResults() (fired via wire:init) resolves
+            // — with a real list on success, or an empty one on any error/
+            // timeout, so this always runs exactly once per page load.
+            onSkylinkResults(flights) {
+                this.searchingMore = false;
+
+                if (!Array.isArray(flights) || flights.length === 0) return;
+
+                const { merged, addedIds } = this._dedupeMerge(this.allFlights, flights);
+                this.allFlights = merged;
+                this.newlyAddedIds = addedIds;
+                this._buildDerivedData();
+            },
+
+            // Matches the same physical flight across suppliers: identical
+            // airline + flight number for every leg (outbound and return) at
+            // the same departure instant and cabin. Exact-match on purpose —
+            // a false "not a duplicate" just shows two cards instead of one
+            // (harmless), whereas a fuzzy match risks wrongly hiding a
+            // genuinely different, cheaper flight.
+            _flightSignature(flight) {
+                const legs = [...(flight.segments || []), ...(flight.returnSegments || [])];
+                const chain = legs.map(s => `${s.airlineCode}${s.flightNo}@${s.departDT}`).join('|');
+
+                return `${chain}|${String(flight.cabinCode || '').toUpperCase()}`;
+            },
+
+            // Merges incoming (SkyLink) flights into the existing list.
+            // Duplicates of an existing flight are resolved by price EXCEPT
+            // while skylinkBookable is false: a customer must never be shown
+            // a lower price they cannot actually select, so a SkyLink
+            // duplicate can't displace an already-bookable TravelNext offer
+            // until Phase 3 ships. Non-duplicate SkyLink flights are always
+            // added — that's the real inventory expansion this phase adds.
+            _dedupeMerge(existing, incoming) {
+                const bySignature = new Map(existing.map(f => [this._flightSignature(f), f]));
+                const merged = [...existing];
+                const addedIds = [];
+
+                incoming.forEach((flight, index) => {
+                    flight.id = 'sky-' + index;
+                    const signature = this._flightSignature(flight);
+                    const duplicate = bySignature.get(signature);
+
+                    if (!duplicate) {
+                        bySignature.set(signature, flight);
+                        merged.push(flight);
+                        addedIds.push(flight.id);
+
+                        return;
+                    }
+
+                    if (this.skylinkBookable && flight.price < duplicate.price) {
+                        const idx = merged.indexOf(duplicate);
+                        if (idx !== -1) merged[idx] = flight;
+                        bySignature.set(signature, flight);
+                        addedIds.push(flight.id);
+                    }
+                });
+
+                return { merged, addedIds };
+            },
+
+            _hasCheckedBaggage(flight) {
+                const raw = String(flight.segments?.[0]?.baggage || '').trim().toUpperCase();
+
+                return raw !== '' && !/^0\s*(KG|PC)?$/.test(raw);
+            },
+
+            // "Recommended" — unlike Cheapest/Fastest/Departure, which are
+            // literal single-factor sorts — blends price, flight time, stop
+            // count, and whether checked baggage is included, normalized
+            // against this result set. Price dominates; the rest break ties
+            // between similarly-priced options. Mutates in place, matching
+            // the other branches in filteredFlights().
+            _sortByRecommended(flights) {
+                const prices = flights.map(f => f.price);
+                const durations = flights.map(f => f.totalDuration);
+                const minPrice = Math.min(...prices), maxPrice = Math.max(...prices);
+                const minDuration = Math.min(...durations), maxDuration = Math.max(...durations);
+
+                const score = (f) => {
+                    const priceScore = maxPrice > minPrice ? 1 - (f.price - minPrice) / (maxPrice - minPrice) : 1;
+                    const durationScore = maxDuration > minDuration ? 1 - (f.totalDuration - minDuration) / (maxDuration - minDuration) : 1;
+                    const stopsScore = f.stops === 0 ? 1 : (f.stops === 1 ? 0.5 : 0);
+                    const baggageScore = this._hasCheckedBaggage(f) ? 1 : 0;
+
+                    return (priceScore * 0.55) + (durationScore * 0.20) + (stopsScore * 0.15) + (baggageScore * 0.10);
+                };
+
+                flights.sort((a, b) => score(b) - score(a));
             },
 
             _buildDerivedData() {
@@ -3657,6 +3787,19 @@
             },
 
             selectFlight(flight, intent = 'booking') {
+                // SkyLink-sourced cards are shown for comparison in this phase
+                // but aren't bookable until Phase 3 wires the pricing/payment
+                // path — never expose *why* (that would leak which flights
+                // came from which supplier), just a generic, could-happen-to-
+                // any-fare message.
+                if (flight.source === 'skylink' && !this.skylinkBookable) {
+                    window.dispatchEvent(new CustomEvent('flight-toast', {
+                        detail: { message: 'This fare could not be confirmed right now. Please select another option.', type: 'error' },
+                    }));
+
+                    return;
+                }
+
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '{{ route("flights.select") }}';
@@ -3673,10 +3816,18 @@
                 const checkoutIntent = document.createElement('input');
                 checkoutIntent.type = 'hidden'; checkoutIntent.name = 'intent';
                 checkoutIntent.value = intent;
+                // Internal routing hint only — never rendered, never a visible
+                // badge. FlightBookingController::select() uses this (falling
+                // back to 'travelnext') to decide whether to revalidate against
+                // TravelNext or price() against SkyLink.
+                const source = document.createElement('input');
+                source.type = 'hidden'; source.name = 'source';
+                source.value = flight.source || 'travelnext';
                 form.appendChild(csrf);
                 form.appendChild(fsc);
                 form.appendChild(sid);
                 form.appendChild(checkoutIntent);
+                form.appendChild(source);
                 document.body.appendChild(form);
                 form.submit();
             },

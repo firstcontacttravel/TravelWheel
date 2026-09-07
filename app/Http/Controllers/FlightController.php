@@ -402,7 +402,10 @@ class FlightController extends Controller
                         'flightNo' => $airlineCode.$fs['FlightNumber'],
                         'airline' => $fs['MarketingAirlineName'] ?? ($airline['AirLineName'] ?? $airlineCode),
                         'airlineCode' => $airlineCode,
-                        'airlineLogo' => $airline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+                        // Some airline.json entries carry an empty-string logo
+                        // rather than omitting the field — ?? alone won't fall
+                        // through that, so use ?: after a null-safe data_get().
+                        'airlineLogo' => data_get($airline, 'AirLineLogo') ?: '/assets/img/airlines/default.png',
                         'equipment' => $fs['OperatingAirline']['Equipment'] ?? '',
                         'cabin' => $fs['CabinClassText'] ?? '',
                         'cabinCode' => $fs['CabinClassCode'] ?? 'Y',
@@ -414,7 +417,7 @@ class FlightController extends Controller
                         'operatingCode' => $opCode,
                         'operatingAirline' => $fs['OperatingAirline']['Name'] ?? '',
                         'operatingFlightNo' => $opCode.($fs['OperatingAirline']['FlightNumber'] ?? ''),
-                        'operatingLogo' => $opAirline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+                        'operatingLogo' => data_get($opAirline, 'AirLineLogo') ?: '/assets/img/airlines/default.png',
                         'eticket' => (bool) ($fs['Eticket'] ?? true),
                     ];
                 })->values()->toArray();
@@ -661,7 +664,7 @@ class FlightController extends Controller
                     'airlineLogo' => $firstSeg['airlineLogo'] ?? '/assets/img/airlines/default.png',
                     'validatingCode' => $validatingCode,
                     'validatingAirline' => $validatingAir['AirLineName'] ?? $validatingCode,
-                    'validatingLogo' => $validatingAir['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+                    'validatingLogo' => data_get($validatingAir, 'AirLineLogo') ?: '/assets/img/airlines/default.png',
                     'cabin' => $firstSeg['cabin'] ?? '',
                     'cabinCode' => $firstSeg['cabinCode'] ?? 'Y',
                     'stops' => $totalStops,

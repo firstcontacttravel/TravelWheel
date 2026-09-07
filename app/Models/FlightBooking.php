@@ -14,6 +14,7 @@ class FlightBooking extends Model
         'fare_source_code',
         'session_id',
         'fare_type',
+        'supplier',
         'trip_type',
         'route',
         'airline',

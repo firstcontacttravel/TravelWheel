@@ -8,6 +8,7 @@ use App\Models\TravelFlexApplication;
 use App\Services\AdminTicketingService;
 use App\Services\DurableMailService;
 use App\Services\SeerbitPaymentService;
+use App\Services\SkylinkFlightService;
 use App\Services\TravelFlexApplicationPdfService;
 use App\Services\TravelFlexApplicationService;
 use App\Services\TravelFlexFlowService;
@@ -36,9 +37,17 @@ class FlightBookingController extends Controller
             'fare_source_code' => 'required|string',
             'session_id' => 'required|string',
             'intent' => 'nullable|in:booking,travelflex',
+            // Internal routing hint set by the results page's own form — never
+            // customer-visible. Defaults to 'travelnext' so an old cached page
+            // (or any request that omits it) keeps today's behavior exactly.
+            'source' => 'nullable|in:travelnext,skylink',
         ]);
 
         $checkoutIntent = $validated['intent'] ?? 'booking';
+
+        if (($validated['source'] ?? 'travelnext') === 'skylink') {
+            return $this->_selectSkylinkFare($validated, $checkoutIntent);
+        }
 
         $payload = [
             'session_id' => $validated['session_id'],
@@ -141,7 +150,10 @@ class FlightBookingController extends Controller
                         'flightNo' => $airlineCode.$fs['FlightNumber'],
                         'airline' => $fs['MarketingAirlineName'] ?? ($airline['AirLineName'] ?? $airlineCode),
                         'airlineCode' => $airlineCode,
-                        'airlineLogo' => $airline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+                        // Some airline.json entries carry an empty-string logo
+                        // rather than omitting the field — ?? alone won't fall
+                        // through that, so use ?: after a null-safe data_get().
+                        'airlineLogo' => data_get($airline, 'AirLineLogo') ?: '/assets/img/airlines/default.png',
                         'equipment' => $fs['OperatingAirline']['Equipment'] ?? '',
                         'cabin' => trim((string) ($fs['CabinClassText'] ?? '')) !== ''
                             ? $fs['CabinClassText']
@@ -155,7 +167,7 @@ class FlightBookingController extends Controller
                         'operatingCode' => $opCode,
                         'operatingAirline' => $fs['OperatingAirline']['Name'] ?? '',
                         'operatingFlightNo' => $opCode.($fs['OperatingAirline']['FlightNumber'] ?? ''),
-                        'operatingLogo' => $opAirline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+                        'operatingLogo' => data_get($opAirline, 'AirLineLogo') ?: '/assets/img/airlines/default.png',
                         'eticket' => (bool) ($fs['Eticket'] ?? true),
                     ];
                 })->values()->toArray();
@@ -370,7 +382,7 @@ class FlightBookingController extends Controller
             'airlineLogo' => $firstSeg['airlineLogo'] ?? '/assets/img/airlines/default.png',
             'validatingCode' => $validatingCode,
             'validatingAirline' => $validatingAirline['AirLineName'] ?? $validatingCode,
-            'validatingLogo' => $validatingAirline['AirLineLogo'] ?? '/assets/img/airlines/default.png',
+            'validatingLogo' => data_get($validatingAirline, 'AirLineLogo') ?: '/assets/img/airlines/default.png',
             'cabin' => \App\Support\FlightDisplay::cabin($firstSeg),
             'cabinCode' => $firstSeg['cabinCode'] ?? 'Y',
             'stops' => $totalStops,
@@ -451,6 +463,74 @@ class FlightBookingController extends Controller
             'bookingSearchParams' => $searchParams,
             'extraServices' => $extraResponse->json(),
             'fareRules' => $fareRulesResponse->json(),
+            'tripType' => $mappedFlight['directionInd'] ?? 'N/A',
+            'bookingIntent' => $checkoutIntent,
+        ]);
+
+        return redirect()->route('flights.booking');
+    }
+
+    // =========================================================================
+    //  _selectSkylinkFare() — SkyLink equivalent of the TravelNext branch
+    //  above: re-verify price(), store the mapped flight, redirect to the
+    //  same booking form. SkyLink has no extra_services/fare_rules endpoints,
+    //  so those session keys are simply left empty — every consumer already
+    //  defaults them with `?? []`.
+    // =========================================================================
+    private function _selectSkylinkFare(array $validated, string $checkoutIntent)
+    {
+        // The mapped flight (segments, cabin, baggage, etc.) can only come from
+        // where it was originally found — FlightPage::loadSkylinkResults()
+        // stores the current SkyLink search results here for exactly this
+        // lookup (kept separate from flightResultsStore; see that method).
+        $flight = collect(session('skylinkResultsStore', []))->first(
+            fn (array $f): bool => ($f['fareSourceCode'] ?? null) === $validated['fare_source_code']
+        );
+
+        if (! $flight) {
+            return back()->with('error', 'This fare is no longer available. Please select another flight.');
+        }
+
+        $searchParams = session('searchParamsStore', []);
+        $passengers = [
+            'adults' => (int) ($searchParams['adults'] ?? 1),
+            'children' => (int) ($searchParams['childs'] ?? 0),
+            'infants' => (int) ($searchParams['kids'] ?? 0),
+        ];
+
+        $priceResult = app(SkylinkFlightService::class)->price($validated['fare_source_code'], $passengers, [
+            'context' => [
+                'route' => \App\Support\FlightDisplay::route($flight),
+                'cabin' => \App\Support\FlightDisplay::cabin($flight),
+                'trip_type' => $searchParams['trip'] ?? null,
+            ],
+        ]);
+
+        if ($priceResult['error']) {
+            return back()->with('error', $priceResult['message'] ?: 'This fare could not be confirmed. Please select another flight.');
+        }
+
+        $refreshedToken = $priceResult['data']['bookingToken'] ?? $validated['fare_source_code'];
+
+        // Recompute NGN + markup from the freshly verified USD price, the same
+        // way TravelNext's branch re-runs FlightMarkup::apply() on freshly
+        // revalidated fare data above — unset the previous markup fields so
+        // apply() treats the new figure as the raw supplier price, not an
+        // already-marked-up one.
+        $mappedFlight = $flight;
+        unset($mappedFlight['supplierPrice'], $mappedFlight['markupAmount'], $mappedFlight['markupRatePerPassenger'], $mappedFlight['markupPassengerCount'], $mappedFlight['markupCategory'], $mappedFlight['markupCabin']);
+        $mappedFlight['price'] = (float) $priceResult['data']['verifiedPrice'];
+        $mappedFlight['baseFare'] = (float) $priceResult['data']['verifiedPrice'];
+        $mappedFlight['fareSourceCode'] = $refreshedToken;
+        $mappedFlight['skylinkBookingToken'] = $refreshedToken;
+        $mappedFlight = FlightMarkup::apply($mappedFlight);
+
+        session([
+            'bookingFlight' => $mappedFlight,
+            'bookingSessionId' => $validated['session_id'],
+            'bookingSearchParams' => $searchParams,
+            'extraServices' => [],
+            'fareRules' => [],
             'tripType' => $mappedFlight['directionInd'] ?? 'N/A',
             'bookingIntent' => $checkoutIntent,
         ]);
@@ -546,6 +626,21 @@ class FlightBookingController extends Controller
 
                 return redirect()->route('flights.travelflex.fastcredit');
             }
+        }
+
+        // ── SkyLink: always gateway-only, pay first — /reserve creates an
+        // instant, unconditional, billable PNR with no hold concept, unlike
+        // TravelNext's Public/Private "hold now, pay later" flow below.
+        // TravelFlex is never eligible for these fares (_travelFlexEligibility()
+        // rejects them outright); surface that plainly here rather than
+        // silently falling through the way WebFare's intent is dropped above.
+        if (($mappedFlight['source'] ?? null) === 'skylink') {
+            if ($travelFlexIneligibleReason) {
+                return redirect()->route('flights.payment.gateway')
+                    ->withErrors(['error' => $travelFlexIneligibleReason]);
+            }
+
+            return redirect()->route('flights.payment.gateway');
         }
 
         // ── WebFare: go to payment FIRST, then book ───────────────────────────
@@ -662,6 +757,13 @@ class FlightBookingController extends Controller
 
         if (empty($contact) || empty($passengers)) {
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Session expired. Please start over.']);
+        }
+
+        $bookingFlight = session('bookingFlight', []);
+        $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
+
+        if (($mappedFlight['source'] ?? null) === 'skylink') {
+            return $this->_startSeerbitPayment('skylink_reserve_full');
         }
 
         return $this->_startSeerbitPayment('webfare_full');
@@ -959,6 +1061,7 @@ class FlightBookingController extends Controller
 
         $response = match ($booking->payment_flow) {
             'webfare_full' => $this->_completeWebfarePayment($booking, $request),
+            'skylink_reserve_full' => $this->_completeSkylinkReservation($booking),
             'held_ticket_full' => $this->_completeHeldTicketPayment($booking),
             'travelflex_down_payment' => $this->_completeTravelFlexPayment($booking, $request),
             'travelflex_fees_payment' => $this->_completeTravelFlexFeesPayment($booking, $request),
@@ -1515,6 +1618,74 @@ class FlightBookingController extends Controller
 
         $this->_clearCheckoutSession($booking->fresh(), [
             'bookingStatus' => $bookResult['Status'] ?? 'CONFIRMED',
+        ]);
+
+        return redirect()->route('flights.confirmation');
+    }
+
+    // =========================================================================
+    //  _completeSkylinkReservation() — mirrors _completeWebfarePayment() above,
+    //  but calls SkylinkFlightService::reserve() instead of TravelNext's book
+    //  API. Payment is already captured by this point (SeerBit verified in
+    //  _processSeerbitCallback() before dispatching here), so a reserve()
+    //  failure is a "money taken, nothing issued" situation — same category
+    //  as a TravelNext ticketing failure — and gets the same ops alert.
+    // =========================================================================
+    private function _completeSkylinkReservation(FlightBooking $booking)
+    {
+        $result = app(SkylinkFlightService::class)->reserve(
+            $booking->fare_source_code,
+            (array) ($booking->passengers_snapshot ?? []),
+            [
+                'adults' => $booking->adult_count,
+                'children' => $booking->child_count,
+                'infants' => $booking->infant_count,
+            ],
+            ['context' => [
+                'route' => $booking->route,
+                'cabin' => $booking->cabin,
+                'trip_type' => $booking->trip_type,
+            ]],
+        );
+
+        $pnr = $result['data']['pnr'] ?? $result['data']['bookingReference'] ?? '';
+
+        if ($result['error'] || empty($pnr)) {
+            $message = $result['error']
+                ? ($result['message'] ?: 'SkyLink reservation failed after payment.')
+                : 'SkyLink reservation succeeded but returned no PNR.';
+
+            $booking->update([
+                'payment_status' => 'paid',
+                'booking_status' => 'failed',
+                'booking_api_response' => $result['data'] ?? [],
+            ]);
+            $this->_sendTicketingFailureAlert($booking->fresh(), $message, $result['data'] ?? []);
+
+            return redirect()->route('flights.payment.gateway')->withErrors(['error' => $message]);
+        }
+
+        $booking->update([
+            'unique_id' => $pnr,
+            'booking_status' => 'confirmed',
+            'payment_status' => 'paid',
+            'payment_method' => 'gateway',
+            'booking_api_response' => $result['data'],
+        ]);
+
+        $this->_sendConfirmedEmail($booking->fresh());
+
+        session([
+            'bookingConfirmation' => $result['data'],
+            'bookingUniqueId' => $pnr,
+            'bookingRef' => $booking->booking_ref,
+            'bookingStatus' => $result['data']['status'] ?? 'CONFIRMED',
+            'flightBookingDbId' => $booking->id,
+            'paymentMethod' => 'gateway',
+        ]);
+
+        $this->_clearCheckoutSession($booking->fresh(), [
+            'bookingStatus' => $result['data']['status'] ?? 'CONFIRMED',
         ]);
 
         return redirect()->route('flights.confirmation');
@@ -2460,6 +2631,7 @@ class FlightBookingController extends Controller
             'fare_source_code' => $mappedFlight['fareSourceCode'] ?? '',
             'session_id' => session('bookingSessionId', ''),
             'fare_type' => $mappedFlight['fareType'] ?? 'Public',
+            'supplier' => $mappedFlight['source'] ?? 'travelnext',
             'trip_type' => session('tripType', ''),
             'route' => FlightDisplay::route($mappedFlight),
             'airline' => $mappedFlight['airline'] ?? '',
@@ -2872,6 +3044,13 @@ class FlightBookingController extends Controller
     // =========================================================================
     private function _travelFlexEligibility(array $flight): array
     {
+        if (($flight['source'] ?? null) === 'skylink') {
+            return [
+                'eligible' => false,
+                'reason' => 'TravelFlex is not available for this fare. Please choose another flight or pay by card/bank transfer.',
+            ];
+        }
+
         if (strtolower((string) ($flight['fareType'] ?? $flight['fare_type'] ?? '')) === 'webfare') {
             return [
                 'eligible' => false,

@@ -2711,6 +2711,33 @@
                     <div class="bk-fare-section">
                         <div class="bk-fare-title">Flight Fare Summary</div>
 
+                        {{-- SkyLink-sourced fares carry no per-passenger-type breakdown (no
+                             such endpoint exists for that supplier) — show one blended total
+                             row instead of silently rendering nothing. Trip Total below is
+                             already driven by $this->getTotalPrice(), not this section, so
+                             the actual charged amount is unaffected either way. --}}
+                        @if(empty($breakdown))
+                            @php
+                                $blendedPax = max(1, (int) ($searchParams['adults'] ?? 1) + (int) ($searchParams['childs'] ?? 0) + (int) ($searchParams['kids'] ?? 0));
+                            @endphp
+                            <div style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--gray-100);">
+                                <div class="bk-fare-row" style="padding-bottom:4px;">
+                                    <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">{{ $blendedPax }} {{ $blendedPax === 1 ? 'Passenger' : 'Passengers' }}</span>
+                                    <span class="bk-fare-val" style="font-weight:800;">{{ $fmt($totalPrice) }}</span>
+                                </div>
+                                <div class="bk-fare-row">
+                                    <span class="bk-fare-lbl">Base Fare</span>
+                                    <span class="bk-fare-val">{{ $fmt($totalBase) }}</span>
+                                </div>
+                                @if($totalTax > 0)
+                                <div class="bk-fare-row">
+                                    <span class="bk-fare-lbl">Taxes &amp; Fees</span>
+                                    <span class="bk-fare-val">{{ $fmt($totalTax) }}</span>
+                                </div>
+                                @endif
+                            </div>
+                        @endif
+
                         @foreach($breakdown as $fb)
                         @php
                             $ptCode  = $fb['passengerType'] ?? ($fb['PassengerTypeQuantity']['Code'] ?? 'ADT');
