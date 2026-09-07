@@ -26,13 +26,13 @@
                         <div id="carouselBook{{ $lounge->id }}" class="carousel slide" data-bs-ride="carousel">
                             <div class="carousel-inner">
                                 <div class="carousel-item active">
-                                    <img src="{{ asset('assets/lounge/' . $lounge->pics1) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                                    <img src="{{ $lounge->imageUrl(0) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
                                 </div>
                                 <div class="carousel-item">
-                                    <img src="{{ asset('assets/lounge/' . $lounge->pics2) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                                    <img src="{{ $lounge->imageUrl(1) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
                                 </div>
                                 <div class="carousel-item">
-                                    <img src="{{ asset('assets/lounge/' . $lounge->pics3) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                                    <img src="{{ $lounge->imageUrl(2) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
                                 </div>
                             </div>
                             <button class="carousel-control-prev" type="button" data-bs-target="#carouselBook{{ $lounge->id }}" data-bs-slide="prev">
@@ -64,6 +64,7 @@
 
                     <form id="myForm" action="{{ route('air.loungecheckout') }}" method="POST">
                         @csrf
+                        <input type="hidden" name="lounge_id" value="{{ $lounge->id }}">
                         <input type="hidden" name="lounge" value="{{ $lounge->brand_name }}">
                         <input type="hidden" name="state" value="{{ $lounge->location }}">
                         <input type="hidden" name="airport" id="airport" value="{{ $airport }}">
@@ -231,9 +232,9 @@
                         </div>
 
                         <input type="hidden" id="selectedAmount" name="amount" value="0">
-                        <input type="hidden" id="selectAmountA" value="{{ $lounge->priceA }}">
-                        <input type="hidden" id="selectAmountB" value="{{ $lounge->priceB ?? 0 }}">
-                        <input type="hidden" id="selectAmountC" value="{{ $lounge->priceC ?? 0 }}">
+                        <input type="hidden" id="selectAmountA" value="{{ $lounge->bookingPrice('A') }}">
+                        <input type="hidden" id="selectAmountB" value="{{ $lounge->bookingPrice('B') }}">
+                        <input type="hidden" id="selectAmountC" value="{{ $lounge->bookingPrice('C') }}">
 
                         <div class="lounge-subpanel mt-3">
                             <div class="lounge-total-row">

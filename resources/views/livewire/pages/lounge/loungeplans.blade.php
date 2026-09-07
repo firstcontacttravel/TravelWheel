@@ -9,13 +9,13 @@
                     <div id="carouselLounge{{ $lounge->id }}" class="carousel slide" data-bs-ride="carousel">
                         <div class="carousel-inner">
                             <div class="carousel-item active">
-                                <img src="{{ asset('assets/lounge/' . $lounge->pics1) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                                <img src="{{ $lounge->imageUrl(0) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
                             </div>
                             <div class="carousel-item">
-                                <img src="{{ asset('assets/lounge/' . $lounge->pics2) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                                <img src="{{ $lounge->imageUrl(1) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
                             </div>
                             <div class="carousel-item">
-                                <img src="{{ asset('assets/lounge/' . $lounge->pics3) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                                <img src="{{ $lounge->imageUrl(2) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
                             </div>
                         </div>
                         <button class="carousel-control-prev" type="button" data-bs-target="#carouselLounge{{ $lounge->id }}" data-bs-slide="prev">
@@ -44,7 +44,7 @@
                     </ul>
 
                     <div class="lounge-total-row mt-4" style="flex-direction:column; align-items:center; text-align:center;">
-                        <p class="lounge-price" style="margin:0;"><sup>₦</sup>{{ number_format($lounge->priceA) }} <small>/ Passenger</small></p>
+                        <p class="lounge-price" style="margin:0;"><sup>₦</sup>{{ number_format($lounge->bookingPrice('A')) }} <small>/ Passenger</small></p>
                         <a href="{{ route('air.loungebooking', ['id' => $lounge->id]) }}" class="lounge-btn mt-3">
                             Proceed <x-ph-icon name="arrow-right" />
                         </a>

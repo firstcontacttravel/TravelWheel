@@ -20,6 +20,7 @@
 
         <form action="{{ route('air.lounge.purchase') }}" method="POST">
             @csrf
+            <input type="hidden" name="lounge_id"  value="{{ $dataform['lounge_id'] ?? '' }}">
             <input type="hidden" name="lounge"     value="{{ $dataform['lounge'] ?? '' }}">
             <input type="hidden" name="state"      value="{{ $dataform['state'] ?? '' }}">
             <input type="hidden" name="airport"    value="{{ $dataform['airport'] ?? '' }}">

@@ -13,7 +13,10 @@ class LoungeBooking extends Model
     ];
 
     protected $fillable = [
+        'lounge_id',
         'lounge_name',
+        'provider',
+        'provider_url',
         'payment_option',
         'fullname',
         'service',
@@ -35,4 +38,9 @@ class LoungeBooking extends Model
         'trans_id',
         'ref_id',
     ];
+
+    public function requiresManualProviderBooking(): bool
+    {
+        return $this->provider === 'loungepair' && filled($this->provider_url);
+    }
 }

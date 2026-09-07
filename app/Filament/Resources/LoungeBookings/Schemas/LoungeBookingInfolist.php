@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\LoungeBookings\Schemas;
 
+use App\Models\LoungeBooking;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -44,6 +45,18 @@ class LoungeBookingInfolist
                         TextEntry::make('d_time')->label('Departure time'),
                     ])
                     ->columns(3),
+
+                Section::make('LoungePair booking')
+                    ->description('This lounge comes from LoungePair, not our own catalogue — there is no booking API, so place this reservation on their site manually using the details above and the link below.')
+                    ->schema([
+                        TextEntry::make('provider')->label('Source')->badge()->formatStateUsing(fn (?string $state): string => $state === 'loungepair' ? 'LoungePair' : 'Unknown'),
+                        TextEntry::make('provider_url')
+                            ->label('Book on LoungePair')
+                            ->url(fn (LoungeBooking $record): ?string => $record->provider_url, shouldOpenInNewTab: true)
+                            ->color('primary'),
+                    ])
+                    ->columns(2)
+                    ->visible(fn (LoungeBooking $record): bool => $record->requiresManualProviderBooking()),
 
                 Section::make('Passengers')
                     ->schema([

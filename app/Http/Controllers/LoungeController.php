@@ -180,8 +180,15 @@ class LoungeController extends Controller
         $fullname = trim(($dataform['lastname'] ?? '') . ' ' . ($dataform['firstname'] ?? ''));
         $nop      = ((int)($dataform['noa'] ?? 0)) + ((int)($dataform['noc'] ?? 0)) + ((int)($dataform['noi'] ?? 0));
 
+        // Re-fetch the lounge server-side rather than trusting client-submitted
+        // provider fields — only the id is taken from the form.
+        $lounge = filled($dataform['lounge_id'] ?? null) ? Lounge::find($dataform['lounge_id']) : null;
+
         LoungeBooking::create([
+            'lounge_id'      => $lounge?->id,
             'lounge_name'    => $dataform['lounge'] ?? '',
+            'provider'       => $lounge?->provider,
+            'provider_url'   => $lounge?->provider_url,
             'payment_option' => 'seerbit',
             'fullname'       => $fullname,
             'service'        => 'Lounge Service',

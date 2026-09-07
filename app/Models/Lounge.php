@@ -75,29 +75,37 @@ class Lounge extends Model
         return str_starts_with($localImage, 'http') ? $localImage : asset('assets/lounge/'.$localImage);
     }
 
-    public function isProviderBooking(): bool
-    {
-        return $this->provider === 'loungepair'
-            && is_string($this->provider_url)
-            && filter_var($this->provider_url, FILTER_VALIDATE_URL) !== false;
-    }
-
     /**
-     * Convert a LoungePair price (given_PriceA is stored in provider_currency,
+     * Convert a LoungePair price (given_Price* is stored in provider_currency,
      * not NGN) using the project's own exchange rate — the same table flight
-     * pricing reads from. Returns null when there's nothing to convert; we
-     * never charge our own markup on these since checkout happens on
-     * LoungePair's site, not ours.
+     * pricing reads from. $field is one of given_PriceA/B/C. Returns null when
+     * there's nothing to convert; we never charge our own markup on the
+     * conversion itself since it just mirrors LoungePair's own price.
      */
-    public function priceInNgn(): ?float
+    public function priceInNgn(string $field = 'given_PriceA'): ?float
     {
-        if ($this->provider !== 'loungepair' || (float) $this->given_PriceA <= 0) {
+        $amount = (float) ($this->{$field} ?? 0);
+
+        if ($this->provider !== 'loungepair' || $amount <= 0) {
             return null;
         }
 
         $currency = $this->provider_currency ?: 'USD';
 
-        return round(((float) $this->given_PriceA) * ExchangeRate::rateFor($currency), 2);
+        return round($amount * ExchangeRate::rateFor($currency), 2);
+    }
+
+    /**
+     * The amount actually charged for a booking, in NGN, regardless of
+     * whether this is a locally managed lounge (priceA/B/C, vendor price +
+     * markup) or a LoungePair lounge (converted from provider_currency, no
+     * markup — that booking happens on LoungePair's site, we just record it).
+     */
+    public function bookingPrice(string $tier = 'A'): float
+    {
+        $tier = strtoupper($tier);
+
+        return $this->priceInNgn('given_Price'.$tier) ?? (float) $this->{'price'.$tier};
     }
 
     public function getPriceAAttribute(): float

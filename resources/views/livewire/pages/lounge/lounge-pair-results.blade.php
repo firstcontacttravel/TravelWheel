@@ -45,15 +45,9 @@
                                 @endif
                                 <small>/ Passenger</small>
                             </p>
-                            @if($lounge->isProviderBooking())
-                                <a href="{{ $lounge->provider_url }}" class="lounge-btn w-100 mt-3" target="_blank" rel="noopener noreferrer">
-                                    Book Lounge <x-ph-icon name="arrow-right" />
-                                </a>
-                            @else
-                                <a href="{{ route('air.loungeplans', ['id' => $lounge->id]) }}" class="lounge-btn w-100 mt-3">
-                                    Book Lounge <x-ph-icon name="arrow-right" />
-                                </a>
-                            @endif
+                            <a href="{{ route('air.loungeplans', ['id' => $lounge->id]) }}" class="lounge-btn w-100 mt-3">
+                                Book Lounge <x-ph-icon name="arrow-right" />
+                            </a>
                         </div>
                     </div>
                 @endforeach
