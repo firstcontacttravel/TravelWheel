@@ -3018,13 +3018,13 @@
                         <div class="sr-card-meta-item sr-card-meta-seat">
                             <span class="sr-icon-mask sr-icon-cabin" aria-hidden="true"></span>
                             <span>Cabin Bag:</span>
-                            <strong x-text="cabinBagLabel(flight.fareBreakdown[0]?.cabinBaggage[0])"></strong>
+                            <strong x-text="_cabinBagLabel(flight)"></strong>
                         </div>
                         <span class="sr-card-meta-sep"></span>
                         <div class="sr-card-meta-item">
                             <span class="sr-icon-mask sr-icon-luggage" aria-hidden="true"></span>
                             <span>Luggage:</span>
-                            <strong x-text="flight.fareBreakdown[0]?.baggage[0] || '-'"></strong>
+                            <strong x-text="_luggageLabel(flight)"></strong>
                         </div>
                         <span class="sr-card-meta-sep"></span>
                         <div class="sr-card-meta-item">
@@ -3045,7 +3045,7 @@
                             <div class="sr-tooltip">🎒
                                 <span class="sr-meta-label" style="font-size:12px; color:#6b7280;">Cabin:</span>
                             
-                                <span class="sr-meta-value" style="font-size:12px; font-weight:600; color:#374151;" x-text="cabinBagLabel(flight.fareBreakdown[0]?.cabinBaggage[0])"></span>
+                                <span class="sr-meta-value" style="font-size:12px; font-weight:600; color:#374151;" x-text="_cabinBagLabel(flight)"></span>
                                 <div class="sr-tooltip-text">1 standard cabin bag (7kg Hand Bag) allowed — check fare rules for details.</div>
                             </div>
                         </div>
@@ -3053,7 +3053,7 @@
                         <div style="display:flex;align-items:center;gap:5px;">
                             🧳 <span style="font-size:12px;color:#6b7280;">Luggage:</span>
                             <span style="font-size:12px;font-weight:600;color:#374151;"
-                                x-text="flight.fareBreakdown[0]?.baggage[0] || '—'"></span>
+                                x-text="_luggageLabel(flight)"></span>
                         </div>
                         <div style="width:1px;height:14px;background:#e5e7eb;"></div>
                         <div style="display:flex;align-items:center;gap:5px;">
@@ -3159,8 +3159,8 @@
                                                             </div>
                                                         </div>
                                                         <div class="sr-detail-seg-meta">
-                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Baggage</span><span class="sr-detail-meta-val" x-text="flight.fareBreakdown[0]?.baggage[0]||'—'"></span></div>
-                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Cabin bag</span><span class="sr-detail-meta-val" x-text="cabinBagLabel(flight.fareBreakdown[0]?.cabinBaggage[0])"></span></div>
+                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Baggage</span><span class="sr-detail-meta-val" x-text="_luggageLabel(flight, seg)"></span></div>
+                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Cabin bag</span><span class="sr-detail-meta-val" x-text="_cabinBagLabel(flight, seg)"></span></div>
                                                             <div class="sr-detail-meta-item" x-show="seg.equipment"><span class="sr-detail-meta-label">Aircraft</span><span class="sr-detail-meta-val" x-text="seg.equipment"></span></div>
                                                             <div class="sr-detail-meta-item" x-show="seg.resBookCode"><span class="sr-detail-meta-label">Class</span><span class="sr-detail-meta-val" x-text="seg.resBookCode"></span></div>
                                                             <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Seats</span><span class="sr-detail-meta-val" :style="seg.seatsLeft<=5?'color:#dc2626':''" x-text="seg.seatsLeft+' remaining'"></span></div>
@@ -3213,7 +3213,7 @@
                                                                 </div>
                                                             </div>
                                                             <div class="sr-detail-seg-meta">
-                                                                <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Baggage</span><span class="sr-detail-meta-val" x-text="flight.fareBreakdown[0]?.baggage[0]||'—'"></span></div>
+                                                                <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Baggage</span><span class="sr-detail-meta-val" x-text="_luggageLabel(flight, seg)"></span></div>
                                                                 <div class="sr-detail-meta-item" x-show="seg.equipment"><span class="sr-detail-meta-label">Aircraft</span><span class="sr-detail-meta-val" x-text="seg.equipment"></span></div>
                                                                 <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Seats</span><span class="sr-detail-meta-val" :style="seg.seatsLeft<=5?'color:#dc2626':''" x-text="seg.seatsLeft+' remaining'"></span></div>
                                                             </div>
@@ -3281,12 +3281,12 @@
                                                                 <div class="sr-detail-meta-item">
                                                                     <span class="sr-detail-meta-label">Baggage</span>
                                                                     <span class="sr-detail-meta-val"
-                                                                        x-text="flight.fareBreakdown[0]?.baggage[li] || flight.fareBreakdown[0]?.baggage[0] || '—'"></span>
+                                                                        x-text="_luggageLabel(flight, seg, li)"></span>
                                                                 </div>
                                                                 <div class="sr-detail-meta-item">
                                                                     <span class="sr-detail-meta-label">Cabin bag</span>
                                                                     <span class="sr-detail-meta-val"
-                                                                        x-text="cabinBagLabel(flight.fareBreakdown[0]?.cabinBaggage[li] || flight.fareBreakdown[0]?.cabinBaggage[0])"></span>
+                                                                        x-text="_cabinBagLabel(flight, seg, li)"></span>
                                                                 </div>
                                                                 <div class="sr-detail-meta-item" x-show="seg.equipment">
                                                                     <span class="sr-detail-meta-label">Aircraft</span>
@@ -3480,6 +3480,27 @@
             cabinBagLabel(value) {
                 const label = String(value || '').trim();
                 return label.toUpperCase() === 'SB' ? '7KG' : (label || '—');
+            },
+
+            // TravelNext's fareBreakdown carries baggage per passenger type
+            // (optionally per leg, via legIndex); SkyLink has no such
+            // breakdown (always []) but does carry real baggage info per
+            // segment — fall back to that (the specific segment in scope,
+            // when given one) instead of always showing "-" for SkyLink.
+            _luggageLabel(flight, seg = null, legIndex = 0) {
+                const breakdown = flight.fareBreakdown?.[0]?.baggage;
+                const fromBreakdown = breakdown?.[legIndex] || breakdown?.[0];
+                if (fromBreakdown) return fromBreakdown;
+
+                return (seg || flight.segments?.[0])?.baggage || '-';
+            },
+
+            _cabinBagLabel(flight, seg = null, legIndex = 0) {
+                const breakdown = flight.fareBreakdown?.[0]?.cabinBaggage;
+                const fromBreakdown = breakdown?.[legIndex] || breakdown?.[0];
+                if (fromBreakdown) return this.cabinBagLabel(fromBreakdown);
+
+                return this.cabinBagLabel((seg || flight.segments?.[0])?.cabinBaggage);
             },
 
             timeSlots: [

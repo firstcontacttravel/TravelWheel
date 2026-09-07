@@ -43,6 +43,11 @@ class SkylinkFlightServiceTest extends TestCase
         $this->assertSame('LOS', $flight['segments'][0]['from']);
         $this->assertSame('DXB', $flight['segments'][0]['to']);
         $this->assertSame(405, $flight['segments'][0]['duration']);
+        // Real baggage allowance, not the "-" the UI used to show when it
+        // only ever looked at TravelNext's (always-empty, for SkyLink)
+        // fareBreakdown instead of falling back to segment-level data.
+        $this->assertSame('30kg', $flight['segments'][0]['baggage']);
+        $this->assertSame('7kg', $flight['segments'][0]['cabinBaggage']);
         $this->assertSame('07:15 pm', $flight['segments'][0]['departTime']);
         $this->assertStringStartsWith('2026-10-05T19:15:00', $flight['segments'][0]['departDT']);
 
@@ -383,6 +388,7 @@ class SkylinkFlightServiceTest extends TestCase
                             'class' => 'economy',
                             'class_letter' => 'O',
                             'baggage' => '30kg',
+                            'cabin_baggage' => '7kg',
                             'departure_airport' => 'Murtala Muhammed International',
                             'departure_city' => 'Lagos',
                             'departure_code' => 'LOS',

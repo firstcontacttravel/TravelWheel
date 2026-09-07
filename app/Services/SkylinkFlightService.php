@@ -447,6 +447,7 @@ class SkylinkFlightService
             'cabin' => $this->cabinLabel((string) ($leg['class'] ?? 'Economy')),
             'cabinCode' => strtoupper((string) ($leg['class_letter'] ?? substr((string) ($leg['class'] ?? 'Economy'), 0, 1))),
             'baggage' => (string) ($leg['baggage'] ?? ''),
+            'cabinBaggage' => (string) ($leg['cabin_baggage'] ?? ''),
             'seatsLeft' => (int) ($leg['seats_left'] ?? 9),
             'isCodeshare' => false,
             'refundable' => (bool) ($leg['refundable'] ?? false),
