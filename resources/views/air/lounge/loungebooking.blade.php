@@ -75,14 +75,16 @@
                         <input type="hidden" name="airport" id="airport" value="{{ $airport }}">
 
                         <div class="row">
-                            <div class="col-sm-6 lounge-field">
-                                <label class="lounge-label">Location</label>
-                                <input type="text" class="form-control" value="{{ $lounge->location }}" readonly>
-                            </div>
-                            <div class="col-sm-6 lounge-field">
-                                <label class="lounge-label">Airport</label>
-                                <input type="text" class="form-control" value="{{ $airport }}" readonly>
-                            </div>
+                            @if($lounge->provider !== 'loungepair')
+                                <div class="col-sm-6 lounge-field">
+                                    <label class="lounge-label">Location</label>
+                                    <input type="text" class="form-control" value="{{ $lounge->location }}" readonly>
+                                </div>
+                                <div class="col-sm-6 lounge-field">
+                                    <label class="lounge-label">Airport</label>
+                                    <input type="text" class="form-control" value="{{ $airport }}" readonly>
+                                </div>
+                            @endif
                             <div class="col-sm-6 lounge-field">
                                 <label class="lounge-label">First Name</label>
                                 <input type="text" class="form-control" name="firstname" placeholder="Enter first name" required>
