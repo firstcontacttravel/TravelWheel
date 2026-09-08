@@ -23,25 +23,30 @@
             <div class="lounge-grid">
                 <div>
                     <div class="lounge-hero-main" style="padding:0; overflow:hidden;">
-                        <div id="carouselBook{{ $lounge->id }}" class="carousel slide" data-bs-ride="carousel">
-                            <div class="carousel-inner">
-                                <div class="carousel-item active">
-                                    <img src="{{ $lounge->imageUrl(0) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                        @if($lounge->provider === 'loungepair')
+                            {{-- LoungePair only gives us one photo per lounge — no carousel needed. --}}
+                            <img src="{{ $lounge->imageUrl(0) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                        @else
+                            <div id="carouselBook{{ $lounge->id }}" class="carousel slide" data-bs-ride="carousel">
+                                <div class="carousel-inner">
+                                    <div class="carousel-item active">
+                                        <img src="{{ $lounge->imageUrl(0) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                                    </div>
+                                    <div class="carousel-item">
+                                        <img src="{{ $lounge->imageUrl(1) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                                    </div>
+                                    <div class="carousel-item">
+                                        <img src="{{ $lounge->imageUrl(2) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                                    </div>
                                 </div>
-                                <div class="carousel-item">
-                                    <img src="{{ $lounge->imageUrl(1) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
-                                </div>
-                                <div class="carousel-item">
-                                    <img src="{{ $lounge->imageUrl(2) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
-                                </div>
+                                <button class="carousel-control-prev" type="button" data-bs-target="#carouselBook{{ $lounge->id }}" data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon"></span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#carouselBook{{ $lounge->id }}" data-bs-slide="next">
+                                    <span class="carousel-control-next-icon"></span>
+                                </button>
                             </div>
-                            <button class="carousel-control-prev" type="button" data-bs-target="#carouselBook{{ $lounge->id }}" data-bs-slide="prev">
-                                <span class="carousel-control-prev-icon"></span>
-                            </button>
-                            <button class="carousel-control-next" type="button" data-bs-target="#carouselBook{{ $lounge->id }}" data-bs-slide="next">
-                                <span class="carousel-control-next-icon"></span>
-                            </button>
-                        </div>
+                        @endif
                     </div>
 
                     <div class="lounge-panel mt-3">
