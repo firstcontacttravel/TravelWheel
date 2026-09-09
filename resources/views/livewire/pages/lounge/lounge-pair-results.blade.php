@@ -1,25 +1,26 @@
 <section class="lounge-page">
     @include('air.lounge.partials.lounge-ui')
     <div class="lounge-wrap">
-        <div class="lounge-hero-main mb-4">
-            <div class="lounge-kicker"><x-ph-icon name="couch" /> Available Lounges</div>
-            <h1 class="lounge-title">Choose a lounge{{ $iata ? ' at '.$iata : '' }}</h1>
-            <p class="lounge-copy">Pick the lounge that matches your terminal and budget.</p>
+        <div class="lounge-hero-main mb-4" style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:16px;">
+            <div>
+                <div class="lounge-kicker"><x-ph-icon name="couch" /> Available Lounges</div>
+                <h1 class="lounge-title">Choose a lounge{{ $iata ? ' at '.$iata : '' }}</h1>
+                <p class="lounge-copy">Pick the lounge that matches your terminal and budget.</p>
+            </div>
+            @if($isNigeria)
+                <div style="min-width:220px;">
+                    <label class="lounge-label">Filter by terminal</label>
+                    <select class="form-select" wire:model.live="typeFilter">
+                        <option value="">All lounges</option>
+                        <option value="domestic">Domestic</option>
+                        <option value="international">International</option>
+                    </select>
+                </div>
+            @endif
         </div>
 
         @if(session('error'))
             <div class="lounge-note mb-4">{{ session('error') }}</div>
-        @endif
-
-        @if($isNigeria)
-            <div class="lounge-panel mb-4" style="max-width:280px;">
-                <label class="lounge-label">Filter by terminal</label>
-                <select class="form-select" wire:model.live="typeFilter">
-                    <option value="">All lounges</option>
-                    <option value="domestic">Domestic</option>
-                    <option value="international">International</option>
-                </select>
-            </div>
         @endif
 
         @if($filteredLounges->isEmpty())
