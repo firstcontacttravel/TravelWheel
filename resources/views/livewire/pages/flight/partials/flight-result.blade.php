@@ -3338,9 +3338,13 @@
                                             <span class="sr-fare-rule-val" :class="fb.refundAllowed?'allowed':'not-allowed'" x-text="fb.refundAllowed?'Allowed':'Not Allowed'"></span>
                                         </div>
                                         <div class="sr-fare-rule-row">
-                                            <span class="sr-fare-rule-icon" x-text="fb.changeAllowed?'✅':'❌'"></span>
+                                            <span class="sr-fare-rule-icon" x-text="fb.changeAllowed===null?'ℹ️':(fb.changeAllowed?'✅':'❌')"></span>
                                             <span class="sr-fare-rule-label">Changes</span>
-                                            <span class="sr-fare-rule-val" :class="fb.changeAllowed?'allowed':'not-allowed'" x-text="fb.changeAllowed?'Allowed · Penalty '+_fmtPrice(fb.changePenalty,flight.currency):'Not Allowed'"></span>
+                                            <!-- fb.changeAllowed is null for suppliers (SkyLink) that don't expose a
+                                                 change policy at all — showing a hard "Not Allowed" there would be a
+                                                 guess, not a fact, so it gets a neutral, unstyled "not specified"
+                                                 note instead of the red/green allowed/not-allowed styling. -->
+                                            <span class="sr-fare-rule-val" :class="fb.changeAllowed===null?'':(fb.changeAllowed?'allowed':'not-allowed')" x-text="fb.changeAllowed===null?'Not specified — contact support before booking if this matters to you':(fb.changeAllowed?'Allowed · Penalty '+_fmtPrice(fb.changePenalty,flight.currency):'Not Allowed')"></span>
                                         </div>
                                         <div class="sr-fare-rule-row">
                                             <span class="sr-fare-rule-icon">💰</span>

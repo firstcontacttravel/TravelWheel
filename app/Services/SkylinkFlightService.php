@@ -381,10 +381,69 @@ class SkylinkFlightService
             'totalTimeLabel' => (string) ($firstRawLeg['duration_time'] ?? ''),
             'returnSegments' => $returnSegments,
             'multiLegs' => [],
-            'fareBreakdown' => [],
+            'fareBreakdown' => $this->buildFareBreakdown($raw, $criteria, (bool) ($firstLeg['refundable'] ?? false)),
             'seatsLeft' => (int) ($raw['seats_left'] ?? $firstLeg['seatsLeft'] ?? 9),
             'lastTicketingDate' => $raw['last_ticketing_date'] ?? null,
         ];
+    }
+
+    /**
+     * SkyLink has no dedicated fare-rules endpoint, but the search response
+     * itself carries baggage_allowance and per-type actual_*_base fields —
+     * this was previously discarded entirely (fareBreakdown was hardcoded to
+     * []), leaving the Fare Rules tab empty for every SkyLink card and, more
+     * importantly, silently capping FlightMarkup::passengerCount() at 1 for
+     * every SkyLink flight regardless of how many passengers actually
+     * searched (it sums qty across fareBreakdown, defaulting to 1 when
+     * empty) — found via live testing.
+     *
+     * changeAllowed/changePenalty have no SkyLink equivalent at all (not in
+     * the API docs, not in any raw field observed) — left null rather than
+     * guessing true/false, since a wrong guess here is actively misleading
+     * (a customer relying on "Not Allowed" to decide whether to buy). The
+     * Fare Rules tab renders null as a neutral "Not specified" instead of
+     * red/green.
+     */
+    private function buildFareBreakdown(array $raw, array $criteria, bool $refundable): array
+    {
+        $counts = $this->passengerCounts($criteria);
+        $baggage = (array) ($raw['baggage_allowance'] ?? []);
+        $checkedBag = (string) ($baggage['checked'] ?? '');
+        $cabinBag = (string) ($baggage['cabin'] ?? '');
+
+        $types = [
+            'ADT' => ['count' => max(1, $counts['adults']), 'baseField' => 'actual_adult_base'],
+            'CHD' => ['count' => $counts['children'], 'baseField' => 'actual_child_base'],
+            'INF' => ['count' => $counts['infants'], 'baseField' => 'actual_infant_base'],
+        ];
+
+        $breakdown = [];
+
+        foreach ($types as $passengerType => $type) {
+            if ($type['count'] <= 0) {
+                continue;
+            }
+
+            $baseFare = $this->ngnToUsd((float) ($raw[$type['baseField']] ?? 0));
+
+            $breakdown[] = [
+                'passengerType' => $passengerType,
+                'qty' => $type['count'],
+                'baggage' => [$checkedBag],
+                'cabinBaggage' => [$cabinBag],
+                'refundAllowed' => $refundable,
+                'changeAllowed' => null,
+                'changePenalty' => null,
+                // SkyLink doesn't break tax out separately per passenger type —
+                // this is the supplier's own base fare, same as TravelNext's
+                // fareBreakdown entries carry supplier-original (pre-markup)
+                // figures rather than our retail price.
+                'baseFare' => $baseFare,
+                'totalFare' => $baseFare,
+            ];
+        }
+
+        return $breakdown;
     }
 
     /**

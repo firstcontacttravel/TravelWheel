@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\FlightSupplierCall;
 use App\Services\SkylinkFlightService;
+use App\Support\FlightMarkup;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -316,6 +317,51 @@ class SkylinkFlightServiceTest extends TestCase
         // SkyLink always prices in NGN; the service converts back to USD
         // using this rate so tests get a deterministic, round number.
         \App\Models\ExchangeRate::query()->updateOrCreate(['currency' => 'USD'], ['rate' => 1500]);
+    }
+
+    public function test_search_builds_a_real_fare_breakdown_per_passenger_type(): void
+    {
+        // fareBreakdown was hardcoded to [] for every SkyLink flight — this
+        // left the Fare Rules tab empty (found via live testing) and, more
+        // importantly, silently capped FlightMarkup::passengerCount() at 1
+        // for every SkyLink booking regardless of party size, since that
+        // method sums qty across fareBreakdown and defaults to 1 when empty.
+        $this->configureSkylink();
+
+        $response = $this->searchResponse();
+        $response['data']['flights'][0]['baggage_allowance'] = [
+            'checked' => '2PC', 'cabin' => '7kg',
+        ];
+        $response['data']['flights'][0]['actual_adult_base'] = 500000;
+        $response['data']['flights'][0]['actual_child_base'] = 350000;
+        $response['data']['flights'][0]['segments'][0][0]['refundable'] = 1;
+
+        Http::fake([
+            '*/api/login' => Http::response($this->loginResponse()),
+            '*/api/flights/search' => Http::response($response),
+        ]);
+
+        $criteria = array_merge($this->searchCriteria(), ['adults' => 2, 'childs' => 1, 'kids' => 0]);
+        $flight = app(SkylinkFlightService::class)->search($criteria)['data']['flights'][0];
+
+        $breakdown = collect($flight['fareBreakdown'])->keyBy('passengerType');
+        $this->assertSame(['ADT', 'CHD'], $breakdown->keys()->all());
+        $this->assertSame(2, $breakdown['ADT']['qty']);
+        $this->assertSame(1, $breakdown['CHD']['qty']);
+        $this->assertSame(['2PC'], $breakdown['ADT']['baggage']);
+        $this->assertSame(['7kg'], $breakdown['ADT']['cabinBaggage']);
+        $this->assertTrue($breakdown['ADT']['refundAllowed']);
+        // No SkyLink equivalent exists for change policy — null, not a guess.
+        $this->assertNull($breakdown['ADT']['changeAllowed']);
+        // 500,000 NGN / 1500 test rate.
+        $this->assertSame(333.33, $breakdown['ADT']['baseFare']);
+        // 350,000 NGN / 1500 test rate.
+        $this->assertSame(233.33, $breakdown['CHD']['baseFare']);
+
+        // FlightMarkup::apply() should now see 3 total passengers (2 adults +
+        // 1 child), not the old hardcoded floor of 1.
+        $marked = FlightMarkup::apply($flight);
+        $this->assertSame(3, $marked['markupPassengerCount']);
     }
 
     private function searchCriteria(): array
