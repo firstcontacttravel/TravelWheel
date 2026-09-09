@@ -12,6 +12,17 @@
             <div class="lounge-note mb-4">{{ session('error') }}</div>
         @endif
 
+        @if($isNigeria)
+            <div class="lounge-panel mb-4" style="max-width:280px;">
+                <label class="lounge-label">Filter by terminal</label>
+                <select class="form-select" wire:model.live="typeFilter">
+                    <option value="">All lounges</option>
+                    <option value="domestic">Domestic</option>
+                    <option value="international">International</option>
+                </select>
+            </div>
+        @endif
+
         @if($lounges->isEmpty())
             <div class="lounge-panel text-center">
                 <p class="lounge-copy">No lounge found for the selected options.</p>

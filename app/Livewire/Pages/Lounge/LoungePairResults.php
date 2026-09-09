@@ -10,6 +10,11 @@ class LoungePairResults extends Component
 {
     public string $iata = '';
 
+    public bool $isNigeria = false;
+
+    /** @var ''|'domestic'|'international' */
+    public string $typeFilter = '';
+
     public Collection $lounges;
 
     public function mount(): void
@@ -23,11 +28,24 @@ class LoungePairResults extends Component
             ->where('provider_airport_iata', $this->iata)
             ->latest('provider_synced_at')
             ->get();
+
+        // LoungePair only labels Domestic/International in a way we can
+        // trust for Nigerian airports (see LoungePairCatalogueSyncService)
+        // so the filter only appears there rather than misclassifying
+        // airports elsewhere that don't split lounges this way.
+        $this->isNigeria = $this->lounges
+            ->contains(fn (LoungeProduct $lounge) => strcasecmp((string) data_get($lounge->provider_payload, 'airport.country'), 'Nigeria') === 0);
     }
 
     public function render()
     {
-        return view('livewire.pages.lounge.lounge-pair-results', ['lounges' => $this->lounges])
+        $lounges = match ($this->typeFilter) {
+            'domestic' => $this->lounges->where('airport', 0),
+            'international' => $this->lounges->where('airport', 1),
+            default => $this->lounges,
+        };
+
+        return view('livewire.pages.lounge.lounge-pair-results', ['lounges' => $lounges])
             ->layout('layouts.app', ['title' => 'Available Lounges - TravelWheel']);
     }
 }

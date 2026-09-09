@@ -98,9 +98,9 @@ class LoungePairCatalogueSyncService
             'email' => Str::limit($this->value($record, ['email', 'contact.email']) ?: '', 100, ''),
             'phone_no' => Str::limit($this->value($record, ['phone', 'phone_no', 'contact.phone']) ?: '', 50, ''),
             'location' => Str::limit($city, 50, ''),
-            // Existing screens use this as a Nigerian terminal type. Keep an
-            // external airport identifier in provider_payload instead.
-            'airport' => $existing?->airport ?? 0,
+            // Existing screens use this as Local(0)/International(1) — the
+            // same distinction LoungePair calls Domestic/International.
+            'airport' => $this->classifyAccessType($record, $airport, $existing),
             'service' => Str::limit($this->value($record, ['service', 'access_type']) ?: '', 50, ''),
             'terminal' => Str::limit($this->value($record, ['terminal', 'terminal_name']) ?: $airportCode, 50, ''),
             'description' => $this->value($record, ['description', 'summary', 'content']) ?: 'Details supplied by LoungePair.',
@@ -132,6 +132,41 @@ class LoungePairCatalogueSyncService
             'pics4' => $existing?->pics4 ?? '',
             'pics5' => $existing?->pics5 ?? '',
         ];
+    }
+
+    /**
+     * LoungePair has no dedicated Domestic/International field — but for
+     * Nigerian airports it consistently writes it into the free-text
+     * location ("Domestic Departures") and sometimes the name ("(Domestic)").
+     * Confirmed against the live API that other countries' airports (LHR,
+     * DXB, DOH, SIN...) don't label this at all, so outside Nigeria this
+     * always falls back to the existing/default value rather than guessing.
+     *
+     * @param array<string, mixed> $record
+     * @param array<string, mixed> $airport
+     */
+    private function classifyAccessType(array $record, array $airport, ?Lounge $existing): int
+    {
+        $country = (string) ($this->value($record, ['country', 'airport.country']) ?: $this->value($airport, ['country']) ?: '');
+
+        if (strcasecmp(trim($country), 'Nigeria') !== 0) {
+            return $existing?->airport ?? 0;
+        }
+
+        $text = strtolower(
+            (string) ($this->value($record, ['location']) ?: '').' '.
+            (string) ($this->value($record, ['name']) ?: '')
+        );
+
+        if (str_contains($text, 'international')) {
+            return 1;
+        }
+
+        if (str_contains($text, 'domestic')) {
+            return 0;
+        }
+
+        return $existing?->airport ?? 0;
     }
 
     /**

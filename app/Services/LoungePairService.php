@@ -95,7 +95,15 @@ class LoungePairService
         Log::info('[LoungePair] step 2/4: requesting airport lounges', ['iata' => $iata, 'path' => $path, 'query' => $query]);
 
         $payload = $this->getPayload($path, $query);
-        $airport = is_array($payload['airport'] ?? null) ? $payload['airport'] : ['iata' => $iata];
+        // The airport's own iata/name/city/country sit at the top level of
+        // the response alongside 'lounges' — there is no nested 'airport'
+        // key (confirmed against the live API) — so build it from those.
+        $airport = is_array($payload['airport'] ?? null) ? $payload['airport'] : [
+            'iata' => $payload['iata'] ?? $iata,
+            'name' => $payload['name'] ?? null,
+            'city' => $payload['city'] ?? null,
+            'country' => $payload['country'] ?? null,
+        ];
         $lounges = is_array($payload['lounges'] ?? null) ? $payload['lounges'] : [];
 
         Log::info('[LoungePair] step 2/4: airport lounges received', ['iata' => $iata, 'lounge_count' => count($lounges)]);
