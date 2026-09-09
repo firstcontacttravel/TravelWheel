@@ -39,13 +39,17 @@ class LoungePairResults extends Component
 
     public function render()
     {
-        $lounges = match ($this->typeFilter) {
+        // Named 'filteredLounges' rather than 'lounges' — Livewire auto-exposes
+        // every public property to the view by name, so a local variable here
+        // called 'lounges' would collide with (and lose to) the public
+        // $lounges property holding the full, unfiltered set.
+        $filteredLounges = match ($this->typeFilter) {
             'domestic' => $this->lounges->where('airport', 0),
             'international' => $this->lounges->where('airport', 1),
             default => $this->lounges,
         };
 
-        return view('livewire.pages.lounge.lounge-pair-results', ['lounges' => $lounges])
+        return view('livewire.pages.lounge.lounge-pair-results', ['filteredLounges' => $filteredLounges])
             ->layout('layouts.app', ['title' => 'Available Lounges - TravelWheel']);
     }
 }

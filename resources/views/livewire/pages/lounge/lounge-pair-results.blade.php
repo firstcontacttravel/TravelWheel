@@ -1,6 +1,5 @@
-@include('air.lounge.partials.lounge-ui')
-
 <section class="lounge-page">
+    @include('air.lounge.partials.lounge-ui')
     <div class="lounge-wrap">
         <div class="lounge-hero-main mb-4">
             <div class="lounge-kicker"><x-ph-icon name="couch" /> Available Lounges</div>
@@ -23,7 +22,7 @@
             </div>
         @endif
 
-        @if($lounges->isEmpty())
+        @if($filteredLounges->isEmpty())
             <div class="lounge-panel text-center">
                 <p class="lounge-copy">No lounge found for the selected options.</p>
                 <a class="lounge-btn mt-3" href="{{ route('air.lounge.global') }}">
@@ -32,7 +31,7 @@
             </div>
         @else
             <div class="lounge-plan-grid">
-                @foreach($lounges as $lounge)
+                @foreach($filteredLounges as $lounge)
                     <div class="lounge-plan">
                         <img src="{{ $lounge->imageUrl() }}" alt="{{ $lounge->brand_name }}" style="width:100%; aspect-ratio:16/9; object-fit:cover; border-radius:8px;">
                         <div class="lounge-plan-head">
