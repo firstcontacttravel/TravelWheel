@@ -51,7 +51,9 @@
 
                     <div class="lounge-panel mt-3">
                         <h1 class="lounge-title">{{ $lounge->brand_name }}</h1>
-                        <div class="lounge-kicker"><x-ph-icon name="map-pin" /> {{ $lounge->description }}</div>
+                        @if($lounge->provider !== 'loungepair')
+                            <div class="lounge-kicker"><x-ph-icon name="map-pin" /> {{ $lounge->description }}</div>
+                        @endif
 
                         <div class="lounge-panel-title mt-3"><x-ph-icon name="lifebuoy" /> Facilities</div>
                         <ul class="lounge-list">
