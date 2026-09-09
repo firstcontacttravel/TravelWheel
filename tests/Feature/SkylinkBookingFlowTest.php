@@ -304,6 +304,27 @@ class SkylinkBookingFlowTest extends TestCase
         });
     }
 
+    public function test_payment_gateway_page_does_not_mislabel_skylink_as_an_lcc_ticket(): void
+    {
+        // Found via user review: this page is reached unconditionally for
+        // every SkyLink fare (SkyLink has no hold concept, so it always pays
+        // first) but the copy called every fare here a "Low Cost Carrier
+        // (LCC)" ticket — TravelNext's own fare-type jargon, meaningless (and
+        // confusing) for a SkyLink booking that has nothing to do with LCC
+        // fare classification. Also checks the stale "simulate a successful
+        // payment" copy is gone — this button genuinely redirects to a real,
+        // live SeerBit checkout (redirect()->away() in _startSeerbitPayment()),
+        // so telling the customer their payment is "simulated" was simply
+        // wrong, not a placeholder-only page.
+        $response = $this->withSession($this->skylinkBookingSession())
+            ->get(route('flights.payment.gateway'));
+
+        $response->assertOk();
+        $response->assertDontSeeText('Low Cost Carrier');
+        $response->assertDontSeeText('LCC');
+        $response->assertDontSeeText('simulate', false);
+    }
+
     public function test_reserve_failure_after_payment_marks_the_booking_failed_and_alerts_ops(): void
     {
         Mail::fake();
