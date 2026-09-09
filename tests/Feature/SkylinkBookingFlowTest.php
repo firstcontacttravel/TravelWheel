@@ -119,6 +119,54 @@ class SkylinkBookingFlowTest extends TestCase
             ->assertSessionHasErrors(['error' => 'TravelFlex is not available for this fare. Please choose another flight or pay by card/bank transfer.']);
     }
 
+    public function test_booking_page_shows_a_blended_total_not_a_zero_tax_per_type_breakdown(): void
+    {
+        // Once fareBreakdown was populated (for the Fare Rules tab — see
+        // SkylinkFlightServiceTest), it stopped being empty, which silently
+        // switched the booking page's fare summary from its intended
+        // "blended total" branch (guarded by empty($breakdown)) to a
+        // per-passenger-type branch built for TravelNext's much richer data
+        // (real per-type tax/surcharge fields). SkyLink's breakdown has none
+        // of that, so every "Taxes & Fees" row rendered ₦0.00 per passenger
+        // while Trip Total (computed separately, unaffected) legitimately
+        // included real taxes and markup — the numbers visibly didn't add
+        // up on screen. Found via live testing with a 2-adult-1-child search.
+        $this->configureSkylink();
+
+        session([
+            'bookingFlight' => [
+                'source' => 'skylink',
+                'currency' => 'NGN',
+                'price' => 3353911.0,
+                'baseFare' => 3263911.0,
+                'totalTax' => 90000.0,
+                'airline' => 'Kenya Airways', 'airlineCode' => 'KQ', 'cabinCode' => 'Y',
+                'stops' => 0, 'isRefundable' => false, 'fareType' => 'Public',
+                'segments' => [[
+                    'from' => 'LOS', 'to' => 'NBO', 'airlineCode' => 'KQ', 'flightNo' => 'KQ1234', 'cabinCode' => 'Y',
+                    'departTime' => '12:25 pm', 'arriveTime' => '07:45 pm',
+                    'departDT' => '2026-09-17T12:25:00+00:00', 'arriveDT' => '2026-09-17T19:45:00+00:00',
+                    'duration' => 320, 'seatsLeft' => 9,
+                ]],
+                'returnSegments' => [], 'multiLegs' => [],
+                'fareBreakdown' => [
+                    ['passengerType' => 'ADT', 'qty' => 2, 'baseFare' => 1676928.34, 'totalFare' => 1676928.34, 'baggage' => ['2PC'], 'cabinBaggage' => ['7kg'], 'refundAllowed' => false, 'changeAllowed' => null],
+                    ['passengerType' => 'CHD', 'qty' => 1, 'baseFare' => 629515.07, 'totalFare' => 629515.07, 'baggage' => ['2PC'], 'cabinBaggage' => ['7kg'], 'refundAllowed' => false, 'changeAllowed' => null],
+                ],
+            ],
+            'bookingSearchParams' => ['adults' => 2, 'childs' => 1, 'kids' => 0],
+            'bookingSessionId' => 'sess-1',
+        ]);
+
+        $response = $this->get(route('flights.booking'));
+
+        $response->assertOk();
+        $response->assertSeeText('3 Passengers');
+        // The old broken branch would render these per-type labels instead.
+        $response->assertDontSeeText('Adult x 2');
+        $response->assertDontSeeText('Child x 1');
+    }
+
     public function test_successful_payment_reserves_and_confirms_a_skylink_booking(): void
     {
         Mail::fake();

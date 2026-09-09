@@ -2711,12 +2711,20 @@
                     <div class="bk-fare-section">
                         <div class="bk-fare-title">Flight Fare Summary</div>
 
-                        {{-- SkyLink-sourced fares carry no per-passenger-type breakdown (no
-                             such endpoint exists for that supplier) — show one blended total
-                             row instead of silently rendering nothing. Trip Total below is
-                             already driven by $this->getTotalPrice(), not this section, so
-                             the actual charged amount is unaffected either way. --}}
-                        @if(empty($breakdown))
+                        {{-- SkyLink-sourced fares carry no real per-passenger-type tax/markup
+                             breakdown (no such endpoint exists for that supplier) — show one
+                             blended total row instead. This used to be guarded by
+                             empty($breakdown) alone, back when SkyLink's fareBreakdown was
+                             always []; once that got populated (for the Fare Rules tab, which
+                             only needs baggage/refund info, not fare math) this branch stopped
+                             firing for SkyLink and the per-type branch below rendered instead —
+                             with no tax data to work with, it silently showed "Taxes & Fees:
+                             ₦0.00" per passenger while Trip Total (computed separately, unaffected)
+                             legitimately included real taxes and markup, so the two didn't
+                             reconcile on screen. Found via live testing. Trip Total below is
+                             driven by $this->getTotalPrice(), not this section, so the actual
+                             charged amount was never wrong either way — only this display. --}}
+                        @if(empty($breakdown) || ($mappedFlight['source'] ?? null) === 'skylink')
                             @php
                                 $blendedPax = max(1, (int) ($searchParams['adults'] ?? 1) + (int) ($searchParams['childs'] ?? 0) + (int) ($searchParams['kids'] ?? 0));
                             @endphp
@@ -2738,7 +2746,11 @@
                             </div>
                         @endif
 
-                        @foreach($breakdown as $fb)
+                        {{-- The per-type breakdown below needs real tax/markup data per
+                             passenger, which SkyLink's fareBreakdown doesn't carry (see the
+                             comment above) — skip it there so the blended row above isn't
+                             immediately followed by a second, non-reconciling summary. --}}
+                        @foreach(($mappedFlight['source'] ?? null) === 'skylink' ? [] : $breakdown as $fb)
                         @php
                             $ptCode  = $fb['passengerType'] ?? ($fb['PassengerTypeQuantity']['Code'] ?? 'ADT');
                             $ptQty   = (int)($fb['qty'] ?? ($fb['PassengerTypeQuantity']['Quantity'] ?? 1));
