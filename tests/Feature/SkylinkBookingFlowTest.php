@@ -325,6 +325,31 @@ class SkylinkBookingFlowTest extends TestCase
         $response->assertDontSeeText('simulate', false);
     }
 
+    public function test_payment_gateway_page_still_shows_travelnext_fare_breakdown(): void
+    {
+        // The per-type fare breakdown section on this page is skipped for
+        // SkyLink (see the test above) but should still render normally for
+        // TravelNext, whose fareBreakdown carries a real per-type total fare.
+        $response = $this->withSession([
+            'bookingFlight' => [
+                'fareSourceCode' => 'fs-1',
+                'source' => 'travelnext',
+                'fareType' => 'WebFare',
+                'currency' => 'NGN',
+                'price' => 190000,
+                'airline' => 'Kenya Airways',
+                'segments' => [['from' => 'LOS', 'to' => 'ACC']],
+                'fareBreakdown' => [
+                    ['passengerType' => 'ADT', 'qty' => 1, 'totalFare' => 190000],
+                ],
+            ],
+        ])->get(route('flights.payment.gateway'));
+
+        $response->assertOk();
+        $response->assertSeeText('Fare breakdown');
+        $response->assertSeeText('Adult × 1');
+    }
+
     public function test_reserve_failure_after_payment_marks_the_booking_failed_and_alerts_ops(): void
     {
         Mail::fake();
