@@ -168,6 +168,94 @@ class SkylinkBookingFlowTest extends TestCase
         Mail::assertNotSent(UnTicketedConfirmationAlert::class);
     }
 
+    public function test_reserve_sends_a_correctly_shaped_multi_passenger_travellers_object(): void
+    {
+        // The flat passengers_snapshot list was previously forwarded to
+        // reserve() completely unchanged as the "travellers" payload field —
+        // SkyLink's API expects a nested { primary_guest, travelers: {
+        // adult_0, adult_1, child_0, ... } } object instead (see their docs
+        // §7.1), a shape that was simply never built. Every real SkyLink
+        // reservation would have submitted malformed traveller data. This
+        // test inspects the actual outgoing request body, unlike the other
+        // reserve tests here which only fake a canned response and would
+        // pass regardless of what was sent.
+        Mail::fake();
+        $this->configureSkylink();
+        $this->configureSeerbit();
+
+        $booking = $this->skylinkPendingBooking([
+            'contact_email' => 'lead@example.test',
+            'contact_phone' => '8012345678',
+            'contact_country_code' => '234',
+            'adult_count' => 2,
+            'child_count' => 1,
+            'infant_count' => 0,
+            'passengers_snapshot' => [
+                ['type' => 'ADT', 'title' => 'Mr', 'first_name' => 'Lead', 'last_name' => 'Adult', 'gender' => 'M', 'dob' => '1990-01-01', 'nationality' => 'NG', 'passport_no' => 'A1111111', 'passport_exp' => '2030-01-01', 'passport_issue_date' => '2020-01-01'],
+                ['type' => 'ADT', 'title' => 'Mrs', 'first_name' => 'Second', 'last_name' => 'Adult', 'gender' => 'F', 'dob' => '1992-02-02', 'nationality' => 'NG', 'passport_no' => 'A2222222', 'passport_exp' => '2031-01-01', 'passport_issue_date' => '2021-01-01'],
+                ['type' => 'CHD', 'title' => 'Miss', 'first_name' => 'One', 'last_name' => 'Child', 'gender' => 'F', 'dob' => '2018-03-03', 'nationality' => 'NG', 'passport_no' => 'A3333333', 'passport_exp' => '2032-01-01', 'passport_issue_date' => '2022-01-01'],
+            ],
+        ]);
+
+        Http::fake(function ($request) {
+            if (str_contains($request->url(), '/encrypt/keys')) {
+                return Http::response(['data' => ['EncryptedSecKey' => ['encryptedKey' => 'encrypted-test-key']]]);
+            }
+            if (str_contains($request->url(), '/payments/query/')) {
+                return Http::response(['data' => ['payments' => [
+                    'gatewayCode' => '00', 'gatewayMessage' => 'Successful', 'amount' => 750000, 'currency' => 'NGN',
+                ]]]);
+            }
+            if (str_contains($request->url(), '/api/login')) {
+                return Http::response($this->loginResponse());
+            }
+            if (str_contains($request->url(), '/flights/reserve')) {
+                return Http::response([
+                    'success' => true,
+                    'data' => ['pnr' => 'SKY-PNR-MULTI', 'status' => 'confirmed', 'message' => 'PNR generated successfully'],
+                ]);
+            }
+
+            return Http::response([]);
+        });
+
+        $this->get(route('payments.seerbit.callback', ['paymentReference' => $booking->payment_reference]))
+            ->assertRedirect(route('flights.confirmation'));
+
+        Http::assertSent(function ($request) {
+            if (! str_contains($request->url(), '/flights/reserve')) {
+                return true;
+            }
+
+            $body = $request->data();
+            $travellers = $body['travellers'];
+
+            $this->assertArrayHasKey('primary_guest', $travellers);
+            $this->assertArrayHasKey('travelers', $travellers);
+            // Every passenger present, correctly keyed by type + index —
+            // not the old flat list.
+            $this->assertArrayHasKey('adult_0', $travellers['travelers']);
+            $this->assertArrayHasKey('adult_1', $travellers['travelers']);
+            $this->assertArrayHasKey('child_0', $travellers['travelers']);
+            $this->assertSame('Lead', $travellers['primary_guest']['first_name']);
+            $this->assertSame('Second', $travellers['travelers']['adult_1']['first_name']);
+            $this->assertSame('One', $travellers['travelers']['child_0']['first_name']);
+            // Contact info only lives on primary_guest — SkyLink has nowhere
+            // else to put it, and our form only collects it once anyway.
+            $this->assertSame('lead@example.test', $travellers['primary_guest']['email']);
+            $this->assertSame('8012345678', $travellers['primary_guest']['phone']);
+            $this->assertSame('234', $travellers['primary_guest']['country_code']);
+            // M/F -> male/female, since that's what SkyLink's API expects.
+            $this->assertSame('male', $travellers['primary_guest']['gender']);
+            $this->assertSame('female', $travellers['travelers']['adult_1']['gender']);
+            // passport_no/passport_exp renamed to SkyLink's field names.
+            $this->assertSame('A1111111', $travellers['primary_guest']['passport_number']);
+            $this->assertSame('2030-01-01', $travellers['primary_guest']['passport_expiry']);
+
+            return true;
+        });
+    }
+
     public function test_reserve_failure_after_payment_marks_the_booking_failed_and_alerts_ops(): void
     {
         Mail::fake();
@@ -297,9 +385,12 @@ class SkylinkBookingFlowTest extends TestCase
         ];
     }
 
-    private function skylinkPendingBooking(): FlightBooking
+    private function skylinkPendingBooking(array $overrides = []): FlightBooking
     {
-        $booking = FlightBooking::create([
+        // Plain array_merge (not recursive) — a passed 'passengers_snapshot'
+        // or similar list-valued override replaces the default wholesale
+        // rather than merging item-by-item, which is what every caller wants.
+        $booking = FlightBooking::create(array_merge([
             'booking_ref' => 'TW-SKY-'.strtoupper(str()->random(6)),
             'fare_source_code' => 'btk_refreshed',
             'supplier' => 'skylink',
@@ -326,7 +417,7 @@ class SkylinkBookingFlowTest extends TestCase
                 'price' => 750000,
                 'segments' => [['from' => 'LOS', 'to' => 'DXB']],
             ],
-        ]);
+        ], $overrides));
 
         session(['flightBookingDbId' => $booking->id]);
 

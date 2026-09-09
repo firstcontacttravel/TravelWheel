@@ -1644,7 +1644,11 @@ class FlightBookingController extends Controller
     {
         $result = app(SkylinkFlightService::class)->reserve(
             $booking->fare_source_code,
-            (array) ($booking->passengers_snapshot ?? []),
+            $this->_buildSkylinkTravellers((array) ($booking->passengers_snapshot ?? []), [
+                'email' => $booking->contact_email,
+                'phone' => $booking->contact_phone,
+                'country_code' => $booking->contact_country_code,
+            ]),
             [
                 'adults' => $booking->adult_count,
                 'children' => $booking->child_count,
@@ -1698,6 +1702,77 @@ class FlightBookingController extends Controller
         ]);
 
         return redirect()->route('flights.confirmation');
+    }
+
+    // =========================================================================
+    //  _buildSkylinkTravellers() — this app's passenger data is a flat list
+    //  (one row per passenger, `type` = ADT/CHD/INF), but SkyLink's
+    //  /api/flights/reserve wants a nested { primary_guest, travelers: {
+    //  adult_0, adult_1, child_0, ... } } object (see their docs §7.1) — this
+    //  was never built at all before; every field on $travellers in
+    //  reserve()'s payload was simply the flat list itself, a shape SkyLink's
+    //  API doesn't recognize. Found while fixing the passenger-count bug.
+    //
+    //  primary_guest is the first ADT passenger (SkyLink requires email/phone
+    //  there, which our form only collects once, as the overall booking
+    //  contact — not per passenger). Per their docs, adult_0 always mirrors
+    //  primary_guest and must still be included, not omitted.
+    // =========================================================================
+    private function _buildSkylinkTravellers(array $passengers, array $contact): array
+    {
+        $typePrefixes = ['ADT' => 'adult', 'CHD' => 'child', 'INF' => 'infant'];
+        $counters = ['ADT' => 0, 'CHD' => 0, 'INF' => 0];
+        $travelers = [];
+        $primaryGuest = null;
+
+        foreach ($passengers as $passenger) {
+            $type = $passenger['type'] ?? 'ADT';
+            $prefix = $typePrefixes[$type] ?? 'adult';
+            $index = $counters[$type] ?? 0;
+            $counters[$type] = $index + 1;
+
+            $mapped = $this->_mapSkylinkTraveller($passenger);
+            $travelers["{$prefix}_{$index}"] = $mapped;
+
+            if ($primaryGuest === null && $type === 'ADT') {
+                $primaryGuest = $mapped;
+            }
+        }
+
+        // Defensive fallback only — _validatePassengerCountsAgainstSearch()
+        // already requires at least one adult on every booking (infants must
+        // have an accompanying adult), so $passengers being empty or
+        // ADT-less here should be unreachable in practice.
+        if ($primaryGuest === null) {
+            $primaryGuest = $this->_mapSkylinkTraveller($passengers[0] ?? []);
+        }
+
+        // area_code has no equivalent field in SkyLink's traveller object (only
+        // phone + country_code) — TravelNext's own book() call likewise sends
+        // $contact['phone'] alone for customerPhone, un-prefixed with it.
+        $primaryGuest['email'] = $contact['email'] ?? '';
+        $primaryGuest['phone'] = preg_replace('/\D+/', '', (string) ($contact['phone'] ?? ''));
+        $primaryGuest['country_code'] = preg_replace('/\D+/', '', (string) ($contact['country_code'] ?? ''));
+
+        return [
+            'primary_guest' => $primaryGuest,
+            'travelers' => $travelers,
+        ];
+    }
+
+    private function _mapSkylinkTraveller(array $passenger): array
+    {
+        return [
+            'title' => $passenger['title'] ?? '',
+            'first_name' => $passenger['first_name'] ?? '',
+            'last_name' => $passenger['last_name'] ?? '',
+            'dob' => $passenger['dob'] ?? '',
+            'gender' => ($passenger['gender'] ?? 'M') === 'F' ? 'female' : 'male',
+            'passport_number' => $passenger['passport_no'] ?? '',
+            'passport_expiry' => $passenger['passport_exp'] ?? '',
+            'passport_issue_date' => $passenger['passport_issue_date'] ?? '',
+            'nationality' => $passenger['nationality'] ?? '',
+        ];
     }
 
     private function _completeHeldTicketPayment(FlightBooking $booking)
@@ -2662,6 +2737,12 @@ class FlightBookingController extends Controller
             'total_price' => ((float) ($mappedFlight['price'] ?? 0)) + $this->_selectedExtrasTotal($overrides['extra_services_snapshot'] ?? session('selectedExtras', [])),
             'contact_email' => $contact['email'] ?? '',
             'contact_phone' => $contact['phone'] ?? '',
+            // Needed later for SkyLink's primary_guest.country_code — persisted
+            // rather than read from session at reserve() time, since that call
+            // runs from the SeerBit payment callback (a separate request, by
+            // then the original session may be long gone).
+            'contact_area_code' => $contact['area_code'] ?? '',
+            'contact_country_code' => $contact['country_code'] ?? '',
             'adult_count' => collect($passengers)->where('type', 'ADT')->count(),
             'child_count' => collect($passengers)->where('type', 'CHD')->count(),
             'infant_count' => collect($passengers)->where('type', 'INF')->count(),

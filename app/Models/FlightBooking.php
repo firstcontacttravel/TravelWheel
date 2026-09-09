@@ -45,6 +45,8 @@ class FlightBooking extends Model
         'reconciliation_note',
         'contact_email',
         'contact_phone',
+        'contact_area_code',
+        'contact_country_code',
         'adult_count',
         'child_count',
         'infant_count',
