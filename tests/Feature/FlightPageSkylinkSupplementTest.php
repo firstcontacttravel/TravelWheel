@@ -114,6 +114,9 @@ class FlightPageSkylinkSupplementTest extends TestCase
             // exercise the enabled behavior must not depend on what happens
             // to be in the developer's own .env.
             'services.skylink.enabled' => true,
+            // See SkylinkFlightServiceTest::configureSkylink() — off so these
+            // assert against a real call rather than a cache hit.
+            'services.skylink.search_cache_ttl' => 0,
         ]);
 
         ExchangeRate::query()->updateOrCreate(['currency' => 'USD'], ['rate' => 1500]);

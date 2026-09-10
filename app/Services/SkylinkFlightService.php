@@ -6,6 +6,7 @@ use App\Models\ExchangeRate;
 use App\Models\FlightSupplierCall;
 use Carbon\Carbon;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -33,10 +34,23 @@ class SkylinkFlightService
     public function search(array $criteria): array
     {
         $payload = $this->buildSearchPayload($criteria);
+        $cacheKey = $this->searchCacheKey($payload);
+        $cacheTtl = (int) config('services.skylink.search_cache_ttl', 0);
+
+        // A reload, a back-button from the details page, or the same route
+        // searched twice all re-fire wire:init and pay the full ~7s round trip
+        // again for an answer SkyLink itself considers valid for 10-15 minutes.
+        // Only successful searches are cached, and nothing is written to
+        // flight_supplier_calls on a hit — that table records calls that
+        // actually left the building.
+        if ($cacheTtl > 0 && ($cached = Cache::get($cacheKey)) !== null) {
+            return $cached;
+        }
+
         $startedAt = microtime(true);
 
         try {
-            $response = $this->request(fn ($client) => $client->post('flights/search', $payload));
+            $response = $this->request(fn ($client) => $client->post('flights/search', $payload), $this->timeoutFor('search'));
         } catch (\Throwable $exception) {
             $this->logCall([
                 'call_type' => 'search',
@@ -112,7 +126,7 @@ class SkylinkFlightService
             'http_status' => $response->status(),
         ]);
 
-        return [
+        $result = [
             'error' => false,
             'message' => null,
             'data' => [
@@ -120,6 +134,12 @@ class SkylinkFlightService
                 'meta' => (array) data_get($decoded, 'data.meta', []),
             ],
         ];
+
+        if ($cacheTtl > 0) {
+            Cache::put($cacheKey, $result, $cacheTtl);
+        }
+
+        return $result;
     }
 
     // =========================================================================
@@ -142,7 +162,7 @@ class SkylinkFlightService
         $startedAt = microtime(true);
 
         try {
-            $response = $this->request(fn ($client) => $client->post('flights/pricing', $payload));
+            $response = $this->request(fn ($client) => $client->post('flights/pricing', $payload), $this->timeoutFor('pricing'));
         } catch (\Throwable $exception) {
             $this->logCall(array_merge($this->contextLogAttributes($context, $passengers), [
                 'call_type' => 'pricing',
@@ -238,7 +258,7 @@ class SkylinkFlightService
         $startedAt = microtime(true);
 
         try {
-            $response = $this->request(fn ($client) => $client->post('flights/reserve', $payload));
+            $response = $this->request(fn ($client) => $client->post('flights/reserve', $payload), $this->timeoutFor('reserve'));
         } catch (\Throwable $exception) {
             $this->logCall(array_merge($this->contextLogAttributes($context, $passengers), [
                 'call_type' => 'reserve',
@@ -590,15 +610,39 @@ class SkylinkFlightService
     // =========================================================================
     //  Private helpers
     // =========================================================================
-    private function request(\Closure $callback): Response
+    /**
+     * $timeout is the read timeout in seconds for this specific endpoint —
+     * see config/services.php's skylink block for why search, pricing and
+     * reserve each get their own budget rather than sharing one.
+     */
+    private function request(\Closure $callback, int $timeout): Response
     {
-        $response = $callback($this->auth->authorizedClient());
+        $response = $callback($this->auth->authorizedClient($timeout));
 
         if ($response->status() === 401) {
-            $response = $callback($this->auth->client()->withToken($this->auth->refreshToken()));
+            $response = $callback($this->auth->client($timeout)->withToken($this->auth->refreshToken()));
         }
 
         return $response;
+    }
+
+    private function timeoutFor(string $endpoint): int
+    {
+        return max(1, (int) config('services.skylink.'.$endpoint.'_timeout', 20));
+    }
+
+    /**
+     * Cache key for a search. Built from the request payload we actually send
+     * rather than the raw criteria, so two searches that differ only in fields
+     * SkyLink never sees (city display names, form artefacts) share a hit —
+     * and so a change to how we build the payload can never silently reuse a
+     * result built from the old shape.
+     */
+    private function searchCacheKey(array $payload): string
+    {
+        ksort($payload);
+
+        return 'skylink.search.'.md5(json_encode($payload));
     }
 
     private function buildSearchPayload(array $criteria): array
