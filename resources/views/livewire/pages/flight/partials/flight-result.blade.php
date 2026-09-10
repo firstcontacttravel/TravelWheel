@@ -1,4 +1,9 @@
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+{{-- Plus Jakarta Sans used to be loaded here too, at 5 weights, but --font
+     resolves to the real site-wide body font (--tw-font-sans, Open Sans —
+     loaded once in layouts/app.blade.php) via its fallback chain below, not
+     to Plus Jakarta Sans, which was never actually applied anywhere on this
+     page. Only DM Mono (used for times/prices) is real. --}}
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
     /* ── Reset & Base ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -7,7 +12,7 @@
         --blue:    var(--tw-brand, #303191);
         --blue-lt: #f1f1ff;
         --blue-md: #d7d8ff;
-        --green:   var(--tw-accent, #009933);
+        --green:   var(--tw-accent, #00a859);
         --amber:   #d97706;
         --red:     #dc2626;
         --gray-50: var(--tw-surface-soft, #f8f9fc);
@@ -215,47 +220,147 @@
     .sr-sort-btn.active { background: var(--blue-lt); border-color: var(--blue); color: var(--blue); }
     .sr-result-count { margin-left: auto; font-size: 12px; color: var(--gray-500); font-weight: 500; }
 
-    /* ── Flight Card ── */
-    .sr-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); overflow: hidden; animation: cardIn .3s ease both; transition: box-shadow .2s; }
-    .sr-card:hover { box-shadow: var(--shadow-md); }
+    /* ── Flight Card (rebuilt — see comment block below) ── */
+    /*
+     * This card had accumulated four full, unconditional redefinitions of
+     * the same classes over successive redesign passes (this original one,
+     * "Phase 2/3", and a "Figma replica" pass — none removed the one before
+     * it), each with its own hardcoded, non-token colors and, in the last
+     * pass, heavy absolute positioning pinned to fixed pixel widths. This is
+     * the single canonical implementation replacing all of them — one card
+     * shape/shadow/radius, real brand tokens throughout, and an actual CSS
+     * grid instead of absolute positioning, so the card reflows correctly
+     * instead of relying on a fixed min-height and magic-number offsets.
+     */
     @keyframes cardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    .sr-card-head { display: flex; align-items: center; gap: 14px; padding: 14px 18px 12px; }
-    .sr-airline-logo-wrap { width: 40px; height: 40px; border-radius: 8px; background: var(--gray-100); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; font-weight: 800; color: var(--gray-500); overflow: hidden; }
+
+    .sr-card {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas: "head price" "body body" "footer footer" "details details";
+        column-gap: 20px;
+        background: #fff;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        transition: box-shadow .18s ease, border-color .18s ease;
+        animation: cardIn .3s ease both;
+    }
+    .sr-card:hover { border-color: #d3d6e6; box-shadow: var(--shadow-md); }
+
+    /* Head — airline identity */
+    .sr-card-head { grid-area: head; display: flex; align-items: center; gap: 14px; min-width: 0; padding: 18px 0 0 20px; }
+    .sr-airline-logo-wrap { width: 42px; height: 42px; border-radius: 10px; background: var(--gray-50); border: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; font-weight: 800; color: var(--gray-500); overflow: hidden; }
     .sr-airline-logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
-    .sr-card-airline { font-size: 14px; font-weight: 700; color: var(--gray-900); }
-    .sr-card-class { font-size: 11px; color: var(--gray-400); font-weight: 500; }
-    .sr-card-price-wrap { margin-left: auto; text-align: right; }
-    .sr-card-price-label { font-size: 10px; color: var(--gray-400); font-weight: 600; text-transform: uppercase; }
-    .sr-card-price { font-size: 22px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); line-height: 1.1; }
-    .sr-card-price-sub { font-size: 11px; color: var(--blue); font-weight: 600; cursor: pointer; display:flex; align-items:center; gap:3px; justify-content:flex-end; }
+    .sr-card-airline { font-size: 15px; font-weight: 700; color: var(--gray-900); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sr-card-class { font-size: 12px; color: var(--gray-500); font-weight: 500; margin-top: 1px; }
+
+    /* Price + actions */
+    .sr-card-price-wrap { grid-area: price; display: flex; flex-direction: column; align-items: flex-end; padding: 18px 20px 0 0; text-align: right; }
+    .sr-card-price-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--gray-400); }
+    .sr-card-price { font-size: 23px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); line-height: 1.3; margin-top: 1px; }
+    .sr-card-price-sub { font-size: 11px; color: var(--blue); font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 3px; justify-content: flex-end; margin-top: 2px; }
     .sr-card-price-sub:hover { text-decoration: underline; }
-    .sr-card-body { padding: 0 18px 14px; }
-    .sr-segments { display: flex; align-items: center; gap: 0; }
-    .sr-seg { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-    .sr-seg-time { font-size: 22px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); line-height: 1; }
-    .sr-seg-place { font-size: 12px; color: var(--gray-500); font-weight: 600; }
-    .sr-seg-line { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 14px; min-width: 80px; }
+    .sr-card-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-top: 12px; }
+    .sr-book-btn { min-width: 148px; padding: 0 22px; height: 40px; background: var(--blue); color: #fff; border: none; border-radius: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: background .15s ease, transform .15s ease; }
+    .sr-book-btn:hover { background: var(--tw-brand-hover, #252675); transform: translateY(-1px); }
+    .sr-installment-btn { padding: 6px 12px; border-radius: 8px; border: 1px dashed var(--gray-300); background: #fff; color: var(--gray-500); font-family: var(--font); cursor: pointer; display: inline-flex; flex-direction: column; align-items: flex-end; gap: 1px; transition: border-color .15s ease, color .15s ease; }
+    .sr-installment-btn:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
+    .sr-installment-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .sr-installment-btn-price { font-size: 11.5px; font-weight: 700; color: var(--gray-700); }
+    .sr-installment-btn-label { font-size: 10.5px; color: inherit; }
+
+    /* Body — badges, route, meta */
+    .sr-card-body { grid-area: body; min-width: 0; padding: 14px 20px 0; }
+
+    .sr-refund-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+    .sr-refund-badge.no { background: #fef3f2; color: #b42318; }
+    .sr-refund-badge.yes { background: #ecfdf3; color: var(--green); }
+
+    .sr-depart-return { display: flex; flex-wrap: wrap; gap: 22px; padding: 6px 0 14px; }
+    .sr-dr-col { flex: 1; min-width: 230px; }
+    .sr-dr-col + .sr-dr-col { border-left: 1px dashed var(--gray-200); padding-left: 22px; }
+    .sr-dr-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--gray-400); margin-bottom: 10px; }
+    .sr-segments { display: flex; align-items: flex-start; gap: 0; }
+    .sr-seg { display: flex; flex-direction: column; gap: 4px; min-width: 60px; }
+    .sr-seg:last-child { align-items: flex-end; text-align: right; }
+    .sr-seg-time { font-size: 20px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); line-height: 1.1; }
+    .sr-seg-place { font-size: 12px; color: var(--gray-500); font-weight: 600; max-width: 120px; }
+    .sr-seg-line { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 0 12px; min-width: 84px; }
     .sr-seg-duration { font-size: 11.5px; color: var(--gray-500); font-weight: 600; }
-    .sr-seg-track { width: 100%; display: flex; align-items: center; gap: 0; }
-    .sr-seg-dash { flex: 1; height: 1.5px; background: var(--gray-300); }
-    .sr-seg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gray-400); flex-shrink: 0; }
-    .sr-seg-stop { font-size: 10.5px; color: var(--green); font-weight: 700; }
-    .sr-seg-stop.hasstop { color: var(--amber); }
-    .sr-depart-return { display: flex; gap: 0; }
-    .sr-dr-col { flex: 1; }
-    .sr-dr-col + .sr-dr-col { border-left: 1px dashed var(--gray-200); padding-left: 18px; margin-left: 18px; }
-    .sr-dr-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gray-400); margin-bottom: 8px; }
-    .sr-card-footer { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px 14px; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--gray-100); }
-    .sr-refund-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
-    .sr-refund-badge.no { background: #fef2f2; color: var(--red); }
-    .sr-refund-badge.yes { background: #f0fdf4; color: var(--green); }
-    .sr-view-details { font-size: 12px; color: var(--blue); font-weight: 600; cursor: pointer; text-decoration: none; }
-    .sr-view-details:hover { text-decoration: underline; }
-    .sr-book-btn { padding: 0 24px; height: 40px; background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #fff; border: none; border-radius: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: all .2s; box-shadow: 0 3px 12px rgba(29,78,216,.3); }
-    .sr-book-btn:hover { background: linear-gradient(135deg, #1e40af, #1d4ed8); transform: translateY(-1px); box-shadow: 0 5px 18px rgba(29,78,216,.4); }
+    .sr-seg-track { position: relative; width: 100%; display: flex; align-items: center; height: 16px; }
+    .sr-seg-dash { flex: 1; height: 1.5px; background: var(--gray-200); }
+    .sr-seg-dot { display: none; }
+    .sr-seg-track::after {
+        content: ""; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px;
+        transform: translate(-50%, -50%);
+        background: var(--gray-400);
+        mask: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center / contain no-repeat;
+        -webkit-mask: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center / contain no-repeat;
+    }
+    .sr-seg-stop { font-size: 10.5px; font-weight: 700; color: var(--green); }
+    .sr-seg-stop.hasstop { color: #b54708; }
+
+    .sr-card-meta-clean { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 0; margin-top: 2px; border-top: 1px solid var(--gray-100); font-size: 12px; color: var(--gray-500); }
+    .sr-card-meta-item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+    .sr-card-meta-item strong { color: var(--gray-700); font-weight: 700; }
+    .sr-card-meta-sep { width: 1px; height: 14px; background: var(--gray-200); flex-shrink: 0; }
+    .sr-icon-mask { display: inline-block; width: 15px; height: 15px; flex: 0 0 15px; background: currentColor; color: var(--gray-400); mask: var(--icon-url) center / contain no-repeat; -webkit-mask: var(--icon-url) center / contain no-repeat; }
+    .sr-icon-refund { --icon-url: url("{{ asset('images/figma-icons/flight-card-refund.svg') }}"); width: 14px; height: 14px; flex-basis: 14px; }
+    .sr-icon-cabin { --icon-url: url("{{ asset('images/figma-icons/flight-card-cabin-bag.svg') }}"); }
+    .sr-icon-luggage { --icon-url: url("{{ asset('images/figma-icons/flight-card-luggage.svg') }}"); }
+    .sr-icon-seat { --icon-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M8.75 8.125C8.40625 8.125 8.11208 8.00271 7.8675 7.75812C7.62292 7.51354 7.50042 7.21916 7.5 6.875V3.75C7.5 3.40625 7.6225 3.11208 7.8675 2.8675C8.1125 2.62291 8.40667 2.50042 8.75 2.5H10C10.3437 2.5 10.6381 2.6225 10.8831 2.8675C11.1281 3.1125 11.2504 3.40666 11.25 3.75V6.875C11.25 7.21875 11.1277 7.51312 10.8831 7.75812C10.6385 8.00312 10.3442 8.12542 10 8.125H8.75ZM5.9375 11.25C5.65625 11.25 5.40625 11.1694 5.1875 11.0081C4.96875 10.8469 4.81771 10.6306 4.73437 10.3594L3.17187 5.17187C3.15104 5.11979 3.13813 5.0625 3.13313 5C3.12813 4.9375 3.12542 4.875 3.125 4.8125V3.125C3.125 2.94792 3.185 2.79958 3.305 2.68C3.425 2.56042 3.57333 2.50042 3.75 2.5C3.92667 2.49958 4.07521 2.55958 4.19562 2.68C4.31604 2.80042 4.37583 2.94875 4.375 3.125V5L5.9375 10H10.625C10.8021 10 10.9506 10.06 11.0706 10.18C11.1906 10.3 11.2504 10.4483 11.25 10.625C11.2496 10.8017 11.1896 10.9502 11.07 11.0706C10.9504 11.191 10.8021 11.2508 10.625 11.25H5.9375ZM5.625 13.125C5.44792 13.125 5.29958 13.065 5.18 12.945C5.06042 12.825 5.00042 12.6767 5 12.5C4.99958 12.3233 5.05958 12.175 5.18 12.055C5.30042 11.935 5.44875 11.875 5.625 11.875H10.625C10.8021 11.875 10.9506 11.935 11.0706 12.055C11.1906 12.175 11.2504 12.3233 11.25 12.5C11.2496 12.6767 11.1896 12.8252 11.07 12.9456C10.9504 13.066 10.8021 13.1258 10.625 13.125H5.625Z'/%3E%3C/svg%3E"); }
+
+    /* Footer + expand toggle */
+    .sr-card-footer { grid-area: footer; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px 16px; }
+    .sr-view-details { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--blue); cursor: pointer; text-decoration: none; }
+    .sr-view-details:hover { color: var(--tw-brand-hover, #252675); }
+    .sr-view-details::after {
+        content: ""; width: 14px; height: 14px; background: currentColor;
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M12.3612 7.5C12.3612 6.21072 11.8491 4.97424 10.9374 4.06258C10.0258 3.15092 8.78928 2.63875 7.5 2.63875C6.21072 2.63875 4.97424 3.15092 4.06258 4.06258C3.15092 4.97424 2.63875 6.21072 2.63875 7.5C2.63875 8.78928 3.15092 10.0258 4.06258 10.9374C4.97424 11.8491 6.21072 12.3612 7.5 12.3612C8.78928 12.3612 10.0258 11.8491 10.9374 10.9374C11.8491 10.0258 12.3612 8.78928 12.3612 7.5ZM9.0925 5.9675C9.15693 5.90307 9.23342 5.85196 9.3176 5.81709C9.40178 5.78222 9.49201 5.76428 9.58313 5.76428C9.67424 5.76428 9.76447 5.78222 9.84865 5.81709C9.93283 5.85196 10.0093 5.90307 10.0737 5.9675C10.1382 6.03193 10.1893 6.10842 10.2242 6.1926C10.259 6.27678 10.277 6.36701 10.277 6.45813C10.277 6.54924 10.259 6.63947 10.2242 6.72365C10.1893 6.80783 10.1382 6.88432 10.0737 6.94875L7.99125 9.0325C7.9268 9.09713 7.85024 9.14841 7.76594 9.18339C7.68164 9.21838 7.59127 9.23639 7.5 9.23639C7.40873 9.23639 7.31836 9.21838 7.23406 9.18339C7.14976 9.14841 7.0732 9.09713 7.00875 9.0325L4.92563 6.95L4.87812 6.89687C4.76852 6.76374 4.71244 6.59456 4.72079 6.42232C4.72915 6.25008 4.80135 6.08713 4.92333 5.96523C5.0453 5.84334 5.2083 5.77124 5.38055 5.76299C5.55279 5.75474 5.72194 5.81094 5.855 5.92062L5.9075 5.96812L7.5 7.55938L9.0925 5.9675ZM13.75 7.5C13.75 10.9519 10.9519 13.75 7.5 13.75C4.04813 13.75 1.25 10.9519 1.25 7.5C1.25 4.04813 4.04813 1.25 7.5 1.25C10.9519 1.25 13.75 4.04813 13.75 7.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
+        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M12.3612 7.5C12.3612 6.21072 11.8491 4.97424 10.9374 4.06258C10.0258 3.15092 8.78928 2.63875 7.5 2.63875C6.21072 2.63875 4.97424 3.15092 4.06258 4.06258C3.15092 4.97424 2.63875 6.21072 2.63875 7.5C2.63875 8.78928 3.15092 10.0258 4.06258 10.9374C4.97424 11.8491 6.21072 12.3612 7.5 12.3612C8.78928 12.3612 10.0258 11.8491 10.9374 10.9374C11.8491 10.0258 12.3612 8.78928 12.3612 7.5ZM9.0925 5.9675C9.15693 5.90307 9.23342 5.85196 9.3176 5.81709C9.40178 5.78222 9.49201 5.76428 9.58313 5.76428C9.67424 5.76428 9.76447 5.78222 9.84865 5.81709C9.93283 5.85196 10.0093 5.90307 10.0737 5.9675C10.1382 6.03193 10.1893 6.10842 10.2242 6.1926C10.259 6.27678 10.277 6.36701 10.277 6.45813C10.277 6.54924 10.259 6.63947 10.2242 6.72365C10.1893 6.80783 10.1382 6.88432 10.0737 6.94875L7.99125 9.0325C7.9268 9.09713 7.85024 9.14841 7.76594 9.18339C7.68164 9.21838 7.59127 9.23639 7.5 9.23639C7.40873 9.23639 7.31836 9.21838 7.23406 9.18339C7.14976 9.14841 7.0732 9.09713 7.00875 9.0325L4.92563 6.95L4.87812 6.89687C4.76852 6.76374 4.71244 6.59456 4.72079 6.42232C4.72915 6.25008 4.80135 6.08713 4.92333 5.96523C5.0453 5.84334 5.2083 5.77124 5.38055 5.76299C5.55279 5.75474 5.72194 5.81094 5.855 5.92062L5.9075 5.96812L7.5 7.55938L9.0925 5.9675ZM13.75 7.5C13.75 10.9519 10.9519 13.75 7.5 13.75C4.04813 13.75 1.25 10.9519 1.25 7.5C1.25 4.04813 4.04813 1.25 7.5 1.25C10.9519 1.25 13.75 4.04813 13.75 7.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
+        transition: transform .16s ease;
+    }
+
+    /* Multi-city grid */
+    .mc-grid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-top: 6px; }
+    .mc-leg { min-width: 0; padding: 13px 16px; border: 1px solid var(--gray-100); border-radius: 10px; background: var(--gray-50); }
+    .mc-leg.mc-span { grid-column: 1 / -1; }
+    .mc-leg-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gray-400); margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+    .mc-leg-airline { font-size: 10.5px; color: var(--gray-500); font-weight: 500; margin-bottom: 9px; display: flex; align-items: center; gap: 5px; }
+    .mc-leg-airline img { width: 16px; height: 16px; object-fit: contain; border-radius: 3px; background: #fff; }
+    .mc-row { display: flex; align-items: center; gap: 0; }
+    .mc-pt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .mc-time { font-size: 19px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); line-height: 1.1; }
+    .mc-city { font-size: 11px; color: var(--gray-500); font-weight: 500; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
+    .mc-mid { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 10px; min-width: 60px; }
+    .mc-dur { font-size: 10.5px; color: var(--gray-500); font-weight: 600; }
+    .mc-track { width: 100%; display: flex; align-items: center; }
+    .mc-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gray-300); flex-shrink: 0; }
+    .mc-dash { flex: 1; height: 1.5px; background: var(--gray-200); }
+    .mc-stop { font-size: 10px; font-weight: 700; }
+    .mc-stop.direct { color: var(--green); }
+    .mc-stop.hasstop { color: #b54708; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+        .sr-card { grid-template-columns: 1fr; grid-template-areas: "head" "price" "body" "footer" "details"; }
+        .sr-card-head { padding: 16px 16px 0; }
+        .sr-card-price-wrap { align-items: flex-start; text-align: left; padding: 12px 16px 0; border-top: 1px solid var(--gray-100); margin-top: 12px; }
+        .sr-card-actions { align-items: stretch; width: 100%; }
+        .sr-card-actions .sr-book-btn { width: 100%; }
+        .sr-installment-btn { align-items: center; width: 100%; }
+        .sr-card-body { padding: 14px 16px 0; }
+        .sr-card-footer { padding: 0 16px 14px; }
+        .sr-dr-col { min-width: 0; flex: 1 1 100%; }
+        .sr-dr-col + .sr-dr-col { border-left: none; border-top: 1px dashed var(--gray-200); padding-left: 0; padding-top: 16px; }
+        .mc-grid { grid-template-columns: 1fr; }
+        .mc-leg.mc-span { grid-column: 1; }
+    }
 
     /* ── Flight Detail Panel ── */
-    .sr-detail-panel { border-top: 1px solid var(--gray-200); background: var(--gray-50); }
+    .sr-detail-panel { grid-area: details; border-top: 1px solid var(--gray-200); background: var(--gray-50); }
     .sr-detail-tabs { display: flex; border-bottom: 1px solid var(--gray-200); background: #fff; padding: 0 18px; }
     .sr-detail-tab { padding: 10px 18px; font-size: 12.5px; font-weight: 700; color: var(--gray-500); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; }
     .sr-detail-tab:hover { color: var(--blue); }
@@ -678,51 +783,6 @@
     .sr-load-more { order: 5; text-align: center; padding: 8px 0; }
     .sr-empty-results { order: 4; }
 
-    /* Phase 3 flight cards */
-    .sr-card { border-radius: 8px; border-color: #d8dbe3; box-shadow: 0 4px 12px rgba(16,24,40,.12); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
-    .sr-card:hover { transform: translateY(-1px); border-color: #c8cce0; box-shadow: 0 10px 22px rgba(16,24,40,.14); }
-    .sr-card-head { display: grid; grid-template-columns: 40px minmax(0,1fr) 174px 120px; align-items: center; gap: 12px; padding: 14px 18px 12px; }
-    .sr-airline-logo-wrap { width: 38px; height: 38px; border-radius: 8px; background: #f4f5f8; border: 1px solid var(--gray-100); }
-    .sr-card-airline { font-size: 15px; font-weight: 800; line-height: 1.2; }
-    .sr-card-class { margin-top: 2px; font-size: 11px; color: #8c95a8; font-weight: 700; text-transform: uppercase; letter-spacing: 0; }
-    .sr-card-price-wrap { align-self: stretch; margin-left: 0; padding-left: 18px; border-left: 1px solid #d8dbe3; display: flex; flex-direction: column; justify-content: center; text-align: right; }
-    .sr-card-price-label { font-size: 10px; color: #7a8193; font-weight: 800; letter-spacing: .02em; }
-    .sr-card-price { font-size: 22px; color: var(--gray-900); letter-spacing: 0; }
-    .sr-card-price-sub { color: var(--blue); font-size: 11px; font-weight: 750; text-decoration: none; }
-    .sr-card-head .sr-book-btn { justify-self: stretch; width: 100%; height: 40px; border-radius: 8px; background: var(--blue); box-shadow: 0 8px 18px rgba(48,49,145,.18); }
-    .sr-card-head .sr-book-btn:hover { background: var(--tw-brand-hover, #252675); box-shadow: 0 12px 24px rgba(48,49,145,.24); }
-    .sr-card-body { padding: 0 18px 0; }
-    .sr-card-body > div:first-child { margin-bottom: 8px !important; }
-    .sr-refund-badge { padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 800; }
-    .sr-refund-badge.yes { background: #eafff0; color: var(--green); }
-    .sr-refund-badge.no { background: #fff1f2; color: var(--red); }
-    .sr-depart-return { padding: 4px 0 10px; }
-    .sr-dr-label { margin-bottom: 8px; font-size: 10px; color: #99a1b2; font-weight: 800; text-transform: uppercase; letter-spacing: 0; }
-    .sr-segments { align-items: flex-start; }
-    .sr-seg { min-width: 86px; align-items: flex-start; }
-    .sr-seg:last-child { align-items: flex-end; text-align: right; }
-    .sr-seg-time { font-family: var(--font); font-size: 21px; font-weight: 850; letter-spacing: 0; }
-    .sr-seg-place { max-width: 126px; color: #687083; font-size: 12px; line-height: 1.25; white-space: normal; }
-    .sr-seg-line { padding: 4px 12px 0; min-width: 130px; }
-    .sr-seg-duration { color: var(--gray-700); font-size: 11px; font-weight: 800; }
-    .sr-seg-track { gap: 0; }
-    .sr-seg-dash { height: 1px; background: #cfd3dc; }
-    .sr-seg-dot { width: 7px; height: 7px; background: #9da7b9; }
-    .sr-seg-stop { margin-top: 1px; color: var(--green); font-size: 10.5px; font-weight: 800; }
-    .sr-seg-stop.hasstop { color: #d97706; }
-    .sr-card-meta-clean { display: flex; align-items: center; gap: 14px; padding: 10px 0 12px; border-top: 1px solid #eceef3; color: #6b7280; font-size: 12px; flex-wrap: wrap; }
-    .sr-card-meta-clean + div[style*="display:flex"] { display: none !important; }
-    .sr-card-meta-item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-    .sr-card-meta-item svg { width: 14px; height: 14px; color: #9aa3b4; flex: 0 0 14px; }
-    .sr-card-meta-item strong { color: var(--gray-900); font-weight: 850; }
-    .sr-card-meta-sep { width: 1px; height: 15px; background: #e5e7eb; }
-    .sr-card-footer { padding: 9px 18px 12px; justify-content: flex-end; border-top: 1px solid #eceef3; }
-    .sr-view-details { display: inline-flex; align-items: center; gap: 6px; color: var(--blue); font-size: 12px; font-weight: 800; }
-    .sr-view-details::after { content: ""; width: 14px; height: 14px; border: 1.5px solid currentColor; border-radius: 999px; background: linear-gradient(currentColor,currentColor) center/6px 1.5px no-repeat; opacity: .8; }
-    .mc-grid { border-top-color: #eceef3; }
-    .mc-leg { background: #fff; }
-
-    /* Figma result-page alignment */
     .sr-results-shell { background: #fff; }
     .sr-topbar { padding-top: 24px; }
     .sr-topbar-inner {
@@ -789,40 +849,6 @@
         border-radius: 6px; background: #fff; color: #111827; font: inherit; font-size: 10.5px; outline: none;
     }
     .sr-sort-label, .sr-sort-btn, .sr-result-count { display: none; }
-    .sr-card { position: relative; border: 1px solid #d8d8d8; box-shadow: 0 4px 10px rgba(0,0,0,.12); }
-    .sr-card-head { grid-template-columns: 34px minmax(0,1fr); align-items: start; padding: 16px 224px 4px 24px; }
-    .sr-airline-logo-wrap { width: 30px; height: 30px; background: transparent; border: 0; }
-    .sr-card-airline { font-size: 14px; }
-    .sr-card-class { color: #676767; font-size: 11px; font-weight: 700; }
-    .sr-card-price-wrap {
-        position: absolute; top: 15px; right: 24px; width: 199px; min-height: 159px; padding-left: 18px;
-        border-left: 2px solid #c1c7d0; align-items: stretch; justify-content: center;
-    }
-    .sr-card-price-label { font-size: 10px; color: #111827; text-align: right; }
-    .sr-card-price { font-family: var(--font); font-size: 22px; font-weight: 850; text-align: right; }
-    .sr-card-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-    .sr-card-actions .sr-book-btn, .sr-installment-btn {
-        width: 100%; height: 35px; border-radius: 8px; font-family: var(--font); font-size: 13px; font-weight: 850; cursor: pointer;
-    }
-    .sr-card-actions .sr-book-btn { background: var(--blue); box-shadow: none; }
-    .sr-installment-btn { border: 1px dashed var(--blue); background: #fff; color: #111827; }
-    .sr-card-body { padding: 0 224px 0 24px !important; }
-    .sr-card-body > div:first-child { justify-content: center; margin-top: -4px; }
-    .sr-refund-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; padding: 3px 10px; }
-    .sr-figma-icon { width: 15px; height: 15px; object-fit: contain; display: inline-block; flex: 0 0 15px; }
-    .sr-depart-return { flex-direction: column; gap: 8px; padding-top: 20px; }
-    .sr-dr-label { display: none; }
-    .sr-seg-time { font-size: 20px; }
-    .sr-seg-place { font-size: 11px; }
-    .sr-card-meta-clean { margin-top: 8px; padding: 9px 0 0; font-size: 11px; }
-    .sr-card-footer { margin-top: -34px; padding: 0 18px 12px; border-top: 0; }
-    .sr-view-details { font-weight: 500; }
-    .sr-view-details::after {
-        border: 0;
-        width: 15px;
-        height: 15px;
-        background: url("{{ asset('images/figma-icons/flight-card-dropdown.svg') }}") center/contain no-repeat;
-    }
     .sr-rail { top: 18px; gap: 14px; }
 
     /* Requested result-page refinements */
@@ -898,115 +924,6 @@
         min-height: 48px;
         padding: 7px 6px;
     }
-    .sr-card {
-        min-height: 227px;
-        overflow: visible;
-    }
-    .sr-card-head {
-        min-height: 50px;
-        padding: 16px 224px 4px 24px;
-    }
-    .sr-airline-logo-wrap {
-        width: 34px;
-        height: 34px;
-    }
-    .sr-card-price-wrap {
-        top: 16px;
-        right: 24px;
-        width: 199px;
-        min-height: 159px;
-        padding-left: 18px;
-    }
-    .sr-card-price-label {
-        font-size: 10px;
-        font-weight: 850;
-        line-height: 1.1;
-    }
-    .sr-card-price {
-        font-size: 20px;
-        line-height: 1.15;
-    }
-    .sr-card-actions {
-        gap: 9px;
-    }
-    .sr-card-actions .sr-book-btn,
-    .sr-installment-btn {
-        height: 35px;
-        border-radius: 8px;
-    }
-    .sr-card-body {
-        padding: 0 224px 0 24px !important;
-    }
-    .sr-card-body > div:first-child {
-        justify-content: flex-end;
-        padding-right: 31px;
-        margin: -28px 0 16px !important;
-        min-height: 18px;
-    }
-    .sr-depart-return {
-        flex-direction: column;
-        gap: 8px;
-        padding-top: 0;
-    }
-    .sr-dr-col {
-        min-width: 0;
-    }
-    .sr-dr-col + .sr-dr-col {
-        padding-left: 0 !important;
-        margin-left: 0 !important;
-        border-left: 0;
-        border-top: 0;
-    }
-    .sr-segments {
-        align-items: flex-start;
-    }
-    .sr-seg {
-        min-width: 93px;
-    }
-    .sr-seg-line {
-        min-width: 64px;
-        padding: 2px 6px 0;
-    }
-    .sr-seg-track {
-        position: relative;
-        height: 18px;
-    }
-    .sr-seg-track .sr-seg-dot {
-        display: none;
-    }
-    .sr-seg-track .sr-seg-dash {
-        width: 100%;
-    }
-    .sr-seg-track::after {
-        content: "";
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 17px;
-        height: 17px;
-        transform: translate(-50%, -50%);
-        background: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center/contain no-repeat;
-    }
-    .sr-seg-time {
-        font-size: 20px;
-        line-height: 1.05;
-    }
-    .sr-seg-place {
-        max-width: 93px;
-        font-size: 12px;
-    }
-    .sr-card-meta-clean {
-        margin-top: 9px;
-        padding: 8px 0 0;
-    }
-    .sr-card-footer {
-        position: absolute;
-        right: 24px;
-        bottom: 12px;
-        margin-top: 0;
-        padding: 0;
-    }
-
     /* Focused Figma price matrix replica */
     .sr-matrix {
         position: relative;
@@ -1169,726 +1086,6 @@
         color: #303191 !important;
         text-decoration: none;
     }
-
-    /* Focused Figma flight card replica */
-    .sr-card {
-        position: relative;
-        min-height: 227px;
-        border: 1px solid #b3b3b3;
-        border-radius: 10px;
-        background: #fff;
-        box-shadow: 0 4px 10px 1px rgba(0,0,0,.09);
-        overflow: visible;
-        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-    }
-    .sr-card:hover {
-        transform: translateY(-1px);
-        border-color: #aeb1bf;
-        box-shadow: 0 8px 18px rgba(0,0,0,.12);
-    }
-    .sr-card-head {
-        display: grid;
-        grid-template-columns: 34px minmax(0, 1fr);
-        min-height: 58px;
-        padding: 16px 224px 0 24px;
-        gap: 14px;
-        align-items: start;
-    }
-    .sr-airline-logo-wrap {
-        width: 34px;
-        height: 34px;
-        border: 0;
-        border-radius: 0;
-        background: transparent;
-        overflow: hidden;
-    }
-    .sr-airline-logo-wrap img {
-        width: 34px;
-        height: 34px;
-        object-fit: contain;
-    }
-    .sr-card-airline {
-        max-width: 340px;
-        color: #000;
-        font-size: 18px;
-        font-weight: 700;
-        line-height: 1.12;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    .sr-card-class {
-        max-width: 206px;
-        margin-top: 0;
-        color: #676767;
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1.2;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        text-transform: none;
-    }
-    .sr-card-price-wrap {
-        position: absolute;
-        top: 15px;
-        right: 24px;
-        width: 199px;
-        min-height: 159px;
-        margin: 0;
-        padding-left: 18px;
-        border-left: 2px solid #c1c7d0;
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        justify-content: center;
-        text-align: right;
-    }
-    .sr-card-price-label {
-        color: #000;
-        font-size: 11px;
-        font-weight: 700;
-        line-height: 18px;
-        letter-spacing: 0;
-        text-transform: uppercase;
-    }
-    .sr-card-price {
-        color: #000;
-        font-family: var(--font);
-        font-size: 24px;
-        font-weight: 850;
-        line-height: 1.08;
-        letter-spacing: 0;
-        white-space: nowrap;
-    }
-    .sr-card-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin-top: 10px;
-    }
-    .sr-card-actions .sr-book-btn,
-    .sr-installment-btn {
-        width: 147px;
-        height: 35px;
-        margin-left: auto;
-        border-radius: 10px;
-        font-family: var(--font);
-        cursor: pointer;
-    }
-    .sr-card-actions .sr-book-btn {
-        background: #303191;
-        box-shadow: none;
-        color: #fff;
-        font-size: 16px;
-        font-weight: 850;
-        text-transform: uppercase;
-        transition: transform .16s ease, background .16s ease;
-    }
-    .sr-card-actions .sr-book-btn:hover {
-        background: #272878;
-        transform: translateY(-1px);
-    }
-    .sr-installment-btn {
-        border: 1px dashed #303191;
-        background: #fff;
-        color: #000;
-        font-size: 13px;
-        font-weight: 700;
-        display: inline-flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 2px;
-        transition: background .16s ease, border-color .16s ease, transform .16s ease;
-    }
-    .sr-installment-btn-price {
-        color: #111827;
-        font-size: 12px;
-        font-weight: 850;
-        line-height: 1;
-    }
-    .sr-installment-btn-label {
-        color: inherit;
-        font-size: 12px;
-        line-height: 1;
-    }
-    .sr-installment-btn:hover {
-        background: #f7f7ff;
-        transform: translateY(-1px);
-    }
-    .sr-installment-btn:disabled,
-    .sr-installment-btn:disabled:hover {
-        border-color: #d8dbe3;
-        background: #f8f9fc;
-        color: #98a2b3;
-        cursor: not-allowed;
-        opacity: .82;
-        transform: none;
-    }
-    .sr-card-body {
-        padding: 0 267px 0 24px !important;
-    }
-    .sr-card-body > div:first-child {
-        position: absolute;
-        top: 25px;
-        right: 223px;
-        z-index: 2;
-        display: block !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        min-height: 0;
-    }
-    .sr-refund-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        width: 128px;
-        height: 23px;
-        padding: 0 8px;
-        border-radius: 30px;
-        font-size: 12px;
-        font-weight: 400;
-        line-height: 16px;
-        white-space: nowrap;
-    }
-    .sr-refund-badge.no {
-        background: #ffdede;
-        color: #ff0000;
-    }
-    .sr-refund-badge.yes {
-        background: #eafff0;
-        color: #009933;
-    }
-    .sr-icon-mask {
-        display: inline-block;
-        width: 15px;
-        height: 15px;
-        flex: 0 0 15px;
-        background: currentColor;
-        mask: var(--icon-url) center / contain no-repeat;
-        -webkit-mask: var(--icon-url) center / contain no-repeat;
-    }
-    .sr-icon-refund {
-        --icon-url: url("{{ asset('images/figma-icons/flight-card-refund.svg') }}");
-        width: 14px;
-        height: 14px;
-        flex-basis: 14px;
-    }
-    .sr-icon-cabin {
-        --icon-url: url("{{ asset('images/figma-icons/flight-card-cabin-bag.svg') }}");
-    }
-    .sr-icon-luggage {
-        --icon-url: url("{{ asset('images/figma-icons/flight-card-luggage.svg') }}");
-    }
-    .sr-icon-seat {
-        --icon-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M8.75 8.125C8.40625 8.125 8.11208 8.00271 7.8675 7.75812C7.62292 7.51354 7.50042 7.21916 7.5 6.875V3.75C7.5 3.40625 7.6225 3.11208 7.8675 2.8675C8.1125 2.62291 8.40667 2.50042 8.75 2.5H10C10.3437 2.5 10.6381 2.6225 10.8831 2.8675C11.1281 3.1125 11.2504 3.40666 11.25 3.75V6.875C11.25 7.21875 11.1277 7.51312 10.8831 7.75812C10.6385 8.00312 10.3442 8.12542 10 8.125H8.75ZM5.9375 11.25C5.65625 11.25 5.40625 11.1694 5.1875 11.0081C4.96875 10.8469 4.81771 10.6306 4.73437 10.3594L3.17187 5.17187C3.15104 5.11979 3.13813 5.0625 3.13313 5C3.12813 4.9375 3.12542 4.875 3.125 4.8125V3.125C3.125 2.94792 3.185 2.79958 3.305 2.68C3.425 2.56042 3.57333 2.50042 3.75 2.5C3.92667 2.49958 4.07521 2.55958 4.19562 2.68C4.31604 2.80042 4.37583 2.94875 4.375 3.125V5L5.9375 10H10.625C10.8021 10 10.9506 10.06 11.0706 10.18C11.1906 10.3 11.2504 10.4483 11.25 10.625C11.2496 10.8017 11.1896 10.9502 11.07 11.0706C10.9504 11.191 10.8021 11.2508 10.625 11.25H5.9375ZM5.625 13.125C5.44792 13.125 5.29958 13.065 5.18 12.945C5.06042 12.825 5.00042 12.6767 5 12.5C4.99958 12.3233 5.05958 12.175 5.18 12.055C5.30042 11.935 5.44875 11.875 5.625 11.875H10.625C10.8021 11.875 10.9506 11.935 11.0706 12.055C11.1906 12.175 11.2504 12.3233 11.25 12.5C11.2496 12.6767 11.1896 12.8252 11.07 12.9456C10.9504 13.066 10.8021 13.1258 10.625 13.125H5.625Z'/%3E%3C/svg%3E");
-    }
-    .sr-figma-icon {
-        display: none;
-    }
-    .sr-depart-return {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-        gap: 10px;
-        padding-top: 3px;
-    }
-    .sr-dr-col {
-        min-width: 0;
-    }
-    .sr-dr-col:only-child {
-        grid-column: 1 / -1;
-    }
-    .sr-dr-col + .sr-dr-col {
-        padding-left: 0 !important;
-        margin-left: 0 !important;
-        border-left: 0;
-        border-top: 0;
-    }
-    .sr-segments {
-        align-items: flex-start;
-        width: 100%;
-    }
-    .sr-seg {
-        min-width: 56px;
-        gap: 6px;
-    }
-    .sr-seg:first-child {
-        align-items: flex-start;
-        text-align: left;
-    }
-    .sr-seg:last-child {
-        align-items: flex-end;
-        text-align: right;
-    }
-    .sr-seg-time {
-        color: #000;
-        font-family: var(--font);
-        font-size: 20px;
-        font-weight: 850;
-        line-height: 1.2;
-    }
-    .sr-seg-place {
-        max-width: 70px;
-        color: #676767;
-        font-size: 12px;
-        font-weight: 400;
-        line-height: 1.25;
-        white-space: normal;
-    }
-    .sr-seg-line {
-        min-width: 64px;
-        padding: 2px 6px 0;
-    }
-    .sr-seg-duration,
-    .sr-seg-stop {
-        color: #000;
-        font-size: 10px;
-        font-weight: 700;
-        line-height: 1.2;
-    }
-    .sr-seg-stop.hasstop {
-        color: #000;
-    }
-    .sr-seg-track {
-        position: relative;
-        height: 18px;
-        margin-top: 3px;
-    }
-    .sr-seg-track .sr-seg-dot {
-        display: none;
-    }
-    .sr-seg-track .sr-seg-dash {
-        width: 100%;
-        height: 1px;
-        background: #a6a6a6;
-    }
-    .sr-seg-track::after {
-        content: "";
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 17px;
-        height: 17px;
-        transform: translate(-50%, -50%);
-        background: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center / contain no-repeat;
-    }
-    .sr-card-meta-clean {
-        position: absolute;
-        left: 24px;
-        right: 24px;
-        bottom: 14px;
-        display: flex;
-        align-items: center;
-        gap: 0;
-        margin: 0;
-        padding: 8px 90px 0 0;
-        border-top: 1px solid #a6a6a6;
-        color: #a6a6a6;
-        font-size: 11px;
-        line-height: 15px;
-        flex-wrap: nowrap;
-    }
-    .sr-card-meta-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        min-width: 0;
-        color: #a6a6a6;
-        white-space: nowrap;
-    }
-    .sr-card-meta-item span:not(.sr-icon-mask) {
-        color: #a6a6a6;
-        font-size: 11px;
-        font-weight: 400;
-    }
-    .sr-card-meta-item strong {
-        color: #000;
-        font-size: 11px;
-        font-weight: 700;
-    }
-    .sr-card-meta-seat strong {
-        font-weight: 400;
-    }
-    .sr-card-meta-sep {
-        width: 1px;
-        height: 16px;
-        margin: 0 14px;
-        background: #e5e7eb;
-        flex: 0 0 1px;
-    }
-    .sr-card-footer {
-        position: absolute;
-        right: 24px;
-        bottom: 13px;
-        margin: 0;
-        padding: 0;
-        border: 0;
-    }
-    .sr-view-details {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        color: #303191;
-        font-size: 13px;
-        font-weight: 400;
-        line-height: 18px;
-        text-decoration: none;
-    }
-    .sr-view-details:hover {
-        text-decoration: none;
-        color: #252675;
-    }
-    .sr-view-details::after {
-        content: "";
-        width: 15px;
-        height: 15px;
-        border: 0;
-        border-radius: 0;
-        background: currentColor;
-        opacity: 1;
-        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M12.3612 7.5C12.3612 6.21072 11.8491 4.97424 10.9374 4.06258C10.0258 3.15092 8.78928 2.63875 7.5 2.63875C6.21072 2.63875 4.97424 3.15092 4.06258 4.06258C3.15092 4.97424 2.63875 6.21072 2.63875 7.5C2.63875 8.78928 3.15092 10.0258 4.06258 10.9374C4.97424 11.8491 6.21072 12.3612 7.5 12.3612C8.78928 12.3612 10.0258 11.8491 10.9374 10.9374C11.8491 10.0258 12.3612 8.78928 12.3612 7.5ZM9.0925 5.9675C9.15693 5.90307 9.23342 5.85196 9.3176 5.81709C9.40178 5.78222 9.49201 5.76428 9.58313 5.76428C9.67424 5.76428 9.76447 5.78222 9.84865 5.81709C9.93283 5.85196 10.0093 5.90307 10.0737 5.9675C10.1382 6.03193 10.1893 6.10842 10.2242 6.1926C10.259 6.27678 10.277 6.36701 10.277 6.45813C10.277 6.54924 10.259 6.63947 10.2242 6.72365C10.1893 6.80783 10.1382 6.88432 10.0737 6.94875L7.99125 9.0325C7.9268 9.09713 7.85024 9.14841 7.76594 9.18339C7.68164 9.21838 7.59127 9.23639 7.5 9.23639C7.40873 9.23639 7.31836 9.21838 7.23406 9.18339C7.14976 9.14841 7.0732 9.09713 7.00875 9.0325L4.92563 6.95L4.87812 6.89687C4.76852 6.76374 4.71244 6.59456 4.72079 6.42232C4.72915 6.25008 4.80135 6.08713 4.92333 5.96523C5.0453 5.84334 5.2083 5.77124 5.38055 5.76299C5.55279 5.75474 5.72194 5.81094 5.855 5.92062L5.9075 5.96812L7.5 7.55938L9.0925 5.9675ZM13.75 7.5C13.75 10.9519 10.9519 13.75 7.5 13.75C4.04813 13.75 1.25 10.9519 1.25 7.5C1.25 4.04813 4.04813 1.25 7.5 1.25C10.9519 1.25 13.75 4.04813 13.75 7.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
-        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M12.3612 7.5C12.3612 6.21072 11.8491 4.97424 10.9374 4.06258C10.0258 3.15092 8.78928 2.63875 7.5 2.63875C6.21072 2.63875 4.97424 3.15092 4.06258 4.06258C3.15092 4.97424 2.63875 6.21072 2.63875 7.5C2.63875 8.78928 3.15092 10.0258 4.06258 10.9374C4.97424 11.8491 6.21072 12.3612 7.5 12.3612C8.78928 12.3612 10.0258 11.8491 10.9374 10.9374C11.8491 10.0258 12.3612 8.78928 12.3612 7.5ZM9.0925 5.9675C9.15693 5.90307 9.23342 5.85196 9.3176 5.81709C9.40178 5.78222 9.49201 5.76428 9.58313 5.76428C9.67424 5.76428 9.76447 5.78222 9.84865 5.81709C9.93283 5.85196 10.0093 5.90307 10.0737 5.9675C10.1382 6.03193 10.1893 6.10842 10.2242 6.1926C10.259 6.27678 10.277 6.36701 10.277 6.45813C10.277 6.54924 10.259 6.63947 10.2242 6.72365C10.1893 6.80783 10.1382 6.88432 10.0737 6.94875L7.99125 9.0325C7.9268 9.09713 7.85024 9.14841 7.76594 9.18339C7.68164 9.21838 7.59127 9.23639 7.5 9.23639C7.40873 9.23639 7.31836 9.21838 7.23406 9.18339C7.14976 9.14841 7.0732 9.09713 7.00875 9.0325L4.92563 6.95L4.87812 6.89687C4.76852 6.76374 4.71244 6.59456 4.72079 6.42232C4.72915 6.25008 4.80135 6.08713 4.92333 5.96523C5.0453 5.84334 5.2083 5.77124 5.38055 5.76299C5.55279 5.75474 5.72194 5.81094 5.855 5.92062L5.9075 5.96812L7.5 7.55938L9.0925 5.9675ZM13.75 7.5C13.75 10.9519 10.9519 13.75 7.5 13.75C4.04813 13.75 1.25 10.9519 1.25 7.5C1.25 4.04813 4.04813 1.25 7.5 1.25C10.9519 1.25 13.75 4.04813 13.75 7.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
-        transition: transform .16s ease;
-    }
-    .sr-card .sr-dr-col {
-        padding: 12px 16px 14px !important;
-        background: #fff;
-        border: 1px solid #f1f5f9;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    }
-    .sr-card-expanded .sr-card-meta-clean {
-        position: static;
-        width: calc(100% + 223px);
-        margin-top: 9px;
-        padding: 9px 0 12px;
-        z-index: 2;
-    }
-    .sr-card-expanded:not(.sr-card-round):not(.sr-card-multi) .sr-card-meta-clean {
-        margin-top: 40px;
-    }
-    .sr-card-expanded .sr-card-footer {
-        position: relative;
-        right: auto;
-        bottom: auto;
-        min-height: 24px;
-        margin: -32px 0 0;
-        padding: 0 24px 12px;
-        z-index: 3;
-    }
-    .sr-card-expanded .sr-card-body {
-        padding-bottom: 12px !important;
-    }
-
-    /* Focused Figma itinerary details and fare rules replica */
-    .sr-detail-panel {
-        width: 835px;
-        max-width: 100%;
-        margin-top: 0;
-        border: 1px solid #b3b3b3;
-        border-top: 0;
-        border-radius: 0 0 10px 10px;
-        background: #fff;
-        box-shadow: 0 4px 10px 1px rgba(0,0,0,.09);
-        overflow: hidden;
-    }
-    .sr-detail-tabs {
-        display: flex;
-        align-items: stretch;
-        height: 40px;
-        padding: 0;
-        border: 0;
-        border-left: 1px solid #a6a6a6;
-        border-right: 1px solid #a6a6a6;
-        background: #fbfcfe;
-    }
-    .sr-detail-tab {
-        position: relative;
-        display: flex;
-        align-items: center;
-        height: 40px;
-        margin: 0;
-        padding: 0;
-        border: 0;
-        color: #000;
-        font-size: 15px;
-        font-weight: 700;
-        line-height: 20px;
-    }
-    .sr-detail-tab:first-child { width: 141px; padding-left: 32px; }
-    .sr-detail-tab:nth-child(2) { width: 120px; padding-left: 0; }
-    .sr-detail-tab.active { color: #303191; border: 0; }
-    .sr-detail-tab.active::after {
-        content: "";
-        position: absolute;
-        bottom: 0;
-        width: 99px;
-        height: 2px;
-        background: #303191;
-    }
-    .sr-detail-tab:first-child.active::after { left: 32px; }
-    .sr-detail-tab:nth-child(2).active::after { left: 0; }
-    .sr-detail-body {
-        min-height: 0;
-        padding: 13px 17px 15px;
-        background: #fff;
-    }
-    .sr-multi-detail-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-        align-items: start;
-    }
-    .sr-multi-detail-leg {
-        min-width: 0;
-        padding: 11px;
-        border: 1px solid #e6e8ee;
-        border-radius: 8px;
-        background: #fbfcfe;
-    }
-    .sr-multi-detail-grid .sr-detail-leg-head { min-height: 24px; margin-bottom: 9px; }
-    .sr-multi-detail-grid .sr-detail-leg-title { max-width: calc(100% - 82px); }
-    .sr-multi-detail-grid .sr-detail-seg {
-        width: 100%;
-        min-height: 0;
-        padding: 10px 11px;
-        background: #fff;
-    }
-    .sr-multi-detail-grid .sr-detail-seg-airline { margin-bottom: 11px; }
-    .sr-multi-detail-grid .sr-detail-seg-route { margin-bottom: 7px; }
-    .sr-multi-detail-grid .sr-detail-seg-meta { row-gap: 3px; }
-    .sr-multi-detail-grid .sr-detail-layover { margin-top: 7px !important; margin-bottom: 7px; }
-    .sr-detail-cols {
-        position: relative;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-        gap: 40px;
-        align-items: start;
-    }
-    .sr-detail-cols::before {
-        content: "";
-        position: absolute;
-        top: 12px;
-        bottom: 10px;
-        left: 50%;
-        width: 1px;
-        background: #a6a6a6;
-    }
-    .sr-detail-col {
-        width: 100%;
-        min-width: 0;
-        gap: 0;
-    }
-    .sr-detail-leg-head {
-        position: relative;
-        display: block;
-        min-height: 29px;
-        margin: 0 0 13px;
-    }
-    .sr-detail-leg-title {
-        display: block;
-        max-width: 210px;
-        color: #000;
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 20px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .sr-detail-leg-badge {
-        position: absolute;
-        top: 2px;
-        right: 7px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 68px;
-        height: 16px;
-        padding: 0;
-        border-radius: 30px;
-        background: #dbdcff;
-        color: #303191;
-        font-size: 10px;
-        font-weight: 700;
-        line-height: 14px;
-    }
-    .sr-detail-leg-badge.inbound { background: #ddffe9; color: #009933; }
-    .sr-detail-leg-badge.connecting { background: #f7f7ff; color: #303191; }
-    .sr-detail-seg {
-        width: 100%;
-        min-height: 131px;
-        margin: 0;
-        padding: 9px 13px 10px;
-        border: 0;
-        border-radius: 8px;
-        background: #fbfcfe;
-        border: 1px solid #eef0f4;
-        box-shadow: none;
-    }
-    .sr-detail-seg-airline {
-        height: 20px;
-        margin: 0 0 18px;
-        gap: 6px;
-    }
-    .sr-detail-seg-logo {
-        width: 18px;
-        height: 18px;
-        border: 0;
-        border-radius: 0;
-        background: transparent;
-    }
-    .sr-detail-seg-airline-name {
-        max-width: 119px;
-        color: #000;
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 16px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    .sr-detail-seg-airline-name + span {
-        color: #676767 !important;
-        font-size: 10px !important;
-        font-weight: 400;
-    }
-    .sr-detail-seg-route {
-        margin: 0 0 8px;
-        align-items: flex-start;
-    }
-    .sr-detail-seg-point { width: 91px; min-width: 91px; }
-    .sr-detail-seg-point:last-child { width: 77px; min-width: 77px; }
-    .sr-detail-seg-time {
-        color: #000;
-        font-family: var(--font);
-        font-size: 16px;
-        font-weight: 850;
-        line-height: 18px;
-    }
-    .sr-detail-seg-iata {
-        margin-top: 0;
-        color: #676767;
-        font-size: 10px;
-        font-weight: 400;
-        line-height: 12px;
-    }
-    .sr-detail-seg-airport { display: none; }
-    .sr-detail-seg-mid {
-        width: 129px;
-        min-width: 129px;
-        padding: 1px 8px 0;
-        gap: 3px;
-    }
-    .sr-detail-seg-dur {
-        color: #000;
-        font-size: 10px;
-        font-weight: 600;
-        line-height: 13px;
-    }
-    .sr-detail-seg-track { height: 12px; position: relative; }
-    .sr-detail-seg-line { height: 1px; background: #a6a6a6; }
-    .sr-detail-seg-dot2 { display: none; }
-    .sr-detail-seg-track::after {
-        content: "";
-        position: absolute;
-        left: 50%;
-        top: 50%;
-        width: 10px;
-        height: 10px;
-        transform: translate(-50%, -50%);
-        background: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center / contain no-repeat;
-    }
-    .sr-detail-seg-stops { display: none; }
-    .sr-detail-seg-meta {
-        display: flex;
-        gap: 0;
-        padding-top: 0;
-        border-top: 0;
-        color: #676767;
-        font-size: 10px;
-        line-height: 12px;
-        flex-wrap: wrap;
-    }
-    .sr-detail-meta-item {
-        gap: 3px;
-        margin-right: 13px;
-        white-space: nowrap;
-    }
-    .sr-detail-meta-label {
-        color: #676767;
-        font-size: 10px;
-        font-weight: 600;
-    }
-    .sr-detail-meta-val {
-        color: #000;
-        font-size: 10px;
-        font-weight: 700;
-    }
-    .sr-detail-layover {
-        width: 275px;
-        height: 20px;
-        margin: 4px auto 4px;
-        padding: 0 18px;
-        justify-content: center;
-        border: 1px solid #eef0f4;
-        border-radius: 10px;
-        background: #fff;
-        color: #303191;
-        font-size: 10px;
-        font-weight: 700;
-        line-height: 16px;
-    }
-    .sr-detail-layover svg { width: 12px; height: 12px; flex: 0 0 12px; }
-    .sr-fare-rules-body {
-        min-height: 246px;
-        padding: 15px 32px 24px;
-        background: #fff;
-    }
-    .sr-fare-rules-body > div { margin-bottom: 0 !important; }
-    .sr-fare-rules-body > div > div:first-child {
-        margin: 0 0 13px !important;
-        color: #000 !important;
-        font-size: 12px !important;
-        font-weight: 700 !important;
-        letter-spacing: 0 !important;
-        text-transform: uppercase !important;
-    }
-    .sr-fare-rule-row {
-        min-height: 30px;
-        padding: 0;
-        border: 0;
-        display: grid;
-        grid-template-columns: 14px 98px minmax(0, 1fr);
-        align-items: center;
-        column-gap: 12px;
-        font-size: 12px;
-        line-height: 16px;
-    }
-    .sr-fare-rule-icon {
-        width: 14px;
-        height: 14px;
-        margin: 0;
-        color: #676767;
-        font-size: 12px;
-        overflow: hidden;
-    }
-    .sr-fare-rule-label {
-        min-width: 0;
-        color: #000;
-        font-size: 12px;
-        font-weight: 400;
-    }
-    .sr-fare-rule-val {
-        color: #000;
-        font-size: 12px;
-        font-weight: 700;
-    }
-    .sr-fare-rule-val.allowed { color: #009933; font-weight: 700; }
-    .sr-fare-rule-val.not-allowed { color: #ff0000; font-weight: 700; }
-    .sr-detail-footer { display: none; }
 
     /* ── Responsive ── */
     .sr-mobile-filter-bar,
@@ -2070,7 +1267,6 @@
         .sr-fare-options { gap: 10px; }
         .sr-fare-option { padding: 13px 14px; }
         .sr-fare-option-price { font-size: 18px; }
-        .sr-seg-line { min-width: 0; }
     }
     @media (max-width: 860px) {
         .sr-page { grid-template-columns: 1fr; padding: 12px 10px 32px; gap: 12px; }
@@ -2113,34 +1309,6 @@
         .sr-sort-btn,
         .sr-sort-label,
         .sr-result-count { flex: 0 0 auto; }
-        .sr-card-head { grid-template-columns: 38px minmax(0,1fr); padding-right: 14px; }
-        .sr-card-price-wrap { position: static; width: auto; min-height: 0; grid-column: 1 / -1; align-self: auto; padding: 12px 0 0; border-left: 0; border-top: 1px solid #eceef3; text-align: left; }
-        .sr-card-body { padding: 0 14px 12px !important; }
-        .sr-card-body > div:first-child { position: static; display: flex !important; justify-content: flex-start; padding-right: 0; margin: 0 0 10px !important; }
-        .sr-card-footer { position: static; padding: 9px 14px 12px; }
-        .sr-card-expanded .sr-card-footer {
-            position: static;
-            min-height: 0;
-            margin: 0;
-            padding: 9px 14px 12px;
-        }
-        .sr-card-head .sr-book-btn { grid-column: 1 / -1; }
-        .sr-depart-return { grid-template-columns: 1fr; gap: 14px; }
-        .sr-dr-col + .sr-dr-col { border-left: none; border-top: none; padding-left: 0; margin-left: 0; padding-top: 0; }
-        .sr-card-meta-clean { position: static; padding: 10px 0 0; margin-top: 10px; flex-wrap: wrap; border-top-color: #e5e7eb; }
-        .sr-card-expanded .sr-card-meta-clean {
-            position: static;
-            width: auto;
-            margin-top: 10px;
-            padding: 10px 0 0;
-        }
-        .sr-card-expanded:not(.sr-card-round):not(.sr-card-multi) .sr-card-meta-clean {
-            margin-top: 10px;
-        }
-        .sr-card-actions .sr-book-btn,
-        .sr-installment-btn { width: 100%; margin-left: 0; }
-        .sr-seg-line { min-width: 0; }
-        .sr-detail-panel { width: 100%; margin-top: 0; }
         .sr-detail-body { min-height: 0; padding: 13px 12px 16px; }
         .sr-detail-cols { display: flex; flex-direction: column; gap: 14px; }
         .sr-detail-cols::before { display: none; }
@@ -2173,76 +1341,16 @@
         .sr-fare-option-price { font-size: 17px; }
         .sr-sort-bar { gap: 6px; }
         .sr-sort-btn { padding: 5px 10px; font-size: 11px; }
-        .sr-card-head { gap: 10px; padding: 12px 14px 10px; }
-        .sr-card-head > div:nth-child(2) { flex: 1; min-width: 0; }
-        .sr-card-price-wrap { text-align: left; }
-        .sr-card-price { font-size: 18px; }
-        .sr-card-head .sr-book-btn { width: 100%; margin-left: 0; height: 36px; font-size: 13px; }
-        .sr-card-body { padding: 0 14px 12px; }
-        .sr-card-meta-clean { gap: 10px; }
-        .sr-card-meta-sep { display: none; }
-        .sr-seg { min-width: 68px; }
-        .sr-seg-line { min-width: 88px; padding-left: 8px; padding-right: 8px; }
-        .sr-seg-time { font-size: 18px; }
         .sr-detail-cols { grid-template-columns: 1fr !important; }
         .sr-multi-detail-grid { grid-template-columns: 1fr; gap: 12px; }
         .sr-modify-head { padding: 12px 16px; }
         .sr-modify-body { padding: 16px; }
     }
     @media (max-width: 380px) {
-        .sr-seg-time { font-size: 16px; }
-        .sr-card-price { font-size: 16px; }
         .sr-tb-pill { padding: 4px 7px; }
         .sr-tb-pill-value { font-size: 11px; }
     }
 
-    /* Multi-city card grid */
-    .sr-card.sr-card-multi .sr-card-body {
-        padding-bottom: 62px !important;
-    }
-    .sr-card.sr-card-multi.sr-card-expanded .sr-card-body {
-        padding-bottom: 12px !important;
-    }
-    .sr-card.sr-card-multi .sr-card-body > div:first-child {
-        position: static;
-        display: flex !important;
-        margin: 0 0 10px !important;
-        padding: 0 !important;
-    }
-    .sr-card.sr-card-multi .sr-card-class {
-        max-width: 260px;
-    }
-    .mc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;border-top:1px solid #f1f5f9;padding-top:8px;}
-    .mc-leg {
-        min-width: 0;
-        margin-top: 5px;
-        padding: 12px 16px 14px;
-        border: 1px solid #f1f5f9;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-    }
-    .mc-leg.mc-span{grid-column:1/-1;}
-    .mc-leg-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:2px;display:flex;align-items:center;gap:6px;}
-    .mc-leg-airline{font-size:10.5px;color:#64748b;font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
-    .mc-leg-airline img{width:16px;height:16px;object-fit:contain;border-radius:3px;background:#f1f5f9;}
-    .mc-row{display:flex;align-items:center;gap:0;}
-    .mc-pt{display:flex;flex-direction:column;gap:1px;min-width:0;}
-    .mc-time{font-size:20px;font-weight:800;color:#0f172a;font-family:'DM Mono',monospace;line-height:1;letter-spacing:-.5px;}
-    .mc-city{font-size:11px;color:#64748b;font-weight:500;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;}
-    .mc-mid{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:0 8px;min-width:60px;}
-    .mc-dur{font-size:10.5px;color:#64748b;font-weight:600;}
-    .mc-track{width:100%;display:flex;align-items:center;}
-    .mc-dot{width:5px;height:5px;border-radius:50%;background:#cbd5e1;flex-shrink:0;}
-    .mc-dash{flex:1;height:1.5px;background:#cbd5e1;}
-    .mc-stop{font-size:10px;font-weight:700;}
-    .mc-stop.direct{color:#059669;}
-    .mc-stop.hasstop{color:#d97706;}
-    @media(max-width:580px){
-        .mc-grid{grid-template-columns:1fr;}
-        .mc-leg{border-right:none;}
-        .mc-leg.mc-span{grid-column:1;}
-        .mc-time{font-size:17px;}
-    }
 
     .tw-toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
     .tw-toast {  min-width: 280px; max-width: 350px; padding: 14px 16px; border-radius: 8px; color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; }
@@ -3039,40 +2147,7 @@
                             </template>
                         </div>
                     </div>
-                    <div style="display:flex;align-items:center;gap:18px;margin-top:12px;padding-top:10px;border-top:1px solid #f0f0f0;flex-wrap:wrap;">
-                        {{-- Cabin Baggage --}}
-                        <div class="sr-meta-item" style="display:flex; align-items:center; gap:5px;">
-                            <div class="sr-tooltip">🎒
-                                <span class="sr-meta-label" style="font-size:12px; color:#6b7280;">Cabin:</span>
-                            
-                                <span class="sr-meta-value" style="font-size:12px; font-weight:600; color:#374151;" x-text="_cabinBagLabel(flight)"></span>
-                                <div class="sr-tooltip-text">1 standard cabin bag (7kg Hand Bag) allowed — check fare rules for details.</div>
-                            </div>
-                        </div>
-                        <div style="width:1px;height:14px;background:#e5e7eb;"></div>
-                        <div style="display:flex;align-items:center;gap:5px;">
-                            🧳 <span style="font-size:12px;color:#6b7280;">Luggage:</span>
-                            <span style="font-size:12px;font-weight:600;color:#374151;"
-                                x-text="_luggageLabel(flight)"></span>
-                        </div>
-                        <div style="width:1px;height:14px;background:#e5e7eb;"></div>
-                        <div style="display:flex;align-items:center;gap:5px;">
-                            💺
-                            {{-- one-way/return: seats from segments[0] --}}
-                            <template x-if="!flight.multiLegs || flight.multiLegs.length === 0">
-                                <span style="font-size:12px;font-weight:500;"
-                                    :style="(flight.segments[0]?.seatsLeft ?? 9) <= 5 ? 'color:#dc2626' : 'color:#374151'"
-                                    x-text="(flight.segments[0]?.seatsLeft ?? '—') + ' seats left'"></span>
-                            </template>
-                            {{-- multi-city: seats from multiLegs[0].segments[0] --}}
-                            <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
-                                <span style="font-size:12px;font-weight:500;"
-                                    :style="(flight.multiLegs[0]?.segments[0]?.seatsLeft ?? 9) <= 5 ? 'color:#dc2626' : 'color:#374151'"
-                                    x-text="((flight.multiLegs[0]?.segments[0]?.seatsLeft) ?? '—') + ' seats left'"></span>
-                            </template>
-                        </div>
-                    </div>
-                
+
                 </div>{{-- /sr-card-body --}}
 
                     <div class="sr-card-price-wrap">
