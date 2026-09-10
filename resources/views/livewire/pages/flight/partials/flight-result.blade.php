@@ -43,34 +43,43 @@
         font-family: var(--font);
     }
 
-    /* ── Top Search Bar ── */
-    .sr-topbar { background: transparent; padding: 22px 16px 0; position: relative; z-index: 60; box-shadow: none; }
-    .sr-topbar-inner { max-width: 960px; min-height: 76px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 17px 22px; overflow: hidden; scrollbar-width: none; position: relative; width: 100%; border: 1px solid rgba(255,255,255,.26); border-radius: 12px; background: radial-gradient(circle at 88% 16%, rgba(0,153,51,.26), transparent 30%), linear-gradient(105deg, #303191 0%, #254277 56%, #0c6b64 100%); box-shadow: 0 18px 36px rgba(48,49,145,.16); }
-    .sr-topbar-inner::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255,255,255,.08), transparent 32%, rgba(255,255,255,.05)); pointer-events: none; }
-    .sr-topbar-inner::-webkit-scrollbar { display: none; }
-    .sr-tb-copy { position: relative; z-index: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; }
-    .sr-tb-route { display: flex; align-items: center; gap: 10px; color: #fff; font-size: var(--tw-text-xl, 20px); font-weight: 800; line-height: 1.2; min-width: 0; }
+    /*
+     * ── Search summary bar ──
+     * Was a full-bleed navy-to-teal gradient slab with a radial green wash and
+     * a bright green button — the loudest object on a page whose whole job is
+     * comparing fares, and in direct competition with the "Book now" on every
+     * card below it. It now uses the same surface, radius and hairline as
+     * those cards, so it reads as a record of what was searched rather than a
+     * banner. The route leads, the rest of the criteria sit in separated
+     * cells, and changing the search is the one action — deliberately quiet.
+     */
+    .sr-topbar { background: transparent; padding: 20px 16px 0; position: relative; z-index: 60; box-shadow: none; }
+    .sr-topbar-inner {
+        position: relative; width: 100%; max-width: 1394px; margin: 0 auto;
+        display: flex; align-items: stretch; gap: 0; padding-left: 3px;
+        background: #fff; border: 1px solid var(--gray-200);
+        border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    }
+    /* The one place the two brand colours meet, as a ticket-stub edge. */
+    .sr-topbar-inner::before {
+        content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+        background: linear-gradient(180deg, var(--blue) 0%, var(--green) 100%);
+    }
+
+    .sr-tb-copy { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; padding: 13px 20px; }
+    .sr-tb-route { display: flex; align-items: center; gap: 9px; min-width: 0; font-size: 17px; font-weight: 700; color: var(--gray-900); line-height: 1.25; }
     .sr-tb-route-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sr-tb-route-arrow { color: rgba(255,255,255,.72); font-size: 18px; font-weight: 700; flex-shrink: 0; }
-    .sr-tb-pin { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; color: #10b981; flex: 0 0 18px; }
-    .sr-tb-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; color: rgba(255,255,255,.82); font-size: var(--tw-text-xs, 12px); font-weight: 600; }
-    .sr-tb-meta-item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-    .sr-tb-meta-item svg { width: 13px; height: 13px; flex: 0 0 13px; color: rgba(255,255,255,.86); }
-    .sr-tb-date-pill { padding: 3px 10px; border-radius: 999px; background: rgba(0,153,51,.22); color: #eafff1; }
-    .sr-topbar-inner > .sr-tb-pill,
-    .sr-topbar-inner > .sr-tb-sep { display: none; }
-    .sr-tb-pill { display: flex; flex-direction: column; gap: 1px; padding: 6px 12px; border-radius: 8px; border: 1.5px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all .15s; position: relative; }
-    .sr-tb-pill:hover  { background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.22); }
-    .sr-tb-pill.tb-active { background: rgba(255,255,255,.15); border-color: rgba(37,99,235,.7); box-shadow: 0 0 0 2px rgba(37,99,235,.35); }
-    .sr-tb-pill-label { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: rgba(255,255,255,.45); }
-    .sr-tb-pill-value { font-size: 13px; font-weight: 600; color: #fff; display: flex; align-items: center; gap: 5px; }
-    .sr-tb-edit-hint  { font-size: 9px; color: rgba(255,255,255,.3); font-weight: 400; }
-    .sr-tb-sep  { width: 1px; height: 28px; background: rgba(255,255,255,.12); flex-shrink: 0; margin: 0 2px; }
-    .sr-tb-arrow { color: rgba(255,255,255,.35); font-size: 15px; flex-shrink: 0; }
-    .sr-tb-swap { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); color: rgba(255,255,255,.7); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: all .2s; padding: 0; }
-    .sr-tb-swap:hover { background: rgba(255,255,255,.18); transform: rotate(180deg); }
-    .sr-tb-search { margin-left: auto; flex-shrink: 0; padding: 0 22px; height: 38px; background: #2563eb; color: #fff; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font); display: flex; align-items: center; gap: 7px; transition: background .15s; }
-    .sr-tb-search:hover { background: #1d4ed8; }
+    .sr-tb-route-mark { flex: 0 0 15px; width: 15px; height: 15px; color: var(--blue); }
+    .sr-tb-trip { font-size: 12px; font-weight: 500; color: var(--gray-500); }
+
+    .sr-tb-facts { display: flex; align-items: stretch; margin-left: auto; }
+    .sr-tb-fact { display: flex; flex-direction: column; justify-content: center; gap: 3px; padding: 13px 20px; border-left: 1px solid var(--gray-100); min-width: 0; }
+    .sr-tb-fact-label { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; color: var(--gray-500); white-space: nowrap; }
+    .sr-tb-fact-label .sr-ic { color: var(--gray-400); }
+    .sr-tb-fact-value { font-size: 13px; font-weight: 600; color: var(--gray-900); white-space: nowrap; }
+    .sr-tb-fact-value .sep { color: var(--gray-300); font-weight: 400; margin: 0 5px; }
+
+    .sr-tb-action { display: flex; align-items: center; padding: 12px 16px; border-left: 1px solid var(--gray-100); }
 
     /* ── Edit Dropdown Panel ── */
     #tb-dropdown { background: #fff; border-radius: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.22), 0 4px 16px rgba(0,0,0,.1); min-width: 280px; max-width: 340px; overflow: hidden; animation: panelIn .18s ease both; }
@@ -347,6 +356,18 @@
     .sr-ic-sliders  { --i: url("{{ asset('images/flight-icons/sliders.svg') }}"); }
     .sr-ic-grid     { --i: url("{{ asset('images/flight-icons/grid.svg') }}"); }
     .sr-ic-list     { --i: url("{{ asset('images/flight-icons/list.svg') }}"); }
+    .sr-ic-bed      { --i: url("{{ asset('images/flight-icons/bed.svg') }}"); }
+    .sr-ic-shield   { --i: url("{{ asset('images/flight-icons/shield.svg') }}"); }
+    .sr-ic-passport { --i: url("{{ asset('images/flight-icons/passport.svg') }}"); }
+    .sr-ic-package  { --i: url("{{ asset('images/flight-icons/package.svg') }}"); }
+    .sr-ic-bell     { --i: url("{{ asset('images/flight-icons/bell.svg') }}"); }
+    .sr-ic-car      { --i: url("{{ asset('images/flight-icons/car.svg') }}"); }
+    .sr-ic-chevron-right { --i: url("{{ asset('images/flight-icons/chevron-right.svg') }}"); }
+    .sr-ic-swap     { --i: url("{{ asset('images/flight-icons/swap.svg') }}"); }
+    .sr-ic-calendar { --i: url("{{ asset('images/flight-icons/calendar.svg') }}"); }
+    .sr-ic-users    { --i: url("{{ asset('images/flight-icons/users.svg') }}"); }
+    .sr-ic-pencil   { --i: url("{{ asset('images/flight-icons/pencil.svg') }}"); }
+    .sr-ic-plane-route { --i: url("{{ asset('images/flight-icons/plane-route.svg') }}"); }
 
     /*
      * Card anatomy: an itinerary panel and a price rail, split by a hairline.
@@ -636,54 +657,46 @@
     .sr-rail { position: sticky; top: 18px; display: flex; flex-direction: column; gap: 12px; }
 
     /*
-     * The promo rotates on a timer. Its dot control existed in the stylesheet
-     * and in the Alpine state but had no markup, so the card silently changed
-     * under the reader with nothing to say why or how to go back. The dots are
-     * now rendered, and the rotation stops for anyone who asked for reduced
-     * motion.
+     * Trip services.
+     * This replaces a six-slide carousel that showed one service at a time on
+     * a five-second timer, beside a price list the customer is trying to read
+     * — so five of the six were always hidden, the visible one changed under
+     * them, and every slide linked to href="#". All six are listed at once
+     * now, nothing moves on its own, and each row points at its real page.
      */
-    .sr-promo {
-        position: relative; border-radius: var(--radius); overflow: hidden;
-        background: linear-gradient(152deg, var(--blue) 0%, #2b3f88 54%, #0f6b62 100%);
-        box-shadow: 0 10px 26px rgba(48,49,145,.22);
+    .sr-svc { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .sr-svc-head {
+        position: relative; padding: 15px 16px 16px; overflow: hidden;
+        background: linear-gradient(140deg, var(--blue) 0%, #2b3f88 56%, #0f6b62 100%);
+        color: #fff;
     }
-    .sr-promo::after {
+    .sr-svc-head::after {
         content: ""; position: absolute; inset: 0; pointer-events: none;
-        background: radial-gradient(circle at 86% 12%, rgba(0,168,89,.28), transparent 46%);
+        background: radial-gradient(circle at 88% 6%, rgba(0,168,89,.36), transparent 54%);
     }
-    .sr-promo-slides { position: relative; min-height: 182px; }
-    .sr-promo-slide {
-        position: absolute; inset: 0; z-index: 1;
-        display: flex; flex-direction: column; align-items: flex-start;
-        padding: 15px 16px 42px;
-        opacity: 0; transition: opacity .5s ease; pointer-events: none;
+    .sr-svc-title { position: relative; z-index: 1; font-size: 14px; font-weight: 700; line-height: 1.3; }
+    .sr-svc-sub { position: relative; z-index: 1; margin-top: 4px; font-size: 11.5px; line-height: 1.5; color: rgba(255,255,255,.74); }
+
+    .sr-svc-row {
+        display: flex; align-items: center; gap: 11px;
+        padding: 11px 14px; text-decoration: none;
+        transition: background .14s ease;
     }
-    .sr-promo-slide.active { opacity: 1; pointer-events: auto; }
-    .sr-promo-chip {
-        display: inline-flex; align-items: center; gap: 6px;
-        font-size: 10.5px; font-weight: 600; letter-spacing: .02em;
-        background: rgba(255,255,255,.14); color: #fff;
-        padding: 4px 10px; border-radius: 999px; margin-bottom: 11px;
+    .sr-svc-row + .sr-svc-row { border-top: 1px solid var(--gray-100); }
+    .sr-svc-row:hover { background: var(--gray-50); }
+    .sr-svc-row:focus-visible { outline: none; background: var(--blue-lt); box-shadow: inset 0 0 0 2px var(--blue); }
+    .sr-svc-ic {
+        flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--blue-lt); color: var(--blue);
+        transition: background .14s ease, color .14s ease;
     }
-    .sr-promo-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
-    .sr-promo-title { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.35; }
-    .sr-promo-body { font-size: 11.5px; color: rgba(255,255,255,.74); line-height: 1.55; margin-top: 6px; }
-    .sr-promo-btn {
-        display: inline-flex; align-items: center; gap: 6px; margin-top: auto;
-        padding: 8px 15px; background: #fff; color: var(--blue);
-        border-radius: 8px; font-size: 12px; font-weight: 700;
-        text-decoration: none; border: none; cursor: pointer;
-        transition: background .15s ease, transform .15s ease;
-    }
-    .sr-promo-btn:hover { background: #f2f2ff; transform: translateY(-1px); }
-    .sr-promo-dots { position: absolute; z-index: 2; left: 16px; bottom: 15px; display: flex; gap: 5px; align-items: center; }
-    .sr-promo-dot {
-        width: 5px; height: 5px; border-radius: 999px; padding: 0; border: 0;
-        background: rgba(255,255,255,.34); cursor: pointer;
-        transition: width .28s ease, background .28s ease;
-    }
-    .sr-promo-dot:hover { background: rgba(255,255,255,.6); }
-    .sr-promo-dot.active { width: 15px; background: #fff; }
+    .sr-svc-row:hover .sr-svc-ic { background: var(--blue); color: #fff; }
+    .sr-svc-txt { flex: 1; min-width: 0; }
+    .sr-svc-name { display: block; font-size: 12.5px; font-weight: 600; color: var(--gray-900); line-height: 1.35; }
+    .sr-svc-note { display: block; font-size: 11px; color: var(--gray-500); line-height: 1.45; }
+    .sr-svc-go { flex-shrink: 0; color: var(--gray-300); transition: color .14s ease, transform .14s ease; }
+    .sr-svc-row:hover .sr-svc-go { color: var(--blue); transform: translateX(2px); }
 
     .sr-tip-card { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; }
     .sr-tip-title { display: flex; align-items: center; gap: 9px; font-size: 12.5px; font-weight: 700; color: var(--gray-900); margin-bottom: 9px; }
@@ -692,228 +705,147 @@
     /* Was brand blue, which reads as a link in a paragraph that has none. */
     .sr-tip-highlight { color: var(--gray-900); font-weight: 600; }
 
-    /* ── Modify Button ── */
+    /*
+     * Modify search.
+     * The panel hosts the shared flight-search widget, which the landing hero
+     * also renders, so every rule here is scoped to .sr-modify-inline --
+     * restyling .fw-* globally would silently change the homepage. What it
+     * replaces was that hero widget forced into a small box by a wall of
+     * !important; this treats it as a panel of the results page instead.
+     */
     .sr-tb-modify-btn {
-        position: relative; z-index: 1; display: flex; align-items: center; gap: 8px; padding: 0 18px; height: 42px;
-        background: var(--green); color: #fff; border: 1px solid rgba(255,255,255,.28);
-        border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer;
-        font-family: var(--font); flex-shrink: 0; margin-left: auto; transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
-        box-shadow: 0 10px 22px rgba(0,153,51,.22);
+        display: inline-flex; align-items: center; gap: 8px;
+        height: 40px; padding: 0 16px; flex-shrink: 0;
+        border: 1px solid var(--blue-md); border-radius: 8px;
+        background: var(--blue-lt); color: var(--blue);
+        font-size: 13px; font-weight: 600; font-family: var(--font);
+        white-space: nowrap; cursor: pointer;
+        transition: background .15s ease, border-color .15s ease, color .15s ease;
     }
-    .sr-tb-modify-btn:hover { background: #00852d; transform: translateY(-1px); box-shadow: 0 14px 26px rgba(0,153,51,.28); }
-    .sr-tb-modify-btn.active { background: #087f32; box-shadow: 0 0 0 3px rgba(255,255,255,.16), 0 10px 22px rgba(0,153,51,.18); }
+    .sr-tb-modify-btn:hover,
+    .sr-tb-modify-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
 
-    /* ── Backdrop ── */
-    .sr-modify-backdrop {
-        position: fixed; inset: 0; background: rgba(0,0,0,.45);
-        z-index: 300; backdrop-filter: blur(2px);
-    }
-
-    /* ── Drop Modal ── */
-    .sr-modify-modal {
-        position: fixed; top: 60px; left: 0; right: 0; z-index: 301;
-        background: var(--navy); border-bottom: 1px solid rgba(255,255,255,.1);
-        box-shadow: 0 16px 48px rgba(0,0,0,.35);
-        max-height: calc(100vh - 60px); overflow-y: auto;
-    }
-    .sr-modify-head {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 14px 32px; border-bottom: 1px solid rgba(255,255,255,.1);
-        background: rgba(255,255,255,.04); max-width: 1280px;
-        margin: 0 auto; width: 100%; box-sizing: border-box;
-    }
-    .sr-modify-close {
-        width: 32px; height: 32px; border-radius: 50%;
-        border: 1.5px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08);
-        color: rgba(255,255,255,.7); display: flex; align-items: center;
-        justify-content: center; cursor: pointer; transition: all .15s; padding: 0;
-    }
-
-    .sr-modify-close:hover { background: rgba(255,255,255,.18); color: #fff; }
-    .sr-modify-body { max-width: 1280px; margin: 0 auto; padding: 24px 32px 32px; box-sizing: border-box; }
-    .sr-modify-body .fw-card-outer { background: none !important; padding: 0 !important; min-height: unset !important; }
-    .sr-modify-body .fw-card-outer::before { display: none !important; }
-    .sr-modify-body .fw-card { box-shadow: 0 4px 24px rgba(0,0,0,.2); }
     .sr-modify-inline {
-        max-width: 1394px;
-        margin: 14px auto 0;
-        padding: 0 16px;
-        position: relative;
-        z-index: 45;
+        position: relative; z-index: 45;
+        max-width: 1394px; margin: 10px auto 0; padding: 0 16px;
         transform-origin: top center;
     }
-    .sr-modify-transition {
-        transition: opacity .22s ease, transform .24s ease, filter .24s ease;
-    }
-    .sr-modify-hidden {
-        opacity: 0;
-        transform: translateY(-10px) scale(.985);
-        filter: blur(2px);
-    }
-    .sr-modify-shown {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        filter: blur(0);
-    }
+    .sr-modify-transition { transition: opacity .22s ease, transform .24s ease; }
+    .sr-modify-hidden { opacity: 0; transform: translateY(-8px); }
+    .sr-modify-shown { opacity: 1; transform: translateY(0); }
     .sr-modify-card {
-        overflow: visible;
-        border: 1px solid #e6e8ee;
-        border-radius: 12px;
-        background: rgba(255,255,255,.96);
-        box-shadow: 0 18px 34px rgba(16,24,40,.08);
+        position: relative; overflow: visible; padding-left: 3px;
+        border: 1px solid var(--gray-200); border-radius: var(--radius);
+        background: #fff; box-shadow: var(--shadow-md);
     }
-    .sr-modify-inline .sr-modify-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 46px;
-        width: 100%;
-        max-width: none;
-        margin: 0;
-        padding: 0 16px;
-        border-bottom: 1px solid #eef0f5;
-        background: #fff;
+    /* Same stub edge as the bar it drops out of, so the two read as one object. */
+    .sr-modify-card::before {
+        content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+        border-radius: var(--radius) 0 0 var(--radius);
+        background: linear-gradient(180deg, var(--blue) 0%, var(--green) 100%);
     }
-    .sr-modify-title {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        color: #111827;
-        font-size: 13px;
-        font-weight: 800;
+
+    .sr-modify-head {
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        min-height: 46px; padding: 0 14px 0 18px;
+        border-bottom: 1px solid var(--gray-100);
     }
-    .sr-modify-title-icon {
-        width: 24px;
-        height: 24px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 999px;
-        background: #f1f1ff;
-        color: #303191;
+    .sr-modify-title { display: inline-flex; align-items: center; gap: 9px; font-size: 12.5px; font-weight: 700; color: var(--gray-900); }
+    .sr-modify-title-icon { width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background: var(--blue-lt); color: var(--blue); }
+    .sr-modify-close {
+        width: 30px; height: 30px; padding: 0; border-radius: 8px;
+        border: 1px solid var(--gray-200); background: #fff; color: var(--gray-500);
+        display: flex; align-items: center; justify-content: center; cursor: pointer;
+        transition: background .15s ease, color .15s ease, border-color .15s ease;
     }
-    .sr-modify-inline .sr-modify-close {
-        width: 30px;
-        height: 30px;
-        border-radius: 8px;
-        border: 1px solid #e5e7eb;
-        background: #fff;
-        color: #667085;
-        box-shadow: none;
-    }
-    .sr-modify-inline .sr-modify-close:hover {
-        background: #f8f9fc;
-        color: #303191;
-    }
-    .sr-modify-inline .sr-modify-body {
-        max-width: none;
-        margin: 0;
-        padding: 14px 16px 16px;
-        background: #fff;
-        border-radius: 0 0 12px 12px;
-        overflow: visible !important;
-    }
-    .sr-modify-inline .fw-card-outer {
-        background: transparent !important;
-        min-height: 0 !important;
-        padding: 0 !important;
-        overflow: visible !important;
-    }
-    .sr-modify-inline .fw-card-outer::before {
-        display: none !important;
-    }
-    .sr-modify-inline .fw-card {
-        border: 0 !important;
-        border-radius: 0 !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        overflow: visible !important;
-    }
-    .sr-modify-inline .tw-landing-hero {
-        min-height: 0 !important;
-        display: block !important;
-        padding: 0 !important;
-        background: transparent !important;
-        overflow: visible !important;
-    }
+    .sr-modify-close:hover { background: var(--gray-50); border-color: var(--gray-300); color: var(--gray-900); }
+    .sr-modify-body { padding: 16px 18px 18px; }
+
+    /* Strip the landing-hero chrome the widget ships with. */
+    .sr-modify-inline .fw-card-outer,
+    .sr-modify-inline .tw-landing-hero { min-height: 0 !important; display: block !important; padding: 0 !important; background: transparent !important; overflow: visible !important; }
+    .sr-modify-inline .fw-card-outer::before,
     .sr-modify-inline .tw-landing-hero::before,
     .sr-modify-inline .tw-hero-title,
     .sr-modify-inline .tw-hero-subtitle,
-    .sr-modify-inline .tw-product-tabs {
-        display: none !important;
-    }
-    .sr-modify-inline .tw-hero-inner {
-        max-width: none !important;
-        width: 100% !important;
-        text-align: left !important;
-        overflow: visible !important;
-    }
-    .sr-modify-inline .fw-card {
-        max-width: none !important;
-        padding: 0 !important;
-    }
-    .sr-modify-inline .fw-card > div:first-child {
-        margin-bottom: 14px !important;
-    }
+    .sr-modify-inline .tw-product-tabs { display: none !important; }
+    .sr-modify-inline .fw-card { max-width: none !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; overflow: visible !important; }
+    .sr-modify-inline .tw-hero-inner { max-width: none !important; width: 100% !important; text-align: left !important; overflow: visible !important; }
+    .sr-modify-inline .fw-card > div:first-child { margin-bottom: 14px !important; }
+
+    /* Trip type: a proper segmented control, not three loose grey pills. */
     .sr-modify-inline .fw-tabs {
-        padding-bottom: 0 !important;
-        border-bottom: 0 !important;
-        gap: 8px !important;
+        display: inline-flex; flex: 0 0 auto !important; gap: 2px;
+        margin: 0 !important; padding: 3px !important;
+        border: 1px solid var(--gray-200); border-bottom: 1px solid var(--gray-200) !important;
+        border-radius: 10px; background: var(--gray-50);
     }
     .sr-modify-inline .fw-tab {
-        min-height: 32px;
-        padding: 8px 12px;
-        font-size: 12px;
+        min-height: 32px; margin: 0; padding: 0 14px; gap: 7px;
+        border: 1px solid transparent; border-radius: 7px; background: transparent;
+        color: var(--gray-600); font-size: 12.5px; font-weight: 600;
+        box-shadow: none !important; transform: none !important;
     }
-    .sr-modify-inline .fw-row {
-        gap: 12px;
+    .sr-modify-inline .fw-tab:hover { background: rgba(255,255,255,.72); color: var(--gray-900); }
+    .sr-modify-inline .fw-tab.fw-active {
+        background: #fff; color: var(--blue); border-color: var(--gray-200);
+        box-shadow: 0 1px 2px rgba(16,24,40,.07) !important;
     }
+
+    .sr-modify-inline .fw-row { gap: 12px; }
     .sr-modify-inline .fw-field,
     .sr-modify-inline .fw-field-2x,
     .sr-modify-inline .fw-field-15x,
     .sr-modify-inline .fw-field-12x,
     .sr-modify-inline .fw-input-wrap,
-    .sr-modify-inline .fw-cabin-field {
-        position: relative;
-        overflow: visible !important;
-    }
+    .sr-modify-inline .fw-cabin-field { position: relative; overflow: visible !important; }
     .sr-modify-inline .fw-field:focus-within,
     .sr-modify-inline .fw-field-2x:focus-within,
     .sr-modify-inline .fw-field-15x:focus-within,
     .sr-modify-inline .fw-field-12x:focus-within,
-    .sr-modify-inline .fw-cabin-field:focus-within {
-        z-index: 120;
-    }
+    .sr-modify-inline .fw-cabin-field:focus-within { z-index: 120; }
     .sr-modify-inline .fw-ac-dropdown,
     .sr-modify-inline .fw-cal,
     .sr-modify-inline .fw-pax-dropdown,
-    .sr-modify-inline .fw-cabin-dropdown {
-        z-index: 1400 !important;
-    }
-    .sr-modify-inline .fw-input {
-        height: 48px;
-        background: #fbfcfe;
-        border-color: #e1e4eb;
-        border-radius: 8px;
-        font-size: 13px;
-    }
-    .sr-modify-inline .fw-label {
-        margin-bottom: 7px;
-        color: #30364a;
-        font-size: 11px;
-        font-weight: 800;
-    }
-    .sr-modify-inline .fw-search-row {
-        margin-top: 14px;
-    }
-    .sr-modify-inline .fw-search-btn {
-        width: 196px;
-        height: 48px;
-        border-radius: 10px;
-        font-size: 14px;
-        box-shadow: 0 10px 20px rgba(48,49,145,.18);
-    }
+    .sr-modify-inline .fw-cabin-dropdown { z-index: 1400 !important; }
 
+    /* Sentence case, muted. The shared widget hardcodes the label text in
+       capitals ("FROM", "DEPARTURE DATE"), so text-transform: none alone does
+       nothing — lowercasing and re-capitalising the first letter is the only
+       way to fix the casing here without editing markup the homepage renders. */
+    .sr-modify-inline .fw-label {
+        /* block, not the widget flex: ::first-letter does not apply to a flex
+           container. These labels hold text only, so nothing needs flex here. */
+        display: block; margin-bottom: 6px; color: var(--gray-500);
+        font-size: 11.5px; font-weight: 500;
+        text-transform: lowercase; letter-spacing: 0;
+    }
+    .sr-modify-inline .fw-label::first-letter { text-transform: uppercase; }
+    .sr-modify-inline .fw-input {
+        height: 44px; padding: 0 12px; border-radius: 9px;
+        border: 1px solid var(--gray-200); background: #fff;
+        font-size: 13px; color: var(--gray-900);
+    }
+    .sr-modify-inline .fw-input::placeholder { color: var(--gray-400); }
+    .sr-modify-inline .fw-input:hover { border-color: var(--gray-300); }
+    .sr-modify-inline .fw-input:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(48,49,145,.11); }
+    .sr-modify-inline .fw-swap {
+        width: 32px; height: 32px; min-width: 32px; margin-bottom: 6px;
+        border: 1px solid var(--gray-200); background: #fff; color: var(--gray-500);
+    }
+    .sr-modify-inline .fw-swap:hover { background: var(--blue-lt); border-color: var(--blue-md); color: var(--blue); }
+
+    .sr-modify-inline .fw-search-row { margin-top: 16px; }
+    .sr-modify-inline .fw-search-btn {
+        width: auto; min-width: 152px; height: 44px; padding: 0 22px;
+        border-radius: 9px; font-size: 13.5px; font-weight: 700;
+        background: var(--blue); border-color: var(--blue); box-shadow: none;
+    }
+    .sr-modify-inline .fw-search-btn:hover {
+        background: var(--tw-brand-hover, #252675); border-color: var(--tw-brand-hover, #252675);
+        transform: none; box-shadow: 0 6px 16px rgba(48,49,145,.22);
+    }
+    .sr-modify-inline .fw-search-btn svg { width: 17px !important; height: 17px !important; }
     /* ── Tooltip ── */
     .sr-tooltip { position: relative; display: inline-block; cursor: pointer; }
     .sr-tooltip-text {
@@ -924,27 +856,8 @@
     }
     .sr-tooltip:hover .sr-tooltip-text { opacity: 1; }
 
-    /*
-     * ── Results shell & topbar sizing ──
-     * What used to sit here were three more full, unconditional redefinitions
-     * of the sidebar, fare matrix, fare cards, sort bar and right rail
-     * ("Phase 2 result controls", "Requested result-page refinements" and a
-     * "Focused Figma price matrix replica"), stacked on top of the originals
-     * in exactly the pattern the flight card had. Each carried its own
-     * hardcoded greys, its own fixed pixel sizes, and UI faked in CSS
-     * ::before/::after — including a pair of matrix arrows that looked
-     * clickable but were pointer-events:none, and a "Filters" heading drawn
-     * with three gradient bars. All of it is replaced by one canonical
-     * implementation per component, further up this stylesheet.
-     */
+    /* The results page sits on white rather than the page-wide tint. */
     .sr-results-shell { background: #fff; }
-    .sr-topbar { padding-top: 24px; }
-    .sr-topbar-inner {
-        max-width: 960px; min-height: 82px; border-radius: 8px; box-shadow: none; border: 0;
-        background: linear-gradient(96deg, #303191 0%, #24467a 61%, #146b6b 100%);
-    }
-    .sr-tb-route { font-size: 20px; }
-    .sr-tb-modify-btn { height: 42px; border-radius: 8px; background: var(--green); box-shadow: none; border: 0; }
 
     /* ── Responsive ── */
     .sr-mobile-filter-bar,
@@ -1159,16 +1072,23 @@
         .sr-fare-rules-body { min-height: 0; padding: 14px 16px 2px; }
         .sr-detail-footer { padding: 13px 16px 15px; }
     }
+    @media (max-width: 980px) {
+        /* The criteria cells wrap under the route rather than squeezing. */
+        .sr-topbar-inner { flex-wrap: wrap; }
+        .sr-tb-facts { width: 100%; margin-left: 0; border-top: 1px solid var(--gray-100); }
+        .sr-tb-fact { flex: 1; }
+        .sr-tb-fact:first-child { border-left: 0; }
+        .sr-tb-action { margin-left: auto; border-left: 0; }
+    }
     @media (max-width: 600px) {
         .sr-topbar { padding: 16px 12px 0; }
-        .sr-topbar-inner { align-items: stretch; flex-direction: column; gap: 14px; min-height: 0; padding: 16px; }
-        .sr-tb-route { flex-wrap: wrap; gap: 8px; font-size: var(--tw-text-lg, 17px); }
-        .sr-tb-route-text { max-width: calc(100vw - 116px); }
-        .sr-tb-meta { gap: 8px; font-size: 11.5px; }
-        .sr-tb-modify-btn { width: 100%; justify-content: center; margin-left: 0; height: 40px; }
-        .sr-tb-pill { padding: 5px 9px; }
-        .sr-tb-pill-value { font-size: 12px; }
-        .sr-tb-search { padding: 0 14px; font-size: 12px; height: 34px; }
+        .sr-tb-copy { padding: 12px 16px; width: 100%; }
+        .sr-tb-route { font-size: 16px; }
+        .sr-tb-facts { flex-wrap: wrap; }
+        .sr-tb-fact { flex: 1 1 50%; padding: 11px 16px; border-top: 1px solid var(--gray-100); border-left: 0; }
+        .sr-tb-fact:nth-child(even) { border-left: 1px solid var(--gray-100); }
+        .sr-tb-action { width: 100%; padding: 12px 16px; border-top: 1px solid var(--gray-100); }
+        .sr-tb-modify-btn { width: 100%; justify-content: center; }
         .sr-matrix-head { padding: 11px 14px; }
         .sr-matrix-hint { display: none; }
         .sr-fare-options { grid-template-columns: 1fr; }
@@ -1179,12 +1099,9 @@
         .sr-detail-footer { flex-direction: column; align-items: stretch; gap: 10px; }
         .sr-detail-footer .sr-book-btn { width: 100%; }
         .sr-policy-grid { grid-template-columns: 1fr; }
-        .sr-modify-head { padding: 12px 16px; }
-        .sr-modify-body { padding: 16px; }
-    }
-    @media (max-width: 380px) {
-        .sr-tb-pill { padding: 4px 7px; }
-        .sr-tb-pill-value { font-size: 11px; }
+        .sr-modify-inline { padding: 0 12px; }
+        .sr-modify-head { padding: 0 12px 0 15px; }
+        .sr-modify-body { padding: 14px; }
     }
 
 
@@ -1309,90 +1226,64 @@
     {{-- ══ TOPBAR ══ --}}
     <div class="sr-topbar">
         <div class="sr-topbar-inner">
+
+            {{-- Route --}}
             <div class="sr-tb-copy">
                 <div class="sr-tb-route">
-                    <span class="sr-tb-pin" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 21s7-4.7 7-11a7 7 0 1 0-14 0c0 6.3 7 11 7 11Z"/>
-                            <circle cx="12" cy="10" r="2.4"/>
-                        </svg>
-                    </span>
-                    <span class="sr-tb-route-text">{{ $from }}</span>
-                    <span class="sr-tb-route-arrow">&rarr;</span>
-                    <span class="sr-tb-pin" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 21s7-4.7 7-11a7 7 0 1 0-14 0c0 6.3 7 11 7 11Z"/>
-                            <circle cx="12" cy="10" r="2.4"/>
-                        </svg>
-                    </span>
-                    <span class="sr-tb-route-text">{{ $to }}</span>
+                    <span class="sr-tb-route-text">{{ $trip === 'multi' ? ($routes[0]['from'] ?? $from) : $from }}</span>
+                    <span class="sr-ic sr-ic-plane-route sr-tb-route-mark" aria-hidden="true"></span>
+                    <span class="sr-tb-route-text">{{ $trip === 'multi' ? (last($routes)['to'] ?? $to) : $to }}</span>
                 </div>
-                <div class="sr-tb-meta">
-                    <span class="sr-tb-meta-item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M16 21v-2a4 4 0 0 0-8 0v2"/>
-                            <circle cx="12" cy="7" r="4"/>
-                        </svg>
-                        {{ $totalPassengers }} passenger{{ $totalPassengers > 1 ? 's' : '' }}
-                    </span>
-                    <span class="sr-tb-meta-item">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M4 9h16"/>
-                            <path d="M5 9v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9"/>
-                            <path d="M8 9V6a4 4 0 0 1 8 0v3"/>
-                        </svg>
-                        {{ $cabin }}
-                    </span>
-                    @if($depart)
-                        <span class="sr-tb-meta-item sr-tb-date-pill">
-                            {{ \Carbon\Carbon::createFromFormat('d/m/Y',$depart)->format('Y-m-d') }}
-                            @if($trip === 'return' && $return)
-                                &rarr; {{ \Carbon\Carbon::createFromFormat('d/m/Y',$return)->format('Y-m-d') }}
-                            @endif
-                        </span>
+                <div class="sr-tb-trip">
+                    @if($trip === 'multi')
+                        Multi-city · {{ count($routes) }} legs
+                    @elseif($trip === 'return')
+                        Round trip
+                    @else
+                        One way
                     @endif
                 </div>
             </div>
 
-            {{-- Route pill --}}
-            <div class="sr-tb-pill">
-                <span class="sr-tb-pill-label">Route</span>
-                <span class="sr-tb-pill-value">{{ $from }} → {{ $to }}</span>
+            {{-- Criteria --}}
+            <div class="sr-tb-facts">
+                @if($depart)
+                    <div class="sr-tb-fact">
+                        <span class="sr-tb-fact-label">
+                            <span class="sr-ic sr-ic-sm sr-ic-calendar" aria-hidden="true"></span>
+                            {{ $trip === 'return' && $return ? 'Dates' : 'Departing' }}
+                        </span>
+                        <span class="sr-tb-fact-value">
+                            {{ \Carbon\Carbon::createFromFormat('d/m/Y',$depart)->format('D, d M') }}
+                            @if($trip === 'return' && $return)
+                                <span class="sep">&ndash;</span>{{ \Carbon\Carbon::createFromFormat('d/m/Y',$return)->format('D, d M') }}
+                            @endif
+                        </span>
+                    </div>
+                @endif
+                <div class="sr-tb-fact">
+                    <span class="sr-tb-fact-label">
+                        <span class="sr-ic sr-ic-sm sr-ic-users" aria-hidden="true"></span>
+                        Travellers
+                    </span>
+                    <span class="sr-tb-fact-value">{{ $totalPassengers }} {{ $totalPassengers > 1 ? 'travellers' : 'traveller' }}</span>
+                </div>
+                <div class="sr-tb-fact">
+                    <span class="sr-tb-fact-label">
+                        <span class="sr-ic sr-ic-sm sr-ic-seat" aria-hidden="true"></span>
+                        Cabin
+                    </span>
+                    <span class="sr-tb-fact-value">{{ $cabin }}</span>
+                </div>
             </div>
 
-            <span class="sr-tb-sep"></span>
-
-            {{-- Date pill --}}
-            @if($depart)
-            <div class="sr-tb-pill">
-                <span class="sr-tb-pill-label">Depart</span>
-                <span class="sr-tb-pill-value">{{ \Carbon\Carbon::createFromFormat('d/m/Y',$depart)->format('d M') }}</span>
+            {{-- The one action on this bar --}}
+            <div class="sr-tb-action">
+                <button class="sr-tb-modify-btn" type="button" :class="{ active: modifyOpen }" @click="modifyOpen = !modifyOpen">
+                    <span class="sr-ic sr-ic-sm sr-ic-pencil" aria-hidden="true"></span>
+                    <span x-text="modifyOpen ? 'Close' : 'Edit search'"></span>
+                </button>
             </div>
-            @endif
-
-            @if($trip === 'return' && $return)
-            <div class="sr-tb-pill">
-                <span class="sr-tb-pill-label">Return</span>
-                <span class="sr-tb-pill-value">{{ \Carbon\Carbon::createFromFormat('d/m/Y',$return)->format('d M') }}</span>
-            </div>
-            @endif
-
-            <span class="sr-tb-sep"></span>
-
-            {{-- Passengers pill --}}
-            <div class="sr-tb-pill">
-                <span class="sr-tb-pill-label">Passengers</span>
-                <span class="sr-tb-pill-value">{{ $totalPassengers }} Pax · {{ $cabin }}</span>
-            </div>
-
-            {{-- Modify button — INSIDE the same x-data scope --}}
-            <button class="sr-tb-modify-btn" :class="{ active: modifyOpen }" @click="modifyOpen = !modifyOpen">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-                <span x-text="modifyOpen ? 'Close' : 'Modify Search'"></span>
-            </button>
 
         </div>
     </div>
@@ -1420,7 +1311,7 @@
                         <circle cx="11" cy="11" r="7"/>
                     </svg>
                 </span>
-                <span>Modify search</span>
+                <span>Edit search</span>
             </div>
             <button class="sr-modify-close" @click="modifyOpen = false" type="button" aria-label="Close modify search">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
@@ -2188,63 +2079,36 @@
 
         {{-- ══ RIGHT RAIL ══ --}}
         <aside class="sr-rail">
-            <div class="sr-promo" 
-                x-data="{
-                    current: 0,
-                    timer: null,
-                    items: [
-                        { label:'Hotel Booking',    title:'Find the best hotel deals',        body:'Book top-rated hotels at better prices worldwide.',         cta:'Explore Hotels', link:'#' },
-                        { label:'Airport Protocol', title:'VIP airport assistance',           body:'Skip queues and enjoy fast-track services at the airport.', cta:'Book Protocol',  link:'#' },
-                        { label:'Airport Lounge',   title:'Relax before your flight',         body:'Access premium airport lounges around the world.',          cta:'View Lounges',   link:'#' },
-                        { label:'Travel Insurance', title:'Travel with peace of mind',        body:'Coverage for delays, medical emergencies, and more.',       cta:'Get Covered',    link:'#' },
-                        { label:'Visa Assistance',  title:'Hassle-free visa processing',      body:'Let us handle your visa application start to finish.',      cta:'Apply Now',      link:'#' },
-                        { label:'Air Cargo',        title:'Fast & Reliable cargo delivery', body:'Ship goods locally and internationally with ease.',         cta:'Send Cargo',     link:'#' }
-                    ],
-                    goTo(idx) {
-                        this.current = (idx + this.items.length) % this.items.length;
-                    },
-                    next() { this.goTo(this.current + 1); },
-                    prev() { this.goTo(this.current - 1); },
-                    start() {
-                        this.pause();
-                        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-                        this.timer = setInterval(() => this.next(), 5000);
-                    },
-                    pause() { clearInterval(this.timer); }
-                }"
-                x-init="start()"
-                @mouseenter="pause()"
-                @mouseleave="start()">
 
-                <div class="sr-promo-slides">
-                    <template x-for="(item, i) in items" :key="i">
-                        <div class="sr-promo-slide" :class="{ active: current === i }" :aria-hidden="current === i ? 'false' : 'true'">
-                            <span class="sr-promo-chip">
-                                <span class="sr-promo-chip-dot"></span>
-                                <span x-text="item.label"></span>
-                            </span>
-                            <div class="sr-promo-title" x-text="item.title"></div>
-                            <div class="sr-promo-body" x-text="item.body"></div>
-                            <a class="sr-promo-btn" :href="item.link" :tabindex="current === i ? 0 : -1">
-                                <span x-text="item.cta"></span>
-                                <span class="sr-ic sr-ic-sm sr-ic-chevron" style="transform:rotate(-90deg);" aria-hidden="true"></span>
-                            </a>
-                        </div>
-                    </template>
+            {{-- Ancillary services. Was a six-slide auto-rotating carousel;
+                 all six are visible here, and each links to its real page. --}}
+            @php
+                $tripServices = [
+                    ['route' => 'air.hotel',     'icon' => 'bed',      'name' => 'Hotels',            'note' => 'Near where you land'],
+                    ['route' => 'air.protocol',  'icon' => 'bell',     'name' => 'Airport protocol',  'note' => 'Met at the airport'],
+                    ['route' => 'air.lounge',    'icon' => 'seat',     'name' => 'Airport lounge',    'note' => 'Quiet before boarding'],
+                    ['route' => 'air.insurance', 'icon' => 'shield',   'name' => 'Travel insurance',  'note' => 'Delays and medical'],
+                    ['route' => 'air.visa',      'icon' => 'passport', 'name' => 'Visa assistance',   'note' => 'We handle the forms'],
+                    ['route' => 'air.cargo',     'icon' => 'package',  'name' => 'Air cargo',         'note' => 'Send goods ahead'],
+                ];
+            @endphp
+            <div class="sr-svc">
+                <div class="sr-svc-head">
+                    <div class="sr-svc-title">Complete your trip</div>
+                    <div class="sr-svc-sub">The rest of what you need, booked in the same place.</div>
                 </div>
-
-                {{-- The card rotates on a timer; without these it changed under
-                     the reader with no way to see where they were or go back. --}}
-                <div class="sr-promo-dots">
-                    <template x-for="(item, i) in items" :key="'dot-'+i">
-                        <button type="button"
-                                class="sr-promo-dot"
-                                :class="{ active: current === i }"
-                                :aria-label="'Show ' + item.label"
-                                :aria-current="current === i ? 'true' : 'false'"
-                                @click="goTo(i)"></button>
-                    </template>
-                </div>
+                @foreach($tripServices as $service)
+                    <a class="sr-svc-row" href="{{ route($service['route']) }}">
+                        <span class="sr-svc-ic">
+                            <span class="sr-ic sr-ic-{{ $service['icon'] }}" aria-hidden="true"></span>
+                        </span>
+                        <span class="sr-svc-txt">
+                            <span class="sr-svc-name">{{ $service['name'] }}</span>
+                            <span class="sr-svc-note">{{ $service['note'] }}</span>
+                        </span>
+                        <span class="sr-ic sr-ic-sm sr-ic-chevron-right sr-svc-go" aria-hidden="true"></span>
+                    </a>
+                @endforeach
             </div>
             <div class="sr-tip-card">
                 <div class="sr-tip-title"><span class="sr-tip-icon"><span class="sr-ic sr-ic-refund" aria-hidden="true"></span></span> Flexible Booking</div>
