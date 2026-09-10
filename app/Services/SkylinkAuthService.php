@@ -78,16 +78,33 @@ class SkylinkAuthService
         return is_array($decoded) ? $decoded : [];
     }
 
-    public function authorizedClient(): PendingRequest
+    /**
+     * True when a usable token is already cached, so callers can tell a warm
+     * request (one round trip) from a cold one (login, then the real call)
+     * without forcing a login themselves.
+     */
+    public function hasCachedToken(): bool
     {
-        return $this->client()->withToken($this->accessToken());
+        return Cache::has(self::TOKEN_CACHE_KEY);
     }
 
-    public function client(): PendingRequest
+    public function authorizedClient(?int $timeout = null): PendingRequest
+    {
+        return $this->client($timeout)->withToken($this->accessToken());
+    }
+
+    /**
+     * $timeout is the read timeout in seconds. It is per-endpoint rather than
+     * one global value because search, pricing and reserve have very different
+     * costs when cut short — see config/services.php's skylink block. The
+     * default is the short auth timeout, since the only caller that doesn't
+     * pass one explicitly is login() itself.
+     */
+    public function client(?int $timeout = null): PendingRequest
     {
         return Http::baseUrl(rtrim((string) config('services.skylink.base_url'), '/'))
             ->acceptJson()
-            ->timeout(60)
-            ->connectTimeout(10);
+            ->timeout($timeout ?? (int) config('services.skylink.auth_timeout', 8))
+            ->connectTimeout(5);
     }
 }

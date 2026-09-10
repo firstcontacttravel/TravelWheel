@@ -312,6 +312,13 @@ class SkylinkFlightServiceTest extends TestCase
             'services.skylink.base_url' => 'https://247travels.test/api/',
             'services.skylink.email' => 'partner@example.test',
             'services.skylink.password' => 'secret',
+            // Off by default here so every test below exercises a real call
+            // rather than a cache hit — test_access_token_is_cached_across_
+            // multiple_calls in particular would otherwise pass because the
+            // second search never happened, not because the token was reused.
+            // The caching itself is covered by its own tests, which switch it
+            // back on explicitly.
+            'services.skylink.search_cache_ttl' => 0,
         ]);
 
         // SkyLink always prices in NGN; the service converts back to USD
