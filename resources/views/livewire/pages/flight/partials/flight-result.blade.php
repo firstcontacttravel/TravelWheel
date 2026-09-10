@@ -18,8 +18,10 @@
         --gray-50: var(--tw-surface-soft, #f8f9fc);
         --gray-100:var(--tw-surface-muted, #f2f4f7);
         --gray-200:var(--tw-line, #e6e8ee);
+        --gray-300:#d5d9e2;
         --gray-400:var(--tw-subtle, #98a2b3);
         --gray-500:var(--tw-muted, #667085);
+        --gray-600:#516079;
         --gray-700:var(--tw-text, #1f2937);
         --gray-900:var(--tw-ink, #111827);
         --radius:  var(--tw-radius-lg, 12px);
@@ -138,7 +140,11 @@
     .sr-check-left { display: flex; align-items: center; gap: 8px; }
     .sr-check-box { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--gray-400); background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; }
     .sr-check-box.checked { background: var(--blue); border-color: var(--blue); }
-    .sr-check-box.checked::after { content: '✓'; color: #fff; font-size: 10px; font-weight: 700; }
+    .sr-check-box.checked::after {
+        content: ""; width: 11px; height: 11px; background: #fff;
+        mask: url("{{ asset('images/flight-icons/check.svg') }}") center / contain no-repeat;
+        -webkit-mask: url("{{ asset('images/flight-icons/check.svg') }}") center / contain no-repeat;
+    }
     .sr-check-name { font-size: 12.5px; color: var(--gray-700); font-weight: 500; }
     .sr-check-price { font-size: 11.5px; color: var(--gray-500); font-family: var(--mono); }
     .sr-mat-img { width: 50px; height: 50px; object-fit: contain; border-radius: 4px; background: #fff; padding: 2px; display: inline-flex; align-items: center; justify-content: center; margin-right: 6px; }
@@ -160,7 +166,9 @@
     /* Header */
     .sr-header { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .sr-header-title { font-size: 17px; font-weight: 800; color: var(--gray-900); }
-    .sr-header-sub { font-size: 13px; color: var(--gray-500); margin-top: 3px; }
+    .sr-header-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--gray-500); margin-top: 5px; }
+    .sr-header-fact { display: inline-flex; align-items: center; gap: 6px; }
+    .sr-header-fact .sr-ic { color: var(--gray-400); }
     .sr-fare-cal-btn { display: flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 8px; border: 1.5px solid var(--blue-md); background: var(--blue-lt); color: var(--blue); font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: var(--font); transition: all .15s; }
     .sr-fare-cal-btn:hover { background: #dbeafe; border-color: var(--blue); }
 
@@ -234,11 +242,46 @@
      */
     @keyframes cardIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+    /*
+     * Icon set. One family of 24px line glyphs (stroke 1.75, round joins,
+     * public/images/flight-icons) drawn as CSS masks, so every icon inherits
+     * `color` from its context instead of shipping a fixed-colour asset and
+     * every icon on the card shares the same optical weight. Replaces the
+     * emoji that used to stand in for icons in the fare-rules panel.
+     */
+    .sr-ic { display: inline-block; width: 16px; height: 16px; flex: 0 0 16px; background: currentColor;
+             mask: var(--i) center / contain no-repeat; -webkit-mask: var(--i) center / contain no-repeat; }
+    .sr-ic-sm { width: 14px; height: 14px; flex-basis: 14px; }
+    .sr-ic-lg { width: 18px; height: 18px; flex-basis: 18px; }
+    .sr-ic-luggage  { --i: url("{{ asset('images/flight-icons/luggage.svg') }}"); }
+    .sr-ic-cabin    { --i: url("{{ asset('images/flight-icons/cabin-bag.svg') }}"); }
+    .sr-ic-seat     { --i: url("{{ asset('images/flight-icons/seat.svg') }}"); }
+    .sr-ic-refund   { --i: url("{{ asset('images/flight-icons/refund.svg') }}"); }
+    .sr-ic-change   { --i: url("{{ asset('images/flight-icons/change.svg') }}"); }
+    .sr-ic-clock    { --i: url("{{ asset('images/flight-icons/clock.svg') }}"); }
+    .sr-ic-chevron  { --i: url("{{ asset('images/flight-icons/chevron-down.svg') }}"); }
+    .sr-ic-check    { --i: url("{{ asset('images/flight-icons/check.svg') }}"); }
+    .sr-ic-cross    { --i: url("{{ asset('images/flight-icons/cross.svg') }}"); }
+    .sr-ic-info     { --i: url("{{ asset('images/flight-icons/info.svg') }}"); }
+    .sr-ic-aircraft { --i: url("{{ asset('images/flight-icons/aircraft.svg') }}"); }
+    .sr-ic-ticket   { --i: url("{{ asset('images/flight-icons/ticket.svg') }}"); }
+    .sr-ic-card     { --i: url("{{ asset('images/flight-icons/card.svg') }}"); }
+    .sr-ic-tag      { --i: url("{{ asset('images/flight-icons/tag.svg') }}"); }
+    .sr-ic-alert    { --i: url("{{ asset('images/flight-icons/alert.svg') }}"); }
+    .sr-ic-search   { --i: url("{{ asset('images/flight-icons/search.svg') }}"); }
+    .sr-ic-route    { --i: url("{{ asset('images/flight-icons/route.svg') }}"); }
+
+    /*
+     * Card anatomy: an itinerary panel and a price rail, split by a hairline.
+     * The rail carries a faint brand tint so the commercial half of the card
+     * (what it costs, how to buy it) reads as a distinct zone from the factual
+     * half (where and when you fly) — and so a column of prices scans as a
+     * single vertical strip down a long result list.
+     */
     .sr-card {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        grid-template-areas: "head price" "body body" "footer footer" "details details";
-        column-gap: 20px;
+        grid-template-columns: minmax(0, 1fr) 218px;
+        grid-template-areas: "main rail" "details details";
         background: #fff;
         border: 1px solid var(--gray-200);
         border-radius: var(--radius);
@@ -247,162 +290,270 @@
         transition: box-shadow .18s ease, border-color .18s ease;
         animation: cardIn .3s ease both;
     }
-    .sr-card:hover { border-color: #d3d6e6; box-shadow: var(--shadow-md); }
+    .sr-card:hover { border-color: #c9cce4; box-shadow: var(--shadow-md); }
+    .sr-card:focus-within { border-color: var(--blue); }
+    .sr-card-expanded { border-color: #c9cce4; box-shadow: var(--shadow-md); }
 
-    /* Head — airline identity */
-    .sr-card-head { grid-area: head; display: flex; align-items: center; gap: 14px; min-width: 0; padding: 18px 0 0 20px; }
-    .sr-airline-logo-wrap { width: 42px; height: 42px; border-radius: 10px; background: var(--gray-50); border: 1px solid var(--gray-100); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; font-weight: 800; color: var(--gray-500); overflow: hidden; }
+    .sr-card-main { grid-area: main; min-width: 0; display: flex; flex-direction: column; padding: 16px 20px 0; }
+
+    /* Head — airline identity, kept deliberately quiet so the route can lead */
+    .sr-card-head { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .sr-airline-logo-wrap { width: 34px; height: 34px; border-radius: 8px; background: #fff; border: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; font-weight: 800; color: var(--gray-500); overflow: hidden; padding: 3px; }
     .sr-airline-logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
-    .sr-card-airline { font-size: 15px; font-weight: 700; color: var(--gray-900); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sr-card-class { font-size: 12px; color: var(--gray-500); font-weight: 500; margin-top: 1px; }
+    .sr-card-airline { font-size: 13.5px; font-weight: 700; color: var(--gray-900); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sr-card-class { font-size: 11.5px; color: var(--gray-500); font-weight: 500; }
+    .sr-head-tags { display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0; }
+    .sr-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; line-height: 1; padding: 5px 9px; border-radius: 6px; white-space: nowrap; }
+    .sr-tag-neutral { background: var(--gray-50); color: var(--gray-600); border: 1px solid var(--gray-200); }
+    .sr-tag-brand   { background: var(--blue-lt); color: var(--blue); }
+    .sr-tag-good    { background: #e9f9f0; color: #04713f; }
+    .sr-tag-warn    { background: #fef3f2; color: #b42318; }
 
-    /* Price + actions */
-    .sr-card-price-wrap { grid-area: price; display: flex; flex-direction: column; align-items: flex-end; padding: 18px 20px 0 0; text-align: right; }
-    .sr-card-price-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--gray-400); }
-    .sr-card-price { font-size: 23px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); line-height: 1.3; margin-top: 1px; }
-    .sr-card-price-sub { font-size: 11px; color: var(--blue); font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 3px; justify-content: flex-end; margin-top: 2px; }
-    .sr-card-price-sub:hover { text-decoration: underline; }
-    .sr-card-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-top: 12px; }
-    .sr-book-btn { min-width: 148px; padding: 0 22px; height: 40px; background: var(--blue); color: #fff; border: none; border-radius: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: background .15s ease, transform .15s ease; }
-    .sr-book-btn:hover { background: var(--tw-brand-hover, #252675); transform: translateY(-1px); }
-    .sr-installment-btn { padding: 6px 12px; border-radius: 8px; border: 1px dashed var(--gray-300); background: #fff; color: var(--gray-500); font-family: var(--font); cursor: pointer; display: inline-flex; flex-direction: column; align-items: flex-end; gap: 1px; transition: border-color .15s ease, color .15s ease; }
-    .sr-installment-btn:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
-    .sr-installment-btn:disabled { opacity: .5; cursor: not-allowed; }
-    .sr-installment-btn-price { font-size: 11.5px; font-weight: 700; color: var(--gray-700); }
-    .sr-installment-btn-label { font-size: 10.5px; color: inherit; }
-
-    /* Body — badges, route, meta */
-    .sr-card-body { grid-area: body; min-width: 0; padding: 14px 20px 0; }
-
-    .sr-refund-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
-    .sr-refund-badge.no { background: #fef3f2; color: #b42318; }
-    .sr-refund-badge.yes { background: #ecfdf3; color: var(--green); }
-
-    .sr-depart-return { display: flex; flex-wrap: wrap; gap: 22px; padding: 6px 0 14px; }
-    .sr-dr-col { flex: 1; min-width: 230px; }
-    .sr-dr-col + .sr-dr-col { border-left: 1px dashed var(--gray-200); padding-left: 22px; }
-    .sr-dr-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--gray-400); margin-bottom: 10px; }
+    /* Route — the one loud element on the card */
+    .sr-depart-return { display: flex; flex-wrap: wrap; gap: 0 24px; padding: 16px 0 4px; }
+    .sr-dr-col { flex: 1 1 240px; min-width: 0; }
+    /* Alpine's x-if leaves its <template> anchor in the DOM between the two
+       columns, so the adjacent-sibling combinator never matches here — the
+       general-sibling one does, and there are only ever two columns. */
+    .sr-dr-col ~ .sr-dr-col { border-left: 1px solid var(--gray-100); padding-left: 24px; }
+    .sr-dr-label { display: flex; align-items: baseline; gap: 6px; font-size: 11.5px; color: var(--gray-500); font-weight: 600; margin-bottom: 8px; }
     .sr-segments { display: flex; align-items: flex-start; gap: 0; }
-    .sr-seg { display: flex; flex-direction: column; gap: 4px; min-width: 60px; }
+    .sr-seg { display: flex; flex-direction: column; gap: 3px; min-width: 62px; }
     .sr-seg:last-child { align-items: flex-end; text-align: right; }
-    .sr-seg-time { font-size: 20px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); line-height: 1.1; }
-    .sr-seg-place { font-size: 12px; color: var(--gray-500); font-weight: 600; max-width: 120px; }
-    .sr-seg-line { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 0 12px; min-width: 84px; }
-    .sr-seg-duration { font-size: 11.5px; color: var(--gray-500); font-weight: 600; }
-    .sr-seg-track { position: relative; width: 100%; display: flex; align-items: center; height: 16px; }
-    .sr-seg-dash { flex: 1; height: 1.5px; background: var(--gray-200); }
-    .sr-seg-dot { display: none; }
+    .sr-seg-time { font-size: 23px; font-weight: 500; color: var(--gray-900); font-family: var(--mono); line-height: 1.05; letter-spacing: -.01em; }
+    .sr-seg-place { font-size: 12px; color: var(--gray-500); font-weight: 500; max-width: 130px; }
+    .sr-seg-line { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 3px 14px 0; min-width: 92px; }
+    .sr-seg-duration { font-size: 11.5px; color: var(--gray-600); font-weight: 600; font-family: var(--mono); }
+    .sr-seg-track { position: relative; width: 100%; display: flex; align-items: center; height: 14px; }
+    .sr-seg-dash { flex: 1; height: 1px; background: var(--gray-200); }
+    .sr-seg-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gray-300); flex-shrink: 0; }
     .sr-seg-track::after {
-        content: ""; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px;
-        transform: translate(-50%, -50%);
-        background: var(--gray-400);
+        content: ""; position: absolute; left: 50%; top: 50%; width: 15px; height: 15px;
+        transform: translate(-50%, -50%); background: var(--blue);
         mask: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center / contain no-repeat;
         -webkit-mask: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center / contain no-repeat;
     }
-    .sr-seg-stop { font-size: 10.5px; font-weight: 700; color: var(--green); }
-    .sr-seg-stop.hasstop { color: #b54708; }
+    .sr-seg-stop { font-size: 11px; font-weight: 600; color: var(--green); }
+    .sr-seg-stop.hasstop { color: var(--gray-500); font-weight: 500; }
 
-    .sr-card-meta-clean { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 12px 0; margin-top: 2px; border-top: 1px solid var(--gray-100); font-size: 12px; color: var(--gray-500); }
-    .sr-card-meta-item { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-    .sr-card-meta-item strong { color: var(--gray-700); font-weight: 700; }
-    .sr-card-meta-sep { width: 1px; height: 14px; background: var(--gray-200); flex-shrink: 0; }
-    .sr-icon-mask { display: inline-block; width: 15px; height: 15px; flex: 0 0 15px; background: currentColor; color: var(--gray-400); mask: var(--icon-url) center / contain no-repeat; -webkit-mask: var(--icon-url) center / contain no-repeat; }
-    .sr-icon-refund { --icon-url: url("{{ asset('images/figma-icons/flight-card-refund.svg') }}"); width: 14px; height: 14px; flex-basis: 14px; }
-    .sr-icon-cabin { --icon-url: url("{{ asset('images/figma-icons/flight-card-cabin-bag.svg') }}"); }
-    .sr-icon-luggage { --icon-url: url("{{ asset('images/figma-icons/flight-card-luggage.svg') }}"); }
-    .sr-icon-seat { --icon-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M8.75 8.125C8.40625 8.125 8.11208 8.00271 7.8675 7.75812C7.62292 7.51354 7.50042 7.21916 7.5 6.875V3.75C7.5 3.40625 7.6225 3.11208 7.8675 2.8675C8.1125 2.62291 8.40667 2.50042 8.75 2.5H10C10.3437 2.5 10.6381 2.6225 10.8831 2.8675C11.1281 3.1125 11.2504 3.40666 11.25 3.75V6.875C11.25 7.21875 11.1277 7.51312 10.8831 7.75812C10.6385 8.00312 10.3442 8.12542 10 8.125H8.75ZM5.9375 11.25C5.65625 11.25 5.40625 11.1694 5.1875 11.0081C4.96875 10.8469 4.81771 10.6306 4.73437 10.3594L3.17187 5.17187C3.15104 5.11979 3.13813 5.0625 3.13313 5C3.12813 4.9375 3.12542 4.875 3.125 4.8125V3.125C3.125 2.94792 3.185 2.79958 3.305 2.68C3.425 2.56042 3.57333 2.50042 3.75 2.5C3.92667 2.49958 4.07521 2.55958 4.19562 2.68C4.31604 2.80042 4.37583 2.94875 4.375 3.125V5L5.9375 10H10.625C10.8021 10 10.9506 10.06 11.0706 10.18C11.1906 10.3 11.2504 10.4483 11.25 10.625C11.2496 10.8017 11.1896 10.9502 11.07 11.0706C10.9504 11.191 10.8021 11.2508 10.625 11.25H5.9375ZM5.625 13.125C5.44792 13.125 5.29958 13.065 5.18 12.945C5.06042 12.825 5.00042 12.6767 5 12.5C4.99958 12.3233 5.05958 12.175 5.18 12.055C5.30042 11.935 5.44875 11.875 5.625 11.875H10.625C10.8021 11.875 10.9506 11.935 11.0706 12.055C11.1906 12.175 11.2504 12.3233 11.25 12.5C11.2496 12.6767 11.1896 12.8252 11.07 12.9456C10.9504 13.066 10.8021 13.1258 10.625 13.125H5.625Z'/%3E%3C/svg%3E"); }
-
-    /* Footer + expand toggle */
-    .sr-card-footer { grid-area: footer; display: flex; align-items: center; justify-content: flex-end; padding: 0 20px 16px; }
-    .sr-view-details { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: var(--blue); cursor: pointer; text-decoration: none; }
-    .sr-view-details:hover { color: var(--tw-brand-hover, #252675); }
-    .sr-view-details::after {
-        content: ""; width: 14px; height: 14px; background: currentColor;
-        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M12.3612 7.5C12.3612 6.21072 11.8491 4.97424 10.9374 4.06258C10.0258 3.15092 8.78928 2.63875 7.5 2.63875C6.21072 2.63875 4.97424 3.15092 4.06258 4.06258C3.15092 4.97424 2.63875 6.21072 2.63875 7.5C2.63875 8.78928 3.15092 10.0258 4.06258 10.9374C4.97424 11.8491 6.21072 12.3612 7.5 12.3612C8.78928 12.3612 10.0258 11.8491 10.9374 10.9374C11.8491 10.0258 12.3612 8.78928 12.3612 7.5ZM9.0925 5.9675C9.15693 5.90307 9.23342 5.85196 9.3176 5.81709C9.40178 5.78222 9.49201 5.76428 9.58313 5.76428C9.67424 5.76428 9.76447 5.78222 9.84865 5.81709C9.93283 5.85196 10.0093 5.90307 10.0737 5.9675C10.1382 6.03193 10.1893 6.10842 10.2242 6.1926C10.259 6.27678 10.277 6.36701 10.277 6.45813C10.277 6.54924 10.259 6.63947 10.2242 6.72365C10.1893 6.80783 10.1382 6.88432 10.0737 6.94875L7.99125 9.0325C7.9268 9.09713 7.85024 9.14841 7.76594 9.18339C7.68164 9.21838 7.59127 9.23639 7.5 9.23639C7.40873 9.23639 7.31836 9.21838 7.23406 9.18339C7.14976 9.14841 7.0732 9.09713 7.00875 9.0325L4.92563 6.95L4.87812 6.89687C4.76852 6.76374 4.71244 6.59456 4.72079 6.42232C4.72915 6.25008 4.80135 6.08713 4.92333 5.96523C5.0453 5.84334 5.2083 5.77124 5.38055 5.76299C5.55279 5.75474 5.72194 5.81094 5.855 5.92062L5.9075 5.96812L7.5 7.55938L9.0925 5.9675ZM13.75 7.5C13.75 10.9519 10.9519 13.75 7.5 13.75C4.04813 13.75 1.25 10.9519 1.25 7.5C1.25 4.04813 4.04813 1.25 7.5 1.25C10.9519 1.25 13.75 4.04813 13.75 7.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
-        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15'%3E%3Cpath d='M12.3612 7.5C12.3612 6.21072 11.8491 4.97424 10.9374 4.06258C10.0258 3.15092 8.78928 2.63875 7.5 2.63875C6.21072 2.63875 4.97424 3.15092 4.06258 4.06258C3.15092 4.97424 2.63875 6.21072 2.63875 7.5C2.63875 8.78928 3.15092 10.0258 4.06258 10.9374C4.97424 11.8491 6.21072 12.3612 7.5 12.3612C8.78928 12.3612 10.0258 11.8491 10.9374 10.9374C11.8491 10.0258 12.3612 8.78928 12.3612 7.5ZM9.0925 5.9675C9.15693 5.90307 9.23342 5.85196 9.3176 5.81709C9.40178 5.78222 9.49201 5.76428 9.58313 5.76428C9.67424 5.76428 9.76447 5.78222 9.84865 5.81709C9.93283 5.85196 10.0093 5.90307 10.0737 5.9675C10.1382 6.03193 10.1893 6.10842 10.2242 6.1926C10.259 6.27678 10.277 6.36701 10.277 6.45813C10.277 6.54924 10.259 6.63947 10.2242 6.72365C10.1893 6.80783 10.1382 6.88432 10.0737 6.94875L7.99125 9.0325C7.9268 9.09713 7.85024 9.14841 7.76594 9.18339C7.68164 9.21838 7.59127 9.23639 7.5 9.23639C7.40873 9.23639 7.31836 9.21838 7.23406 9.18339C7.14976 9.14841 7.0732 9.09713 7.00875 9.0325L4.92563 6.95L4.87812 6.89687C4.76852 6.76374 4.71244 6.59456 4.72079 6.42232C4.72915 6.25008 4.80135 6.08713 4.92333 5.96523C5.0453 5.84334 5.2083 5.77124 5.38055 5.76299C5.55279 5.75474 5.72194 5.81094 5.855 5.92062L5.9075 5.96812L7.5 7.55938L9.0925 5.9675ZM13.75 7.5C13.75 10.9519 10.9519 13.75 7.5 13.75C4.04813 13.75 1.25 10.9519 1.25 7.5C1.25 4.04813 4.04813 1.25 7.5 1.25C10.9519 1.25 13.75 4.04813 13.75 7.5Z'/%3E%3C/svg%3E") center / contain no-repeat;
-        transition: transform .16s ease;
+    /* Meta strip — every remaining fact plus the expand control, on one line */
+    .sr-card-meta-clean {
+        display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap;
+        margin-top: auto; padding: 12px 0 13px;
+        border-top: 1px solid var(--gray-100);
+        font-size: 12px; color: var(--gray-500);
     }
+    .sr-card-meta-item { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+    .sr-card-meta-item .sr-ic { color: var(--gray-400); }
+    .sr-card-meta-item strong { color: var(--gray-700); font-weight: 600; }
+    .sr-card-meta-item.low strong { color: #b42318; }
+    .sr-card-meta-item.low .sr-ic { color: #b42318; }
+    .sr-card-meta-sep { display: none; }
 
-    /* Multi-city grid */
-    .mc-grid { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-top: 6px; }
-    .mc-leg { min-width: 0; padding: 13px 16px; border: 1px solid var(--gray-100); border-radius: 10px; background: var(--gray-50); }
+    .sr-view-details {
+        display: inline-flex; align-items: center; gap: 5px; margin-left: auto;
+        font-size: 12.5px; font-weight: 600; color: var(--blue);
+        cursor: pointer; text-decoration: none; white-space: nowrap;
+        border-radius: 6px; padding: 3px 2px;
+    }
+    .sr-view-details:hover { color: var(--tw-brand-hover, #252675); text-decoration: underline; }
+    .sr-view-details .sr-ic { transition: transform .18s ease; }
+    .sr-card-expanded .sr-view-details .sr-ic { transform: rotate(180deg); }
+
+    /* Price rail */
+    .sr-card-price-wrap {
+        grid-area: rail; display: flex; flex-direction: column; justify-content: center;
+        gap: 3px; padding: 18px 20px; text-align: right;
+        background: linear-gradient(180deg, #fbfbff 0%, #f7f7fd 100%);
+        border-left: 1px solid var(--gray-100);
+    }
+    .sr-card-price-label { font-size: 11.5px; font-weight: 500; color: var(--gray-500); }
+    .sr-card-price { font-size: 24px; font-weight: 500; color: var(--gray-900); font-family: var(--mono); line-height: 1.15; letter-spacing: -.02em; }
+    .sr-card-price-note { font-size: 11px; color: var(--gray-400); }
+    .sr-card-price-sub { font-size: 11px; color: var(--blue); font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 3px; justify-content: flex-end; }
+    .sr-card-price-sub:hover { text-decoration: underline; }
+    .sr-card-actions { display: flex; flex-direction: column; align-items: stretch; gap: 7px; margin-top: 13px; }
+    .sr-book-btn { width: 100%; padding: 0 18px; height: 42px; background: var(--blue); color: #fff; border: none; border-radius: 8px; font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: background .15s ease, box-shadow .15s ease; }
+    .sr-book-btn:hover { background: var(--tw-brand-hover, #252675); box-shadow: 0 4px 12px rgba(48,49,145,.24); }
+    .sr-book-btn:active { transform: translateY(1px); }
+    .sr-installment-btn { width: 100%; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--gray-200); background: #fff; color: var(--gray-500); font-family: var(--font); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 1px; transition: border-color .15s ease, color .15s ease; }
+    .sr-installment-btn:hover:not(:disabled) { border-color: var(--blue-md); color: var(--blue); }
+    .sr-installment-btn:disabled { opacity: .55; cursor: not-allowed; }
+    .sr-installment-btn-price { font-size: 12px; font-weight: 600; color: var(--gray-700); font-family: var(--mono); }
+    .sr-installment-btn-label { font-size: 10.5px; color: inherit; font-weight: 600; }
+
+    /* Multi-city legs — same route grammar as above, at leg scale */
+    .mc-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; padding: 14px 0 4px; }
+    .mc-leg { min-width: 0; padding: 12px 14px; border: 1px solid var(--gray-100); border-radius: 10px; background: #fcfcfe; }
     .mc-leg.mc-span { grid-column: 1 / -1; }
-    .mc-leg-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gray-400); margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
-    .mc-leg-airline { font-size: 10.5px; color: var(--gray-500); font-weight: 500; margin-bottom: 9px; display: flex; align-items: center; gap: 5px; }
-    .mc-leg-airline img { width: 16px; height: 16px; object-fit: contain; border-radius: 3px; background: #fff; }
+    .mc-leg-lbl { font-size: 11.5px; font-weight: 600; color: var(--gray-600); margin-bottom: 2px; display: flex; align-items: baseline; gap: 6px; }
+    .mc-leg-airline { font-size: 11px; color: var(--gray-500); font-weight: 500; margin-bottom: 9px; display: flex; align-items: center; gap: 5px; }
+    .mc-leg-airline img { width: 15px; height: 15px; object-fit: contain; border-radius: 3px; background: #fff; }
     .mc-row { display: flex; align-items: center; gap: 0; }
     .mc-pt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .mc-time { font-size: 19px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); line-height: 1.1; }
+    .mc-time { font-size: 19px; font-weight: 500; color: var(--gray-900); font-family: var(--mono); line-height: 1.1; }
     .mc-city { font-size: 11px; color: var(--gray-500); font-weight: 500; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
     .mc-mid { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 10px; min-width: 60px; }
-    .mc-dur { font-size: 10.5px; color: var(--gray-500); font-weight: 600; }
-    .mc-track { width: 100%; display: flex; align-items: center; }
-    .mc-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gray-300); flex-shrink: 0; }
-    .mc-dash { flex: 1; height: 1.5px; background: var(--gray-200); }
-    .mc-stop { font-size: 10px; font-weight: 700; }
+    .mc-dur { font-size: 10.5px; color: var(--gray-600); font-weight: 600; font-family: var(--mono); }
+    .mc-track { position: relative; width: 100%; display: flex; align-items: center; height: 12px; }
+    .mc-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--gray-300); flex-shrink: 0; }
+    .mc-dash { flex: 1; height: 1px; background: var(--gray-200); }
+    .mc-track::after {
+        content: ""; position: absolute; left: 50%; top: 50%; width: 12px; height: 12px;
+        transform: translate(-50%, -50%); background: var(--blue);
+        mask: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center / contain no-repeat;
+        -webkit-mask: url("{{ asset('images/figma-icons/flight-card-plane.svg') }}") center / contain no-repeat;
+    }
+    .mc-stop { font-size: 10.5px; font-weight: 600; }
     .mc-stop.direct { color: var(--green); }
-    .mc-stop.hasstop { color: #b54708; }
+    .mc-stop.hasstop { color: var(--gray-500); font-weight: 500; }
 
-    /* Responsive */
-    @media (max-width: 640px) {
-        .sr-card { grid-template-columns: 1fr; grid-template-areas: "head" "price" "body" "footer" "details"; }
-        .sr-card-head { padding: 16px 16px 0; }
-        .sr-card-price-wrap { align-items: flex-start; text-align: left; padding: 12px 16px 0; border-top: 1px solid var(--gray-100); margin-top: 12px; }
-        .sr-card-actions { align-items: stretch; width: 100%; }
-        .sr-card-actions .sr-book-btn { width: 100%; }
-        .sr-installment-btn { align-items: center; width: 100%; }
-        .sr-card-body { padding: 14px 16px 0; }
-        .sr-card-footer { padding: 0 16px 14px; }
-        .sr-dr-col { min-width: 0; flex: 1 1 100%; }
-        .sr-dr-col + .sr-dr-col { border-left: none; border-top: 1px dashed var(--gray-200); padding-left: 0; padding-top: 16px; }
+    /* Responsive — the rail unstacks under the itinerary and goes horizontal */
+    @media (max-width: 860px) {
+        .sr-card { grid-template-columns: 1fr; grid-template-areas: "main" "rail" "details"; }
+        .sr-card-main { padding: 15px 16px 0; }
+        .sr-card-price-wrap {
+            flex-direction: row; align-items: center; justify-content: space-between;
+            flex-wrap: wrap; gap: 12px; text-align: left; padding: 13px 16px;
+            border-left: none; border-top: 1px solid var(--gray-100);
+        }
+        .sr-card-price-wrap > .sr-rail-figures { display: flex; flex-direction: column; }
+        .sr-card-actions { flex-direction: row; align-items: center; gap: 9px; margin-top: 0; margin-left: auto; }
+        .sr-book-btn { width: auto; min-width: 132px; }
+        .sr-installment-btn { width: auto; min-width: 96px; }
+        .sr-dr-col { flex: 1 1 100%; }
+        .sr-dr-col ~ .sr-dr-col { border-left: none; border-top: 1px solid var(--gray-100); padding-left: 0; padding-top: 14px; margin-top: 14px; }
         .mc-grid { grid-template-columns: 1fr; }
         .mc-leg.mc-span { grid-column: 1; }
     }
+    @media (max-width: 520px) {
+        .sr-seg-time { font-size: 20px; }
+        .sr-seg-line { min-width: 70px; padding: 3px 10px 0; }
+        .sr-card-price { font-size: 21px; }
+        .sr-card-actions { width: 100%; margin-left: 0; }
+        .sr-book-btn, .sr-installment-btn { flex: 1; min-width: 0; }
+        .sr-head-tags { margin-left: 0; width: 100%; }
+        .sr-card-head { flex-wrap: wrap; }
+    }
 
-    /* ── Flight Detail Panel ── */
-    .sr-detail-panel { grid-area: details; border-top: 1px solid var(--gray-200); background: var(--gray-50); }
-    .sr-detail-tabs { display: flex; border-bottom: 1px solid var(--gray-200); background: #fff; padding: 0 18px; }
-    .sr-detail-tab { padding: 10px 18px; font-size: 12.5px; font-weight: 700; color: var(--gray-500); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all .15s; }
-    .sr-detail-tab:hover { color: var(--blue); }
-    .sr-detail-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
-    .sr-detail-body { padding: 18px; }
-    .sr-detail-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .sr-detail-col { display: flex; flex-direction: column; gap: 12px; }
-    .sr-detail-leg-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .sr-detail-leg-title { font-size: 12px; font-weight: 700; color: var(--gray-900); }
-    .sr-detail-leg-badge { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--blue-lt); color: var(--blue); }
-    .sr-detail-leg-badge.inbound { background: #f0fdf4; color: var(--green); }
-    .sr-detail-leg-badge.connecting { background: #fff7ed; color: var(--amber); }
-    .sr-detail-seg { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 14px; }
-    .sr-detail-seg-airline { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-    .sr-detail-seg-logo { width: 28px; height: 28px; border-radius: 6px; background: var(--gray-100); display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: var(--gray-500); flex-shrink: 0; overflow: hidden; }
-    .sr-detail-seg-logo img { width: 100%; height: 100%; object-fit: contain; }
-    .sr-detail-seg-airline-name { font-size: 12.5px; font-weight: 700; color: var(--gray-900); }
-    .sr-detail-seg-route { display: flex; align-items: flex-start; gap: 0; margin-bottom: 12px; }
-    .sr-detail-seg-point { flex-shrink: 0; }
-    .sr-detail-seg-time { font-size: 20px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); line-height: 1.1; }
-    .sr-detail-seg-iata { font-size: 11px; font-weight: 700; color: var(--gray-500); margin-top: 2px; }
-    .sr-detail-seg-airport { font-size: 10.5px; color: var(--gray-400); margin-top: 1px; max-width: 130px; line-height: 1.3; }
-    .sr-detail-seg-mid { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 6px 12px 0; gap: 3px; }
-    .sr-detail-seg-dur { font-size: 11px; font-weight: 700; color: var(--gray-500); }
-    .sr-detail-seg-track { width: 100%; display: flex; align-items: center; }
-    .sr-detail-seg-line { flex: 1; height: 1.5px; background: var(--gray-300); }
-    .sr-detail-seg-dot2 { width: 6px; height: 6px; border-radius: 50%; background: var(--gray-400); flex-shrink: 0; }
-    .sr-detail-seg-stops { font-size: 10.5px; color: var(--green); font-weight: 700; }
-    .sr-detail-seg-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; padding-top: 10px; border-top: 1px solid var(--gray-100); font-size: 11.5px; color: var(--gray-500); }
-    .sr-detail-meta-item { display: flex; align-items: center; gap: 5px; }
-    .sr-detail-meta-label { color: var(--gray-400); font-weight: 600; }
-    .sr-detail-meta-val { color: var(--gray-700); font-weight: 600; }
-    .sr-detail-layover { display: flex; align-items: center; gap: 8px; padding: 7px 12px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; font-size: 11.5px; color: var(--amber); font-weight: 600; margin-bottom: 10px; }
-    .sr-fare-rules-body { padding: 18px; }
-    .sr-fare-rule-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--gray-100); font-size: 12.5px; }
-    .sr-fare-rule-row:last-child { border-bottom: none; }
-    .sr-fare-rule-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
-    .sr-fare-rule-label { font-weight: 700; color: var(--gray-700); min-width: 110px; flex-shrink: 0; }
-    .sr-fare-rule-val { color: var(--gray-500); }
-    .sr-fare-rule-val.allowed { color: var(--green); font-weight: 600; }
-    .sr-fare-rule-val.not-allowed { color: var(--red); font-weight: 600; }
-    .sr-detail-footer { display: flex; align-items: center; justify-content: flex-end; padding: 12px 18px 16px; border-top: 1px solid var(--gray-100); background: #fff; }
+    /*
+     * ── Expanded Detail Panel ──
+     * Each leg is drawn as a vertical timeline: a hairline spine with a node at
+     * every airport, layovers sitting on the spine between segments. That is
+     * how a journey actually reads — one continuous line of stations — and it
+     * replaces a stack of bordered boxes that gave a two-stop connection the
+     * same visual weight as three unrelated flights.
+     */
+    .sr-detail-panel { grid-area: details; border-top: 1px solid var(--gray-200); background: #fff; }
+    .sr-detail-tabs { display: flex; gap: 4px; padding: 14px 20px 0; }
+    .sr-detail-tab {
+        padding: 7px 14px; font-size: 12.5px; font-weight: 600; color: var(--gray-500);
+        cursor: pointer; border-radius: 7px; border: 1px solid transparent;
+        transition: background .15s ease, color .15s ease, border-color .15s ease;
+    }
+    .sr-detail-tab:hover { color: var(--gray-900); background: var(--gray-50); }
+    .sr-detail-tab.active { color: var(--blue); background: var(--blue-lt); border-color: #e2e2fb; }
+
+    .sr-detail-body { padding: 16px 20px 4px; }
+    .sr-detail-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .sr-detail-cols > .sr-detail-col ~ .sr-detail-col { border-left: 1px solid var(--gray-100); padding-left: 20px; }
+    .sr-detail-col { min-width: 0; }
+    .sr-multi-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 24px; }
+    .sr-multi-detail-leg { min-width: 0; }
+
+    .sr-detail-leg-head { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; }
+    .sr-detail-leg-title { font-size: 13px; font-weight: 700; color: var(--gray-900); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sr-detail-leg-badge { flex-shrink: 0; font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 6px; background: var(--blue-lt); color: var(--blue); }
+    .sr-detail-leg-badge.inbound { background: #e9f9f0; color: #04713f; }
+    .sr-detail-leg-badge.connecting { background: var(--gray-50); color: var(--gray-600); border: 1px solid var(--gray-200); }
+    .sr-detail-leg-date { flex-shrink: 0; margin-left: auto; font-size: 11.5px; color: var(--gray-500); white-space: nowrap; }
+
+    /* The spine. Nodes and layovers are positioned against this left gutter. */
+    .sr-timeline { position: relative; padding-left: 26px; }
+    .sr-timeline::before {
+        content: ""; position: absolute; left: 5px; top: 7px; bottom: 7px;
+        width: 1px; background: var(--gray-200);
+    }
+    .sr-tl-node { position: relative; padding: 0 0 2px; }
+    .sr-tl-node::before {
+        content: ""; position: absolute; left: -26px; top: 6px;
+        width: 11px; height: 11px; border-radius: 50%;
+        background: #fff; border: 2px solid var(--blue); box-sizing: border-box;
+    }
+    .sr-tl-node.mid::before { border-color: var(--gray-300); width: 9px; height: 9px; left: -25px; top: 7px; }
+    .sr-tl-row { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+    .sr-tl-time { flex: 0 0 46px; font-size: 15px; font-weight: 500; font-family: var(--mono); color: var(--gray-900); line-height: 1.45; }
+    .sr-tl-station { min-width: 0; }
+    .sr-tl-place { display: block; font-size: 12.5px; font-weight: 600; color: var(--gray-900); line-height: 1.45; }
+    .sr-tl-airport { display: block; font-size: 11.5px; color: var(--gray-500); line-height: 1.4; }
+
+    /* The flight between two nodes: carrier, duration and cabin facts */
+    .sr-tl-flight { padding: 9px 0 11px 56px; }
+    .sr-tl-carrier { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 12px; color: var(--gray-700); font-weight: 600; }
+    .sr-tl-carrier img { width: 18px; height: 18px; object-fit: contain; border-radius: 4px; background: #fff; border: 1px solid var(--gray-100); flex-shrink: 0; }
+    .sr-tl-carrier-code { font-size: 11.5px; color: var(--gray-500); font-weight: 500; }
+    .sr-tl-carrier-dur { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--gray-500); font-weight: 500; font-family: var(--mono); }
+    .sr-tl-carrier-dur::before { content: ""; width: 3px; height: 3px; border-radius: 50%; background: var(--gray-300); }
+    .sr-tl-facts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+    .sr-fact {
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 11.5px; color: var(--gray-600); font-weight: 500;
+        background: var(--gray-50); border: 1px solid var(--gray-100);
+        border-radius: 6px; padding: 4px 9px; line-height: 1.4;
+    }
+    .sr-fact .sr-ic { color: var(--gray-400); }
+    .sr-fact strong { color: var(--gray-900); font-weight: 600; }
+    .sr-fact.low { background: #fef3f2; border-color: #fee4e2; color: #b42318; }
+    .sr-fact.low .sr-ic, .sr-fact.low strong { color: #b42318; }
+
+    .sr-detail-layover {
+        position: relative; display: inline-flex; align-items: center; gap: 7px;
+        margin: 4px 0 10px; padding: 5px 11px;
+        background: #fffaf0; border: 1px solid #fde8c8; border-radius: 7px;
+        font-size: 11.5px; color: #92400e; font-weight: 600;
+    }
+    .sr-detail-layover::before {
+        content: ""; position: absolute; left: -22px; top: 50%; transform: translateY(-50%);
+        width: 5px; height: 5px; border-radius: 50%; background: var(--gray-300);
+    }
+    .sr-detail-layover .sr-ic { color: #b45309; }
+
+    /* ── Fare Rules ── policy cards per passenger type, then the money row */
+    .sr-fare-rules-body { padding: 16px 20px 4px; }
+    .sr-fare-group ~ .sr-fare-group { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--gray-200); }
+    .sr-fare-group-head { display: flex; align-items: center; gap: 8px; margin-bottom: 11px; }
+    .sr-fare-group-title { font-size: 13px; font-weight: 700; color: var(--gray-900); }
+    .sr-fare-group-qty { font-size: 11.5px; font-weight: 600; color: var(--gray-600); background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: 6px; padding: 2px 8px; }
+    .sr-policy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 9px; }
+    .sr-policy {
+        display: flex; align-items: flex-start; gap: 10px;
+        padding: 11px 13px; border: 1px solid var(--gray-200); border-radius: 9px; background: #fff;
+    }
+    .sr-policy-ic {
+        flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--gray-50); color: var(--gray-500);
+    }
+    .sr-policy.good .sr-policy-ic { background: #e9f9f0; color: #04713f; }
+    .sr-policy.bad  .sr-policy-ic { background: #fef3f2; color: #b42318; }
+    .sr-policy-txt { min-width: 0; }
+    .sr-policy-label { display: block; font-size: 11.5px; color: var(--gray-500); font-weight: 500; line-height: 1.4; }
+    .sr-policy-val { display: block; font-size: 12.5px; color: var(--gray-900); font-weight: 600; line-height: 1.45; margin-top: 1px; }
+    .sr-policy.good .sr-policy-val { color: #04713f; }
+    .sr-policy.bad  .sr-policy-val { color: #b42318; }
+    .sr-policy-note { display: block; font-size: 11.5px; color: var(--gray-500); font-weight: 400; line-height: 1.45; margin-top: 3px; }
+    .sr-rules-empty { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; border: 1px solid var(--gray-200); border-radius: 9px; background: var(--gray-50); font-size: 12.5px; color: var(--gray-600); line-height: 1.55; max-width: 62ch; }
+    .sr-rules-empty .sr-ic { color: var(--gray-400); margin-top: 1px; }
+
+    .sr-fare-money { display: flex; flex-direction: column; gap: 7px; margin-top: 11px; padding: 12px 14px; border-radius: 9px; background: var(--gray-50); border: 1px solid var(--gray-100); }
+    .sr-fare-money-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; font-size: 12.5px; color: var(--gray-600); }
+    .sr-fare-money-row .v { font-family: var(--mono); color: var(--gray-700); }
+    .sr-fare-money-row.total { padding-top: 7px; border-top: 1px solid var(--gray-200); font-weight: 700; color: var(--gray-900); }
+    .sr-fare-money-row.total .v { font-size: 14px; color: var(--gray-900); }
+
+    .sr-detail-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 20px 16px; margin-top: 14px; border-top: 1px solid var(--gray-100); }
+    .sr-detail-footer-note { font-size: 11.5px; color: var(--gray-500); }
+    .sr-detail-footer .sr-book-btn { width: auto; min-width: 168px; }
 
     /* ── Right Rail ── */
     .sr-rail { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 78px; }
@@ -467,7 +618,7 @@
 
     .sr-tip-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); padding: 16px; }
     .sr-tip-title { font-size: 12.5px; font-weight: 700; color: var(--gray-900); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-    .sr-tip-icon { font-size: 16px; }
+    .sr-tip-icon { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex-shrink: 0; border-radius: 7px; background: var(--blue-lt); color: var(--blue); }
     .sr-tip-body { font-size: 12px; color: var(--gray-500); line-height: 1.6; }
     .sr-tip-highlight { color: var(--blue); font-weight: 700; }
 
@@ -1309,16 +1460,13 @@
         .sr-sort-btn,
         .sr-sort-label,
         .sr-result-count { flex: 0 0 auto; }
-        .sr-detail-body { min-height: 0; padding: 13px 12px 16px; }
-        .sr-detail-cols { display: flex; flex-direction: column; gap: 14px; }
-        .sr-detail-cols::before { display: none; }
-        .sr-detail-col,
-        .sr-detail-seg { width: 100%; }
-        .sr-detail-seg-point { width: 78px; min-width: 78px; }
-        .sr-detail-seg-point:last-child { width: 70px; min-width: 70px; }
-        .sr-detail-seg-mid { width: auto; min-width: 0; flex: 1; }
-        .sr-detail-layover { width: min(275px, 100%); }
-        .sr-fare-rules-body { min-height: 0; padding: 15px 18px 22px; }
+        .sr-detail-tabs { padding: 12px 16px 0; }
+        .sr-detail-body { min-height: 0; padding: 14px 16px 2px; }
+        .sr-detail-cols,
+        .sr-multi-detail-grid { grid-template-columns: 1fr; gap: 18px; }
+        .sr-detail-cols > .sr-detail-col ~ .sr-detail-col { border-left: none; padding-left: 0; border-top: 1px solid var(--gray-100); padding-top: 18px; }
+        .sr-fare-rules-body { min-height: 0; padding: 14px 16px 2px; }
+        .sr-detail-footer { padding: 13px 16px 15px; }
     }
     @media (max-width: 600px) {
         .sr-topbar { padding: 16px 12px 0; }
@@ -1341,8 +1489,9 @@
         .sr-fare-option-price { font-size: 17px; }
         .sr-sort-bar { gap: 6px; }
         .sr-sort-btn { padding: 5px 10px; font-size: 11px; }
-        .sr-detail-cols { grid-template-columns: 1fr !important; }
-        .sr-multi-detail-grid { grid-template-columns: 1fr; gap: 12px; }
+        .sr-detail-footer { flex-direction: column; align-items: stretch; gap: 10px; }
+        .sr-detail-footer .sr-book-btn { width: 100%; }
+        .sr-policy-grid { grid-template-columns: 1fr; }
         .sr-modify-head { padding: 12px 16px; }
         .sr-modify-body { padding: 16px; }
     }
@@ -1355,7 +1504,8 @@
     .tw-toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
     .tw-toast {  min-width: 280px; max-width: 350px; padding: 14px 16px; border-radius: 8px; color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; }
     .tw-toast-content { display: flex; align-items: center; gap: 10px; color: #fff; }
-    .tw-toast-icon { font-size: 18px; }
+    .tw-toast-icon { display: inline-flex; flex-shrink: 0; }
+    .tw-toast-icon .sr-ic { width: 18px; height: 18px; flex-basis: 18px; }
     .tw-toast-message { font-size: 14px;}
     .tw-toast-close { background: transparent; border: none; color: white; font-size: 18px; cursor: pointer; }
 
@@ -1454,7 +1604,7 @@
         class="tw-toast"
     >
         <div class="tw-toast-content">
-            <span class="tw-toast-icon" x-text="icon"></span>
+            <span class="tw-toast-icon"><span class="sr-ic" :class="icon" aria-hidden="true"></span></span>
             <span class="tw-toast-message" x-text="message" style="color: #fff;"></span>
         </div>
 
@@ -1839,21 +1989,28 @@
                     </div>
                     <div class="sr-header-title">
                        @if($trip === 'multi')
-                            ✈ Multi-city 
+                            Multi-city:
                             {{ collect($routes)->pluck('from')->implode(' → ') }} → {{ last($routes)['to'] ?? '' }}
                         @else
-                            ✈ Flights from {{ $routes[0]['from'] ?? '' }} → {{ $routes[0]['to'] ?? '' }}
+                            {{ $routes[0]['from'] ?? '' }} → {{ $routes[0]['to'] ?? '' }}
                             {{ $trip === 'return' ? ', and back' : '' }}
                         @endif
-
-                        
                     </div>
                     <div class="sr-header-sub">
-                        @if($depart) 📅 {{ \Carbon\Carbon::createFromFormat('d/m/Y',$depart)->format('D, d M') }} @endif
-                        @if($trip === 'return' && $return) — {{ \Carbon\Carbon::createFromFormat('d/m/Y',$return)->format('D, d M') }} @endif
-                        · 👤 {{ $totalPassengers }} passenger{{ $totalPassengers > 1 ? 's' : '' }}
-                        · 💺 {{ $cabin }}
-                        · <span x-text="filteredFlights.length + ' flights found'"></span>
+                        @if($depart)
+                            <span class="sr-header-fact">
+                                <span class="sr-ic sr-ic-sm sr-ic-clock" aria-hidden="true"></span>
+                                {{ \Carbon\Carbon::createFromFormat('d/m/Y',$depart)->format('D, d M') }}@if($trip === 'return' && $return) — {{ \Carbon\Carbon::createFromFormat('d/m/Y',$return)->format('D, d M') }}@endif
+                            </span>
+                        @endif
+                        <span class="sr-header-fact">
+                            <span class="sr-ic sr-ic-sm sr-ic-seat" aria-hidden="true"></span>
+                            {{ $totalPassengers }} passenger{{ $totalPassengers > 1 ? 's' : '' }}, {{ $cabin }}
+                        </span>
+                        <span class="sr-header-fact">
+                            <span class="sr-ic sr-ic-sm sr-ic-search" aria-hidden="true"></span>
+                            <span x-text="filteredFlights.length + ' flights found'"></span>
+                        </span>
                     </div>
                 </div>
                 {{--
@@ -1983,7 +2140,10 @@
                     'sr-card-new': newlyAddedIds.includes(flight.id)
                 }" :style="'animation-delay:' + (fi * 60) + 'ms'">
 
-                    {{-- Card Head --}}
+                    {{-- Itinerary panel: everything factual about the journey --}}
+                    <div class="sr-card-main">
+
+                    {{-- Head — carrier, cabin, and the two tags worth seeing before expanding --}}
                     <div class="sr-card-head">
                         <div class="sr-airline-logo-wrap">
                             <template x-if="flight.airlineLogo">
@@ -1993,39 +2153,36 @@
                                 <span x-text="flight.airlineCode" style="font-size:8px;font-weight:800;color:var(--gray-600);text-align:center;line-height:1.2;"></span>
                             </template>
                         </div>
-                        <div>
+                        <div style="min-width:0;">
                             <div class="sr-card-airline" x-text="flight.airline"></div>
-                            <div class="sr-card-class" x-text="flight.cabin + ' · ' + ((flight.multiLegs && flight.multiLegs.length > 0) ? ('Multi-city · ' + flight.multiLegs.length + ' legs') : (flight.stops === 0 ? 'Direct' : flight.stops + ' Stop' + (flight.stops > 1 ? 's' : '')))"></div>
+                            <div class="sr-card-class" x-text="flight.cabin"></div>
+                        </div>
+                        <div class="sr-head-tags">
+                            <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
+                                <span class="sr-tag sr-tag-brand">
+                                    <span class="sr-ic sr-ic-sm sr-ic-route" aria-hidden="true"></span>
+                                    <span x-text="flight.multiLegs.length + ' legs'"></span>
+                                </span>
+                            </template>
+                            <span class="sr-tag" :class="flight.isRefundable ? 'sr-tag-good' : 'sr-tag-warn'">
+                                <span class="sr-ic sr-ic-sm" :class="flight.isRefundable ? 'sr-ic-refund' : 'sr-ic-cross'" aria-hidden="true"></span>
+                                <span x-text="flight.isRefundable ? 'Refundable' : 'Non-refundable'"></span>
+                            </span>
                         </div>
                     </div>
 
-                    
-
-                    {{-- Card Body --}}
-                    <div class="sr-card-body" style="padding-top:12px;">
- 
-                    {{-- Badge row --}}
-                    <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                        <span class="sr-refund-badge" :class="flight.isRefundable ? 'yes' : 'no'">
-                            <span class="sr-icon-mask sr-icon-refund" aria-hidden="true"></span>
-                            <span x-text="flight.isRefundable ? 'Refundable' : 'Non Refundable'"></span>
-                        </span>
-                        <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
-                            <span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#eff6ff;color:#1d4ed8;">
-                                Multi-city · <span x-text="flight.multiLegs.length + ' legs'"></span>
-                            </span>
-                        </template>
-                    </div>
-                
                     {{-- ── ONE WAY / RETURN ── --}}
                     <template x-if="!flight.multiLegs || flight.multiLegs.length === 0">
                         <div class="sr-depart-return">
                             {{-- Outbound --}}
                             <div class="sr-dr-col">
-                                <div class="sr-dr-label" x-text="'Depart ' + flight.departTime + ' · ' + flight.airline"></div>
+                                <div class="sr-dr-label">
+                                    <span style="font-weight:700;color:var(--gray-900);">Depart</span>
+                                    <span x-show="flight.departDateLabel" x-text="flight.departDateLabel"></span>
+                                </div>
                                 <div class="sr-segments">
                                     <div class="sr-seg">
-                                        <div class="sr-seg-time" x-text="flight.departTime"></div>
+                                        <div class="sr-seg-time" x-text="_time(flight.departTime)"></div>
                                         <div class="sr-seg-place" x-text="flight.segments[0]?.fromCity"></div>
                                     </div>
                                     <div class="sr-seg-line">
@@ -2034,10 +2191,10 @@
                                             <div class="sr-seg-dot"></div><div class="sr-seg-dash"></div><div class="sr-seg-dot"></div>
                                         </div>
                                         <div class="sr-seg-stop" :class="{ hasstop: flight.stops > 0 }"
-                                            x-text="flight.stops === 0 ? 'Non stop' : flight.stops + ' Stop'"></div>
+                                            x-text="_stopLabel(flight.stops)"></div>
                                     </div>
                                     <div class="sr-seg">
-                                        <div class="sr-seg-time" x-text="flight.arriveTime"></div>
+                                        <div class="sr-seg-time" x-text="_time(flight.arriveTime)"></div>
                                         <div class="sr-seg-place" x-text="flight.segments[flight.segments.length-1]?.toCity"></div>
                                     </div>
                                 </div>
@@ -2045,10 +2202,13 @@
                             {{-- Return inbound --}}
                             <template x-if="flight.returnSegments && flight.returnSegments.length > 0">
                                 <div class="sr-dr-col">
-                                    <div class="sr-dr-label" x-text="'Return ' + (flight.returnSegments[0]?.departTime || '') + ' · ' + flight.airline"></div>
+                                    <div class="sr-dr-label">
+                                        <span style="font-weight:700;color:var(--gray-900);">Return</span>
+                                        <span x-show="flight.returnDateLabel" x-text="flight.returnDateLabel"></span>
+                                    </div>
                                     <div class="sr-segments">
                                         <div class="sr-seg">
-                                            <div class="sr-seg-time" x-text="flight.returnSegments[0]?.departTime"></div>
+                                            <div class="sr-seg-time" x-text="_time(flight.returnSegments[0]?.departTime)"></div>
                                             <div class="sr-seg-place" x-text="flight.returnSegments[0]?.fromCity"></div>
                                         </div>
                                         <div class="sr-seg-line">
@@ -2057,10 +2217,10 @@
                                                 <div class="sr-seg-dot"></div><div class="sr-seg-dash"></div><div class="sr-seg-dot"></div>
                                             </div>
                                             <div class="sr-seg-stop" :class="{ hasstop: (flight.returnStops||0) > 0 }"
-                                                x-text="(flight.returnStops||0) === 0 ? 'Non stop' : flight.returnStops + ' Stop'"></div>
+                                                x-text="_stopLabel(flight.returnStops||0)"></div>
                                         </div>
                                         <div class="sr-seg">
-                                            <div class="sr-seg-time" x-text="flight.returnSegments[flight.returnSegments.length-1]?.arriveTime"></div>
+                                            <div class="sr-seg-time" x-text="_time(flight.returnSegments[flight.returnSegments.length-1]?.arriveTime)"></div>
                                             <div class="sr-seg-place" x-text="flight.returnSegments[flight.returnSegments.length-1]?.toCity"></div>
                                         </div>
                                     </div>
@@ -2078,26 +2238,26 @@
                 
                                     {{-- Label: first leg = Depart, rest = Connecting --}}
                                     <div class="mc-leg-lbl">
-                                        <span x-text="li === 0 ? 'Depart' : 'Connecting'"></span>
+                                        <span style="font-weight:700;color:var(--gray-900);"
+                                              x-text="li === 0 ? 'Depart' : 'Connecting'"></span>
                                         <span x-show="leg.departDateLabel"
-                                            style="font-weight:500;color:#94a3b8;"
-                                            x-text="'· ' + leg.departDateLabel"></span>
+                                            style="font-weight:500;color:var(--gray-500);"
+                                            x-text="leg.departDateLabel"></span>
                                     </div>
-                
+
                                     {{-- Airline row --}}
                                     <div class="mc-leg-airline">
                                         <template x-if="leg.segments[0]?.airlineLogo">
                                             <img :src="leg.segments[0].airlineLogo" :alt="leg.segments[0].airline">
                                         </template>
                                         <span x-text="leg.segments[0]?.airline || flight.validatingAirline"></span>
-                                        <span style="color:#cbd5e1;margin:0 2px;">·</span>
-                                        <span x-text="leg.segments[0]?.flightNo || ''"></span>
+                                        <span style="color:var(--gray-400);" x-text="leg.segments[0]?.flightNo || ''"></span>
                                     </div>
                 
                                     {{-- Times / route row --}}
                                     <div class="mc-row">
                                         <div class="mc-pt">
-                                            <div class="mc-time" x-text="leg.departTime"></div>
+                                            <div class="mc-time" x-text="_time(leg.departTime)"></div>
                                             <div class="mc-city" x-text="leg.fromCity"></div>
                                         </div>
                                         <div class="mc-mid">
@@ -2108,10 +2268,10 @@
                                                 <div class="mc-dot"></div>
                                             </div>
                                             <div class="mc-stop" :class="leg.stops === 0 ? 'direct' : 'hasstop'"
-                                                x-text="leg.stops === 0 ? 'Non stop' : leg.stops + ' Stop'"></div>
+                                                x-text="_stopLabel(leg.stops)"></div>
                                         </div>
                                         <div class="mc-pt" style="text-align:right;align-items:flex-end;">
-                                            <div class="mc-time" x-text="leg.arriveTime"></div>
+                                            <div class="mc-time" x-text="_time(leg.arriveTime)"></div>
                                             <div class="mc-city" x-text="leg.toCity"></div>
                                         </div>
                                     </div>
@@ -2121,40 +2281,45 @@
                         </div>
                     </template>
                 
-                    {{-- Baggage & seats — shared --}}
+                    {{-- Allowances, seat scarcity and the expand control on one line --}}
                     <div class="sr-card-meta-clean">
-                        <div class="sr-card-meta-item sr-card-meta-seat">
-                            <span class="sr-icon-mask sr-icon-cabin" aria-hidden="true"></span>
-                            <span>Cabin Bag:</span>
+                        <div class="sr-card-meta-item">
+                            <span class="sr-ic sr-ic-sm sr-ic-cabin" aria-hidden="true"></span>
                             <strong x-text="_cabinBagLabel(flight)"></strong>
+                            <span>cabin</span>
                         </div>
-                        <span class="sr-card-meta-sep"></span>
                         <div class="sr-card-meta-item">
-                            <span class="sr-icon-mask sr-icon-luggage" aria-hidden="true"></span>
-                            <span>Luggage:</span>
+                            <span class="sr-ic sr-ic-sm sr-ic-luggage" aria-hidden="true"></span>
                             <strong x-text="_luggageLabel(flight)"></strong>
+                            <span>checked</span>
                         </div>
-                        <span class="sr-card-meta-sep"></span>
-                        <div class="sr-card-meta-item">
-                            <span class="sr-icon-mask sr-icon-seat" aria-hidden="true"></span>
-                            <template x-if="!flight.multiLegs || flight.multiLegs.length === 0">
-                                <strong :style="(flight.segments[0]?.seatsLeft ?? 9) <= 5 ? 'color:#dc2626' : ''"
-                                    x-text="(flight.segments[0]?.seatsLeft ?? '-') + ' seats left'"></strong>
-                            </template>
-                            <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
-                                <strong :style="(flight.multiLegs[0]?.segments[0]?.seatsLeft ?? 9) <= 5 ? 'color:#dc2626' : ''"
-                                    x-text="((flight.multiLegs[0]?.segments[0]?.seatsLeft) ?? '-') + ' seats left'"></strong>
-                            </template>
+                        <div class="sr-card-meta-item" :class="{ low: _seatsLeft(flight) !== null && _seatsLeft(flight) <= 5 }">
+                            <span class="sr-ic sr-ic-sm sr-ic-seat" aria-hidden="true"></span>
+                            <strong x-text="_seatsLeft(flight) === null ? '—' : _seatsLeft(flight)"></strong>
+                            <span>seats left</span>
                         </div>
+
+                        <a class="sr-view-details"
+                           href="#"
+                           :aria-expanded="expandedId === flight.id ? 'true' : 'false'"
+                           @click.prevent="toggleDetails(flight.id)">
+                            <span x-text="expandedId === flight.id ? 'Hide details' : 'Flight details'"></span>
+                            <span class="sr-ic sr-ic-sm sr-ic-chevron" aria-hidden="true"></span>
+                        </a>
                     </div>
 
-                </div>{{-- /sr-card-body --}}
+                </div>{{-- /sr-card-main --}}
 
+                    {{-- Price rail: what it costs and how to buy it --}}
                     <div class="sr-card-price-wrap">
-                        <div class="sr-card-price-label">Total Itinerary Fee</div>
-                        <div class="sr-card-price" x-text="_fmtPrice(flight.price, flight.currency)"></div>
+                        <div class="sr-rail-figures">
+                            <div class="sr-card-price-label">Total fare</div>
+                            <div class="sr-card-price" x-text="_fmtPrice(flight.price, flight.currency)"></div>
+                            <div class="sr-card-price-note"
+                                 x-text="_passengerCount(flight) > 1 ? ('for ' + _passengerCount(flight) + ' travellers') : 'all taxes included'"></div>
+                        </div>
                         <div class="sr-card-actions">
-                            <button class="sr-book-btn" @click="selectFlight(flight)">Book Now</button>
+                            <button class="sr-book-btn" @click="selectFlight(flight)">Book now</button>
                             <button
                                 class="sr-installment-btn"
                                 type="button"
@@ -2167,16 +2332,6 @@
                         </div>
                     </div>
 
-
-                    {{-- Card Footer --}}
-                    <div class="sr-card-footer">
-                        <a class="sr-view-details"
-                           href="#"
-                           @click.prevent="toggleDetails(flight.id)"
-                           x-text="expandedId === flight.id ? 'Close' : 'Details'">
-                        </a>
-                    </div>
-
                     {{-- ══ Expandable Detail Panel ══ --}}
                     <div class="sr-detail-panel" x-show="expandedId === flight.id" x-transition>
 
@@ -2187,257 +2342,168 @@
 
                         <template x-if="(activeTab[flight.id]||'details') === 'details'">
                             <div class="sr-detail-body">
-                        
-                                {{-- ── ONE WAY / RETURN detail ── --}}
+
+                                {{-- ── ONE WAY / RETURN ── --}}
                                 <template x-if="!flight.multiLegs || flight.multiLegs.length === 0">
                                     <div :class="(flight.returnSegments && flight.returnSegments.length > 0) ? 'sr-detail-cols' : ''">
-                        
+
                                         {{-- Outbound --}}
                                         <div class="sr-detail-col">
                                             <div class="sr-detail-leg-head">
                                                 <span class="sr-detail-leg-title"
-                                                    x-text="(flight.segments[0]?.fromCity||'') + ' → ' + (flight.segments[flight.segments.length-1]?.toCity||'') + (flight.departDateLabel ? ', '+flight.departDateLabel : '')">
+                                                    x-text="(flight.segments[0]?.fromCity||'') + ' to ' + (flight.segments[flight.segments.length-1]?.toCity||'')">
                                                 </span>
                                                 <span class="sr-detail-leg-badge">Outbound</span>
+                                                <span class="sr-detail-leg-date" x-show="flight.departDateLabel" x-text="flight.departDateLabel"></span>
                                             </div>
-                                            <template x-for="(seg, si) in flight.segments" :key="'d-out-'+si">
-                                                <div>
-                                                    <template x-if="si > 0">
-                                                        <div class="sr-detail-layover">
-                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                            <span x-text="'Layover in '+(flight.segments[si-1]?.toCity||'')+(flight.layoverDurations?.[si-1]?' · '+flight.layoverDurations[si-1]:'')"></span>
-                                                        </div>
-                                                    </template>
-                                                    <div class="sr-detail-seg">
-                                                        <div class="sr-detail-seg-airline">
-                                                            <div class="sr-detail-seg-logo">
-                                                                <template x-if="seg.airlineLogo"><img :src="seg.airlineLogo" :alt="seg.airline"></template>
-                                                                <template x-if="!seg.airlineLogo"><span x-text="seg.airlineCode"></span></template>
-                                                            </div>
-                                                            <span class="sr-detail-seg-airline-name" x-text="seg.airline"></span>
-                                                            <span style="font-size:11px;color:var(--gray-400);margin-left:5px;" x-text="seg.flightNo"></span>
-                                                        </div>
-                                                        <div class="sr-detail-seg-route">
-                                                            <div class="sr-detail-seg-point">
-                                                                <div class="sr-detail-seg-time" x-text="seg.departTime"></div>
-                                                                <div class="sr-detail-seg-iata" x-text="seg.fromCity"></div>
-                                                                <div class="sr-detail-seg-airport" x-text="seg.fromAirport"></div>
-                                                            </div>
-                                                            <div class="sr-detail-seg-mid">
-                                                                <span class="sr-detail-seg-dur" x-text="Math.floor(seg.duration/60)+'h '+(seg.duration%60)+'m'"></span>
-                                                                <div class="sr-detail-seg-track"><div class="sr-detail-seg-dot2"></div><div class="sr-detail-seg-line"></div><div class="sr-detail-seg-dot2"></div></div>
-                                                            </div>
-                                                            <div class="sr-detail-seg-point" style="text-align:right;">
-                                                                <div class="sr-detail-seg-time" x-text="seg.arriveTime"></div>
-                                                                <div class="sr-detail-seg-iata" x-text="seg.toCity"></div>
-                                                                <div class="sr-detail-seg-airport" x-text="seg.toAirport" style="text-align:right;"></div>
-                                                            </div>
-                                                        </div>
-                                                        <div class="sr-detail-seg-meta">
-                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Baggage</span><span class="sr-detail-meta-val" x-text="_luggageLabel(flight, seg)"></span></div>
-                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Cabin bag</span><span class="sr-detail-meta-val" x-text="_cabinBagLabel(flight, seg)"></span></div>
-                                                            <div class="sr-detail-meta-item" x-show="seg.equipment"><span class="sr-detail-meta-label">Aircraft</span><span class="sr-detail-meta-val" x-text="seg.equipment"></span></div>
-                                                            <div class="sr-detail-meta-item" x-show="seg.resBookCode"><span class="sr-detail-meta-label">Class</span><span class="sr-detail-meta-val" x-text="seg.resBookCode"></span></div>
-                                                            <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Seats</span><span class="sr-detail-meta-val" :style="seg.seatsLeft<=5?'color:#dc2626':''" x-text="seg.seatsLeft+' remaining'"></span></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </template>
+                                            @include('livewire.pages.flight.partials.flight-timeline', [
+                                                'segments' => 'flight.segments',
+                                                'layovers' => 'flight.layoverDurations',
+                                                'key' => 'd-out-',
+                                                'legIndex' => '0',
+                                            ])
                                         </div>
-                        
+
                                         {{-- Return inbound --}}
                                         <template x-if="flight.returnSegments && flight.returnSegments.length > 0">
                                             <div class="sr-detail-col">
                                                 <div class="sr-detail-leg-head">
                                                     <span class="sr-detail-leg-title"
-                                                        x-text="(flight.returnSegments[0]?.fromCity||'') + ' → ' + (flight.returnSegments[flight.returnSegments.length-1]?.toCity||'') + (flight.returnDateLabel ? ', '+flight.returnDateLabel : '')">
+                                                        x-text="(flight.returnSegments[0]?.fromCity||'') + ' to ' + (flight.returnSegments[flight.returnSegments.length-1]?.toCity||'')">
                                                     </span>
                                                     <span class="sr-detail-leg-badge inbound">Inbound</span>
+                                                    <span class="sr-detail-leg-date" x-show="flight.returnDateLabel" x-text="flight.returnDateLabel"></span>
                                                 </div>
-                                                <template x-for="(seg, si) in flight.returnSegments" :key="'d-ret-'+si">
-                                                    <div>
-                                                        <template x-if="si > 0">
-                                                            <div class="sr-detail-layover">
-                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                                <span x-text="'Layover in '+(flight.returnSegments[si-1]?.toCity||'')+(flight.returnLayoverDurations?.[si-1]?' · '+flight.returnLayoverDurations[si-1]:'')"></span>
-                                                            </div>
-                                                        </template>
-                                                        <div class="sr-detail-seg">
-                                                            <div class="sr-detail-seg-airline">
-                                                                <div class="sr-detail-seg-logo">
-                                                                    <template x-if="seg.airlineLogo"><img :src="seg.airlineLogo" :alt="seg.airline"></template>
-                                                                    <template x-if="!seg.airlineLogo"><span x-text="seg.airlineCode"></span></template>
-                                                                </div>
-                                                                <span class="sr-detail-seg-airline-name" x-text="seg.airline"></span>
-                                                                <span style="font-size:11px;color:var(--gray-400);margin-left:5px;" x-text="seg.flightNo"></span>
-                                                            </div>
-                                                            <div class="sr-detail-seg-route">
-                                                                <div class="sr-detail-seg-point">
-                                                                    <div class="sr-detail-seg-time" x-text="seg.departTime"></div>
-                                                                    <div class="sr-detail-seg-iata" x-text="seg.fromCity"></div>
-                                                                    <div class="sr-detail-seg-airport" x-text="seg.fromAirport"></div>
-                                                                </div>
-                                                                <div class="sr-detail-seg-mid">
-                                                                    <span class="sr-detail-seg-dur" x-text="Math.floor(seg.duration/60)+'h '+(seg.duration%60)+'m'"></span>
-                                                                    <div class="sr-detail-seg-track"><div class="sr-detail-seg-dot2"></div><div class="sr-detail-seg-line"></div><div class="sr-detail-seg-dot2"></div></div>
-                                                                </div>
-                                                                <div class="sr-detail-seg-point" style="text-align:right;">
-                                                                    <div class="sr-detail-seg-time" x-text="seg.arriveTime"></div>
-                                                                    <div class="sr-detail-seg-iata" x-text="seg.toCity"></div>
-                                                                    <div class="sr-detail-seg-airport" x-text="seg.toAirport" style="text-align:right;"></div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="sr-detail-seg-meta">
-                                                                <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Baggage</span><span class="sr-detail-meta-val" x-text="_luggageLabel(flight, seg)"></span></div>
-                                                                <div class="sr-detail-meta-item" x-show="seg.equipment"><span class="sr-detail-meta-label">Aircraft</span><span class="sr-detail-meta-val" x-text="seg.equipment"></span></div>
-                                                                <div class="sr-detail-meta-item"><span class="sr-detail-meta-label">Seats</span><span class="sr-detail-meta-val" :style="seg.seatsLeft<=5?'color:#dc2626':''" x-text="seg.seatsLeft+' remaining'"></span></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </template>
+                                                @include('livewire.pages.flight.partials.flight-timeline', [
+                                                    'segments' => 'flight.returnSegments',
+                                                    'layovers' => 'flight.returnLayoverDurations',
+                                                    'key' => 'd-ret-',
+                                                    'legIndex' => '0',
+                                                ])
                                             </div>
                                         </template>
-                        
+
                                     </div>
                                 </template>
-                        
-                                {{-- ── MULTI-CITY detail — stacked legs ── --}}
+
+                                {{-- ── MULTI-CITY — one timeline per leg ── --}}
                                 <template x-if="flight.multiLegs && flight.multiLegs.length > 0">
                                     <div class="sr-multi-detail-grid">
-                        
                                         <template x-for="(leg, li) in flight.multiLegs" :key="'det-leg-'+li">
                                             <div class="sr-multi-detail-leg">
-                                                {{-- Leg heading --}}
                                                 <div class="sr-detail-leg-head">
                                                     <span class="sr-detail-leg-title"
-                                                        x-text="'Leg '+(li+1)+' · '+(leg.fromCity||'')+' → '+(leg.toCity||'')+(leg.departDateLabel ? ', '+leg.departDateLabel : '')">
+                                                        x-text="(leg.fromCity||'') + ' to ' + (leg.toCity||'')">
                                                     </span>
                                                     <span class="sr-detail-leg-badge"
                                                         :class="li === 0 ? '' : 'connecting'"
-                                                        x-text="li === 0 ? 'Depart' : 'Connecting'">
+                                                        x-text="li === 0 ? 'Depart' : 'Leg ' + (li+1)">
                                                     </span>
+                                                    <span class="sr-detail-leg-date" x-show="leg.departDateLabel" x-text="leg.departDateLabel"></span>
                                                 </div>
-                        
-                                                {{-- Segments within this leg --}}
-                                                <template x-for="(seg, si) in leg.segments" :key="'det-l'+li+'-s'+si">
-                                                    <div>
-                                                        <template x-if="si > 0">
-                                                            <div class="sr-detail-layover" style="margin-top:10px;">
-                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                                <span x-text="'Layover in '+(leg.segments[si-1]?.toCity||'')+(leg.layoverDurations?.[si-1]?' · '+leg.layoverDurations[si-1]:'')"></span>
-                                                            </div>
-                                                        </template>
-                                                        <div class="sr-detail-seg">
-                                                            <div class="sr-detail-seg-airline">
-                                                                <div class="sr-detail-seg-logo">
-                                                                    <template x-if="seg.airlineLogo"><img :src="seg.airlineLogo" :alt="seg.airline"></template>
-                                                                    <template x-if="!seg.airlineLogo"><span x-text="seg.airlineCode"></span></template>
-                                                                </div>
-                                                                <span class="sr-detail-seg-airline-name" x-text="seg.airline"></span>
-                                                                <span style="font-size:11px;color:var(--gray-400);margin-left:5px;" x-text="seg.flightNo"></span>
-                                                            </div>
-                                                            <div class="sr-detail-seg-route">
-                                                                <div class="sr-detail-seg-point">
-                                                                    <div class="sr-detail-seg-time" x-text="seg.departTime"></div>
-                                                                    <div class="sr-detail-seg-iata" x-text="seg.fromCity"></div>
-                                                                    <div class="sr-detail-seg-airport" x-text="seg.fromAirport"></div>
-                                                                </div>
-                                                                <div class="sr-detail-seg-mid">
-                                                                    <span class="sr-detail-seg-dur" x-text="Math.floor(seg.duration/60)+'h '+(seg.duration%60)+'m'"></span>
-                                                                    <div class="sr-detail-seg-track"><div class="sr-detail-seg-dot2"></div><div class="sr-detail-seg-line"></div><div class="sr-detail-seg-dot2"></div></div>
-                                                                </div>
-                                                                <div class="sr-detail-seg-point" style="text-align:right;">
-                                                                    <div class="sr-detail-seg-time" x-text="seg.arriveTime"></div>
-                                                                    <div class="sr-detail-seg-iata" x-text="seg.toCity"></div>
-                                                                    <div class="sr-detail-seg-airport" x-text="seg.toAirport" style="text-align:right;"></div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="sr-detail-seg-meta">
-                                                                <div class="sr-detail-meta-item">
-                                                                    <span class="sr-detail-meta-label">Baggage</span>
-                                                                    <span class="sr-detail-meta-val"
-                                                                        x-text="_luggageLabel(flight, seg, li)"></span>
-                                                                </div>
-                                                                <div class="sr-detail-meta-item">
-                                                                    <span class="sr-detail-meta-label">Cabin bag</span>
-                                                                    <span class="sr-detail-meta-val"
-                                                                        x-text="_cabinBagLabel(flight, seg, li)"></span>
-                                                                </div>
-                                                                <div class="sr-detail-meta-item" x-show="seg.equipment">
-                                                                    <span class="sr-detail-meta-label">Aircraft</span>
-                                                                    <span class="sr-detail-meta-val" x-text="seg.equipment"></span>
-                                                                </div>
-                                                                <div class="sr-detail-meta-item" x-show="seg.resBookCode">
-                                                                    <span class="sr-detail-meta-label">Class</span>
-                                                                    <span class="sr-detail-meta-val" x-text="seg.resBookCode"></span>
-                                                                </div>
-                                                                <div class="sr-detail-meta-item">
-                                                                    <span class="sr-detail-meta-label">Seats</span>
-                                                                    <span class="sr-detail-meta-val"
-                                                                        :style="seg.seatsLeft<=5?'color:#dc2626':''"
-                                                                        x-text="seg.seatsLeft+' remaining'"></span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </template>
+                                                @include('livewire.pages.flight.partials.flight-timeline', [
+                                                    'segments' => 'leg.segments',
+                                                    'layovers' => 'leg.layoverDurations',
+                                                    'key' => 'det-l-',
+                                                    'legIndex' => 'li',
+                                                ])
                                             </div>
                                         </template>
-                        
                                     </div>
                                 </template>
-                        
+
                             </div>
                         </template>
 
                         {{-- Fare Rules Tab --}}
                         <template x-if="activeTab[flight.id] === 'rules'">
                             <div class="sr-fare-rules-body">
+
                                 <template x-for="fb in flight.fareBreakdown" :key="fb.passengerType">
-                                    <div style="margin-bottom:16px;">
-                                        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:8px;"
-                                             x-text="fb.passengerType==='ADT'?'Adult':fb.passengerType==='CHD'?'Child':'Infant'"></div>
-                                        <div class="sr-fare-rule-row">
-                                            <span class="sr-fare-rule-icon">🧳</span>
-                                            <span class="sr-fare-rule-label">Checked Bag</span>
-                                            <span class="sr-fare-rule-val" x-text="fb.baggage[0] || '—'"></span>
+                                    <div class="sr-fare-group">
+                                        <div class="sr-fare-group-head">
+                                            <span class="sr-fare-group-title"
+                                                  x-text="fb.passengerType==='ADT'?'Adult':fb.passengerType==='CHD'?'Child':'Infant'"></span>
+                                            <span class="sr-fare-group-qty" x-show="fb.qty > 1" x-text="'× ' + fb.qty"></span>
                                         </div>
-                                        <div class="sr-fare-rule-row">
-                                            <span class="sr-fare-rule-icon">💼</span>
-                                            <span class="sr-fare-rule-label">Cabin Bag</span>
-                                            <span class="sr-fare-rule-val" x-text="cabinBagLabel(fb.cabinBaggage[0])"></span>
+
+                                        <div class="sr-policy-grid">
+                                            <div class="sr-policy">
+                                                <span class="sr-policy-ic"><span class="sr-ic sr-ic-lg sr-ic-luggage" aria-hidden="true"></span></span>
+                                                <span class="sr-policy-txt">
+                                                    <span class="sr-policy-label">Checked baggage</span>
+                                                    <span class="sr-policy-val" x-text="fb.baggage?.[0] || '—'"></span>
+                                                </span>
+                                            </div>
+
+                                            <div class="sr-policy">
+                                                <span class="sr-policy-ic"><span class="sr-ic sr-ic-lg sr-ic-cabin" aria-hidden="true"></span></span>
+                                                <span class="sr-policy-txt">
+                                                    <span class="sr-policy-label">Cabin baggage</span>
+                                                    <span class="sr-policy-val" x-text="cabinBagLabel(fb.cabinBaggage?.[0])"></span>
+                                                </span>
+                                            </div>
+
+                                            <div class="sr-policy" :class="fb.refundAllowed ? 'good' : 'bad'">
+                                                <span class="sr-policy-ic"><span class="sr-ic sr-ic-lg sr-ic-refund" aria-hidden="true"></span></span>
+                                                <span class="sr-policy-txt">
+                                                    <span class="sr-policy-label">Refunds</span>
+                                                    <span class="sr-policy-val" x-text="fb.refundAllowed ? 'Allowed' : 'Not allowed'"></span>
+                                                </span>
+                                            </div>
+
+                                            {{-- fb.changeAllowed is null for suppliers (SkyLink) that don't expose a
+                                                 change policy at all — showing a hard "Not allowed" there would be a
+                                                 guess, not a fact, so it gets neutral styling and a plain note rather
+                                                 than the red/green treatment the other policies carry. --}}
+                                            <div class="sr-policy" :class="fb.changeAllowed === null ? '' : (fb.changeAllowed ? 'good' : 'bad')">
+                                                <span class="sr-policy-ic">
+                                                    <span class="sr-ic sr-ic-lg" :class="fb.changeAllowed === null ? 'sr-ic-info' : 'sr-ic-change'" aria-hidden="true"></span>
+                                                </span>
+                                                <span class="sr-policy-txt">
+                                                    <span class="sr-policy-label">Date changes</span>
+                                                    <span class="sr-policy-val"
+                                                          x-text="fb.changeAllowed === null ? 'Not specified' : (fb.changeAllowed ? 'Allowed' : 'Not allowed')"></span>
+                                                    <span class="sr-policy-note" x-show="fb.changeAllowed === null">
+                                                        This airline didn't publish a change policy. Ask us before booking if you may need to move your dates.
+                                                    </span>
+                                                    <span class="sr-policy-note" x-show="fb.changeAllowed === true"
+                                                          x-text="'Penalty ' + _fmtPrice(fb.changePenalty, flight.currency)"></span>
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div class="sr-fare-rule-row">
-                                            <span class="sr-fare-rule-icon" x-text="fb.refundAllowed?'✅':'❌'"></span>
-                                            <span class="sr-fare-rule-label">Refund</span>
-                                            <span class="sr-fare-rule-val" :class="fb.refundAllowed?'allowed':'not-allowed'" x-text="fb.refundAllowed?'Allowed':'Not Allowed'"></span>
+
+                                        <div class="sr-fare-money">
+                                            <div class="sr-fare-money-row">
+                                                <span x-text="'Base fare' + (fb.qty > 1 ? ' × ' + fb.qty : '')"></span>
+                                                <span class="v" x-text="_fmtPrice(fb.baseFare * fb.qty, flight.currency)"></span>
+                                            </div>
+                                            <div class="sr-fare-money-row total">
+                                                <span>Total for this traveller type</span>
+                                                <span class="v" x-text="_fmtPrice(fb.totalFare * fb.qty, flight.currency)"></span>
+                                            </div>
                                         </div>
-                                        <div class="sr-fare-rule-row">
-                                            <span class="sr-fare-rule-icon" x-text="fb.changeAllowed===null?'ℹ️':(fb.changeAllowed?'✅':'❌')"></span>
-                                            <span class="sr-fare-rule-label">Changes</span>
-                                            <!-- fb.changeAllowed is null for suppliers (SkyLink) that don't expose a
-                                                 change policy at all — showing a hard "Not Allowed" there would be a
-                                                 guess, not a fact, so it gets a neutral, unstyled "not specified"
-                                                 note instead of the red/green allowed/not-allowed styling. -->
-                                            <span class="sr-fare-rule-val" :class="fb.changeAllowed===null?'':(fb.changeAllowed?'allowed':'not-allowed')" x-text="fb.changeAllowed===null?'Not specified — contact support before booking if this matters to you':(fb.changeAllowed?'Allowed · Penalty '+_fmtPrice(fb.changePenalty,flight.currency):'Not Allowed')"></span>
-                                        </div>
-                                        <div class="sr-fare-rule-row">
-                                            <span class="sr-fare-rule-icon">💰</span>
-                                            <span class="sr-fare-rule-label">Base Fare</span>
-                                            <span class="sr-fare-rule-val" x-text="_fmtPrice(fb.baseFare,flight.currency)+' × '+fb.qty"></span>
-                                        </div>
-                                        <div class="sr-fare-rule-row" style="font-weight:700;">
-                                            <span class="sr-fare-rule-icon">🧾</span>
-                                            <span class="sr-fare-rule-label">Total Fare</span>
-                                            <span class="sr-fare-rule-val" style="color:var(--gray-900);" x-text="_fmtPrice(fb.totalFare*fb.qty,flight.currency)"></span>
-                                        </div>
+                                    </div>
+                                </template>
+
+                                {{-- SkyLink returns no per-passenger fare breakdown at all, so this
+                                     tab would otherwise render as a blank panel. --}}
+                                <template x-if="!flight.fareBreakdown || flight.fareBreakdown.length === 0">
+                                    <div class="sr-rules-empty">
+                                        <span class="sr-ic sr-ic-lg sr-ic-info" aria-hidden="true"></span>
+                                        <span>
+                                            Detailed fare rules aren't published for this fare. The allowances shown on
+                                            the card apply — contact us if you need the full conditions before booking.
+                                        </span>
                                     </div>
                                 </template>
                             </div>
                         </template>
 
                         <div class="sr-detail-footer">
-                            <button class="sr-book-btn" @click="selectFlight(flight)">Book Now</button>
+                            <span class="sr-detail-footer-note"
+                                  x-text="'Total fare ' + _fmtPrice(flight.price, flight.currency) + (_passengerCount(flight) > 1 ? ' for ' + _passengerCount(flight) + ' travellers' : '')"></span>
+                            <button class="sr-book-btn" @click="selectFlight(flight)">Book now</button>
                         </div>
 
                     </div>{{-- /sr-detail-panel --}}
@@ -2455,10 +2521,12 @@
             {{-- No results --}}
             <template x-if="filteredFlights.length === 0">
                 <div class="sr-empty-results" style="text-align:center;padding:48px 24px;background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);">
-                    <div style="font-size:32px;margin-bottom:12px;">✈️</div>
-                    <div style="font-size:16px;font-weight:700;color:var(--gray-700);margin-bottom:6px;">No flights match your filters</div>
-                    <div style="font-size:13px;color:var(--gray-400);">Try adjusting your filters to see more results</div>
-                    <button class="sr-book-btn" style="margin-top:16px;" @click="resetAll()">Clear All Filters</button>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:12px;background:var(--blue-lt);color:var(--blue);margin-bottom:14px;">
+                        <span class="sr-ic sr-ic-search" style="width:22px;height:22px;flex-basis:22px;" aria-hidden="true"></span>
+                    </span>
+                    <div style="font-size:16px;font-weight:700;color:var(--gray-900);margin-bottom:6px;">No flights match these filters</div>
+                    <div style="font-size:13px;color:var(--gray-500);">Widen a filter — stops, times or airlines — to see more of this route.</div>
+                    <button class="sr-book-btn" style="width:auto;margin-top:18px;" @click="resetAll()">Clear all filters</button>
                 </div>
             </template>
 
@@ -2507,15 +2575,15 @@
                 
             </div>
             <div class="sr-tip-card">
-                <div class="sr-tip-title"><span class="sr-tip-icon">🛡️</span> Flexible Booking</div>
+                <div class="sr-tip-title"><span class="sr-tip-icon"><span class="sr-ic sr-ic-refund" aria-hidden="true"></span></span> Flexible Booking</div>
                 <div class="sr-tip-body">Look for <span class="sr-tip-highlight">refundable</span> fares if your plans may change. Most ValueJet routes offer free cancellation within 24hrs.</div>
             </div>
             <div class="sr-tip-card">
-                <div class="sr-tip-title"><span class="sr-tip-icon">💳</span> Travel Flex</div>
+                <div class="sr-tip-title"><span class="sr-tip-icon"><span class="sr-ic sr-ic-card" aria-hidden="true"></span></span> Travel Flex</div>
                 <div class="sr-tip-body">Apply for <span class="sr-tip-highlight">TravelFlex financing</span> through Fast Credit and spread eligible travel costs over an approved repayment plan — available at checkout.</div>
             </div>
             <div class="sr-tip-card">
-                <div class="sr-tip-title"><span class="sr-tip-icon">⏱️</span> Best Time to Fly</div>
+                <div class="sr-tip-title"><span class="sr-tip-icon"><span class="sr-ic sr-ic-clock" aria-hidden="true"></span></span> Best Time to Fly</div>
                 <div class="sr-tip-body">Morning departures (6–9AM) typically have the <span class="sr-tip-highlight">lowest delay rates</span> on the LOS–PHC route.</div>
             </div>
         </aside>
@@ -2567,12 +2635,20 @@
             // breakdown (always []) but does carry real baggage info per
             // segment — fall back to that (the specific segment in scope,
             // when given one) instead of always showing "-" for SkyLink.
+            // A multi-city itinerary carries no top-level `segments` array — its
+            // flights live under multiLegs[n].segments — so falling back to
+            // flight.segments[0] alone left every multi-city card showing a
+            // dash for both allowances.
+            _firstSegment(flight) {
+                return flight.segments?.[0] || flight.multiLegs?.[0]?.segments?.[0] || null;
+            },
+
             _luggageLabel(flight, seg = null, legIndex = 0) {
                 const breakdown = flight.fareBreakdown?.[0]?.baggage;
                 const fromBreakdown = breakdown?.[legIndex] || breakdown?.[0];
                 if (fromBreakdown) return fromBreakdown;
 
-                return (seg || flight.segments?.[0])?.baggage || '-';
+                return (seg || this._firstSegment(flight))?.baggage || '—';
             },
 
             _cabinBagLabel(flight, seg = null, legIndex = 0) {
@@ -2580,7 +2656,43 @@
                 const fromBreakdown = breakdown?.[legIndex] || breakdown?.[0];
                 if (fromBreakdown) return this.cabinBagLabel(fromBreakdown);
 
-                return this.cabinBagLabel((seg || flight.segments?.[0])?.cabinBaggage);
+                return this.cabinBagLabel((seg || this._firstSegment(flight))?.cabinBaggage);
+            },
+
+            // SkyLink reports 12-hour clock times ("07:15 pm"); TravelNext
+            // reports 24-hour ("19:15"). Both suppliers' results sit in the
+            // same list, so two cards for the same departure could print the
+            // time two different ways. Normalise at render time only — the
+            // underlying value still goes to the booking payload untouched.
+            _time(value) {
+                const raw = String(value ?? '').trim();
+                const parts = raw.match(/^(\d{1,2}):(\d{2})\s*([ap])\.?m\.?$/i);
+                if (! parts) return raw;
+
+                const hour = (Number(parts[1]) % 12) + (parts[3].toLowerCase() === 'p' ? 12 : 0);
+
+                return String(hour).padStart(2, '0') + ':' + parts[2];
+            },
+
+            _stopLabel(stops) {
+                const n = Number(stops) || 0;
+                return n === 0 ? 'Non-stop' : (n === 1 ? '1 stop' : n + ' stops');
+            },
+
+            // Seats remaining on the first segment — the binding constraint on
+            // the whole itinerary. null when the supplier didn't report it, so
+            // the card can show an em dash rather than the string "undefined".
+            _seatsLeft(flight) {
+                const seats = this._firstSegment(flight)?.seatsLeft;
+
+                return (seats === null || seats === undefined || seats === '') ? null : Number(seats);
+            },
+
+            _passengerCount(flight) {
+                const counted = (flight.fareBreakdown || [])
+                    .reduce((total, fb) => total + (Number(fb.qty) || 0), 0);
+
+                return counted > 0 ? counted : (Number(flight.markupPassengerCount) || 1);
             },
 
             timeSlots: [
@@ -2791,8 +2903,15 @@
             _fmtPrice(amount, currency) {
                 if (!amount && amount !== 0) return '';
                 const sym = currency === 'NGN' ? '₦' : currency === 'USD' ? '$' : (currency || '');
-                return sym + parseFloat(amount).toLocaleString('en-NG', {
-                    minimumFractionDigits: 2, maximumFractionDigits: 2
+                const value = parseFloat(amount);
+                // Air fares in Naira land on whole numbers far more often than
+                // not, and a column of ".00" endings is pure noise in a list
+                // whose whole job is price comparison. Kobo still show when a
+                // fare actually has them.
+                const decimals = Number.isInteger(value) ? 0 : 2;
+
+                return sym + value.toLocaleString('en-NG', {
+                    minimumFractionDigits: decimals, maximumFractionDigits: decimals
                 });
             },
 
@@ -2948,7 +3067,7 @@
             show: false,
             message: '',
             type: 'error',
-            icon: '⚠️',
+            icon: 'sr-ic-alert',
 
             init() {
                 let error = @json(session('error'));
@@ -2961,7 +3080,7 @@
             showToast(msg, type = 'error') {
                 this.message = msg;
                 this.type = type;
-                this.icon = type === 'success' ? '✅' : '⚠️';
+                this.icon = type === 'success' ? 'sr-ic-check' : 'sr-ic-alert';
                 this.show = true;
 
                 setTimeout(() => this.show = false, 9000);
