@@ -2248,7 +2248,7 @@
             </div>
             <div class="sr-tip-card">
                 <div class="sr-tip-title"><span class="sr-tip-icon"><span class="sr-ic sr-ic-refund" aria-hidden="true"></span></span> Flexible Booking</div>
-                <div class="sr-tip-body">Look for <span class="sr-tip-highlight">refundable</span> fares if your plans may change. Most ValueJet routes offer free cancellation within 24hrs.</div>
+                <div class="sr-tip-body">Look for <span class="sr-tip-highlight">refundable</span> fares if your plans might change — you can cancel or move them without losing the full ticket price.</div>
             </div>
             <div class="sr-tip-card">
                 <div class="sr-tip-title"><span class="sr-tip-icon"><span class="sr-ic sr-ic-card" aria-hidden="true"></span></span> Travel Flex</div>
@@ -2256,7 +2256,7 @@
             </div>
             <div class="sr-tip-card">
                 <div class="sr-tip-title"><span class="sr-tip-icon"><span class="sr-ic sr-ic-clock" aria-hidden="true"></span></span> Best Time to Fly</div>
-                <div class="sr-tip-body">Morning departures (6–9AM) typically have the <span class="sr-tip-highlight">lowest delay rates</span> on the LOS–PHC route.</div>
+                <div class="sr-tip-body">Morning departures usually have the <span class="sr-tip-highlight">lowest delay rates</span>, since delays build up across the day.</div>
             </div>
         </aside>
 
