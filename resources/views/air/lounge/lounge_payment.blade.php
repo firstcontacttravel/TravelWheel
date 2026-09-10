@@ -17,9 +17,15 @@
                 <p class="lounge-copy">
                     The sum of ₦{{ number_format($booking->amount) }} has been received for Lounge Booking ({{ $booking->lounge_name }}).
                 </p>
-                <a href="{{ route('air.lounge_generate', ['trans_id' => $trans_id]) }}" class="lounge-btn mt-4" id="generate-pass-link">
-                    Generate Pass <x-ph-icon name="download-simple" />
-                </a>
+                @if($booking->provider === 'loungepair')
+                    <p class="lounge-copy mt-4">
+                        <x-ph-icon name="envelope-simple" /> Your lounge pass will be emailed to <strong>{{ $booking->email }}</strong> shortly.
+                    </p>
+                @else
+                    <a href="{{ route('air.lounge_generate', ['trans_id' => $trans_id]) }}" class="lounge-btn mt-4" id="generate-pass-link">
+                        Generate Pass <x-ph-icon name="download-simple" />
+                    </a>
+                @endif
             </div>
 
             <div class="lounge-panel">
@@ -40,7 +46,7 @@
 </section>
 
 <script>
-    document.getElementById('generate-pass-link').addEventListener('click', function () {
+    document.getElementById('generate-pass-link')?.addEventListener('click', function () {
         this.textContent = 'Generating...';
         this.classList.add('disabled');
     });
