@@ -125,89 +125,155 @@
     .sr-pax-done:hover { background: #1e40af; }
 
     /* ── Page Layout ── */
-    .sr-page { max-width: 1280px; margin: 0 auto; padding: 20px 16px 48px; display: grid; grid-template-columns: 252px 1fr 220px; gap: 18px; align-items: start; }
+    .sr-page {
+        max-width: 1394px; margin: 0 auto; padding: 20px 16px 48px;
+        display: grid; grid-template-columns: 270px minmax(0, 835px) 220px;
+        gap: 18px; align-items: start; justify-content: center;
+    }
 
-    /* ── Sidebar ── */
-    .sr-sidebar { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 78px; }
-    .sr-panel { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); overflow: hidden; }
-    .sr-panel-head { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px 10px; border-bottom: 1px solid var(--gray-100); }
-    .sr-panel-title { font-size: 13px; font-weight: 700; color: var(--gray-900); }
-    .sr-panel-reset { font-size: 11px; color: var(--blue); cursor: pointer; font-weight: 600; text-decoration: none; }
+    /* ── Filters (left rail) ── */
+    .sr-sidebar {
+        position: sticky; top: 18px;
+        display: flex; flex-direction: column;
+        background: #fff; border: 1px solid var(--gray-200);
+        border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    }
+    .sr-filters-head { display: flex; align-items: center; gap: 9px; padding: 13px 16px; border-bottom: 1px solid var(--gray-200); }
+    .sr-filters-head .sr-ic { color: var(--gray-500); }
+    .sr-filters-title { font-size: 13px; font-weight: 700; color: var(--gray-900); }
+    .sr-filters-count { font-size: 11px; font-weight: 600; color: var(--blue); background: var(--blue-lt); border-radius: 999px; padding: 2px 8px; }
+    .sr-filters-reset { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--blue); cursor: pointer; text-decoration: none; }
+    .sr-filters-reset:hover { text-decoration: underline; }
+    .sr-filters-reset[aria-disabled="true"] { color: var(--gray-400); cursor: default; text-decoration: none; }
+
+    .sr-panel { background: transparent; border: 0; border-radius: 0; box-shadow: none; }
+    .sr-panel ~ .sr-panel { border-top: 1px solid var(--gray-100); }
+    .sr-panel-head { display: flex; align-items: center; gap: 8px; padding: 14px 16px 0; border: 0; }
+    .sr-panel-title { font-size: 12px; font-weight: 700; color: var(--gray-900); }
+    .sr-panel-sub { font-size: 11.5px; color: var(--gray-500); font-weight: 500; }
+    .sr-panel-reset { margin-left: auto; font-size: 11.5px; color: var(--blue); cursor: pointer; font-weight: 600; text-decoration: none; }
     .sr-panel-reset:hover { text-decoration: underline; }
-    .sr-panel-body { padding: 10px 16px 14px; display: flex; flex-direction: column; gap: 6px; }
-    .sr-check-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; cursor: pointer; gap: 8px; }
-    .sr-check-row:hover .sr-check-name { color: var(--blue); }
-    .sr-check-left { display: flex; align-items: center; gap: 8px; }
-    .sr-check-box { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--gray-400); background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all .15s; }
+    .sr-panel-body { padding: 8px 10px 14px; display: flex; flex-direction: column; gap: 1px; max-height: 268px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--gray-300) transparent; }
+    .sr-panel-body::-webkit-scrollbar { width: 8px; }
+    .sr-panel-body::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 999px; }
+
+    .sr-check-row { display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 5px 6px; border-radius: 8px; cursor: pointer; transition: background .14s ease; }
+    .sr-check-row:hover { background: var(--gray-50); }
+    .sr-check-left { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    /* Square, not round: airlines are a multi-select, and a circle reads as a
+       radio button — i.e. as though picking one would clear the others. */
+    .sr-check-box { width: 16px; height: 16px; border-radius: 5px; border: 1.5px solid var(--gray-300); background: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .14s ease, border-color .14s ease; }
+    .sr-check-row:hover .sr-check-box { border-color: var(--gray-400); }
     .sr-check-box.checked { background: var(--blue); border-color: var(--blue); }
     .sr-check-box.checked::after {
         content: ""; width: 11px; height: 11px; background: #fff;
         mask: url("{{ asset('images/flight-icons/check.svg') }}") center / contain no-repeat;
         -webkit-mask: url("{{ asset('images/flight-icons/check.svg') }}") center / contain no-repeat;
     }
-    .sr-check-name { font-size: 12.5px; color: var(--gray-700); font-weight: 500; }
-    .sr-check-price { font-size: 11.5px; color: var(--gray-500); font-family: var(--mono); }
-    .sr-mat-img { width: 50px; height: 50px; object-fit: contain; border-radius: 4px; background: #fff; padding: 2px; display: inline-flex; align-items: center; justify-content: center; margin-right: 6px; }
+    .sr-check-name { font-size: 12.5px; color: var(--gray-700); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sr-check-row:hover .sr-check-name { color: var(--gray-900); }
+    .sr-check-price { margin-left: auto; flex-shrink: 0; font-size: 11.5px; color: var(--gray-500); font-weight: 500; font-family: var(--mono); }
 
-    .sr-stop-pills { display: flex; gap: 6px; padding: 10px 16px 14px; }
-    .sr-stop-pill { flex: 1; text-align: center; padding: 7px 4px; border-radius: 8px; border: 1.5px solid var(--gray-200); cursor: pointer; transition: all .15s; font-size: 11.5px; font-weight: 600; color: var(--gray-500); background: #fff; }
-    .sr-stop-pill:hover { border-color: var(--blue-md); color: var(--blue); }
-    .sr-stop-pill.active { background: var(--blue-lt); border-color: var(--blue); color: var(--blue); }
-    .sr-stop-pill-sub { font-size: 10px; font-weight: 500; color: var(--gray-400); margin-top: 1px; }
-    .sr-stop-pill.active .sr-stop-pill-sub { color: var(--blue); opacity: .7; }
-    .sr-time-pills { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px 14px; }
-    .sr-time-pill { padding: 6px 10px; border-radius: 8px; border: 1.5px solid var(--gray-200); cursor: pointer; transition: all .15s; font-size: 11px; font-weight: 600; color: var(--gray-500); background: #fff; white-space: nowrap; }
-    .sr-time-pill:hover { border-color: var(--blue-md); color: var(--blue); }
-    .sr-time-pill.active { background: var(--blue-lt); border-color: var(--blue); color: var(--blue); }
+    .sr-stop-pills { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 7px; padding: 10px 16px 16px; }
+    .sr-time-pills { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; padding: 10px 16px 16px; }
+    .sr-stop-pill, .sr-time-pill {
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+        min-width: 0; min-height: 52px; padding: 8px 6px; border-radius: 9px;
+        border: 1px solid var(--gray-200); background: #fff;
+        font-size: 11.5px; font-weight: 600; color: var(--gray-700);
+        text-align: center; cursor: pointer;
+        transition: border-color .14s ease, background .14s ease, color .14s ease;
+    }
+    .sr-stop-pill:hover, .sr-time-pill:hover { border-color: var(--blue-md); background: #fcfcff; }
+    .sr-stop-pill.active, .sr-time-pill.active { border-color: var(--blue); background: var(--blue-lt); color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue); }
+    .sr-pill-sub { font-size: 10.5px; font-weight: 500; color: var(--gray-500); font-family: var(--mono); }
+    .sr-stop-pill.active .sr-pill-sub, .sr-time-pill.active .sr-pill-sub { color: var(--blue); opacity: .75; }
 
     /* ── Main Content ── */
     .sr-main { display: flex; flex-direction: column; gap: 14px; }
 
-    /* Header */
-    .sr-header { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .sr-header-title { font-size: 17px; font-weight: 800; color: var(--gray-900); }
-    .sr-header-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--gray-500); margin-top: 5px; }
-    .sr-header-fact { display: inline-flex; align-items: center; gap: 6px; }
-    .sr-header-fact .sr-ic { color: var(--gray-400); }
-    .sr-fare-cal-btn { display: flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: 8px; border: 1.5px solid var(--blue-md); background: var(--blue-lt); color: var(--blue); font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: var(--font); transition: all .15s; }
-    .sr-fare-cal-btn:hover { background: #dbeafe; border-color: var(--blue); }
+    /*
+     * ── Fare Matrix ──
+     * A grid for spotting the cheapest airline/stops combination, not a
+     * spreadsheet. Vertical rules are gone — columns are separated by
+     * whitespace and the sticky label column's single border — because every
+     * cell already reads as a cell without being boxed in. Each populated
+     * cell filters the list below, so it gets a real hit target and hover
+     * state; before, a click did something but nothing said it would.
+     */
+    .sr-matrix { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .sr-matrix-head { display: flex; align-items: center; gap: 9px; padding: 13px 16px; border-bottom: 1px solid var(--gray-200); }
+    .sr-matrix-head .sr-ic { color: var(--gray-500); }
+    .sr-matrix-title { font-size: 13px; font-weight: 700; color: var(--gray-900); }
+    .sr-matrix-hint { margin-left: auto; font-size: 11.5px; color: var(--gray-500); }
+    .sr-matrix-scroll { overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--gray-300) transparent; }
+    .sr-matrix-scroll::-webkit-scrollbar { height: 8px; }
+    .sr-matrix-scroll::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 999px; }
+    .sr-matrix-scroll::-webkit-scrollbar-track { background: transparent; }
+    /* separate, not collapse: collapsed borders drop out from under a
+       position:sticky cell in several engines. */
+    .sr-matrix table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+    .sr-matrix th, .sr-matrix td { padding: 0; text-align: center; vertical-align: middle; white-space: nowrap; }
+    .sr-matrix thead th { height: 60px; background: #fff; border-bottom: 1px solid var(--gray-200); }
+    .sr-matrix tbody td, .sr-matrix tbody th { height: 52px; border-bottom: 1px solid var(--gray-100); }
+    .sr-matrix tbody tr:last-child td, .sr-matrix tbody tr:last-child th { border-bottom: 0; }
+    .sr-matrix th:first-child, .sr-matrix td:first-child {
+        position: sticky; left: 0; z-index: 2; background: #fff;
+        width: 116px; min-width: 116px; max-width: 116px;
+        padding-left: 16px; text-align: left;
+        border-right: 1px solid var(--gray-200);
+    }
+    .sr-matrix th:not(:first-child), .sr-matrix td:not(:first-child) { width: 124px; min-width: 124px; }
+    .sr-matrix-corner { font-size: 11px; font-weight: 600; color: var(--gray-500); line-height: 1.35; }
+    .sr-matrix-corner span { display: block; }
+    .sr-matrix-row-label { font-size: 12.5px; font-weight: 600; color: var(--gray-900); }
+    .sr-matrix .airline-logo1 { display: flex; align-items: center; justify-content: center; height: 60px; padding: 0 12px; }
+    .sr-mat-img {
+        display: block; width: auto; max-width: 92px; max-height: 30px; object-fit: contain;
+        /* airline logos arrive from the data provider as small (70×30) GIFs —
+           crisp-edges keeps them defined rather than smeared when scaled up. */
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+    }
+    .sr-matrix-price {
+        display: flex; align-items: center; justify-content: center;
+        width: calc(100% - 20px); height: 36px; margin: 0 auto;
+        border: 0; border-radius: 8px; background: transparent;
+        font-family: var(--mono); font-size: 12.5px; font-weight: 500; color: var(--gray-900);
+        cursor: pointer; transition: background .14s ease, color .14s ease, box-shadow .14s ease;
+    }
+    .sr-matrix-price:hover { background: var(--blue-lt); color: var(--blue); box-shadow: inset 0 0 0 1px var(--blue-md); }
+    .sr-matrix-price:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--blue); }
+    .sr-matrix-price.cheapest { background: #e9f9f0; color: #04713f; font-weight: 600; }
+    .sr-matrix-price.cheapest:hover { box-shadow: inset 0 0 0 1px #8fdcb4; }
+    .sr-matrix-empty { display: block; color: var(--gray-300); font-size: 13px; }
+    .sr-matrix .airline-name, .sr-next-btn { display: none; }
 
-    /* ── Fare Matrix ── */
-    .sr-matrix { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); overflow: hidden; }
-    .sr-matrix-scroll { width: 750px; max-width:100vw; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:auto; scrollbar-color:var(--navy) transparent; }
-    .sr-matrix-scroll::-webkit-scrollbar { height: 4px; }
-    .sr-matrix-scroll::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 2px; }
-    .sr-matrix table { width: max-content; min-width: 100%; border-collapse: collapse; table-layout: fixed; }
-    .sr-matrix th, .sr-matrix td { padding: 10px 14px; text-align: center; border-bottom: 1px solid var(--gray-100); border-right: 1px solid var(--gray-100); font-size: 12px; white-space: nowrap; }
-    .sr-matrix th:last-child, .sr-matrix td:last-child { border-right: none; }
-    .sr-matrix tr:last-child td { border-bottom: none; }
-    .sr-matrix th:first-child, .sr-matrix td:first-child { position: sticky; left: 0; z-index: 2; background: #fff; min-width: 110px; text-align: left; border-right: 2px solid var(--gray-200); }
-    .sr-matrix thead th:first-child { background: var(--gray-50); }
-    .sr-matrix thead th { background: var(--gray-50); font-weight: 700; color: var(--gray-500); font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; }
-    .sr-matrix th:not(:first-child):not(:last-child), .sr-matrix td:not(:first-child):not(:last-child) { min-width: 100px; max-width: 130px; }
-    .sr-matrix tbody td:first-child { font-weight: 700; color: var(--gray-700); font-size: 12.5px; }
-    .sr-matrix-price { display: block; font-family: var(--mono); font-weight: 500; color: var(--gray-900); font-size: 12px; cursor: pointer; transition: color .12s; white-space: nowrap; }
-    .sr-matrix-price:hover { color: var(--blue); text-decoration: underline; }
-    .sr-matrix-price.cheapest { color: var(--green); font-weight: 700; }
-    .sr-matrix-empty { color: var(--gray-300); }
-    .sr-matrix .airline-logo { width: 50px; height: 50px; border-radius: 8px; background: var(--gray-100); display: flex; align-items: center; justify-content: center; margin: 0 auto 4px; font-size: 9px; font-weight: 700; color: var(--gray-500); }
-    .sr-matrix .airline-name { font-size: 10.5px; font-weight: 600; color: var(--gray-700); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
-    .sr-next-btn { background: none; border: none; cursor: pointer; color: var(--blue); padding: 8px; display: flex; align-items: center; }
-
-    /* Fare Summary Bar */
-    .sr-fare-bar { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); overflow: hidden; }
-    .sr-fare-bar-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 18px; background: var(--navy); color: #fff; }
-    .sr-fare-bar-title { font-size: 13px; font-weight: 700; }
-    .sr-fare-bar-cta { font-size: 11.5px; color: var(--blue-md); font-weight: 500; }
-    .sr-fare-options { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--gray-100); }
-    .sr-fare-option { padding: 14px 16px; text-align: center; border-right: 1px solid var(--gray-100); cursor: pointer; transition: background .15s; }
-    .sr-fare-option:last-child { border-right: none; }
-    .sr-fare-option:hover { background: var(--gray-50); }
-    .sr-fare-option.active { background: var(--blue-lt); }
-    .sr-fare-option-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--gray-500); margin-bottom: 4px; }
+    /*
+     * ── Best / Cheapest / Fastest ──
+     * Three peer choices, so they get one shape and are ordered in the markup
+     * rather than shuffled by `order` on :nth-child, which made the rendered
+     * order impossible to read off the template.
+     */
+    .sr-fare-options { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+    .sr-fare-option {
+        display: flex; align-items: flex-start; gap: 11px;
+        padding: 13px 14px; text-align: left;
+        border: 1px solid var(--gray-200); border-radius: var(--radius); background: #fff;
+        box-shadow: var(--shadow); cursor: pointer;
+        transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+    .sr-fare-option:hover { border-color: var(--blue-md); box-shadow: var(--shadow-md); }
+    .sr-fare-option.active { border-color: var(--blue); background: var(--blue-lt); box-shadow: inset 0 0 0 1px var(--blue); }
+    .sr-fare-option-ic { flex-shrink: 0; width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: var(--gray-50); color: var(--gray-500); }
+    .sr-fare-option.active .sr-fare-option-ic { background: #fff; color: var(--blue); }
+    .sr-fare-option-txt { min-width: 0; }
+    .sr-fare-option-label { display: block; font-size: 11.5px; font-weight: 600; color: var(--gray-500); line-height: 1.35; }
     .sr-fare-option.active .sr-fare-option-label { color: var(--blue); }
-    .sr-fare-option-price { font-size: 17px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); }
+    .sr-fare-option-price { display: block; font-size: 19px; font-weight: 500; font-family: var(--mono); color: var(--gray-900); line-height: 1.25; letter-spacing: -.01em; }
     .sr-fare-option.active .sr-fare-option-price { color: var(--blue); }
+    .sr-fare-option-note { display: block; font-size: 11px; color: var(--gray-500); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sr-fare-option.active .sr-fare-option-note { color: var(--blue); opacity: .8; }
 
     /* Supplemental-supplier loading indicator */
     .sr-supplement-status { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--gray-500); padding: 2px 0; }
@@ -221,12 +287,19 @@
     .sr-card-new { animation: sr-card-highlight 2.4s ease-out; }
 
     /* Sort bar */
-    .sr-sort-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .sr-sort-label { font-size: 12px; color: var(--gray-500); font-weight: 600; }
-    .sr-sort-btn { padding: 6px 14px; border-radius: 999px; border: 1.5px solid var(--gray-200); background: #fff; color: var(--gray-600); font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; font-family: var(--font); }
-    .sr-sort-btn:hover { border-color: var(--blue-md); color: var(--blue); }
-    .sr-sort-btn.active { background: var(--blue-lt); border-color: var(--blue); color: var(--blue); }
-    .sr-result-count { margin-left: auto; font-size: 12px; color: var(--gray-500); font-weight: 500; }
+    .sr-sort-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 34px; }
+    .sr-result-pill { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 999px; background: var(--blue-lt); color: var(--blue); font-size: 11.5px; font-weight: 600; }
+    .sr-sort-select { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; font-size: 12px; font-weight: 600; color: var(--gray-600); }
+    .sr-sort-select select {
+        height: 32px; min-width: 152px; padding: 0 32px 0 11px;
+        border: 1px solid var(--gray-200); border-radius: 8px; color: var(--gray-900);
+        font: inherit; font-size: 12px; font-weight: 600; outline: none; cursor: pointer;
+        appearance: none; -webkit-appearance: none;
+        background: #fff url("{{ asset('images/flight-icons/chevron-down.svg') }}") no-repeat right 10px center / 14px 14px;
+        transition: border-color .14s ease, box-shadow .14s ease;
+    }
+    .sr-sort-select select:hover { border-color: var(--blue-md); }
+    .sr-sort-select select:focus-visible { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(48,49,145,.12); }
 
     /* ── Flight Card (rebuilt — see comment block below) ── */
     /*
@@ -270,6 +343,10 @@
     .sr-ic-alert    { --i: url("{{ asset('images/flight-icons/alert.svg') }}"); }
     .sr-ic-search   { --i: url("{{ asset('images/flight-icons/search.svg') }}"); }
     .sr-ic-route    { --i: url("{{ asset('images/flight-icons/route.svg') }}"); }
+    .sr-ic-award    { --i: url("{{ asset('images/flight-icons/award.svg') }}"); }
+    .sr-ic-sliders  { --i: url("{{ asset('images/flight-icons/sliders.svg') }}"); }
+    .sr-ic-grid     { --i: url("{{ asset('images/flight-icons/grid.svg') }}"); }
+    .sr-ic-list     { --i: url("{{ asset('images/flight-icons/list.svg') }}"); }
 
     /*
      * Card anatomy: an itinerary panel and a price rail, split by a hairline.
@@ -556,71 +633,64 @@
     .sr-detail-footer .sr-book-btn { width: auto; min-width: 168px; }
 
     /* ── Right Rail ── */
-    .sr-rail { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 78px; }
+    .sr-rail { position: sticky; top: 18px; display: flex; flex-direction: column; gap: 12px; }
 
+    /*
+     * The promo rotates on a timer. Its dot control existed in the stylesheet
+     * and in the Alpine state but had no markup, so the card silently changed
+     * under the reader with nothing to say why or how to go back. The dots are
+     * now rendered, and the rotation stops for anyone who asked for reduced
+     * motion.
+     */
     .sr-promo {
-    position: relative;
-    background: linear-gradient(135deg, var(--navy) 0%, #1e3a8a 100%);
-    border-radius: 14px;
-    overflow: hidden;
-    min-height: 164px;
+        position: relative; border-radius: var(--radius); overflow: hidden;
+        background: linear-gradient(152deg, var(--blue) 0%, #2b3f88 54%, #0f6b62 100%);
+        box-shadow: 0 10px 26px rgba(48,49,145,.22);
     }
-    .sr-promo-slides { position: relative; width: 100%; min-height: 164px; }
+    .sr-promo::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(circle at 86% 12%, rgba(0,168,89,.28), transparent 46%);
+    }
+    .sr-promo-slides { position: relative; min-height: 182px; }
     .sr-promo-slide {
-    position: absolute; inset: 0;
-    padding: 15px 15px 52px;
-    opacity: 0;
-    transition: opacity 0.55s ease;
-    pointer-events: none;
+        position: absolute; inset: 0; z-index: 1;
+        display: flex; flex-direction: column; align-items: flex-start;
+        padding: 15px 16px 42px;
+        opacity: 0; transition: opacity .5s ease; pointer-events: none;
     }
     .sr-promo-slide.active { opacity: 1; pointer-events: auto; }
     .sr-promo-chip {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 10px; font-weight: 700; letter-spacing: .1em;
-    text-transform: uppercase;
-    background: rgba(255,255,255,.12); color: rgba(255, 255, 255, 0.75);
-    padding: 3px 10px; border-radius: 20px; margin-bottom: 10px;
+        display: inline-flex; align-items: center; gap: 6px;
+        font-size: 10.5px; font-weight: 600; letter-spacing: .02em;
+        background: rgba(255,255,255,.14); color: #fff;
+        padding: 4px 10px; border-radius: 999px; margin-bottom: 11px;
     }
-    .sr-promo-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: #38bdf8; }
-    .sr-promo-title { font-size: 12px; font-weight: 700; color: #fff; line-height: 1.3; margin-bottom: 7px; }
-    .sr-promo-body  { font-size: 10px; color: rgba(255,255,255,.6); line-height: 1.55; margin-bottom: 14px; }
+    .sr-promo-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .sr-promo-title { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.35; }
+    .sr-promo-body { font-size: 11.5px; color: rgba(255,255,255,.74); line-height: 1.55; margin-top: 6px; }
     .sr-promo-btn {
-    display: inline-block; padding: 7px 16px;
-    background: #fff; color: var(--navy);
-    border-radius: 8px; font-size: 12px; font-weight: 700;
-    text-decoration: none; border: none; cursor: pointer;
-    transition: opacity .15s;
+        display: inline-flex; align-items: center; gap: 6px; margin-top: auto;
+        padding: 8px 15px; background: #fff; color: var(--blue);
+        border-radius: 8px; font-size: 12px; font-weight: 700;
+        text-decoration: none; border: none; cursor: pointer;
+        transition: background .15s ease, transform .15s ease;
     }
-    .sr-promo-btn:hover { opacity: .88; }
-    .sr-promo-footer {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    padding: 10px 20px;
-    display: flex; align-items: center; justify-content: space-between;
-    }
-    .sr-promo-dots { display: flex; gap: 5px; align-items: center; }
+    .sr-promo-btn:hover { background: #f2f2ff; transform: translateY(-1px); }
+    .sr-promo-dots { position: absolute; z-index: 2; left: 16px; bottom: 15px; display: flex; gap: 5px; align-items: center; }
     .sr-promo-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: rgba(255,255,255,.28);
-    cursor: pointer; border: none; padding: 0;
-    transition: background .3s, transform .3s;
+        width: 5px; height: 5px; border-radius: 999px; padding: 0; border: 0;
+        background: rgba(255,255,255,.34); cursor: pointer;
+        transition: width .28s ease, background .28s ease;
     }
-    .sr-promo-dot.active { background: #fff; transform: scale(1.3); }
-    .sr-promo-arrows { display: flex; gap: 6px; }
-    .sr-promo-arrow {
-    width: 26px; height: 26px; border-radius: 50%;
-    background: rgba(255,255,255,.12);
-    border: 1px solid rgba(255,255,255,.2);
-    color: #fff; font-size: 13px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: background .15s;
-    }
-    .sr-promo-arrow:hover { background: rgba(255,255,255,.22); }
+    .sr-promo-dot:hover { background: rgba(255,255,255,.6); }
+    .sr-promo-dot.active { width: 15px; background: #fff; }
 
-    .sr-tip-card { background: #fff; border-radius: var(--radius); border: 1px solid var(--gray-200); box-shadow: var(--shadow); padding: 16px; }
-    .sr-tip-title { font-size: 12.5px; font-weight: 700; color: var(--gray-900); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-    .sr-tip-icon { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex-shrink: 0; border-radius: 7px; background: var(--blue-lt); color: var(--blue); }
-    .sr-tip-body { font-size: 12px; color: var(--gray-500); line-height: 1.6; }
-    .sr-tip-highlight { color: var(--blue); font-weight: 700; }
+    .sr-tip-card { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px; }
+    .sr-tip-title { display: flex; align-items: center; gap: 9px; font-size: 12.5px; font-weight: 700; color: var(--gray-900); margin-bottom: 9px; }
+    .sr-tip-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; background: var(--blue-lt); color: var(--blue); }
+    .sr-tip-body { font-size: 11.5px; color: var(--gray-500); line-height: 1.6; }
+    /* Was brand blue, which reads as a link in a paragraph that has none. */
+    .sr-tip-highlight { color: var(--gray-900); font-weight: 600; }
 
     /* ── Modify Button ── */
     .sr-tb-modify-btn {
@@ -854,86 +924,19 @@
     }
     .sr-tooltip:hover .sr-tooltip-text { opacity: 1; }
 
-    /* Phase 2 result controls */
-    .sr-page { grid-template-columns: 270px minmax(0,1fr) 220px; }
-    .sr-sidebar { top: 18px; gap: 0; background: #fbf7f8; border: 1px solid var(--gray-200); border-radius: 12px; padding: 10px 12px; box-shadow: 0 10px 28px rgba(16,24,40,.045); }
-    .sr-panel { background: transparent; border: 0; border-radius: 0; box-shadow: none; overflow: visible; transition: none; }
-    .sr-panel + .sr-panel { border-top: 2px solid rgba(17,24,39,.48); padding-top: 14px; margin-top: 14px; }
-    .sr-panel:hover { border-color: transparent; box-shadow: none; }
-    .sr-panel-head { padding: 10px 4px 11px; border-bottom: 0; background: transparent; }
-    .sr-panel-title { font-size: 13px; font-weight: 800; }
-    .sr-panel-reset { padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; transition: background .16s ease, color .16s ease; }
-    .sr-panel-reset:hover { background: var(--blue-lt); text-decoration: none; }
-    .sr-panel-body { padding: 8px 4px 14px; gap: 6px; }
-    .sr-check-row { padding: 8px 7px; gap: 10px; border-radius: 10px; transition: background .16s ease, color .16s ease; }
-    .sr-check-row:hover { background: var(--gray-50); }
-    .sr-check-box { width: 17px; height: 17px; border-radius: 6px; }
-    .sr-check-box.checked::after { content: ''; width: 7px; height: 4px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translateY(-1px); }
-    .sr-check-name { font-size: 12.5px; font-weight: 650; line-height: 1.25; }
-    .sr-check-price { white-space: nowrap; }
-    .sr-stop-pills { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 7px; padding: 10px 4px 15px; }
-    .sr-stop-pill { min-width: 0; padding: 9px 5px; border-radius: 8px; font-weight: 800; color: var(--blue); background: #fff; border-color: #cfd2da; transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease; }
-    .sr-stop-pill:hover { transform: translateY(-1px); }
-    .sr-stop-pill.active { background: #f7f7ff; box-shadow: 0 0 0 3px rgba(48,49,145,.08); }
-    .sr-time-pills { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; padding: 10px 4px 15px; }
-    .sr-time-pill { min-width: 0; padding: 8px 9px; border-radius: 8px; text-align: center; font-weight: 800; color: var(--blue); background: #e0e0e0; border-color: transparent; transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease; }
-    .sr-time-pill:hover { transform: translateY(-1px); }
-    .sr-time-pill.active { background: #f7f7ff; box-shadow: 0 0 0 3px rgba(48,49,145,.08); }
-    .sr-main { gap: 13px; }
-    .sr-main,
-    .sr-header,
-    .sr-fare-bar,
-    .sr-matrix,
-    .sr-sort-bar,
-    .sr-card { min-width: 0; max-width: 100%; }
-    .sr-header { order: 0; border-radius: 14px; box-shadow: 0 10px 28px rgba(16,24,40,.045); padding: 15px 18px; }
-    .sr-header-title { font-size: var(--tw-text-lg, 17px); letter-spacing: 0; }
-    .sr-header-sub { font-size: var(--tw-text-sm, 13px); }
-    .sr-header-title:not(.sr-header-title-clean),
-    .sr-header-sub:not(.sr-header-sub-clean) { display: none; }
-    .sr-header-sub-clean { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .sr-header-sub-clean span { display: inline-flex; align-items: center; }
-    .sr-header-sub-clean span + span::before { content: ''; width: 4px; height: 4px; margin-right: 8px; border-radius: 999px; background: var(--gray-400); }
-    .sr-fare-bar { order: 2; border-radius: 14px; box-shadow: 0 10px 28px rgba(16,24,40,.045); background: transparent; border: none; overflow: visible; }
-    .sr-fare-bar-head { display: none; }
-    .sr-fare-options { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; border: 0; }
-    .sr-fare-option { position: relative; min-height: 60px; padding: 12px 44px 12px 14px; text-align: left; border: 1.5px solid #cfcfd7; border-radius: 8px; background: #fff; box-shadow: 0 3px 8px rgba(16,24,40,.12); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease; }
-    .sr-fare-option:nth-child(3) { order: 1; }
-    .sr-fare-option:nth-child(1) { order: 2; }
-    .sr-fare-option:nth-child(2) { order: 3; }
-    .sr-fare-option::after { content: ""; position: absolute; top: 13px; right: 16px; width: 20px; height: 20px; border-radius: 999px; background-color: currentColor; opacity: .68; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='6'/%3E%3Cpath d='M15.5 13.5 17 22l-5-3-5 3 1.5-8.5'/%3E%3C/svg%3E") center/contain no-repeat; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='8' r='6'/%3E%3Cpath d='M15.5 13.5 17 22l-5-3-5 3 1.5-8.5'/%3E%3C/svg%3E") center/contain no-repeat; }
-    .sr-fare-option:nth-child(1)::after { mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12h8'/%3E%3Cpath d='M10 8h8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-3'/%3E%3Cpath d='M8 8H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h8'/%3E%3Cpath d='m7 19 3-3-3-3'/%3E%3C/svg%3E"); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 12h8'/%3E%3Cpath d='M10 8h8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-3'/%3E%3Cpath d='M8 8H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h8'/%3E%3Cpath d='m7 19 3-3-3-3'/%3E%3C/svg%3E"); }
-    .sr-fare-option:nth-child(2)::after { mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='13' r='8'/%3E%3Cpath d='M12 9v5l3 2'/%3E%3Cpath d='M9 2h6'/%3E%3C/svg%3E"); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='13' r='8'/%3E%3Cpath d='M12 9v5l3 2'/%3E%3Cpath d='M9 2h6'/%3E%3C/svg%3E"); }
-    .sr-fare-option:last-child { border-right: 1px solid var(--gray-200); }
-    .sr-fare-option:hover { background: #fff; border-color: var(--blue-md); transform: translateY(-1px); box-shadow: 0 8px 16px rgba(16,24,40,.14); }
-    .sr-fare-option.active { background: #dedcff; border-color: rgba(48,49,145,.22); box-shadow: 0 4px 10px rgba(48,49,145,.16); }
-    .sr-fare-option-label { margin-bottom: 4px; font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--blue); font-weight: 800; }
-    .sr-fare-option-price { font-size: 22px; line-height: 1.05; color: var(--gray-900); }
-    .sr-fare-option.active .sr-fare-option-price { color: var(--blue); }
-    .sr-matrix { order: 1; border-radius: 8px; box-shadow: 0 4px 10px rgba(16,24,40,.14); border-color: #d7d7de; }
-    .sr-matrix::before { content: "Lowest fares by Airlines and Stops"; display: flex; align-items: center; height: 28px; padding: 0 16px; background: var(--blue); color: #fff; font-size: 12px; font-weight: 700; }
-    .sr-matrix-scroll { width: 100%; max-width: 100%; scrollbar-color: var(--blue) transparent; }
-    .sr-matrix-scroll::-webkit-scrollbar { height: 6px; }
-    .sr-matrix-scroll::-webkit-scrollbar-thumb { background: var(--blue-md); border-radius: 999px; }
-    .sr-matrix table { min-width: 720px; }
-    .sr-matrix th, .sr-matrix td { padding: 10px 14px; font-size: 12px; border-color: #dcdde6; }
-    .sr-matrix thead th { background: #fff; color: var(--gray-500); letter-spacing: 0; text-transform: none; }
-    .sr-matrix th:first-child, .sr-matrix td:first-child { background: #fff; border-right: 1px solid var(--gray-200); }
-    .sr-matrix thead th:first-child { background: #fff; }
-    .sr-matrix-price { font-weight: 800; }
-    .sr-matrix-price:hover { text-decoration: none; color: var(--blue); }
-    .sr-matrix-price.cheapest { color: var(--green); }
-    .sr-mat-img { width: 40px; height: 28px; object-fit: contain; border-radius: 4px; background: #fff; padding: 2px; display: block; margin: 0 auto 3px; border: 0; }
-    .sr-sort-bar { order: 3; align-items: center; padding: 10px 0 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-    .sr-sort-label { padding-left: 4px; font-size: 12px; font-weight: 700; }
-    .sr-sort-btn { border-width: 1px; padding: 7px 12px; background: transparent; color: var(--gray-700); font-weight: 750; transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease; }
-    .sr-sort-btn:hover { background: #fff; transform: translateY(-1px); }
-    .sr-sort-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: 0 8px 18px rgba(48,49,145,.16); }
-    .sr-result-count { padding-right: 4px; font-weight: 700; color: var(--gray-500); }
-    .sr-main > .sr-card { order: 4; }
-    .sr-load-more { order: 5; text-align: center; padding: 8px 0; }
-    .sr-empty-results { order: 4; }
-
+    /*
+     * ── Results shell & topbar sizing ──
+     * What used to sit here were three more full, unconditional redefinitions
+     * of the sidebar, fare matrix, fare cards, sort bar and right rail
+     * ("Phase 2 result controls", "Requested result-page refinements" and a
+     * "Focused Figma price matrix replica"), stacked on top of the originals
+     * in exactly the pattern the flight card had. Each carried its own
+     * hardcoded greys, its own fixed pixel sizes, and UI faked in CSS
+     * ::before/::after — including a pair of matrix arrows that looked
+     * clickable but were pointer-events:none, and a "Filters" heading drawn
+     * with three gradient bars. All of it is replaced by one canonical
+     * implementation per component, further up this stylesheet.
+     */
     .sr-results-shell { background: #fff; }
     .sr-topbar { padding-top: 24px; }
     .sr-topbar-inner {
@@ -942,301 +945,6 @@
     }
     .sr-tb-route { font-size: 20px; }
     .sr-tb-modify-btn { height: 42px; border-radius: 8px; background: var(--green); box-shadow: none; border: 0; }
-    .sr-page {
-        max-width: 1394px;
-        grid-template-columns: 270px minmax(0, 835px) 220px;
-        gap: 18px;
-        padding-top: 20px;
-        justify-content: center;
-    }
-    .sr-header { display: none; }
-    .sr-sidebar {
-        position: sticky; top: 18px; min-height: 725px; padding: 14px 16px 18px; border: 1px solid #eceef4;
-        border-radius: 8px; background: rgba(255,255,255,.92); box-shadow: none;
-    }
-    .sr-sidebar::before {
-        content: "Filters"; display: flex; align-items: center; min-height: 36px; padding: 0 4px 12px 28px;
-        border-bottom: 1px solid rgba(103,103,103,.58); color: #111827; font-size: 13px; font-weight: 700;
-        background:
-            linear-gradient(#111827,#111827) 4px 10px / 16px 2px no-repeat,
-            linear-gradient(#111827,#111827) 7px 16px / 10px 2px no-repeat,
-            linear-gradient(#111827,#111827) 10px 22px / 4px 2px no-repeat;
-    }
-    .sr-sidebar .sr-panel:first-child .sr-panel-head { padding-top: 24px; }
-    .sr-panel + .sr-panel { border-top: 1px solid rgba(103,103,103,.68); padding-top: 24px; margin-top: 22px; }
-    .sr-panel-title { color: #676767; font-size: 13px; text-transform: uppercase; }
-    .sr-panel:first-child .sr-panel-title { font-size: 0; }
-    .sr-panel:first-child .sr-panel-title::after { content: "AIRLINES"; font-size: 13px; }
-    .sr-check-row { padding: 5px 4px; border-radius: 6px; }
-    .sr-check-name, .sr-check-price { font-size: 11.5px; font-weight: 700; }
-    .sr-stop-pill { min-height: 60px; border-radius: 7px; background: #fff; box-shadow: none; }
-    .sr-time-pill { min-height: 48px; background: #d9d9d9; color: var(--blue); box-shadow: none; }
-    .sr-main { gap: 14px; }
-    .sr-fare-bar { order: 2; margin-bottom: 0; }
-    .sr-fare-options { gap: 12px; }
-    .sr-fare-option {
-        min-height: 74px; border-radius: 8px; padding: 13px 42px 12px 14px;
-        box-shadow: 0 3px 6px rgba(0,0,0,.18);
-    }
-    .sr-fare-option-label { font-size: 11px; line-height: 1.2; }
-    .sr-fare-option-price { font-family: var(--font); font-size: 22px; font-weight: 850; }
-    .sr-matrix { order: 1; border: 0; border-radius: 8px; box-shadow: 0 4px 13px rgba(0,0,0,.16); }
-    .sr-matrix::before { height: 30px; border-radius: 8px 8px 0 0; font-size: 11px; font-weight: 600; }
-    .sr-matrix th, .sr-matrix td { padding: 8px 12px; font-size: 11px; }
-    .sr-matrix thead th { font-size: 10.5px; }
-    .sr-matrix tbody td:first-child { font-size: 12px; }
-    .sr-sort-bar { order: 3; justify-content: space-between; padding-top: 0; min-height: 30px; }
-    .sr-result-pill {
-        display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 11px;
-        border-radius: 999px; background: #dbdcff; color: #303191; font-size: 11px; font-weight: 700;
-    }
-    .sr-result-pill svg { width: 13px; height: 13px; }
-    .sr-sort-select {
-        display: inline-flex; align-items: center; gap: 6px; margin-left: auto;
-        color: #111827; font-size: 11px; font-weight: 700;
-    }
-    .sr-sort-select select {
-        height: 28px; min-width: 138px; padding: 0 26px 0 9px; border: 1px solid var(--blue);
-        border-radius: 6px; background: #fff; color: #111827; font: inherit; font-size: 10.5px; outline: none;
-    }
-    .sr-sort-label, .sr-sort-btn, .sr-result-count { display: none; }
-    .sr-rail { top: 18px; gap: 14px; }
-
-    /* Requested result-page refinements */
-    .sr-sidebar {
-        position: sticky;
-        overflow: visible;
-        padding: 14px 16px 18px;
-        background: rgba(255,255,255,.92);
-    }
-    .sr-sidebar .sr-panel:first-child .sr-panel-head {
-        position: static;
-        padding: 25px 4px 16px;
-    }
-    .sr-sidebar .sr-panel:first-child .sr-panel-reset {
-        position: absolute;
-        top: 19px;
-        right: 18px;
-        padding: 0;
-        background: transparent;
-        color: var(--blue);
-        font-size: 11px;
-    }
-    .sr-sidebar::before {
-        min-height: 36px;
-        padding-bottom: 13px;
-    }
-    .sr-panel + .sr-panel {
-        padding-top: 28px;
-        margin-top: 24px;
-        border-top-color: rgba(103,103,103,.62);
-    }
-    .sr-panel-title {
-        letter-spacing: 0;
-        font-weight: 850;
-    }
-    .sr-panel-body {
-        padding-left: 4px;
-        padding-right: 4px;
-    }
-    .sr-check-row {
-        min-height: 32px;
-        padding: 4px;
-        border-radius: 6px;
-    }
-    .sr-check-box {
-        width: 17px;
-        height: 17px;
-        border-radius: 50%;
-        border-color: #8b95a7;
-    }
-    .sr-check-name {
-        max-width: 122px;
-        line-height: 1.18;
-    }
-    .sr-check-price {
-        margin-left: auto;
-        color: #30364a;
-        font-size: 10.5px;
-        font-weight: 850;
-    }
-    .sr-stop-pill {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        min-height: 60px;
-        padding: 8px 4px;
-        border: 1px solid #a6a6a6;
-    }
-    .sr-time-pill {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        min-height: 48px;
-        padding: 7px 6px;
-    }
-    /* Focused Figma price matrix replica */
-    .sr-matrix {
-        position: relative;
-        width: 835px;
-        max-width: 100%;
-        height: 258px;
-        border: 0;
-        border-radius: 10px;
-        background: #303191;
-        box-shadow: 0 4px 13.2px -2px rgba(0,0,0,.25);
-        overflow: hidden;
-    }
-    .sr-matrix::before {
-        content: "Lowest fares by Airlines and Stops";
-        display: flex;
-        align-items: center;
-        height: 30px;
-        padding: 0 19px;
-        border-radius: 10px 10px 0 0;
-        background: #303191;
-        color: #fff;
-        font-size: 12px;
-        font-weight: 400;
-        line-height: 16px;
-    }
-    .sr-matrix::after {
-        content: "";
-        position: absolute;
-        top: 3px;
-        right: 28px;
-        width: 51px;
-        height: 20px;
-        background:
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") left center / 20px 20px no-repeat,
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") right center / 20px 20px no-repeat;
-        pointer-events: none;
-    }
-    .sr-matrix-scroll {
-        width: 100%;
-        height: 228px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        border-radius: 10px;
-        background: #fff;
-        scrollbar-color: #303191 transparent;
-    }
-    .sr-matrix table {
-        width: 835px;
-        min-width: 835px;
-        height: 228px;
-        border-collapse: collapse;
-        table-layout: fixed;
-        background: #fff;
-    }
-    .sr-matrix th,
-    .sr-matrix td {
-        height: 47px;
-        padding: 0;
-        border-right: 1px solid #b3b3b3;
-        border-bottom: 1px solid #b3b3b3;
-        background: #fff;
-        color: #000;
-        text-align: center;
-        vertical-align: middle;
-        letter-spacing: 0;
-        text-transform: none;
-        white-space: nowrap;
-    }
-    .sr-matrix thead th {
-        height: 64px;
-        background: #fff;
-    }
-    .sr-matrix tbody tr:last-child td {
-        height: 70px;
-        border-bottom: 0;
-    }
-    .sr-matrix th:first-child,
-    .sr-matrix td:first-child {
-        position: static;
-        z-index: auto;
-        width: 83px;
-        min-width: 83px;
-        max-width: 83px;
-        border-right: 1px solid #b3b3b3;
-        background: #fff;
-    }
-    .sr-matrix th:not(:first-child):not(:last-child),
-    .sr-matrix td:not(:first-child):not(:last-child) {
-        width: 120px;
-        min-width: 120px;
-        max-width: 120px;
-    }
-    .sr-matrix th:last-child,
-    .sr-matrix td:last-child {
-        width: 32px;
-        min-width: 32px;
-        max-width: 32px;
-        border-right: 0;
-    }
-    .sr-matrix-corner {
-        text-align: left !important;
-    }
-    .sr-matrix-corner span {
-        display: block;
-        margin-left: 22px;
-        color: #676767;
-        font-size: 11px;
-        font-weight: 700;
-        line-height: 10px;
-        text-align: left;
-    }
-    .sr-matrix-row-label {
-        padding-left: 19px !important;
-        color: #676767 !important;
-        font-size: 15px !important;
-        font-weight: 700 !important;
-        line-height: 20px;
-        text-align: left !important;
-    }
-    .sr-matrix .airline-logo1 {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 64px;
-    }
-    .sr-mat-img {
-        display: block;
-        height: 36px;
-        width: auto;
-        max-width: 100px;
-        margin: 0 auto;
-        padding: 0;
-        border-radius: 0;
-        background: transparent;
-        object-fit: contain;
-        /* airline logos come from the data provider as small (70x30) GIFs —
-           crisp-edges keeps them looking defined instead of smoothed/blurry
-           when the browser scales them up to display size. */
-        image-rendering: -webkit-optimize-contrast;
-        image-rendering: -moz-crisp-edges;
-        image-rendering: crisp-edges;
-    }
-    .sr-matrix .airline-name,
-    .sr-matrix .sr-next-btn {
-        display: none !important;
-    }
-    .sr-matrix-price,
-    .sr-matrix-empty {
-        display: block;
-        padding-right: 10px;
-        color: #000 !important;
-        font-family: var(--font);
-        font-size: 15px;
-        font-weight: 700;
-        line-height: 20px;
-        text-align: right;
-        text-decoration: none;
-    }
-    .sr-matrix-price:hover {
-        color: #303191 !important;
-        text-decoration: none;
-    }
 
     /* ── Responsive ── */
     .sr-mobile-filter-bar,
@@ -1414,9 +1122,8 @@
     @media (max-width: 1100px) {
         .sr-page { grid-template-columns: 220px 1fr; gap: 14px; }
         .sr-rail { display: none; }
-        .sr-matrix-scroll { width: 100%; }
         .sr-fare-options { gap: 10px; }
-        .sr-fare-option { padding: 13px 14px; }
+        .sr-fare-option { padding: 12px; gap: 9px; }
         .sr-fare-option-price { font-size: 18px; }
     }
     @media (max-width: 860px) {
@@ -1440,26 +1147,10 @@
         .sr-mobile-filter-bar::-webkit-scrollbar { display: none; }
         .sr-filter-backdrop { display: block; }
         .sr-filter-sheet { display: flex; }
-        .sr-time-pill {
-            background: #fff;
-            border-color: #e1e5ee;
-            color: #303191;
-        }
-        .sr-time-pill.active {
-            background: #f7f7ff;
-            border-color: #d7d8ff;
-            box-shadow: 0 0 0 3px rgba(48,49,145,.08);
-        }
-        .sr-stop-pills { padding: 8px 12px 10px; gap: 5px; }
-        .sr-stop-pill  { padding: 5px 3px; font-size: 11px; }
-        .sr-time-pills { padding: 8px 12px 10px; }
-        .sr-time-pill  { padding: 4px 8px; font-size: 10.5px; }
+        .sr-stop-pills, .sr-time-pills { padding: 8px 12px 12px; gap: 6px; }
+        .sr-stop-pill, .sr-time-pill { min-height: 46px; padding: 6px 5px; font-size: 11px; }
         .sr-fare-options { grid-template-columns: 1fr; gap: 9px; }
-        .sr-sort-bar { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; }
-        .sr-sort-bar::-webkit-scrollbar { display: none; }
-        .sr-sort-btn,
-        .sr-sort-label,
-        .sr-result-count { flex: 0 0 auto; }
+        .sr-sort-bar { gap: 8px; }
         .sr-detail-tabs { padding: 12px 16px 0; }
         .sr-detail-body { min-height: 0; padding: 14px 16px 2px; }
         .sr-detail-cols,
@@ -1478,17 +1169,13 @@
         .sr-tb-pill { padding: 5px 9px; }
         .sr-tb-pill-value { font-size: 12px; }
         .sr-tb-search { padding: 0 14px; font-size: 12px; height: 34px; }
-        .sr-header { padding: 12px 14px; }
-        .sr-header-title { font-size: 14px; }
-        .sr-header-sub { font-size: 11.5px; }
-        .sr-fare-cal-btn { padding: 6px 12px; font-size: 11.5px; }
-        .sr-matrix-scroll { width: 100%; }
+        .sr-matrix-head { padding: 11px 14px; }
+        .sr-matrix-hint { display: none; }
         .sr-fare-options { grid-template-columns: 1fr; }
-        .sr-fare-option { min-height: 66px; border-right: 1px solid var(--gray-200); border-bottom: 1px solid var(--gray-200); padding: 12px 14px; }
-        .sr-fare-option:last-child { border-bottom: 1px solid var(--gray-200); }
-        .sr-fare-option-price { font-size: 17px; }
-        .sr-sort-bar { gap: 6px; }
-        .sr-sort-btn { padding: 5px 10px; font-size: 11px; }
+        .sr-fare-option-price { font-size: 18px; }
+        .sr-sort-bar { gap: 8px; }
+        .sr-sort-select { margin-left: 0; width: 100%; }
+        .sr-sort-select select { flex: 1; min-width: 0; }
         .sr-detail-footer { flex-direction: column; align-items: stretch; gap: 10px; }
         .sr-detail-footer .sr-book-btn { width: 100%; }
         .sr-policy-grid { grid-template-columns: 1fr; }
@@ -1777,59 +1464,80 @@
 
         {{-- ══ LEFT SIDEBAR ══ --}}
         <aside class="sr-sidebar">
-            {{-- Airlines Filter --}}
+            {{-- Real heading. This used to be drawn by .sr-sidebar::before —
+                 a content string plus three gradient bars faking an icon. --}}
+            <div class="sr-filters-head">
+                <span class="sr-ic sr-ic-sliders" aria-hidden="true"></span>
+                <span class="sr-filters-title">Filters</span>
+                <span class="sr-filters-count" x-show="activeFilterCount > 0" x-cloak x-text="activeFilterCount"></span>
+                <a class="sr-filters-reset"
+                   href="#"
+                   :aria-disabled="activeFilterCount === 0 ? 'true' : 'false'"
+                   @click.prevent="activeFilterCount && resetAll()">Clear all</a>
+            </div>
+
+            {{-- Airlines --}}
             <div class="sr-panel">
                 <div class="sr-panel-head">
                     <span class="sr-panel-title">Airlines</span>
-                    <a class="sr-panel-reset" @click.prevent="resetAirlines()">Reset</a>
+                    <a class="sr-panel-reset" href="#" x-show="selectedAirlines.length > 0" x-cloak @click.prevent="resetAirlines()">Reset</a>
                 </div>
                 <div class="sr-panel-body">
                     <template x-for="airline in airlines" :key="airline.code">
                         <label class="sr-check-row" @click.prevent="toggleAirline(airline.code)">
                             <span class="sr-check-left">
                                 <span class="sr-check-box" :class="{ checked: selectedAirlines.includes(airline.code) }"></span>
-                                <span class="sr-check-name" x-text="airline.name"></span>
+                                <span class="sr-check-name" x-text="airline.name" :title="airline.name"></span>
                             </span>
                             <span class="sr-check-price" x-text="airline.fromPrice"></span>
                         </label>
                     </template>
                 </div>
             </div>
-            {{-- Stops Filter --}}
+
+            {{-- Stops --}}
             <div class="sr-panel">
-                <div class="sr-panel-head"><span class="sr-panel-title">Onward Journey</span></div>
-                <div style="padding:8px 16px 4px;">
-                    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-400);margin-bottom:6px;">Stops from Origin</div>
+                <div class="sr-panel-head">
+                    <span class="sr-panel-title">Stops</span>
+                    <span class="sr-panel-sub">from origin</span>
                 </div>
                 <div class="sr-stop-pills">
                     <template x-for="stop in stopOptions" :key="stop.value">
                         <div class="sr-stop-pill" :class="{ active: selectedStop === stop.value }" @click="selectedStop = (selectedStop === stop.value ? null : stop.value)">
-                            <div x-text="stop.label"></div>
-                            <div class="sr-stop-pill-sub" x-text="stop.sub"></div>
+                            <span x-text="stop.label"></span>
+                            <span class="sr-pill-sub" x-text="stop.sub"></span>
                         </div>
                     </template>
                 </div>
             </div>
+
             {{-- Departure Time --}}
             <div class="sr-panel">
-                <div class="sr-panel-head"><span class="sr-panel-title">Departure from Origin</span></div>
+                <div class="sr-panel-head">
+                    <span class="sr-panel-title">Departure</span>
+                    <span class="sr-panel-sub">from origin</span>
+                </div>
                 <div class="sr-time-pills">
                     <template x-for="t in timeSlots" :key="t.value">
                         <div class="sr-time-pill" :class="{ active: selectedDepartTime === t.value }" @click="selectedDepartTime = (selectedDepartTime === t.value ? null : t.value)">
-                            <div x-text="t.label"></div>
-                            <div style="font-size:10px;opacity:.7;" x-text="t.range"></div>
+                            <span x-text="t.label"></span>
+                            <span class="sr-pill-sub" x-text="t.range"></span>
                         </div>
                     </template>
                 </div>
             </div>
+
             {{-- Arrival Time --}}
             <div class="sr-panel">
-                <div class="sr-panel-head"><span class="sr-panel-title">Arrival at Destination</span></div>
+                <div class="sr-panel-head">
+                    <span class="sr-panel-title">Arrival</span>
+                    <span class="sr-panel-sub">at destination</span>
+                </div>
                 <div class="sr-time-pills">
                     <template x-for="t in timeSlots" :key="t.value">
                         <div class="sr-time-pill" :class="{ active: selectedArrivalTime === t.value }" @click="selectedArrivalTime = (selectedArrivalTime === t.value ? null : t.value)">
-                            <div x-text="t.label"></div>
-                            <div style="font-size:10px;opacity:.7;" x-text="t.range"></div>
+                            <span x-text="t.label"></span>
+                            <span class="sr-pill-sub" x-text="t.range"></span>
                         </div>
                     </template>
                 </div>
@@ -1889,37 +1597,43 @@
                     </div>
                 </div>
                 <div class="sr-panel">
-                    <div class="sr-panel-head"><span class="sr-panel-title">Onward Journey</span></div>
-                    <div style="padding:8px 16px 4px;">
-                        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray-400);margin-bottom:6px;">Stops from Origin</div>
+                    <div class="sr-panel-head">
+                        <span class="sr-panel-title">Stops</span>
+                        <span class="sr-panel-sub">from origin</span>
                     </div>
                     <div class="sr-stop-pills">
                         <template x-for="stop in stopOptions" :key="'mobile-stop-'+stop.value">
                             <div class="sr-stop-pill" :class="{ active: selectedStop === stop.value }" @click="selectedStop = (selectedStop === stop.value ? null : stop.value)">
-                                <div x-text="stop.label"></div>
-                                <div class="sr-stop-pill-sub" x-text="stop.sub"></div>
+                                <span x-text="stop.label"></span>
+                                <span class="sr-pill-sub" x-text="stop.sub"></span>
                             </div>
                         </template>
                     </div>
                 </div>
                 <div class="sr-panel">
-                    <div class="sr-panel-head"><span class="sr-panel-title">Departure from Origin</span></div>
+                    <div class="sr-panel-head">
+                        <span class="sr-panel-title">Departure</span>
+                        <span class="sr-panel-sub">from origin</span>
+                    </div>
                     <div class="sr-time-pills">
                         <template x-for="t in timeSlots" :key="'mobile-depart-'+t.value">
                             <div class="sr-time-pill" :class="{ active: selectedDepartTime === t.value }" @click="selectedDepartTime = (selectedDepartTime === t.value ? null : t.value)">
-                                <div x-text="t.label"></div>
-                                <div style="font-size:10px;opacity:.7;" x-text="t.range"></div>
+                                <span x-text="t.label"></span>
+                                <span class="sr-pill-sub" x-text="t.range"></span>
                             </div>
                         </template>
                     </div>
                 </div>
                 <div class="sr-panel">
-                    <div class="sr-panel-head"><span class="sr-panel-title">Arrival at Destination</span></div>
+                    <div class="sr-panel-head">
+                        <span class="sr-panel-title">Arrival</span>
+                        <span class="sr-panel-sub">at destination</span>
+                    </div>
                     <div class="sr-time-pills">
                         <template x-for="t in timeSlots" :key="'mobile-arrival-'+t.value">
                             <div class="sr-time-pill" :class="{ active: selectedArrivalTime === t.value }" @click="selectedArrivalTime = (selectedArrivalTime === t.value ? null : t.value)">
-                                <div x-text="t.label"></div>
-                                <div style="font-size:10px;opacity:.7;" x-text="t.range"></div>
+                                <span x-text="t.label"></span>
+                                <span class="sr-pill-sub" x-text="t.range"></span>
                             </div>
                         </template>
                     </div>
@@ -1962,103 +1676,50 @@
                     :class="{ active: selectedStop === 0 }"
                     type="button"
                     @click="selectedStop = selectedStop === 0 ? null : 0">
-                    Non stop
+                    Non-stop
                 </button>
-            </div>
-
-            {{-- Header --}}
-            <div class="sr-header">
-                <div>
-                    <div class="sr-header-title sr-header-title-clean">
-                        @if($trip === 'multi')
-                            Multi-city flights: {{ collect($routes)->pluck('from')->implode(' -> ') }} -> {{ last($routes)['to'] ?? '' }}
-                        @else
-                            Flights from {{ $routes[0]['from'] ?? '' }} to {{ $routes[0]['to'] ?? '' }}{{ $trip === 'return' ? ', and back' : '' }}
-                        @endif
-                    </div>
-                    <div class="sr-header-sub sr-header-sub-clean">
-                        @if($depart)
-                            <span>{{ \Carbon\Carbon::createFromFormat('d/m/Y',$depart)->format('D, d M') }}</span>
-                        @endif
-                        @if($trip === 'return' && $return)
-                            <span>{{ \Carbon\Carbon::createFromFormat('d/m/Y',$return)->format('D, d M') }}</span>
-                        @endif
-                        <span>{{ $totalPassengers }} passenger{{ $totalPassengers > 1 ? 's' : '' }}</span>
-                        <span>{{ $cabin }}</span>
-                        <span x-text="filteredFlights.length + ' flights found'"></span>
-                    </div>
-                    <div class="sr-header-title">
-                       @if($trip === 'multi')
-                            Multi-city:
-                            {{ collect($routes)->pluck('from')->implode(' → ') }} → {{ last($routes)['to'] ?? '' }}
-                        @else
-                            {{ $routes[0]['from'] ?? '' }} → {{ $routes[0]['to'] ?? '' }}
-                            {{ $trip === 'return' ? ', and back' : '' }}
-                        @endif
-                    </div>
-                    <div class="sr-header-sub">
-                        @if($depart)
-                            <span class="sr-header-fact">
-                                <span class="sr-ic sr-ic-sm sr-ic-clock" aria-hidden="true"></span>
-                                {{ \Carbon\Carbon::createFromFormat('d/m/Y',$depart)->format('D, d M') }}@if($trip === 'return' && $return) — {{ \Carbon\Carbon::createFromFormat('d/m/Y',$return)->format('D, d M') }}@endif
-                            </span>
-                        @endif
-                        <span class="sr-header-fact">
-                            <span class="sr-ic sr-ic-sm sr-ic-seat" aria-hidden="true"></span>
-                            {{ $totalPassengers }} passenger{{ $totalPassengers > 1 ? 's' : '' }}, {{ $cabin }}
-                        </span>
-                        <span class="sr-header-fact">
-                            <span class="sr-ic sr-ic-sm sr-ic-search" aria-hidden="true"></span>
-                            <span x-text="filteredFlights.length + ' flights found'"></span>
-                        </span>
-                    </div>
-                </div>
-                {{--
-                <button class="sr-fare-cal-btn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                        <rect x="3" y="4" width="18" height="18" rx="2"/>
-                        <line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/>
-                        <line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    Fare Calendar
-                </button>
-                --}}
             </div>
 
             {{-- Fare Matrix --}}
-            <div class="sr-matrix">
+            <div class="sr-matrix" x-show="matrixAirlines.length > 0" x-cloak>
+                <div class="sr-matrix-head">
+                    <span class="sr-ic sr-ic-grid" aria-hidden="true"></span>
+                    <span class="sr-matrix-title">Lowest fare by airline and stops</span>
+                    <span class="sr-matrix-hint">Pick a fare to filter the results</span>
+                </div>
                 <div class="sr-matrix-scroll">
                     <table>
                         <thead>
                             <tr>
-                                <th class="sr-matrix-corner">
+                                <th class="sr-matrix-corner" scope="col">
                                     <span>Airline</span>
-                                    <span>/Stops</span>
+                                    <span>Stops</span>
                                 </th>
                                 <template x-for="col in matrixAirlines" :key="col.code">
-                                    <th>
+                                    <th scope="col">
                                         <div class="airline-logo1">
-                                            <img class="sr-mat-img" :src="col.logo" :alt="col.name">
+                                            <img class="sr-mat-img" :src="col.logo" :alt="col.name" :title="col.name">
                                         </div>
                                     </th>
                                 </template>
-                                <th class="sr-matrix-nav-cell"></th>
                             </tr>
                         </thead>
                         <tbody>
                             <template x-for="row in matrixRows" :key="row.label">
                                 <tr>
-                                    <td class="sr-matrix-row-label">
-                                        <span x-text="row.label === 'Non stop' ? 'Direct' : (row.label === '1+ Stops' ? '2 Stop' : row.label)"></span>
-                                    </td>
+                                    <th class="sr-matrix-row-label" scope="row" x-text="row.label"></th>
                                     <template x-for="col in matrixAirlines" :key="col.code">
                                         <td>
-                                            <span x-show="row.prices[col.code]" @click.prevent="selectMatrixCell(col.code, row.stops)" class="sr-matrix-price" :class="{ cheapest: row.prices[col.code] === cheapestPrice }" x-text="row.prices[col.code]"></span>
-                                            <span x-show="!row.prices[col.code]" class="sr-matrix-empty">—</span>
+                                            <button type="button"
+                                                    x-show="row.prices[col.code]"
+                                                    class="sr-matrix-price"
+                                                    :class="{ cheapest: row.prices[col.code] === cheapestPrice }"
+                                                    :title="'Show ' + col.name + ' · ' + row.label + ' from ' + row.prices[col.code]"
+                                                    @click="selectMatrixCell(col.code, row.stops)"
+                                                    x-text="row.prices[col.code]"></button>
+                                            <span x-show="!row.prices[col.code]" class="sr-matrix-empty" aria-label="No fare">—</span>
                                         </td>
                                     </template>
-                                    <td class="sr-matrix-nav-cell"></td>
                                 </tr>
                             </template>
                         </tbody>
@@ -2066,62 +1727,55 @@
                 </div>
             </div>
 
-            {{-- Fare Summary Bar --}}
-            <div class="sr-fare-bar">
-                <div class="sr-fare-bar-head">
-                    @if($trip === 'oneway')
-                        <span class="sr-fare-bar-title text-white">One Way Flights</span>
-                    @elseif($trip === 'return')
-                        <span class="sr-fare-bar-title text-white">Round Trip Flights</span>
-                    @elseif($trip === 'multi')
-                        <span class="sr-fare-bar-title text-white">Multi-city Flights</span>
-                    @endif
-                    <span class="sr-fare-bar-cta">Book Now to secure the best fares</span>
-                </div>
-                <div class="sr-fare-options">
-                    <div class="sr-fare-option" :class="{ active: activeFare === 'cheapest' }" @click="activeFare = 'cheapest'; sortBy = 'price'">
-                        <div class="sr-fare-option-label">Cheapest Fare</div>
-                        <div class="sr-fare-option-price" x-text="cheapestPrice || '—'"></div>
-                    </div>
-                    <div class="sr-fare-option" :class="{ active: activeFare === 'fastest' }" @click="activeFare = 'fastest'; sortBy = 'duration'">
-                        <div class="sr-fare-option-label">Fastest Flight</div>
-                        <div class="sr-fare-option-price" x-text="_fmtPrice([...allFlights].sort((a,b)=>a.totalDuration-b.totalDuration)[0]?.price, allFlights[0]?.currency) || '—'"></div>
-                    </div>
-                    <div class="sr-fare-option" :class="{ active: activeFare === 'recommended' }" @click="activeFare = 'recommended'; sortBy = 'recommended'">
-                        <div class="sr-fare-option-label">Best (Recommended)</div>
-                        <div class="sr-fare-option-price" x-text="cheapestPrice || '—'"></div>
-                    </div>
-                </div>
+            {{-- Best / Cheapest / Fastest. Ordered here rather than shuffled
+                 with `order` on :nth-child, and each shows the fact that makes
+                 it that pick — Best and Cheapest used to print the identical
+                 number with nothing to tell them apart. --}}
+            <div class="sr-fare-options" x-show="allFlights.length > 0" x-cloak>
+                <button type="button" class="sr-fare-option" :class="{ active: activeFare === 'recommended' }"
+                        @click="activeFare = 'recommended'; sortBy = 'recommended'">
+                    <span class="sr-fare-option-ic"><span class="sr-ic sr-ic-lg sr-ic-award" aria-hidden="true"></span></span>
+                    <span class="sr-fare-option-txt">
+                        <span class="sr-fare-option-label">Best overall</span>
+                        <span class="sr-fare-option-price" x-text="_bestPick.price || '—'"></span>
+                        <span class="sr-fare-option-note" x-text="_bestPick.note"></span>
+                    </span>
+                </button>
+                <button type="button" class="sr-fare-option" :class="{ active: activeFare === 'cheapest' }"
+                        @click="activeFare = 'cheapest'; sortBy = 'price'">
+                    <span class="sr-fare-option-ic"><span class="sr-ic sr-ic-lg sr-ic-tag" aria-hidden="true"></span></span>
+                    <span class="sr-fare-option-txt">
+                        <span class="sr-fare-option-label">Cheapest</span>
+                        <span class="sr-fare-option-price" x-text="_cheapestPick.price || '—'"></span>
+                        <span class="sr-fare-option-note" x-text="_cheapestPick.note"></span>
+                    </span>
+                </button>
+                <button type="button" class="sr-fare-option" :class="{ active: activeFare === 'fastest' }"
+                        @click="activeFare = 'fastest'; sortBy = 'duration'">
+                    <span class="sr-fare-option-ic"><span class="sr-ic sr-ic-lg sr-ic-clock" aria-hidden="true"></span></span>
+                    <span class="sr-fare-option-txt">
+                        <span class="sr-fare-option-label">Fastest</span>
+                        <span class="sr-fare-option-price" x-text="_fastestPick.price || '—'"></span>
+                        <span class="sr-fare-option-note" x-text="_fastestPick.note"></span>
+                    </span>
+                </button>
             </div>
 
             {{-- Sort Bar --}}
             <div class="sr-sort-bar">
                 <span class="sr-result-pill">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M9 6h11"/>
-                        <path d="M9 12h11"/>
-                        <path d="M9 18h11"/>
-                        <path d="M4 6h.01"/>
-                        <path d="M4 12h.01"/>
-                        <path d="M4 18h.01"/>
-                    </svg>
+                    <span class="sr-ic sr-ic-sm sr-ic-list" aria-hidden="true"></span>
                     <span x-text="filteredFlights.length + ' flight' + (filteredFlights.length !== 1 ? 's' : '') + ' found'"></span>
                 </span>
                 <label class="sr-sort-select">
-                    <span>Sort:</span>
+                    <span>Sort by</span>
                     <select x-model="sortBy">
                         <option value="recommended">Recommended</option>
-                        <option value="price">Price Low to High</option>
-                        <option value="duration">Fastest</option>
-                        <option value="depart">Departure</option>
+                        <option value="price">Price: low to high</option>
+                        <option value="duration">Duration: shortest</option>
+                        <option value="depart">Departure time</option>
                     </select>
                 </label>
-                <span class="sr-sort-label">Sort by:</span>
-                <button class="sr-sort-btn" :class="{ active: sortBy === 'recommended' }" @click="sortBy = 'recommended'">Recommended</button>
-                <button class="sr-sort-btn" :class="{ active: sortBy === 'price' }" @click="sortBy = 'price'">Cheapest</button>
-                <button class="sr-sort-btn" :class="{ active: sortBy === 'duration' }" @click="sortBy = 'duration'">Fastest</button>
-                <button class="sr-sort-btn" :class="{ active: sortBy === 'depart' }" @click="sortBy = 'depart'">Departure</button>
-                <span class="sr-result-count" x-text="filteredFlights.length + ' result' + (filteredFlights.length !== 1 ? 's' : '')"></span>
             </div>
 
             <div class="sr-supplement-status" x-show="searchingMore" x-cloak>
@@ -2551,7 +2205,11 @@
                     },
                     next() { this.goTo(this.current + 1); },
                     prev() { this.goTo(this.current - 1); },
-                    start() { this.timer = setInterval(() => this.next(), 5000); },
+                    start() {
+                        this.pause();
+                        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                        this.timer = setInterval(() => this.next(), 5000);
+                    },
                     pause() { clearInterval(this.timer); }
                 }"
                 x-init="start()"
@@ -2560,19 +2218,33 @@
 
                 <div class="sr-promo-slides">
                     <template x-for="(item, i) in items" :key="i">
-                        <div class="sr-promo-slide" :class="{ active: current === i }">
-                            <div class="sr-promo-chip">
+                        <div class="sr-promo-slide" :class="{ active: current === i }" :aria-hidden="current === i ? 'false' : 'true'">
+                            <span class="sr-promo-chip">
                                 <span class="sr-promo-chip-dot"></span>
-                                <span x-text="item.label" style="color: #fff;"></span>
-                            </div>
+                                <span x-text="item.label"></span>
+                            </span>
                             <div class="sr-promo-title" x-text="item.title"></div>
-                            <div class="sr-promo-body" style="color: #fff;"  x-text="item.body"></div>
-                            <a class="sr-promo-btn" :href="item.link" x-text="item.cta"></a>
+                            <div class="sr-promo-body" x-text="item.body"></div>
+                            <a class="sr-promo-btn" :href="item.link" :tabindex="current === i ? 0 : -1">
+                                <span x-text="item.cta"></span>
+                                <span class="sr-ic sr-ic-sm sr-ic-chevron" style="transform:rotate(-90deg);" aria-hidden="true"></span>
+                            </a>
                         </div>
                     </template>
                 </div>
 
-                
+                {{-- The card rotates on a timer; without these it changed under
+                     the reader with no way to see where they were or go back. --}}
+                <div class="sr-promo-dots">
+                    <template x-for="(item, i) in items" :key="'dot-'+i">
+                        <button type="button"
+                                class="sr-promo-dot"
+                                :class="{ active: current === i }"
+                                :aria-label="'Show ' + item.label"
+                                :aria-current="current === i ? 'true' : 'false'"
+                                @click="goTo(i)"></button>
+                    </template>
+                </div>
             </div>
             <div class="sr-tip-card">
                 <div class="sr-tip-title"><span class="sr-tip-icon"><span class="sr-ic sr-ic-refund" aria-hidden="true"></span></span> Flexible Booking</div>
@@ -2695,16 +2367,19 @@
                 return counted > 0 ? counted : (Number(flight.markupPassengerCount) || 1);
             },
 
+            // 24-hour ranges, matching how every other time on this page is
+            // printed now (see _time()) — the pills used to be the only
+            // 12-hour clock left on the results page.
             timeSlots: [
-                { value: 'morning',   label: 'Morning',   range: '12:00AM–11:59AM' },
-                { value: 'afternoon', label: 'Afternoon', range: '12:00PM–5:59PM'  },
-                { value: 'evening',   label: 'Evening',   range: '6:00PM–11:59PM'  },
+                { value: 'morning',   label: 'Morning',   range: '00:00–11:59' },
+                { value: 'afternoon', label: 'Afternoon', range: '12:00–17:59' },
+                { value: 'evening',   label: 'Evening',   range: '18:00–23:59' },
             ],
 
             stopOptions: [
-                { value: 0, label: 'Non stop', sub: '' },
-                { value: 1, label: '1 Stop',   sub: '' },
-                { value: 2, label: '1+ Stops', sub: '' },
+                { value: 0, label: 'Non-stop', sub: '' },
+                { value: 1, label: '1 stop',   sub: '' },
+                { value: 2, label: '2+ stops', sub: '' },
             ],
 
             allFlights: @js($flightResults),
@@ -2719,6 +2394,39 @@
                     + (this.selectedStop !== null ? 1 : 0)
                     + (this.selectedDepartTime ? 1 : 0)
                     + (this.selectedArrivalTime ? 1 : 0);
+            },
+
+            // The three shortcut cards above the list. "Best" used to print
+            // cheapestPrice — the same number as "Cheapest", with nothing to
+            // distinguish them — so it now reports the flight the recommended
+            // ranking actually puts first. Each card also carries the fact
+            // that earned it the slot, since the price alone doesn't say why.
+            _pick(flight, note) {
+                if (! flight) return { price: '', note: '' };
+
+                return { price: this._fmtPrice(flight.price, flight.currency), note };
+            },
+
+            get _bestPick() {
+                const ranked = this._sortByRecommended([...this.allFlights]);
+                const best = ranked[0];
+                if (! best) return { price: '', note: '' };
+
+                return this._pick(best, best.airline + ' · ' + this._stopLabel(best.stops).toLowerCase());
+            },
+
+            get _cheapestPick() {
+                const cheapest = [...this.allFlights].sort((a, b) => a.price - b.price)[0];
+                if (! cheapest) return { price: '', note: '' };
+
+                return this._pick(cheapest, cheapest.airline);
+            },
+
+            get _fastestPick() {
+                const fastest = [...this.allFlights].sort((a, b) => a.totalDuration - b.totalDuration)[0];
+                if (! fastest) return { price: '', note: '' };
+
+                return this._pick(fastest, fastest.totalTimeLabel || fastest.airline);
             },
 
             get filteredFlights() {
@@ -2842,7 +2550,10 @@
                     return (priceScore * 0.55) + (durationScore * 0.20) + (stopsScore * 0.15) + (baggageScore * 0.10);
                 };
 
-                flights.sort((a, b) => score(b) - score(a));
+                // Sorts in place (matching the other branches in
+                // filteredFlights) and hands the array back, so callers that
+                // only want the top-ranked flight can read it off directly.
+                return flights.sort((a, b) => score(b) - score(a));
             },
 
             _buildDerivedData() {
@@ -2884,10 +2595,14 @@
                 this.matrixAirlines = Object.entries(airlineMap)
                     .map(([code, d]) => ({ code, name: d.name, logo: d.logo }));
 
+                // Labels are the ones rendered, so they read the same here as
+                // in the stops filter. The template used to remap two of the
+                // three on the way out, which meant the matrix and the filter
+                // called the same thing by different names.
                 this.matrixRows = [
-                    { label: 'Non stop', stops: 0, style: 'color:var(--green)', prices: {} },
-                    { label: '1 Stop',   stops: 1, style: 'color:var(--amber)', prices: {} },
-                    { label: '1+ Stops', stops: 2, style: 'color:var(--red)',   prices: {} },
+                    { label: 'Non-stop', stops: 0, prices: {} },
+                    { label: '1 stop',   stops: 1, prices: {} },
+                    { label: '2+ stops', stops: 2, prices: {} },
                 ];
 
                 this.allFlights.forEach(f => {

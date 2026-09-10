@@ -38,6 +38,40 @@ class FlightResultIconSetTest extends TestCase
     }
 
     /**
+     * The icons are CSS masks driven by a --i custom property. When a
+     * `sr-ic-*` class is used in markup but never defined in the stylesheet,
+     * --i resolves to nothing, the mask is dropped, and `background:
+     * currentColor` paints the element as a solid filled square — no console
+     * error, no missing asset, just a black box where a glyph should be.
+     * Caught exactly that on the filters, matrix and "Best overall" icons.
+     */
+    public function test_every_icon_class_used_in_markup_is_defined_in_the_stylesheet(): void
+    {
+        $sources = array_map(
+            fn (string $view): string => file_get_contents(base_path($view)),
+            self::VIEWS
+        );
+        $all = implode(PHP_EOL, $sources);
+
+        preg_match_all('/\bsr-ic-([a-z0-9]+(?:-[a-z0-9]+)*)/', $all, $used);
+        preg_match_all('/\.sr-ic-([a-z0-9-]+)\s*\{/', $all, $defined);
+
+        // sm/lg are size modifiers on .sr-ic itself, not glyph selectors.
+        $used = array_diff(array_unique($used[1]), ['sm', 'lg']);
+        $defined = array_unique($defined[1]);
+
+        $this->assertNotEmpty($used, 'Expected the flight results page to use icons.');
+
+        $missing = array_diff($used, $defined);
+        $this->assertSame(
+            [],
+            array_values($missing),
+            'Icon classes used in markup with no --i rule (these render as solid squares): '
+                .implode(', ', $missing)
+        );
+    }
+
+    /**
      * Emoji were standing in for icons in the fare-rules panel and the results
      * header. They render differently on every platform, can't inherit colour,
      * and read as unfinished next to the line-icon set that replaced them.
