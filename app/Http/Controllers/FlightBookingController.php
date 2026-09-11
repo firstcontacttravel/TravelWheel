@@ -223,84 +223,25 @@ class FlightBookingController extends Controller
             }
         }
 
-        // ── SkyLink: always gateway-only, pay first — /reserve creates an
-        // instant, unconditional, billable PNR with no hold concept, unlike
-        // TravelNext's Public/Private "hold now, pay later" flow below.
-        // TravelFlex is never eligible for these fares (_travelFlexEligibility()
-        // rejects them outright); surface that plainly here rather than
-        // silently falling through the way WebFare's intent is dropped above.
-        if (($mappedFlight['source'] ?? null) === 'skylink') {
-            if ($travelFlexIneligibleReason) {
-                return redirect()->route('flights.payment.gateway')
-                    ->withErrors(['error' => $travelFlexIneligibleReason]);
-            }
-
-            return redirect()->route('flights.payment.gateway');
-        }
-
-        // ── WebFare: go to payment FIRST, then book ───────────────────────────
-        if ($fareType === 'webfare') {
-            return redirect()->route('flights.payment.gateway');
-        }
-
-        // ── Public / Private: book now (hold), then collect payment ───────────
-        $result = $this->_callBookApi($validated, $request);
-
-        if ($result['error']) {
-            return back()->withErrors(['error' => $result['message']]);
-        }
-
-        $apiResponse = $result['data'];
-        $bookResult = $apiResponse['BookFlightResponse']['BookFlightResult'] ?? [];
-        $success = filter_var($bookResult['Success'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $uniqueId = $bookResult['UniqueID'] ?? '';
-        $tktTimeLimit = $bookResult['TktTimeLimit'] ?? '';
-
-        if (! $success || empty($uniqueId)) {
-            $errMsg = $this->_extractApiErrorMessage($bookResult, 'Booking failed. Please try again.');
-
-            return back()->withErrors(['error' => $errMsg]);
-        }
-
-        $dbBooking = $this->_persistBooking($mappedFlight, $validated, $apiResponse, [
-            'unique_id' => $uniqueId,
-            'booking_status' => 'on_hold',
-            'payment_status' => 'pending',
-            'tkt_time_limit' => $tktTimeLimit ?: null,
-            'extra_services_snapshot' => session('selectedExtras', []),
-        ]);
-
-        session([
-            'bookingConfirmation' => $apiResponse,
-            'bookingUniqueId' => $uniqueId,           // API hold/ticket ref — NOT shown as booking ref
-            'bookingRef' => $dbBooking->booking_ref, // OUR internal booking reference
-            'bookingTktTimeLimit' => $tktTimeLimit,
-            'bookingStatus' => $bookResult['Status'] ?? '',
-            'flightBookingDbId' => $dbBooking->id,
-        ]);
-
-        $this->_sendPendingEmail($dbBooking, 'hold');
-
+        // ── Every fare is SkyLink on this branch: gateway-only, pay first ────
+        // /reserve creates an instant, unconditional, billable PNR with no
+        // hold concept, unlike TravelNext's Public/Private "hold now, pay
+        // later" flow. TravelFlex is never eligible for these fares
+        // (_travelFlexEligibility() rejects them outright); surface that
+        // plainly rather than silently dropping the intent.
+        //
+        // DEMO BRANCH: this was `if (($mappedFlight['source'] ?? null) ===
+        // 'skylink')`, followed by TravelNext's WebFare branch and its
+        // Public/Private "book a hold now, collect payment after" path.
+        // Both are deleted and this is unconditional, so a flight snapshot
+        // that somehow lacks `source` — a session carried over from before
+        // this branch was deployed, say — cannot reach a TravelNext call.
         if ($travelFlexIneligibleReason) {
-            return redirect()->route('flights.payment.options')
-                ->withErrors(['flex_error' => $travelFlexIneligibleReason]);
+            return redirect()->route('flights.payment.gateway')
+                ->withErrors(['error' => $travelFlexIneligibleReason]);
         }
 
-        if (session('bookingIntent') === 'travelflex') {
-            $travelFlexEligibility = $this->_travelFlexEligibility($mappedFlight);
-            if ($travelFlexEligibility['eligible']) {
-                session(['travelFlexRedirectTarget' => 'plan']);
-
-                return redirect()->route('flights.travelflex.fastcredit');
-            }
-
-            session()->forget('bookingIntent');
-
-            return redirect()->route('flights.payment.options')
-                ->withErrors(['flex_error' => $travelFlexEligibility['reason']]);
-        }
-
-        return redirect()->route('flights.payment.options');
+        return redirect()->route('flights.payment.gateway');
     }
 
     // =========================================================================
@@ -346,7 +287,7 @@ class FlightBookingController extends Controller
     }
 
     // =========================================================================
-    //  processGatewayPayment() — WebFare: simulate payment → call book API
+    //  processGatewayPayment() — start the card payment that precedes reserve()
     // =========================================================================
     public function processGatewayPayment(Request $request)
     {
@@ -357,14 +298,12 @@ class FlightBookingController extends Controller
             return redirect()->route('air.flight-s')->withErrors(['error' => 'Session expired. Please start over.']);
         }
 
-        $bookingFlight = session('bookingFlight', []);
-        $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
-
-        if (($mappedFlight['source'] ?? null) === 'skylink') {
-            return $this->_startSeerbitPayment('skylink_reserve_full');
-        }
-
-        return $this->_startSeerbitPayment('webfare_full');
+        // DEMO BRANCH: was a `source === 'skylink'` check falling back to
+        // TravelNext's 'webfare_full' flow. Unconditional here for the same
+        // reason as book()'s gateway redirect — every fare is SkyLink, and
+        // 'webfare_full' would dispatch _completeWebfarePayment(), which
+        // books against TravelNext.
+        return $this->_startSeerbitPayment('skylink_reserve_full');
     }
 
     // =========================================================================
@@ -2304,7 +2243,7 @@ class FlightBookingController extends Controller
             'fare_source_code' => $mappedFlight['fareSourceCode'] ?? '',
             'session_id' => session('bookingSessionId', ''),
             'fare_type' => $mappedFlight['fareType'] ?? 'Public',
-            'supplier' => $mappedFlight['source'] ?? 'travelnext',
+            'supplier' => $mappedFlight['source'] ?? 'skylink',
             'trip_type' => session('tripType', ''),
             'route' => FlightDisplay::route($mappedFlight),
             'airline' => $mappedFlight['airline'] ?? '',

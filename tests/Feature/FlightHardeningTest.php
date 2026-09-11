@@ -39,6 +39,8 @@ class FlightHardeningTest extends TestCase
 
     public function test_malformed_successful_supplier_response_is_contained(): void
     {
+        $this->markTestSkipped('DEMO BRANCH: exercises the TravelNext availability response, which this branch no longer calls.');
+
         Http::fake([
             'travelnext.works/*' => Http::response([
                 'AirSearchResponse' => [
@@ -110,6 +112,8 @@ class FlightHardeningTest extends TestCase
 
     public function test_successful_webhook_validates_and_completes_held_ticket_payment(): void
     {
+        $this->markTestSkipped('DEMO BRANCH: exercises TravelNext\'s hold-then-ticket flow. SkyLink reserves after payment instead and has no hold.');
+
         Mail::fake();
         $this->configureSeerbit();
         $booking = $this->heldBooking();
