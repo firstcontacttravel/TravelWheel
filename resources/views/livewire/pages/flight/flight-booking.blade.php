@@ -246,14 +246,6 @@
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── Notices ── */
-    .bk-notice { padding: 11px 14px; border-radius: 9px; font-size: 12.5px; display: flex; align-items: flex-start; gap: 9px; }
-    .bk-notice svg { flex-shrink: 0; margin-top: 1px; }
-    .bk-notice.info   { background: var(--blue-lt);  color: var(--blue);  border: 1px solid var(--blue-md); }
-    .bk-notice.warn   { background: var(--amber-lt); color: var(--amber); border: 1px solid #fed7aa; }
-    .bk-notice.danger { background: var(--red-lt);   color: var(--red);   border: 1px solid #fca5a5; }
-    .bk-notice.green  { background: var(--green-lt); color: var(--green); border: 1px solid #a7f3d0; }
-
     /* Passport accordion */
     .bk-pp-toggle { display: flex; align-items: center; gap: 9px; cursor: pointer; width: 100%; padding: 10px 15px; background: var(--gray-50); border-top: 1px solid var(--gray-100); border-bottom: none; border-left: none; border-right: none; transition: background .15s; user-select: none; font-family: var(--font); text-align: left; }
     .bk-pp-toggle:hover { background: var(--blue-lt); }
@@ -277,19 +269,6 @@
     .bk-seat-chip svg { opacity: .6; }
     .bk-seat-choose { padding: 6px 16px; border-radius: 7px; background: var(--blue); color: #fff; font-size: 12.5px; font-weight: 700; border: none; cursor: pointer; font-family: var(--font); transition: background .15s; }
     .bk-seat-choose:hover { background: #1e40af; }
-
-    /* ── T&C bar ── */
-    .bk-terms-bar { display: flex; align-items: center; gap: 10px; padding: 12px 0 0; font-size: 12.5px; color: var(--gray-500); }
-    .bk-terms-bar a { color: var(--blue); font-weight: 600; }
-    .bk-terms-bar input { width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer; }
-
-    /* ── Review step ── */
-    .bk-review-section { margin-bottom: 20px; }
-    .bk-review-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); padding-bottom: 8px; border-bottom: 1px solid var(--gray-100); margin-bottom: 10px; }
-    .bk-review-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--gray-100); gap: 16px; font-size: 13px; }
-    .bk-review-row:last-child { border-bottom: none; }
-    .bk-review-label { color: var(--gray-500); font-weight: 500; flex-shrink: 0; }
-    .bk-review-val   { color: var(--gray-900); font-weight: 700; text-align: right; }
 
     /* Phase 1 booking redesign shell */
     :root {
@@ -623,6 +602,68 @@
     .bk-rule-body { padding: 12px 14px; font-size: 12px; color: var(--gray-600); line-height: 1.7; white-space: pre-wrap; max-height: 240px; overflow-y: auto; }
     .bk-rule-body.empty { color: var(--gray-400); }
 
+    /*
+     * ── Review and continue ──
+     * The last screen before money changes hands, so it is a check sheet:
+     * every block the traveller is about to commit to, each with a way back
+     * to the step that owns it. The flight itself was missing from it
+     * entirely — the page asked people to "review all details carefully
+     * before payment" while never showing them what they were flying.
+     */
+    .bk-review-section + .bk-review-section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--gray-100); }
+    .bk-review-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+    .bk-review-title {
+        font-size: 12.5px; font-weight: 700; color: var(--gray-900);
+        text-transform: none; letter-spacing: 0;
+        padding: 0; border: 0; margin: 0;
+    }
+    .bk-review-change { flex-shrink: 0; padding: 0; border: 0; background: none; font-family: var(--font); font-size: 11.5px; font-weight: 600; color: var(--blue); cursor: pointer; }
+    .bk-review-change:hover { text-decoration: underline; }
+
+    .bk-review-row { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 7px 0; font-size: 12.5px; border: 0; }
+    .bk-review-row + .bk-review-row { border-top: 1px solid var(--gray-100); }
+    .bk-review-label { flex-shrink: 0; color: var(--gray-500); font-weight: 500; }
+    .bk-review-val { color: var(--gray-900); font-weight: 600; text-align: right; min-width: 0; }
+    .bk-review-val.good { color: var(--green-dk); }
+    .bk-review-val.bad { color: var(--red); }
+
+    /* Flight block: what is actually being bought, which the review omitted. */
+    .bk-review-flight { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border: 1px solid var(--gray-200); border-radius: 10px; background: var(--gray-50); }
+    .bk-review-flight-ic { flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px; background: var(--blue-lt); color: var(--blue); display: flex; align-items: center; justify-content: center; }
+    .bk-review-flight-txt { min-width: 0; flex: 1; }
+    .bk-review-flight-route { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; color: var(--gray-900); line-height: 1.4; }
+    .bk-review-flight-meta { font-size: 11.5px; color: var(--gray-500); line-height: 1.5; margin-top: 2px; }
+    .bk-review-flight-times { display: flex; align-items: baseline; gap: 8px; margin-top: 7px; font-family: var(--mono); font-size: 13px; color: var(--gray-900); }
+    .bk-review-flight-times .sep { color: var(--gray-300); }
+    .bk-review-flight-dur { font-family: var(--font); font-size: 11.5px; color: var(--gray-500); }
+
+    /* Travellers: name first and left-aligned. It used to be right-aligned,
+       which put the most important value furthest from its own label. */
+    .bk-review-pax { display: flex; align-items: flex-start; gap: 11px; padding: 9px 0; }
+    .bk-review-pax + .bk-review-pax { border-top: 1px solid var(--gray-100); }
+    .bk-review-pax-ix { flex-shrink: 0; width: 26px; height: 26px; border-radius: 7px; background: var(--gray-50); border: 1px solid var(--gray-200); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11.5px; color: var(--gray-600); }
+    .bk-review-pax-txt { min-width: 0; flex: 1; }
+    .bk-review-pax-name { display: block; font-size: 13px; font-weight: 600; color: var(--gray-900); line-height: 1.4; }
+    .bk-review-pax-meta { display: block; font-size: 11.5px; color: var(--gray-500); line-height: 1.5; margin-top: 1px; }
+    .bk-review-pax-tag { flex-shrink: 0; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; line-height: 1.45; background: var(--blue-lt); color: var(--blue); }
+    .bk-review-pax-tag.chd { background: #fff4e5; color: var(--amber); }
+    .bk-review-pax-tag.inf { background: var(--green-lt); color: var(--green-dk); }
+
+    /* The class existed in this stylesheet but was never placed in the markup,
+       so the checkout referenced no terms anywhere. */
+    .bk-terms-bar { display: flex; align-items: flex-start; gap: 9px; padding: 12px 2px 0; font-size: 11.5px; color: var(--gray-500); line-height: 1.55; }
+    .bk-terms-bar a { color: var(--blue); font-weight: 600; text-decoration: none; }
+    .bk-terms-bar a:hover { text-decoration: underline; }
+    .bk-terms-bar .bk-mini-icon { flex-shrink: 0; color: var(--gray-400); margin-top: 2px; }
+
+    .bk-pay-note { font-size: 11.5px; color: var(--gray-500); line-height: 1.5; margin-top: 6px; text-align: right; }
+
+    .bk-notice { display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border-radius: 10px; font-size: 12.5px; line-height: 1.55; }
+    .bk-notice svg { flex-shrink: 0; margin-top: 1px; }
+    .bk-notice.info { background: var(--blue-lt); color: var(--blue); border: 1px solid #e2e2fb; }
+    .bk-notice.warn { background: var(--amber-lt); color: var(--amber); border: 1px solid #fde8c8; }
+    .bk-notice.danger { background: var(--red-lt); color: var(--red); border: 1px solid #fee4e2; }
+    .bk-notice.green { background: var(--green-lt); color: var(--green-dk); border: 1px solid #9ae0bd; }
 </style>
 
 @php
@@ -1530,84 +1571,146 @@
                 {{-- ════════ STEP 2 ════════ --}}
                 @if($step === 3)
 
-                    <div class="bk-notice info" style="margin-bottom:4px;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <div class="bk-notice info">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                         <span>
                             {{ $isTravelFlexCheckout
-                                ? 'Review all details carefully before continuing to TravelFlex. No payment is due at this step.'
-                                : 'Review all details carefully before payment. Name corrections after ticketing may incur fees.' }}
+                                ? 'Check everything below before continuing to TravelFlex. Nothing is charged at this step.'
+                                : 'Check everything below before you pay. Names are ticketed exactly as shown, and corrections after ticketing may carry an airline fee.' }}
                         </span>
                     </div>
 
-                    {{-- Review accordion --}}
-                    <div class="bk-acc" x-data="{ open: true }">
-                        <div class="bk-acc-head" :class="{ open }" @click="open = !open">
+                    {{-- Named for what it is. "Booking summary" is the rail, and two
+                         things by that name on one screen helps nobody. --}}
+                    <div class="bk-acc">
+                        <div class="bk-acc-head open">
                             <div class="bk-acc-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                             </div>
                             <div>
-                                <div class="bk-acc-title">Booking Summary</div>
-                                <div class="bk-acc-sub">
-                                    {{ $isTravelFlexCheckout
-                                        ? 'Confirm all details before starting your TravelFlex application'
-                                        : 'Confirm all details are correct before paying' }}
-                                </div>
+                                <div class="bk-acc-title">Check your booking</div>
+                                <div class="bk-acc-sub">This is exactly what we will ticket</div>
                             </div>
-                            <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
-                        <div x-show="open" x-transition>
-                            <div class="bk-acc-body">
+                        <div class="bk-acc-body">
 
-                                <div class="bk-review-section">
-                                    <div class="bk-review-title">Passengers ({{ $this->getTotalPassengers() }})</div>
-                                    @foreach($this->passengers as $i => $pax)
-                                        @php
-                                            $ptLabel = match($pax['type']) { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Pax' };
-                                            $dobStr  = !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '-';
-                                            $natName = $this->nationalities[$pax['nationality']] ?? $pax['nationality'];
-                                        @endphp
-                                        <div class="bk-review-row">
-                                            <span class="bk-review-label">{{ $ptLabel }} {{ $i + 1 }}{{ $pax['is_primary'] ? ' · Primary' : '' }}</span>
-                                            <span class="bk-review-val">
-                                                {{ $pax['title'] }} {{ strtoupper($pax['first_name']) }} {{ strtoupper($pax['last_name']) }}
-                                                <br><span style="font-size:11px;color:var(--gray-500);font-weight:500;">DOB: {{ $dobStr }} · {{ $natName }}@if(!empty($pax['passport_no'])) · Passport: {{ $pax['passport_no'] }} @endif</span>
-                                            </span>
-                                        </div>
-                                    @endforeach
+                            {{-- ── The flight. The review never showed it at all. ── --}}
+                            <div class="bk-review-section">
+                                <div class="bk-review-head">
+                                    <span class="bk-review-title">Flight</span>
                                 </div>
-
-                                <div class="bk-review-section">
-                                    <div class="bk-review-title">Contact</div>
-                                    <div class="bk-review-row">
-                                        <span class="bk-review-label">Email</span>
-                                        <span class="bk-review-val">{{ $contactEmail }}</span>
-                                    </div>
-                                    <div class="bk-review-row">
-                                        <span class="bk-review-label">Phone</span>
-                                        <span class="bk-review-val">{{ $contactPhoneFull ?: ('+' . $contactCountryCode . ' ' . $contactPhone) }}</span>
-                                    </div>
-                                </div>
-
-                                <div class="bk-review-section" style="margin-bottom:0;">
-                                    <div class="bk-review-title">Fare Policy</div>
-                                    @foreach($breakdown as $fb)
-                                        @php
-                                            $ptl    = match($fb['passengerType'] ?? '') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' };
-                                            $bagStr = implode(' / ', array_unique(array_filter((array)($fb['baggage'] ?? []), fn($v) => $v !== ''))) ?: '-';
-                                            $refund = !empty($fb['refundAllowed']);
-                                            $change = !empty($fb['changeAllowed']);
-                                        @endphp
-                                        <div class="bk-review-row">
-                                            <span class="bk-review-label">{{ $ptl }} · Baggage</span>
-                                            <span class="bk-review-val">{{ $bagStr }}</span>
-                                        </div>
-                                    @endforeach
-                                    <div class="bk-review-row">
-                                            <span class="bk-review-label">Refund</span>
-                                            <span class="bk-review-val" style="color:{{ !empty($flight['isRefundable']) ? 'var(--green)' : 'var(--red)' }}">{{ !empty($flight['isRefundable']) ? 'Allowed' : 'Not allowed' }}</span>
-                                    </div>
+                                <div class="bk-review-flight">
+                                    <span class="bk-review-flight-ic">
+                                        <span class="bk-icon-mask bk-icon-plane" style="width:15px;height:15px;" aria-hidden="true"></span>
+                                    </span>
+                                    <span class="bk-review-flight-txt">
+                                        <span class="bk-review-flight-route">
+                                            {{ $firstSeg['fromCity'] ?? $firstSeg['from'] ?? '' }}
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gray-400);flex-shrink:0;"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+                                            {{ $lastSeg['toCity'] ?? $lastSeg['to'] ?? '' }}
+                                        </span>
+                                        <span class="bk-review-flight-meta">
+                                            {{ $firstSeg['airline'] ?? '' }}@if(!empty($firstSeg['flightNo'])) {{ $firstSeg['flightNo'] }}@endif
+                                            &middot; {{ $tripLabel }} &middot; {{ $cabin }}
+                                            @if(!empty($flight['departDateLabel'])) &middot; {{ $flight['departDateLabel'] }} @endif
+                                        </span>
+                                        <span class="bk-review-flight-times">
+                                            <span>{{ $bkTime($firstSeg['departTime'] ?? '') }}</span>
+                                            <span class="sep">&ndash;</span>
+                                            <span>{{ $bkTime($lastSeg['arriveTime'] ?? '') }}</span>
+                                            @if(!empty($flight['totalTimeLabel']))
+                                                <span class="bk-review-flight-dur">{{ $flight['totalTimeLabel'] }}</span>
+                                            @endif
+                                        </span>
+                                    </span>
                                 </div>
                             </div>
+
+                            {{-- ── Travellers ── --}}
+                            <div class="bk-review-section">
+                                <div class="bk-review-head">
+                                    <span class="bk-review-title">Travellers ({{ $this->getTotalPassengers() }})</span>
+                                    <button type="button" class="bk-review-change" wire:click="$set('step', 1)">Change</button>
+                                </div>
+                                @foreach($this->passengers as $i => $pax)
+                                    @php
+                                        $ptLabel = match($pax['type']) { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Traveller' };
+                                        $dobStr  = !empty($pax['dob']) ? \Carbon\Carbon::parse($pax['dob'])->format('d M Y') : '—';
+                                        $natName = $this->nationalities[$pax['nationality']] ?? $pax['nationality'];
+                                    @endphp
+                                    <div class="bk-review-pax">
+                                        <span class="bk-review-pax-ix" aria-hidden="true">{{ $i + 1 }}</span>
+                                        <span class="bk-review-pax-txt">
+                                            <span class="bk-review-pax-name">
+                                                {{ $pax['title'] }} {{ strtoupper($pax['first_name']) }} {{ strtoupper($pax['last_name']) }}
+                                            </span>
+                                            <span class="bk-review-pax-meta">
+                                                Born {{ $dobStr }} &middot; {{ $natName }}@if(!empty($pax['passport_no'])) &middot; Passport {{ $pax['passport_no'] }}@endif
+                                                @if($pax['is_primary']) &middot; main contact @endif
+                                            </span>
+                                        </span>
+                                        <span class="bk-review-pax-tag {{ strtolower($pax['type']) }}">{{ $ptLabel }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            {{-- ── Contact ── --}}
+                            <div class="bk-review-section">
+                                <div class="bk-review-head">
+                                    <span class="bk-review-title">Contact</span>
+                                    <button type="button" class="bk-review-change" wire:click="$set('step', 1)">Change</button>
+                                </div>
+                                <div class="bk-review-row">
+                                    <span class="bk-review-label">Email</span>
+                                    <span class="bk-review-val">{{ $contactEmail }}</span>
+                                </div>
+                                <div class="bk-review-row">
+                                    <span class="bk-review-label">Mobile</span>
+                                    <span class="bk-review-val">{{ $contactPhoneFull ?: ('+' . $contactCountryCode . ' ' . $contactPhone) }}</span>
+                                </div>
+                            </div>
+
+                            {{-- ── Fare conditions ── --}}
+                            <div class="bk-review-section">
+                                <div class="bk-review-head">
+                                    <span class="bk-review-title">Fare conditions</span>
+                                </div>
+                                @php
+                                    // The per-type rows repeated the same allowance once per passenger
+                                    // type, which said nothing new when they all matched.
+                                    $allowances = [];
+                                    foreach ($breakdown as $fb) {
+                                        $bag = implode(' / ', array_unique(array_filter((array)($fb['baggage'] ?? []), fn($v) => $v !== '')));
+                                        if ($bag !== '') { $allowances[$bag][] = match($fb['passengerType'] ?? '') { 'ADT' => 'adult', 'CHD' => 'child', 'INF' => 'infant', default => 'traveller' }; }
+                                    }
+                                @endphp
+                                @forelse($allowances as $bag => $types)
+                                    <div class="bk-review-row">
+                                        {{-- Built in PHP: Blade will not compile a directive that is
+                                             attached to a word character, so "baggage@if(...)" stayed
+                                             literal while its @endif compiled, orphaning the endif. --}}
+                                        @php
+                                            $bagLabel = count($allowances) > 1
+                                                ? 'Checked baggage ('.implode(', ', $types).')'
+                                                : 'Checked baggage';
+                                        @endphp
+                                        <span class="bk-review-label">{{ $bagLabel }}</span>
+                                        <span class="bk-review-val">{{ $bag }}</span>
+                                    </div>
+                                @empty
+                                    <div class="bk-review-row">
+                                        <span class="bk-review-label">Checked baggage</span>
+                                        <span class="bk-review-val">As shown on the itinerary</span>
+                                    </div>
+                                @endforelse
+                                <div class="bk-review-row">
+                                    <span class="bk-review-label">Refunds</span>
+                                    <span class="bk-review-val {{ !empty($flight['isRefundable']) ? 'good' : 'bad' }}">
+                                        {{ !empty($flight['isRefundable']) ? 'Allowed' : 'Not allowed' }}
+                                    </span>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
 
@@ -1653,20 +1756,41 @@
 
 
 
+                    {{-- The class for this existed in the stylesheet but was never
+                         placed, so the checkout referenced no terms at all. --}}
+                    <div class="bk-terms-bar">
+                        <span class="bk-mini-icon bk-icon-clock" aria-hidden="true"></span>
+                        <span>
+                            By continuing you accept our
+                            <a href="{{ route('legal.booking-agreement') }}" target="_blank" rel="noopener">Booking Agreement</a>
+                            and <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener">Terms &amp; Conditions</a>.
+                        </span>
+                    </div>
+
                     <div class="bk-actions">
                         <button class="bk-btn-ghost" wire:click="back">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                            Edit Details
+                            Back
                         </button>
-                        <button class="bk-btn-pay" @click="submitForm()">
-                            @if($isTravelFlexCheckout)
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
-                                Continue to TravelFlex
-                            @else
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                                Confirm &amp; Pay {{ $fmt($this->getTotalPrice()) }}
-                            @endif
-                        </button>
+                        <div style="text-align:right;">
+                            <button class="bk-btn-pay" @click="submitForm()">
+                                @if($isTravelFlexCheckout)
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+                                    Continue to TravelFlex
+                                @else
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                                    Continue to payment &middot; {{ $fmt($this->getTotalPrice()) }}
+                                @endif
+                            </button>
+                            {{-- This button does not take payment: it posts the booking and
+                                 moves to the payment step. It used to read "Confirm & Pay"
+                                 next to a six-figure sum, which says the charge happens now. --}}
+                            <div class="bk-pay-note">
+                                {{ $isTravelFlexCheckout
+                                    ? 'You will start your TravelFlex application on the next step.'
+                                    : 'Nothing is charged until you complete payment on the next step.' }}
+                            </div>
+                        </div>
                     </div>
 
                 @endif {{-- /step 2 --}}
