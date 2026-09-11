@@ -219,6 +219,51 @@ class SkylinkSearchResilienceTest extends TestCase
     }
 
     /**
+     * The other half of the payload problem, measured on the same staging run.
+     *
+     * loadSkylinkResults() exists only to hand the browser an event — Alpine
+     * does the merging, and nothing Blade renders changes as a result. But
+     * Livewire re-renders after every call by default, and that re-render was
+     * the largest single thing in the response: a round trip came back with
+     * 1.24 MB of re-rendered HTML (a 69 KB inline <style> block, plus a second
+     * full copy of the flight list inlined by @js) on top of the 834 KB of
+     * flights actually requested.
+     *
+     * It was also a correctness hazard, not just weight: that HTML gets morphed
+     * over the live DOM, re-running the @js seed underneath an Alpine component
+     * that has already merged SkyLink's results into its own state.
+     */
+    public function test_loading_skylink_does_not_re_render_the_whole_results_page(): void
+    {
+        $this->configureSkylink(['services.skylink.enabled' => true]);
+        session([
+            'searchParamsStore' => $this->searchCriteria(),
+            'flightResultsStore' => [['fareSourceCode' => 'tn-1', 'source' => 'travelnext']],
+        ]);
+
+        Http::fake([
+            '*/api/login' => Http::response($this->loginResponse()),
+            '*/api/flights/search' => Http::response($this->searchResponse()),
+        ]);
+
+        // The event still has to reach the browser — that is the whole job.
+        Livewire::test(FlightPage::class)
+            ->call('loadSkylinkResults')
+            ->assertOk()
+            ->assertDispatched('skylink-results-ready');
+
+        $renderless = collect(
+            (new \ReflectionMethod(FlightPage::class, 'loadSkylinkResults'))->getAttributes()
+        )->contains(fn (\ReflectionAttribute $a): bool => is_a($a->getName(), \Livewire\Attributes\Renderless::class, true));
+
+        $this->assertTrue(
+            $renderless,
+            'loadSkylinkResults must be #[Renderless] — without it Livewire ships a full page re-render '
+                .'(1.24 MB on a staging round trip) to deliver an event Alpine already handles.',
+        );
+    }
+
+    /**
      * Shaped and sized like a real round-trip result (~7.5 KB each, as measured
      * on staging) so 200 of them would blow well past the cap if they were
      * still being serialised into component state.

@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages;
 
 use App\Services\SkylinkFlightService;
+use Livewire\Attributes\Renderless;
 use App\Support\FlightMarkup;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
@@ -58,6 +59,20 @@ class FlightPage extends Component
      * Alpine's allFlights at mount — confirmed via live browser testing.
      * FlightBookingController::select() reads this key for SkyLink fares.
      */
+    /**
+     * Renderless: this call exists only to hand the browser an event. Alpine
+     * does the merging, so nothing Blade renders changes as a result of it —
+     * but Livewire re-renders the component after every call by default, and
+     * that re-render was the single largest thing in the response. Measured on
+     * staging, a round trip came back with 1.24 MB of re-rendered HTML (a 69 KB
+     * inline <style> block, plus a second full copy of the flight list inlined
+     * by @js) on top of the 834 KB of flights actually asked for.
+     *
+     * Skipping it also removes a hazard rather than just weight: that HTML gets
+     * morphed over the live DOM, re-running the @js seed underneath an Alpine
+     * component that has already merged SkyLink's results into its own state.
+     */
+    #[Renderless]
     public function loadSkylinkResults(): void
     {
         $this->dispatch('skylink-results-ready', flights: $this->skylinkFlights());
