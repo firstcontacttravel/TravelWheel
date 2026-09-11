@@ -2144,10 +2144,10 @@
             activeFare: 'recommended',
             pageSize: 5,
 
-            // ── SkyLink live supplement (Phase 2) ──────────────────────────
-            // True until the loadSkylinkResults() event fires (success or
-            // failure) — see FlightPage::loadSkylinkResults().
-            searchingMore: true,
+            // DEMO BRANCH: the SkyLink search is synchronous (FlightController::
+            // performSearch), so results are already complete at first paint —
+            // there is no second supplier still being queried in the background.
+            searchingMore: false,
             // Ids of flights merged in from the supplement, for the brief
             // highlight animation and the "+N more offers found" message.
             newlyAddedIds: [],
