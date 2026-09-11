@@ -176,6 +176,68 @@ class SkylinkSearchResilienceTest extends TestCase
         $component->assertSee('tn-1', false);
     }
 
+    /**
+     * The 500s reported on round-trip searches, reproduced on staging.
+     *
+     * The server caps request bodies at post_max_size = 1M. Livewire POSTs the
+     * whole component snapshot on every request, and the snapshot carried the
+     * result set, so the wire:init call that fetches SkyLink grew with the
+     * number of flights found. Past 1 MiB, PHP discards the body, Livewire
+     * cannot find its payload, and Laravel returns a 500. Measured live, same
+     * route and date, one passenger:
+     *
+     *   LOS->JFK one way     36 flights    192 KB snapshot   223 KB body   200
+     *   LOS->JFK round trip 126 flights    982 KB snapshot 1,142 KB body   500
+     *
+     * Round trips crossed the line first because they return roughly 3.5x the
+     * flights and each is ~1.6x larger (it carries returnSegments too), but
+     * nothing about the trip type was ever the real cause — size was. So the
+     * guarantee worth testing is not "smaller" but "does not grow at all":
+     * the body has to stay flat no matter how many flights a search returns.
+     */
+    public function test_the_livewire_payload_does_not_grow_with_the_number_of_flights(): void
+    {
+        session(['searchParamsStore' => $this->searchCriteria()]);
+
+        $measure = function (int $flights): int {
+            session(['flightResultsStore' => array_fill(0, $flights, $this->bulkyFlight())]);
+
+            return strlen(json_encode(Livewire::test(FlightPage::class)->snapshot));
+        };
+
+        $small = $measure(1);
+        $huge = $measure(200);
+
+        $this->assertSame(
+            $small,
+            $huge,
+            'The snapshot grew with the result count — the payload is back in Livewire state.',
+        );
+
+        // Far below the 1 MiB body cap even before Livewire's own wrapper.
+        $this->assertLessThan(4096, $huge);
+    }
+
+    /**
+     * Shaped and sized like a real round-trip result (~7.5 KB each, as measured
+     * on staging) so 200 of them would blow well past the cap if they were
+     * still being serialised into component state.
+     */
+    private function bulkyFlight(): array
+    {
+        $segment = array_fill_keys(
+            ['from', 'to', 'fromCity', 'toCity', 'fromAirport', 'toAirport', 'airline', 'airlineLogo'],
+            str_repeat('x', 120),
+        );
+
+        return [
+            'fareSourceCode' => str_repeat('f', 180),
+            'segments' => [$segment, $segment],
+            'returnSegments' => [$segment, $segment],
+            'fareBreakdown' => [array_fill_keys(['baggage', 'cabinBaggage'], str_repeat('b', 120))],
+        ];
+    }
+
     private function searchRequests(): Collection
     {
         return collect(Http::recorded())
