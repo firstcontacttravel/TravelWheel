@@ -25,8 +25,11 @@ class FlightBookingWizardTest extends TestCase
         Livewire::test(FlightBooking::class)
             ->set('step', 2)
             ->assertSee('Trip customisation')
-            ->assertSee('Add extra check-in bags')
-            ->assertSee('Review Booking')
+            // With no extras on offer the banner used to be headed "Add extra
+            // check-in bags", which reads as an action on a step where none is
+            // available. It now names the situation and what the fare covers.
+            ->assertSee('No optional extras for this route')
+            ->assertSee('Review booking')
             ->assertDontSee('Traveller details');
     }
 

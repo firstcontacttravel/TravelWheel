@@ -254,20 +254,6 @@
     .bk-notice.danger { background: var(--red-lt);   color: var(--red);   border: 1px solid #fca5a5; }
     .bk-notice.green  { background: var(--green-lt); color: var(--green); border: 1px solid #a7f3d0; }
 
-    /* ── Extra bags banner ── */
-    .bk-bags-banner {
-        display: flex; align-items: center; gap: 14px;
-        padding: 14px 18px; background: #fff;
-        border: 1px solid var(--gray-200); border-radius: var(--radius);
-        box-shadow: var(--shadow);
-    }
-    .bk-bags-icon { font-size: 28px; flex-shrink: 0; }
-    .bk-bags-text { flex: 1; }
-    .bk-bags-title { font-size: 13.5px; font-weight: 700; color: var(--gray-900); }
-    .bk-bags-sub   { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
-    .bk-bags-btn { padding: 7px 18px; border: 1.5px solid var(--blue); border-radius: 8px; background: #fff; color: var(--blue); font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: all .15s; flex-shrink: 0; }
-    .bk-bags-btn:hover { background: var(--blue-lt); }
-
     /* Passport accordion */
     .bk-pp-toggle { display: flex; align-items: center; gap: 9px; cursor: pointer; width: 100%; padding: 10px 15px; background: var(--gray-50); border-top: 1px solid var(--gray-100); border-bottom: none; border-left: none; border-right: none; transition: background .15s; user-select: none; font-family: var(--font); text-align: left; }
     .bk-pp-toggle:hover { background: var(--blue-lt); }
@@ -276,7 +262,6 @@
     .bk-pp-added  { font-size: 11px; color: var(--green); font-weight: 600; margin-left: 6px; }
     .bk-pp-chevron { color: var(--gray-400); transition: transform .25s; flex-shrink: 0; }
     .bk-pp-chevron.open { transform: rotate(180deg); }
-    .bk-pp-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px 15px; background: #fff; border-top: 1px solid var(--gray-100); }
 
     /* ── Seat selection (Image 3 style) ── */
     .bk-seat-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--gray-100); }
@@ -325,30 +310,6 @@
         --shadow: 0 1px 2px rgba(16,24,40,.05);
         --shadow-md: 0 10px 28px rgba(16,24,40,.08);
         --font: var(--tw-font-sans, 'Open Sans', 'Plus Jakarta Sans', sans-serif);
-    }
-    .bk-bags-banner {
-        border-radius: 12px;
-        border-color: var(--gray-200);
-        box-shadow: var(--shadow);
-    }
-    .bk-bags-icon {
-        display: inline-flex;
-        width: 34px;
-        height: 34px;
-        align-items: center;
-        justify-content: center;
-        border-radius: 9px;
-        background: #f1f1ff;
-        color: var(--blue);
-        font-size: 19px;
-    }
-    .bk-bags-title {
-        font-size: 14px;
-        font-weight: 850;
-    }
-    .bk-bags-sub {
-        color: var(--gray-500);
-        font-size: 12px;
     }
 
     /* Phase 4 review, contact and summary refinement */
@@ -551,6 +512,117 @@
     .bk-tax-lbl { color: var(--gray-500); }
     .bk-tax-code { font-size: 10.5px; color: var(--gray-400); margin-left: 4px; }
     .bk-tax-val { font-family: var(--mono); font-size: 11px; color: var(--gray-700); }
+
+    /*
+     * ── Trip customisation ──
+     * Everything on this step is optional, which the page never said: it
+     * opened straight into a tracked-out capitalised baggage heading and left
+     * the traveller to work out whether they had to do something. Each
+     * add-on is now a selectable row with one clear price and one clear unit
+     * (the baggage rows used to carry two different units at once, "per
+     * passenger" under the name and "per bag" under the price).
+     */
+    .bk-optional-note {
+        display: flex; align-items: flex-start; gap: 9px;
+        padding: 11px 13px; margin-bottom: 16px;
+        border: 1px solid var(--gray-200); border-radius: 9px; background: var(--gray-50);
+        font-size: 12px; color: var(--gray-600); line-height: 1.5;
+    }
+    .bk-optional-note .bk-mini-icon { color: var(--gray-400); margin-top: 2px; }
+
+    .bk-xs-group + .bk-xs-group { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--gray-100); }
+    .bk-xs-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .bk-xs-head .bk-mini-icon { color: var(--gray-400); }
+    .bk-xs-title { font-size: 12.5px; font-weight: 700; color: var(--gray-900); }
+    .bk-xs-note { font-size: 11.5px; color: var(--gray-500); line-height: 1.5; margin-bottom: 11px; }
+    .bk-xs-leg { font-size: 11.5px; font-weight: 600; color: var(--gray-600); margin: 12px 0 8px; }
+
+    .bk-xs-list { display: flex; flex-direction: column; gap: 8px; }
+    .bk-xs-row {
+        display: flex; align-items: center; gap: 14px;
+        padding: 12px 14px; border: 1px solid var(--gray-200); border-radius: 10px;
+        background: #fff; transition: border-color .16s ease, background .16s ease, box-shadow .16s ease;
+    }
+    .bk-xs-row:hover { border-color: var(--gray-300); }
+    .bk-xs-row.on { border-color: var(--blue); background: var(--blue-lt); box-shadow: inset 0 0 0 1px var(--blue); }
+    .bk-xs-txt { flex: 1; min-width: 0; }
+    .bk-xs-name { display: block; font-size: 13px; font-weight: 600; color: var(--gray-900); line-height: 1.4; }
+    .bk-xs-unit { display: block; font-size: 11.5px; color: var(--gray-500); line-height: 1.45; }
+    .bk-xs-price { flex-shrink: 0; font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--gray-900); }
+    .bk-xs-row.on .bk-xs-price { color: var(--blue); }
+
+    /* Quantity stepper */
+    .bk-xs-qty { flex-shrink: 0; display: inline-flex; align-items: center; gap: 3px; padding: 3px; border: 1px solid var(--gray-200); border-radius: 9px; background: var(--gray-50); }
+    .bk-xs-row.on .bk-xs-qty { background: #fff; border-color: var(--blue-md); }
+    .bk-xs-btn {
+        width: 28px; height: 28px; padding: 0; border: 0; border-radius: 7px;
+        background: transparent; color: var(--gray-600); cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-family: var(--font); font-size: 16px; line-height: 1;
+        transition: background .14s ease, color .14s ease;
+    }
+    .bk-xs-btn:hover:not([disabled]) { background: #fff; color: var(--blue); box-shadow: 0 1px 2px rgba(16,24,40,.07); }
+    .bk-xs-btn[disabled] { opacity: .35; cursor: not-allowed; }
+    .bk-xs-num { min-width: 24px; text-align: center; font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--gray-900); }
+
+    /* Meal choice: the whole row is the control, with a real checkbox in it. */
+    .bk-xs-check { position: relative; display: flex; align-items: center; gap: 14px; cursor: pointer; }
+    .bk-xs-check input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+    .bk-xs-box {
+        flex-shrink: 0; width: 18px; height: 18px; border-radius: 5px;
+        border: 1.5px solid var(--gray-300); background: #fff;
+        display: flex; align-items: center; justify-content: center;
+        transition: background .14s ease, border-color .14s ease;
+    }
+    .bk-xs-check input:checked + .bk-xs-box { background: var(--blue); border-color: var(--blue); }
+    .bk-xs-check input:checked + .bk-xs-box::after {
+        content: ""; width: 12px; height: 12px; background: #fff;
+        mask: url("{{ asset('images/flight-icons/check.svg') }}") center / contain no-repeat;
+        -webkit-mask: url("{{ asset('images/flight-icons/check.svg') }}") center / contain no-repeat;
+    }
+    .bk-xs-check input:focus-visible + .bk-xs-box { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(48,49,145,.11); }
+
+    /* Running total of what has been added */
+    .bk-xs-total {
+        display: flex; align-items: center; justify-content: space-between; gap: 14px;
+        margin-top: 16px; padding: 12px 14px; border-radius: 10px;
+        background: var(--green-lt); border: 1px solid #9ae0bd;
+    }
+    .bk-xs-total-lbl { font-size: 12.5px; font-weight: 600; color: var(--green-dk); }
+    .bk-xs-total-val { font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--green-dk); }
+
+    /* Nothing on offer for this route: say what the fare already covers,
+       rather than leaving a dead end that only says "none available". */
+    .bk-bags-banner { display: flex; align-items: flex-start; gap: 13px; padding: 15px 18px; background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .bk-bags-icon { flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px; background: var(--gray-50); color: var(--gray-500); display: flex; align-items: center; justify-content: center; }
+    .bk-bags-text { flex: 1; min-width: 0; }
+    .bk-bags-title { font-size: 13.5px; font-weight: 700; color: var(--gray-900); line-height: 1.4; }
+    .bk-bags-sub { font-size: 12px; color: var(--gray-500); line-height: 1.55; margin-top: 2px; }
+    .bk-bags-allow { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+
+    /* ── Fare and baggage rules ── */
+    .bk-rules-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+    .bk-rules-table th {
+        padding: 9px 14px; text-align: left;
+        font-size: 11.5px; font-weight: 600; color: var(--gray-500);
+        text-transform: none; letter-spacing: 0;
+        background: var(--gray-50); border-bottom: 1px solid var(--gray-200);
+    }
+    .bk-rules-table td { padding: 11px 14px; border-bottom: 1px solid var(--gray-100); color: var(--gray-700); }
+    .bk-rules-table tbody tr:last-child td { border-bottom: 0; }
+    .bk-rules-flight { font-family: var(--mono); font-weight: 500; color: var(--gray-900); }
+    .bk-rules-wrap { border: 1px solid var(--gray-200); border-radius: 10px; overflow: hidden; }
+
+    .bk-rule-card { border: 1px solid var(--gray-200); border-radius: 10px; overflow: hidden; }
+    .bk-rule-card + .bk-rule-card { margin-top: 8px; }
+    .bk-rule-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: var(--gray-50); border-bottom: 1px solid var(--gray-100); }
+    .bk-rule-pair { display: flex; align-items: center; gap: 9px; min-width: 0; }
+    .bk-rule-airline { font-family: var(--mono); font-size: 11.5px; font-weight: 500; color: var(--gray-600); }
+    .bk-rule-route { font-size: 12.5px; font-weight: 600; color: var(--gray-900); }
+    .bk-rule-cat { flex-shrink: 0; padding: 2px 8px; border-radius: 6px; background: #fff; border: 1px solid var(--gray-200); font-size: 11px; font-weight: 600; color: var(--gray-600); line-height: 1.45; }
+    .bk-rule-body { padding: 12px 14px; font-size: 12px; color: var(--gray-600); line-height: 1.7; white-space: pre-wrap; max-height: 240px; overflow-y: auto; }
+    .bk-rule-body.empty { color: var(--gray-400); }
+
 </style>
 
 @php
@@ -629,7 +701,7 @@
         'YQI' => 'Fuel Surcharge',     'YRI' => 'Carrier Surcharge',
         'YRF' => 'Carrier Surcharge',  'GB'  => 'Air Passenger Duty',
         'UB'  => 'Passenger Service Charge', 'DE' => 'Departure Tax',
-        'BE'  => 'Booking Fee',        'OtherTaxes' => 'Taxes & Fees',
+        'BE'  => 'Booking Fee',        'OtherTaxes' => 'Other taxes',
     ];
 
     $equipMap = [
@@ -901,213 +973,141 @@
                         </div>
                     </div>
 
-                    {{-- ── 2. Extra Services (Baggage + Meals) ── --}}
+                    {{-- ── Extra services (baggage and meals) ── --}}
                     @if($step === 2)
                     @if(!empty($baggageOutbound) || !empty($baggageInbound) || !empty($mealOutbound) || !empty($mealInbound))
                     <div class="bk-acc" x-data="{ open: true }">
                         <div class="bk-acc-head" :class="{ open }" @click="open = !open">
-                            <div class="bk-acc-icon" style="background:#f0fdf4;color:#059669;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                            <div class="bk-acc-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
                             </div>
                             <div>
-                                <div class="bk-acc-title">Extra Services</div>
-                                <div class="bk-acc-sub">Add baggage or meals to your booking</div>
+                                <div class="bk-acc-title">Extra services</div>
+                                <div class="bk-acc-sub">Bags and meals &mdash; all optional</div>
                             </div>
                             <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
                         <div x-show="open" x-transition>
-                            <div class="bk-acc-body" style="padding-top:0;">
+                            <div class="bk-acc-body">
 
-                                {{-- ── EXTRA BAGGAGE ── --}}
+                                {{-- The page never said this step was skippable. --}}
+                                <div class="bk-optional-note">
+                                    <span class="bk-mini-icon bk-icon-clock" aria-hidden="true"></span>
+                                    <span>Nothing here is required. Your fare already includes the allowances shown on the itinerary above &mdash; add extras only if you need them.</span>
+                                </div>
+
+                                {{-- ── Extra checked baggage ── --}}
                                 @if(!empty($baggageOutbound) || !empty($baggageInbound))
-                                <div style="padding:14px 0 10px;border-bottom:1px solid var(--gray-100);">
-
-                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+                                <div class="bk-xs-group">
+                                    <div class="bk-xs-head">
                                         <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span>
-                                        Extra Check-in Baggage
+                                        <span class="bk-xs-title">Extra checked baggage</span>
                                     </div>
+                                    <div class="bk-xs-note">Charged per bag, per traveller.</div>
 
                                     @foreach([['outbound', $baggageOutbound], ['inbound', $baggageInbound]] as [$dir, $bagOpts])
                                     @if(!empty($bagOpts))
-                                    <div style="margin-bottom:14px;">
-                                        <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">
-                                            {{ ucfirst($dir) }}
-                                        </div>
+                                        @if(!empty($baggageOutbound) && !empty($baggageInbound))
+                                            <div class="bk-xs-leg">{{ $dir === 'outbound' ? 'Outbound flight' : 'Return flight' }}</div>
+                                        @endif
 
-                                        <div style="display:flex;flex-direction:column;gap:8px;">
+                                        <div class="bk-xs-list">
                                             @foreach($bagOpts as $svc)
-                                            @php
-                                                $svcId  = $svc['ServiceId'];
-                                                $maxQty = (int) ($svc['MaximumQuantity'] ?? 3);
-                                                $price  = (float) ($svc['ServiceCost']['Amount'] ?? 0);
-                                                $curr   = $svc['ServiceCost']['CurrencyCode'] ?? 'USD';
-                                                $sym    = match($curr) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'AED' => 'AED ', default => $curr . ' ' };
-                                                $currentQty = (int) ($selectedBaggage[$dir][$svcId] ?? 0);
-                                            @endphp
-
-                                            <div style="display:flex;align-items:center;gap:14px;padding:11px 14px;
-                                                        border:1.5px solid {{ $currentQty > 0 ? 'var(--blue)' : 'var(--gray-200)' }};
-                                                        border-radius:10px;background:{{ $currentQty > 0 ? 'var(--blue-lt)' : '#fff' }};
-                                                        transition:all .2s;">
-
-                                                {{-- Description --}}
-                                                <div style="flex:1;">
-                                                    <div style="font-size:13px;font-weight:700;color:var(--gray-900);">
-                                                        {{ $svc['Description'] }}
-                                                    </div>
-                                                    <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">
-                                                        {{ $svc['FareDescription'] ?? 'per passenger' }}
-                                                    </div>
-                                                </div>
-
-                                                {{-- Price --}}
-                                                <div style="font-size:13px;font-weight:800;color:var(--blue);
-                                                            white-space:nowrap;font-family:var(--mono);min-width:70px;text-align:right;">
-                                                    +{{ $sym }}{{ number_format($price, 2) }}
-                                                    <div style="font-size:10px;color:var(--gray-400);font-weight:500;font-family:var(--font);">
-                                                        per bag
-                                                    </div>
-                                                </div>
-
-                                                {{-- Quantity stepper --}}
-                                                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-                                                    <button type="button"
-                                                        style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--gray-200);
-                                                            background:#fff;font-size:16px;color:var(--gray-700);cursor:pointer;
-                                                            display:flex;align-items:center;justify-content:center;transition:all .15s;
-                                                            {{ $currentQty === 0 ? 'opacity:.35;cursor:not-allowed;' : '' }}"
-                                                        wire:click="$set('selectedBaggage.{{ $dir }}.{{ $svcId }}', {{ max(0, $currentQty - 1) }})"
-                                                        {{ $currentQty === 0 ? 'disabled' : '' }}>
-                                                        -
-                                                    </button>
-
-                                                    <span style="font-size:16px;font-weight:800;color:var(--gray-900);
-                                                                min-width:20px;text-align:center;">
-                                                        {{ $currentQty }}
+                                                @php
+                                                    $svcId  = $svc['ServiceId'];
+                                                    $maxQty = (int) ($svc['MaximumQuantity'] ?? 3);
+                                                    $price  = (float) ($svc['ServiceCost']['Amount'] ?? 0);
+                                                    $curr   = $svc['ServiceCost']['CurrencyCode'] ?? 'USD';
+                                                    $bSym   = match($curr) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'AED' => 'AED ', default => $curr . ' ' };
+                                                    $currentQty = (int) ($selectedBaggage[$dir][$svcId] ?? 0);
+                                                @endphp
+                                                <div class="bk-xs-row {{ $currentQty > 0 ? 'on' : '' }}">
+                                                    <span class="bk-xs-txt">
+                                                        <span class="bk-xs-name">{{ $svc['Description'] }}</span>
+                                                        <span class="bk-xs-unit">
+                                                            @if($currentQty > 0)
+                                                                {{ $currentQty }} &times; {{ $bSym }}{{ number_format($price, 2) }} = {{ $bSym }}{{ number_format($price * $currentQty, 2) }}
+                                                            @else
+                                                                {{ $svc['FareDescription'] ?? 'per bag' }}
+                                                            @endif
+                                                        </span>
                                                     </span>
-
-                                                    <button type="button"
-                                                        style="width:28px;height:28px;border-radius:50%;border:1.5px solid var(--gray-200);
-                                                            background:#fff;font-size:16px;color:var(--gray-700);cursor:pointer;
-                                                            display:flex;align-items:center;justify-content:center;transition:all .15s;
-                                                            {{ $currentQty >= $maxQty ? 'opacity:.35;cursor:not-allowed;' : '' }}"
-                                                        wire:click="$set('selectedBaggage.{{ $dir }}.{{ $svcId }}', {{ min($maxQty, $currentQty + 1) }})"
-                                                        {{ $currentQty >= $maxQty ? 'disabled' : '' }}>
-                                                        +
-                                                    </button>
+                                                    <span class="bk-xs-price">{{ $bSym }}{{ number_format($price, 2) }}</span>
+                                                    <span class="bk-xs-qty">
+                                                        <button type="button" class="bk-xs-btn"
+                                                                aria-label="Remove one {{ $svc['Description'] }}"
+                                                                wire:click="$set('selectedBaggage.{{ $dir }}.{{ $svcId }}', {{ max(0, $currentQty - 1) }})"
+                                                                {{ $currentQty === 0 ? 'disabled' : '' }}>&minus;</button>
+                                                        <span class="bk-xs-num">{{ $currentQty }}</span>
+                                                        <button type="button" class="bk-xs-btn"
+                                                                aria-label="Add one {{ $svc['Description'] }}"
+                                                                wire:click="$set('selectedBaggage.{{ $dir }}.{{ $svcId }}', {{ min($maxQty, $currentQty + 1) }})"
+                                                                {{ $currentQty >= $maxQty ? 'disabled' : '' }}>+</button>
+                                                    </span>
+                                                    @if($currentQty > 0)
+                                                        <input type="hidden" name="extra_baggage[{{ $dir }}][{{ $svcId }}]" value="{{ $currentQty }}">
+                                                    @endif
                                                 </div>
-
-                                                {{-- Line total --}}
-                                                @if($currentQty > 0)
-                                                <div style="font-size:12px;font-weight:800;color:var(--green);
-                                                            white-space:nowrap;font-family:var(--mono);min-width:65px;text-align:right;">
-                                                    = {{ $sym }}{{ number_format($price * $currentQty, 2) }}
-                                                </div>
-                                                @endif
-
-                                                {{-- Hidden input for form submission --}}
-                                                @if($currentQty > 0)
-                                                <input type="hidden"
-                                                    name="extra_baggage[{{ $dir }}][{{ $svcId }}]"
-                                                    value="{{ $currentQty }}">
-                                                @endif
-                                            </div>
                                             @endforeach
                                         </div>
-                                    </div>
                                     @endif
                                     @endforeach
                                 </div>
                                 @endif
 
-                                {{-- ── MEALS ── --}}
+                                {{-- ── Meals ── --}}
                                 @if(!empty($mealOutbound) || !empty($mealInbound))
-                                <div style="padding-top:14px;">
-
-                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+                                <div class="bk-xs-group">
+                                    <div class="bk-xs-head">
                                         <span class="bk-mini-icon bk-icon-meal" aria-hidden="true"></span>
-                                        Meal Preferences
+                                        <span class="bk-xs-title">Meal preferences</span>
                                     </div>
+                                    <div class="bk-xs-note">Chosen per flight, for every traveller on the booking.</div>
 
                                     @foreach([['outbound', $mealOutbound], ['inbound', $mealInbound]] as [$dir, $mealSegs])
                                     @if(!empty($mealSegs))
-                                    <div style="margin-bottom:14px;">
-                                        <div style="font-size:11.5px;font-weight:700;color:var(--gray-700);margin-bottom:8px;">
-                                            {{ ucfirst($dir) }}
-                                        </div>
-
-                                        @foreach($mealSegs as $si => $segMeals)
-                                        <div style="margin-bottom:10px;">
-                                            <div style="font-size:10.5px;font-weight:700;color:var(--gray-400);
-                                                        text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">
-                                                Segment {{ $si + 1 }}
+                                        @foreach($mealSegs as $si => $mealOpts)
+                                        @if(!empty($mealOpts))
+                                            <div class="bk-xs-leg">
+                                                {{ ($dir === 'outbound' ? 'Outbound' : 'Return') }}@if(count($mealSegs) > 1) &middot; flight {{ $si + 1 }}@endif
                                             </div>
-
-                                            <div style="display:flex;flex-direction:column;gap:7px;">
-                                                @foreach($segMeals as $svc)
-                                                @php
-                                                    $svcId    = $svc['ServiceId'];
-                                                    $price    = (float) ($svc['ServiceCost']['Amount'] ?? 0);
-                                                    $curr     = $svc['ServiceCost']['CurrencyCode'] ?? 'AED';
-                                                $sym    = match($curr) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'AED' => 'AED ', default => $curr . ' ' };
-                                                    $isChecked = !empty($selectedMeals[$dir][$si][$svcId]);
-                                                @endphp
-
-                                                <label style="display:flex;align-items:center;gap:12px;padding:10px 14px;
-                                                            border:1.5px solid {{ $isChecked ? 'var(--amber)' : 'var(--gray-200)' }};
-                                                            border-radius:10px;cursor:pointer;
-                                                            background:{{ $isChecked ? 'var(--amber-lt)' : '#fff' }};
-                                                            transition:all .2s;">
-
-                                                    <input type="checkbox"
-                                                        wire:model.live="selectedMeals.{{ $dir }}.{{ $si }}.{{ $svcId }}"
-                                                        style="width:16px;height:16px;accent-color:var(--amber);
-                                                                cursor:pointer;flex-shrink:0;">
-
-                                                    <div style="flex:1;">
-                                                        <div style="font-size:12.5px;font-weight:700;color:var(--gray-900);">
-                                                            {{ $svc['Description'] }}
-                                                        </div>
+                                            <div class="bk-xs-list">
+                                                @foreach($mealOpts as $svc)
+                                                    @php
+                                                        $svcId = $svc['ServiceId'];
+                                                        $price = (float) ($svc['ServiceCost']['Amount'] ?? 0);
+                                                        $curr  = $svc['ServiceCost']['CurrencyCode'] ?? 'USD';
+                                                        $mSym  = match($curr) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'AED' => 'AED ', default => $curr . ' ' };
+                                                        $isChecked = (bool) ($selectedMeals[$dir][$si][$svcId] ?? false);
+                                                    @endphp
+                                                    <div class="bk-xs-row {{ $isChecked ? 'on' : '' }}">
+                                                        <label class="bk-xs-check" style="flex:1;">
+                                                            <input type="checkbox"
+                                                                   wire:model.live="selectedMeals.{{ $dir }}.{{ $si }}.{{ $svcId }}">
+                                                            <span class="bk-xs-box" aria-hidden="true"></span>
+                                                            <span class="bk-xs-txt">
+                                                                <span class="bk-xs-name">{{ $svc['Description'] }}</span>
+                                                                <span class="bk-xs-unit">{{ $svc['FareDescription'] ?? 'per traveller' }}</span>
+                                                            </span>
+                                                        </label>
+                                                        <span class="bk-xs-price">{{ $mSym }}{{ number_format($price, 2) }}</span>
+                                                        @if($isChecked)
+                                                            <input type="hidden" name="extra_meal[{{ $dir }}][{{ $si }}][]" value="{{ $svcId }}">
+                                                        @endif
                                                     </div>
-
-                                                    <div style="font-size:12.5px;font-weight:800;
-                                                                color:{{ $isChecked ? 'var(--amber)' : 'var(--gray-500)' }};
-                                                                white-space:nowrap;font-family:var(--mono);">
-                                                        +{{ $sym }}{{ number_format($price, 2) }}
-                                                    </div>
-
-                                                    @if($isChecked)
-                                                    <span style="font-size:11px;font-weight:700;color:var(--amber);white-space:nowrap;">Added</span>
-                                                    @endif
-
-                                                    {{-- Hidden input for form submission --}}
-                                                    @if($isChecked)
-                                                    <input type="hidden"
-                                                        name="extra_meal[{{ $dir }}][{{ $si }}][]"
-                                                        value="{{ $svcId }}">
-                                                    @endif
-                                                </label>
                                                 @endforeach
                                             </div>
-                                        </div>
+                                        @endif
                                         @endforeach
-                                    </div>
                                     @endif
                                     @endforeach
                                 </div>
                                 @endif
 
-                                {{-- ── LIVE EXTRAS SUMMARY (shows only when something selected) ── --}}
                                 @if($extrasTotal > 0)
-                                <div style="margin-top:14px;padding:12px 16px;background:var(--green-lt);
-                                            border:1.5px solid #a7f3d0;border-radius:10px;
-                                            display:flex;align-items:center;justify-content:space-between;">
-                                    <span style="font-size:12.5px;font-weight:700;color:var(--green);">
-                                        Extras selected
-                                    </span>
-                                    <span style="font-size:14px;font-weight:800;color:var(--green);font-family:var(--mono);">
-                                        +{{ $esFmt(['ServiceCost' => ['CurrencyCode' => 'NGN', 'Amount' => $extrasTotal]]) }}
-                                    </span>
+                                <div class="bk-xs-total">
+                                    <span class="bk-xs-total-lbl">Extras added</span>
+                                    <span class="bk-xs-total-val">+{{ $esFmt(['ServiceCost' => ['CurrencyCode' => 'NGN', 'Amount' => $extrasTotal]]) }}</span>
                                 </div>
                                 @endif
 
@@ -1116,58 +1116,82 @@
                     </div>
 
                     @else
-                    {{-- Fallback banner if no extra services available --}}
+                    {{-- Nothing on offer for this route. Say what the fare already covers
+                         rather than leaving a dead end that only reports an absence. --}}
+                    @php
+                        $inclBag   = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== '')));
+                        $inclCabin = implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== '')));
+                    @endphp
                     <div class="bk-bags-banner">
                         <div class="bk-bags-icon"><span class="bk-icon-mask bk-icon-bag" style="width:18px;height:18px;" aria-hidden="true"></span></div>
                         <div class="bk-bags-text">
-                            <div class="bk-bags-title">Add extra check-in bags</div>
-                            <div class="bk-bags-sub">No additional baggage options available for this route</div>
+                            <div class="bk-bags-title">No optional extras for this route</div>
+                            <div class="bk-bags-sub">
+                                This airline does not sell extra bags or meals through us on this route. Your fare already includes the allowance below &mdash; continue to review your booking.
+                            </div>
+                            @if($inclBag !== '' || $inclCabin !== '')
+                                <div class="bk-bags-allow">
+                                    @if($inclBag !== '')
+                                        <span class="bk-allow-chip">
+                                            <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span>
+                                            <strong>{{ $inclBag }}</strong> checked
+                                        </span>
+                                    @endif
+                                    @if($inclCabin !== '')
+                                        <span class="bk-allow-chip">
+                                            <span class="bk-mini-icon bk-icon-cabin" aria-hidden="true"></span>
+                                            <strong>{{ $inclCabin }}</strong> cabin
+                                        </span>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     </div>
                     @endif
 
-                    {{-- ── Fare Rules (from BaggageInfos + FareRules) ── --}}
+                    {{-- ── Fare and baggage rules ── --}}
                     @if(!empty($baggageInfos) || !empty($fareRulesList))
                     <div class="bk-acc" x-data="{ open: false }">
                         <div class="bk-acc-head" :class="{ open }" @click="open = !open">
-                            <div class="bk-acc-icon" style="background:#fef2f2;color:#dc2626;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                            <div class="bk-acc-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                             </div>
                             <div>
-                                <div class="bk-acc-title">Fare & Baggage Rules</div>
-                                <div class="bk-acc-sub">Baggage allowance per segment</div>
+                                <div class="bk-acc-title">Fare and baggage rules</div>
+                                <div class="bk-acc-sub">What this fare allows, in the airline's own words</div>
                             </div>
                             <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
                         <div x-show="open" x-transition>
-                            <div class="bk-acc-body" style="padding-top:14px;">
+                            <div class="bk-acc-body">
 
-                                {{-- Baggage per segment table --}}
                                 @if(!empty($baggageInfos))
-                                <div style="margin-bottom:16px;">
-                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:10px;">Baggage Allowance by Segment</div>
-                                    <div style="border:1px solid var(--gray-200);border-radius:9px;overflow:hidden;">
-                                        <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+                                <div class="bk-xs-group" style="padding-top:0;">
+                                    <div class="bk-xs-head">
+                                        <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span>
+                                        <span class="bk-xs-title">Baggage allowance by flight</span>
+                                    </div>
+                                    <div class="bk-xs-note">Included in the fare you are booking.</div>
+
+                                    <div class="bk-rules-wrap">
+                                        <table class="bk-rules-table">
                                             <thead>
-                                                <tr style="background:var(--gray-50);">
-                                                    <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--gray-500);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--gray-200);">Flight</th>
-                                                    <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--gray-500);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--gray-200);">Route</th>
-                                                    <th style="padding:9px 14px;text-align:left;font-weight:700;color:var(--gray-500);font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--gray-200);">Allowance</th>
+                                                <tr>
+                                                    <th scope="col">Flight</th>
+                                                    <th scope="col">Route</th>
+                                                    <th scope="col">Allowance</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach($baggageInfos as $bi => $bagInfo)
+                                                @foreach($baggageInfos as $bagInfo)
                                                     @php $b = $bagInfo['BaggageInfo'] ?? $bagInfo; @endphp
-                                                    <tr style="{{ $bi % 2 === 0 ? '' : 'background:var(--gray-50);' }}">
-                                                        <td style="padding:10px 14px;font-weight:700;color:var(--blue);font-family:var(--mono);border-bottom:1px solid var(--gray-100);">
-                                                            {{ $b['FlightNo'] ?? '-' }}
-                                                        </td>
-                                                        <td style="padding:10px 14px;color:var(--gray-700);font-weight:600;border-bottom:1px solid var(--gray-100);">
-                                                            {{ $b['Departure'] ?? '' }} → {{ $b['Arrival'] ?? '' }}
-                                                        </td>
-                                                        <td style="padding:10px 14px;border-bottom:1px solid var(--gray-100);">
-                                                            <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--green-lt);color:var(--green);border-radius:999px;font-size:11.5px;font-weight:700;">
-                                                                <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span> {{ $b['Baggage'] ?? '-' }}
+                                                    <tr>
+                                                        <td class="bk-rules-flight">{{ $b['FlightNo'] ?? '—' }}</td>
+                                                        <td>{{ $b['Departure'] ?? '' }} to {{ $b['Arrival'] ?? '' }}</td>
+                                                        <td>
+                                                            <span class="bk-allow-chip">
+                                                                <span class="bk-mini-icon bk-icon-bag" aria-hidden="true"></span>
+                                                                <strong>{{ $b['Baggage'] ?? '—' }}</strong>
                                                             </span>
                                                         </td>
                                                     </tr>
@@ -1178,32 +1202,34 @@
                                 </div>
                                 @endif
 
-                                {{-- Fare Rules per city pair --}}
                                 @if(!empty($fareRulesList))
-                                <div>
-                                    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-400);margin-bottom:10px;">Fare Rules by Route</div>
+                                <div class="bk-xs-group">
+                                    <div class="bk-xs-head">
+                                        <span class="bk-mini-icon bk-icon-clock" aria-hidden="true"></span>
+                                        <span class="bk-xs-title">Changes and cancellations</span>
+                                    </div>
+                                    <div class="bk-xs-note">Published by the airline. Contact us if anything here is unclear before you pay.</div>
+
                                     @foreach($fareRulesList as $frItem)
                                         @php
                                             $fr = $frItem['FareRule'] ?? $frItem;
-                                            $rawRules = (string)($fr['Rules'] ?? '');
+                                            $rawRules = (string) ($fr['Rules'] ?? '');
                                             $rulesText = trim(strip_tags(preg_replace('/<(br|\/p|\/div|\/li)>/i', "\n", html_entity_decode($rawRules, ENT_QUOTES | ENT_HTML5))));
                                         @endphp
-                                        <div style="border:1px solid var(--gray-200);border-radius:9px;margin-bottom:8px;overflow:hidden;">
-                                            <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--gray-50);border-bottom:1px solid var(--gray-100);">
-                                                <div style="display:flex;align-items:center;gap:8px;">
-                                                    <span style="font-size:11.5px;font-weight:700;color:var(--navy);font-family:var(--mono);">{{ $fr['Airline'] ?? '' }}</span>
-                                                    <span style="font-size:12px;font-weight:700;color:var(--gray-700);">
-                                                        {{ substr($fr['CityPair'] ?? '', 0, 3) }} → {{ substr($fr['CityPair'] ?? '', 3, 3) }}
+                                        <div class="bk-rule-card">
+                                            <div class="bk-rule-card-head">
+                                                <span class="bk-rule-pair">
+                                                    <span class="bk-rule-airline">{{ $fr['Airline'] ?? '' }}</span>
+                                                    <span class="bk-rule-route">
+                                                        {{ substr($fr['CityPair'] ?? '', 0, 3) }} to {{ substr($fr['CityPair'] ?? '', 3, 3) }}
                                                     </span>
-                                                </div>
-                                                <span style="font-size:10.5px;padding:2px 8px;border-radius:999px;background:var(--blue-lt);color:var(--blue);font-weight:700;">
-                                                    {{ $fr['Category'] ?? 'General' }}
                                                 </span>
+                                                <span class="bk-rule-cat">{{ $fr['Category'] ?? 'General' }}</span>
                                             </div>
                                             @if($rulesText !== '')
-                                            <div style="padding:12px 14px;font-size:12px;color:var(--gray-600);line-height:1.7;white-space:pre-wrap;">{{ $rulesText }}</div>
+                                                <div class="bk-rule-body">{{ $rulesText }}</div>
                                             @else
-                                            <div style="padding:12px 14px;font-size:12px;color:var(--gray-400);font-style:italic;">No specific rules text available for this route.</div>
+                                                <div class="bk-rule-body empty">The airline published no rule text for this route.</div>
                                             @endif
                                         </div>
                                     @endforeach
@@ -1215,18 +1241,17 @@
                     </div>
                     @endif
 
-                    {{-- ── 4. Passenger Count ── --}}
                     <div class="bk-actions">
                         <button class="bk-btn-ghost" wire:click="back">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-                            Traveller Info
+                            Traveller information
                         </button>
                         <button class="bk-btn-next" wire:click="proceed" wire:loading.attr="disabled" wire:target="proceed">
                             <span wire:loading.remove wire:target="proceed" style="display:inline-flex;align-items:center;gap:7px;color:#fff;">
-                                Review Booking
+                                Review booking
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                             </span>
-                            <span wire:loading wire:target="proceed">Updating...</span>
+                            <span wire:loading wire:target="proceed">Saving...</span>
                         </button>
                     </div>
                     @endif
@@ -1805,16 +1830,16 @@
                             x-data="{ showTax: false }">
 
                             <div class="bk-fare-row" style="padding-bottom:4px;">
-                                <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">{{ $ptLabel }} x {{ $ptQty }}</span>
-                                <span class="bk-fare-val" style="font-weight:800;">{{ $fmt($totalPaxFare * $ptQty) }}</span>
+                                <span class="bk-fare-lbl" style="font-weight:600;color:var(--gray-900);">{{ $ptLabel }}{{ $ptQty > 1 ? ' × '.$ptQty : '' }}</span>
+                                <span class="bk-fare-val" style="font-weight:600;">{{ $fmt($totalPaxFare * $ptQty) }}</span>
                             </div>
                             <div class="bk-fare-row">
-                                <span class="bk-fare-lbl">Base Fare</span>
+                                <span class="bk-fare-lbl">Base fare</span>
                                 <span class="bk-fare-val">{{ $fmt($baseTotal) }}</span>
                             </div>
                             <div class="bk-fare-row">
                                 <span class="bk-fare-lbl">
-                                    Taxes & Fees
+                                    Taxes, fees and charges
                                     <button type="button" @click="showTax = !showTax"
                                         style="background:none;border:none;color:var(--blue);cursor:pointer;
                                             font-size:11px;font-family:var(--font);padding:0;margin-left:4px;"
