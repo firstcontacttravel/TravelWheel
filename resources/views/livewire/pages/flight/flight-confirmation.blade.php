@@ -102,6 +102,15 @@
         }
     }
 
+    // SkyLink reports 12-hour clock times ("05:30 pm"); TravelNext reports
+    // 24-hour. Every other page in this funnel normalises for display.
+    $cfTime = function ($value): string {
+        $raw = trim((string) $value);
+        if (! preg_match('/^(\d{1,2}):(\d{2})\s*([ap])\.?m\.?$/i', $raw, $m)) { return $raw; }
+        $hour = ((int) $m[1] % 12) + (strtolower($m[3]) === 'p' ? 12 : 0);
+        return str_pad((string) $hour, 2, '0', STR_PAD_LEFT).':'.$m[2];
+    };
+
     $statusTitle = $isTicketed ? 'Booking confirmed and ticketed' : 'Booking confirmed';
     $statusCopy = $isTicketed
         ? 'Your ticket has been issued. A copy of your itinerary has been sent to your email.'
@@ -127,7 +136,9 @@
     }
 
     body {
-        margin-top: 112px;
+        /* The site chrome is two stacked fixed bars (topbar 0-51px, nav 48-128px),
+           so 112px left the breadcrumb tucked under the nav. */
+        margin-top: 142px;
         background: linear-gradient(180deg, #fff 0%, var(--cf-soft) 42%, #fff 100%);
         color: var(--cf-text);
         font-family: var(--cf-font);
@@ -219,10 +230,9 @@
 
     .cf-ref-label {
         color: var(--cf-muted);
-        font-size: 10.5px;
-        font-weight: 900;
-        letter-spacing: .05em;
-        text-transform: uppercase;
+        font-size: 11.5px;
+        font-weight: 500;
+        letter-spacing: 0;
     }
 
     .cf-ref-value {
@@ -230,8 +240,34 @@
         color: var(--cf-blue);
         font-family: var(--cf-mono);
         font-size: 22px;
-        font-weight: 900;
+        font-weight: 500;
+        letter-spacing: .01em;
         word-break: break-word;
+    }
+
+    .cf-ref-alt {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--cf-line);
+        color: var(--cf-muted);
+        font-size: 11.5px;
+    }
+
+    .cf-ref-alt strong {
+        color: var(--cf-text);
+        font-family: var(--cf-mono);
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .cf-ref-paid {
+        margin-top: 8px;
+        color: var(--cf-muted);
+        font-size: 11.5px;
     }
 
     .cf-grid {
@@ -451,9 +487,8 @@
 
     .cf-pnr-label {
         color: var(--cf-faint);
-        font-size: 10px;
-        font-weight: 900;
-        text-transform: uppercase;
+        font-size: 11px;
+        font-weight: 500;
     }
 
     .cf-pnr-value {
@@ -638,10 +673,9 @@
     }
 
     .cf-total-label {
-        color: var(--cf-text);
-        font-size: 12px;
-        font-weight: 900;
-        text-transform: uppercase;
+        color: var(--cf-muted);
+        font-size: 12.5px;
+        font-weight: 600;
     }
 
     .cf-total-value {
@@ -786,10 +820,31 @@
             </p>
         </div>
 
+        @php
+            // 'gateway' and 'flex_gateway' are internal routing names, not things to
+            // show a customer, the same way 'Fare type: Private' was on the payment page.
+            $paidWith = match ($paymentMethod) {
+                'gateway' => 'Paid by card',
+                'flex_gateway' => 'Paid by card via TravelFlex',
+                'bank_transfer' => 'Paid by bank transfer',
+                'travelflex' => 'TravelFlex instalments',
+                default => '',
+            };
+        @endphp
         <div class="cf-ref-card">
             <div class="cf-ref-label">Booking reference</div>
             <div class="cf-ref-value">{{ $bookingRef ?: ($uniqueId ?: 'Pending') }}</div>
-            <div style="margin-top:8px;color:var(--cf-muted);font-size:11.5px;">{{ ucfirst(str_replace('_', ' ', $paymentMethod)) }}</div>
+            {{-- The airline PNR is what an airline desk asks for. It used to sit
+                 under "Contact Details" labelled "Ticket ref", which is neither. --}}
+            @if($uniqueId && $uniqueId !== $bookingRef)
+                <div class="cf-ref-alt">
+                    <span>Airline reference</span>
+                    <strong>{{ $uniqueId }}</strong>
+                </div>
+            @endif
+            @if($paidWith)
+                <div class="cf-ref-paid">{{ $paidWith }}</div>
+            @endif
         </div>
     </section>
 
@@ -801,7 +856,7 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5L21 16Z"/></svg>
                     </span>
                     <div>
-                        <div class="cf-card-title">Flight Itinerary</div>
+                        <div class="cf-card-title">Flight itinerary</div>
                         <div class="cf-card-sub">{{ $tripLabel }} · {{ $cabinLabel }} · {{ $flight['airline'] ?? 'Selected airline' }}</div>
                     </div>
                 </div>
@@ -856,12 +911,18 @@
                             <div class="cf-segments">
                                 @foreach($legSegments as $segment)
                                     @php
-                                        $flightNo = ($segment['airlineCode'] ?? $segment['airline_code'] ?? '') . ($segment['flightNo'] ?? $segment['flight_number'] ?? '');
+                                        // SkyLink already includes the carrier in flightNo ("VS412"),
+                                        // so prefixing unconditionally printed "VSVS412".
+                                        $segCarrier = (string) ($segment['airlineCode'] ?? $segment['airline_code'] ?? '');
+                                        $segNumber  = (string) ($segment['flightNo'] ?? $segment['flight_number'] ?? '');
+                                        $flightNo   = ($segCarrier !== '' && ! str_starts_with(strtoupper($segNumber), strtoupper($segCarrier)))
+                                            ? $segCarrier . $segNumber
+                                            : $segNumber;
                                         $pnr = $pnrMap[$flightNo] ?? ($segment['airlinePnr'] ?? '');
                                     @endphp
                                     <div class="cf-segment">
                                         <div>
-                                            <div class="cf-time">{{ $segment['departTime'] ?? $segment['departureTime'] ?? '' }}</div>
+                                            <div class="cf-time">{{ $cfTime($segment['departTime'] ?? $segment['departureTime'] ?? '') }}</div>
                                             <div class="cf-seg-meta">{{ $segment['from'] ?? '' }}</div>
                                         </div>
                                         <div class="cf-seg-route">
@@ -869,7 +930,7 @@
                                             <span class="cf-seg-meta">{{ $segment['airline'] ?? $flight['airline'] ?? '' }} @if(! empty($flightNo)) · {{ $flightNo }} @endif</span>
                                         </div>
                                         <div class="cf-pnr">
-                                            <div class="cf-time">{{ $segment['arrivalTime'] ?? $segment['arriveTime'] ?? '' }}</div>
+                                            <div class="cf-time">{{ $cfTime($segment['arrivalTime'] ?? $segment['arriveTime'] ?? '') }}</div>
                                             <div class="cf-seg-meta">{{ $segment['to'] ?? '' }}</div>
                                             @if($pnr)
                                                 <div class="cf-pnr-label">PNR</div>
@@ -897,7 +958,7 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v18l-4-2-4 2-4-2-4 2V4a2 2 0 0 1 2-2Z"/><path d="M8 7h8"/><path d="M8 11h8"/><path d="M8 15h5"/></svg>
                     </span>
                     <div>
-                        <div class="cf-card-title">E-ticket Details</div>
+                        <div class="cf-card-title">E-ticket details</div>
                         <div class="cf-card-sub">{{ $isTicketed ? 'Ticket references for your passengers' : 'Ticket numbers will appear after issuance' }}</div>
                     </div>
                 </div>
@@ -919,7 +980,17 @@
                             <div class="cf-ticket-number">{{ $ticketOrderUniqueId }}</div>
                         </div>
                     @else
-                        <div style="color:var(--cf-muted);font-size:13px;line-height:1.6;">Your e-ticket is being processed. We will send the ticket number to your email once issued.</div>
+                        <div style="color:var(--cf-muted);font-size:13px;line-height:1.6;">
+                            @if($isTicketed)
+                                Your ticket is issued. The airline has not returned the individual ticket
+                                numbers yet &mdash; they will be emailed to you as soon as it does, and your
+                                booking reference above is enough to check in or contact the airline
+                                in the meantime.
+                            @else
+                                Your e-ticket is being processed. We will send the ticket number to your
+                                email once it is issued.
+                            @endif
+                        </div>
                     @endif
                 </div>
             </section>
@@ -963,7 +1034,7 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
                     </span>
                     <div>
-                        <div class="cf-card-title">Before You Fly</div>
+                        <div class="cf-card-title">Before you fly</div>
                         <div class="cf-card-sub">A few checks before departure</div>
                     </div>
                 </div>
@@ -992,11 +1063,11 @@
             <div class="cf-actions">
                 <a class="cf-btn primary" href="{{ route('home') }}">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 22V12h6v10"/></svg>
-                    Back to Home
+                    Back to home
                 </a>
                 <button class="cf-btn" type="button" onclick="window.print()">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
-                    Print Itinerary
+                    Print itinerary
                 </button>
             </div>
         </main>
@@ -1004,26 +1075,36 @@
         <aside class="cf-rail">
             <section class="cf-card">
                 <div class="cf-summary-head">
-                    <div class="cf-card-title">Fare Summary</div>
+                    <div class="cf-card-title">Fare summary</div>
                     <div class="cf-card-sub">{{ $tripLabel }} · {{ count($passengers) }} passenger{{ count($passengers) === 1 ? '' : 's' }}</div>
                 </div>
                 <div class="cf-card-body" style="padding-top:10px;padding-bottom:8px;">
-                    @forelse($breakdown as $fare)
-                        @php
-                            $typeLabel = match($fare['passengerType'] ?? 'ADT') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' };
-                            $qty = (int) ($fare['qty'] ?? 1);
-                        @endphp
-                        <div class="cf-row"><span>{{ $typeLabel }} × {{ $qty }}</span><strong>{{ $fmt(((float) ($fare['totalFare'] ?? 0)) * $qty) }}</strong></div>
-                    @empty
+                    @php
+                        // The per-type figures are rounded per passenger, so they can sum to
+                        // a kobo either side of the amount actually charged — which on a
+                        // receipt reads as an error. Only decompose the total when the parts
+                        // genuinely add up to it.
+                        $breakdownSum = collect($breakdown)->sum(fn ($f) => ((float) ($f['totalFare'] ?? 0)) * (int) ($f['qty'] ?? 1));
+                        $breakdownReconciles = ! empty($breakdown) && abs($breakdownSum - $baseTotal) < 0.01;
+                    @endphp
+                    @if($breakdownReconciles)
+                        @foreach($breakdown as $fare)
+                            @php
+                                $typeLabel = match($fare['passengerType'] ?? 'ADT') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Traveller' };
+                                $qty = (int) ($fare['qty'] ?? 1);
+                            @endphp
+                            <div class="cf-row"><span>{{ $typeLabel }}{{ $qty > 1 ? ' × '.$qty : '' }}</span><strong>{{ $fmt(((float) ($fare['totalFare'] ?? 0)) * $qty) }}</strong></div>
+                        @endforeach
+                    @else
                         <div class="cf-row"><span>Flight fare</span><strong>{{ $fmt($baseTotal) }}</strong></div>
-                    @endforelse
+                    @endif
 
                     @if($extrasTotal > 0)
                         <div class="cf-row"><span>Extras</span><strong>{{ $fmt($extrasTotal) }}</strong></div>
                     @endif
                 </div>
                 <div class="cf-total">
-                    <div class="cf-total-label">Total Paid</div>
+                    <div class="cf-total-label">Total paid</div>
                     <div class="cf-total-value">{{ $fmt($grandTotal) }}</div>
                 </div>
             </section>
@@ -1034,23 +1115,25 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="m22 6-10 7L2 6"/></svg>
                     </span>
                     <div>
-                        <div class="cf-card-title">Contact Details</div>
+                        <div class="cf-card-title">Contact details</div>
                         <div class="cf-card-sub">Used for ticket delivery</div>
                     </div>
                 </div>
                 <div class="cf-card-body" style="padding-top:10px;">
                     <div class="cf-row"><span>Email</span><strong style="font-size:12px;">{{ $contact['email'] ?? '-' }}</strong></div>
                     <div class="cf-row"><span>Phone</span><strong>{{ $contact['phone_full'] ?? $contact['phone'] ?? '-' }}</strong></div>
-                    <div class="cf-row"><span>Payment</span><strong>{{ ucfirst(str_replace('_', ' ', $paymentMethod)) }}</strong></div>
+                    @if($paidWith)
+                        <div class="cf-row"><span>Payment</span><strong>{{ $paidWith }}</strong></div>
+                    @endif
                     @if($uniqueId)
-                        <div class="cf-row"><span>Ticket ref</span><strong style="font-family:var(--cf-mono);font-size:11px;">{{ $uniqueId }}</strong></div>
+
                     @endif
                 </div>
             </section>
 
             <section class="cf-card">
                 <div class="cf-card-body">
-                    <div class="cf-card-title">Need Help?</div>
+                    <div class="cf-card-title">Need help?</div>
                     <div style="margin-top:8px;color:var(--cf-muted);font-size:12.5px;line-height:1.65;">
                         Contact TravelWheel support with your booking reference if your e-ticket does not arrive within the expected time.
                     </div>
