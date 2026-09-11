@@ -3,77 +3,250 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 
 <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    /*
+     * ── Booking page foundation and Traveller info ──
+     * These classes had accumulated five stacked, unconditional redefinitions
+     * (the original block plus "Phase 1" through "Phase 4"), including two
+     * competing :root declarations — the first of which set --blue to a
+     * generic #1d4ed8 and the body font to Plus Jakarta Sans, neither of
+     * which belongs to this site. One canonical implementation replaces all.
+     */
     :root {
-        --navy:     #0a1940;
-        --blue:     #1d4ed8;
-        --blue-lt:  #eff6ff;
-        --blue-md:  #bfdbfe;
-        --green:    #059669;
-        --green-lt: #f0fdf4;
-        --amber:    #d97706;
-        --amber-lt: #fff7ed;
-        --red:      #dc2626;
-        --badgeOut: #267bdc;
-        --red-lt:   #fef2f2;
-        --gray-50:  #f8fafc;
-        --gray-100: #f1f5f9;
-        --gray-200: #e2e8f0;
-        --gray-300: #cbd5e1;
-        --gray-400: #94a3b8;
-        --gray-500: #64748b;
-        --gray-700: #334155;
-        --gray-900: #0f172a;
-        --radius:   10px;
-        --shadow:   0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
-        --shadow-md:0 4px 16px rgba(0,0,0,.10);
-        --font:     'Plus Jakarta Sans', sans-serif;
-        --mono:     'DM Mono', monospace;
+        --navy:     var(--tw-brand, #303191);
+        --blue:     var(--tw-brand, #303191);
+        --blue-dk:  var(--tw-brand-hover, #252675);
+        --blue-lt:  #f1f1ff;
+        --blue-md:  #d7d8ff;
+        --green:    var(--tw-accent, #00a859);
+        --green-dk: #04713f;
+        --green-lt: #e9f9f0;
+        --amber:    #b45309;
+        --amber-lt: #fffaf0;
+        --red:      #b42318;
+        --red-lt:   #fef3f2;
+        --badgeOut: var(--tw-brand, #303191);
+        --gray-50:  var(--tw-surface-soft, #f8f9fc);
+        --gray-100: #f2f4f7;
+        --gray-200: #e6e8ee;
+        --gray-300: #d5d9e2;
+        --gray-400: #98a2b3;
+        --gray-500: #667085;
+        --gray-600: #516079;
+        --gray-700: #344054;
+        --gray-900: #111827;
+        --radius:   12px;
+        --shadow:   0 1px 2px rgba(16,24,40,.05);
+        --shadow-md:0 10px 28px rgba(16,24,40,.08);
+        --font:     var(--tw-font-sans, "Open Sans", sans-serif);
+        --mono:     "DM Mono", monospace;
     }
-    body { font-family: var(--font); background: var(--gray-50); color: var(--gray-900); font-size: 14px; line-height: 1.5; margin-top: 120px; }
+    /* margin-top clears the fixed site header; the 640px query below drops it. */
+    body {
+        font-family: var(--font); color: var(--gray-900);
+        font-size: 14px; line-height: 1.5; margin-top: 120px;
+        background: linear-gradient(180deg, #fff 0%, var(--gray-50) 42%, #fff 100%);
+    }
 
-    /* â”€â”€ Layout â”€â”€ */
-    .bk-wrap  { max-width: 1160px; margin: 0 auto; padding: 24px 16px 64px; }
-    .bk-page  { display: grid; grid-template-columns: 1fr 340px; gap: 22px; align-items: start; }
-    .bk-main  { display: flex; flex-direction: column; gap: 12px; }
-    .bk-rail  { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 20px; }
+    .bk-wrap { max-width: 1216px; margin: 0 auto; padding: 24px 16px 72px; }
+    .bk-page { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+    .bk-main, .bk-rail { min-width: 0; }
+    .bk-main { display: flex; flex-direction: column; gap: 12px; }
+    .bk-rail { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 18px; }
 
-    /* â”€â”€ Breadcrumb â”€â”€ */
-    .bk-crumb { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--gray-400); margin-bottom: 18px; flex-wrap: wrap; }
-    .bk-crumb a { color: var(--blue); text-decoration: none; font-weight: 600; }
-    .bk-crumb a:hover { text-decoration: underline; }
+    .bk-crumb { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--gray-400); margin-bottom: 16px; flex-wrap: wrap; }
+    .bk-crumb a { color: var(--gray-500); text-decoration: none; font-weight: 500; }
+    .bk-crumb a:hover { color: var(--blue); }
     .bk-crumb-sep { color: var(--gray-300); }
 
-    /* â”€â”€ Stepper â”€â”€ */
-    .bk-steps { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 14px 20px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 0; margin-bottom: 4px; }
-    .bk-step  { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
-    .bk-step-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0; }
-    .bk-step-dot.done    { background: var(--green); color: #fff; }
-    .bk-step-dot.active  { background: var(--blue);  color: #fff; box-shadow: 0 0 0 4px var(--blue-md); }
-    .bk-step-dot.pending { background: var(--gray-100); color: var(--gray-400); border: 2px solid var(--gray-200); }
-    .bk-step-label { font-size: 12.5px; font-weight: 700; color: var(--gray-500); }
-    .bk-step-label.active { color: var(--gray-900); }
-    .bk-step-sub   { font-size: 10.5px; color: var(--gray-400); }
-    .bk-connector  { flex: 1; height: 2px; background: var(--gray-200); margin: 0 12px; min-width: 20px; }
-    .bk-connector.done { background: var(--green); }
+    /*
+     * ── Stepper ──
+     * Three equal cells over a progress rail that actually fills as the
+     * booking advances, so how far along you are is readable at a glance
+     * rather than inferred from which dot happens to be coloured in.
+     */
+    .bk-steps {
+        position: relative; display: grid; grid-template-columns: repeat(3, minmax(0,1fr));
+        gap: 4px; padding: 14px 18px 16px;
+        background: #fff; border: 1px solid var(--gray-200);
+        border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    }
+    .bk-steps::before { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--gray-100); }
+    .bk-steps::after {
+        content: ""; position: absolute; left: 0; bottom: 0; height: 3px;
+        width: var(--bk-progress, 0%);
+        background: linear-gradient(90deg, var(--blue) 0%, var(--green) 100%);
+        transition: width .4s ease;
+    }
+    .bk-step { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .bk-step-dot {
+        width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 12.5px; font-weight: 700; font-family: var(--mono);
+        background: #fff; color: var(--gray-400); border: 1.5px solid var(--gray-200);
+        transition: background .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+    .bk-step-dot.active { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: 0 0 0 4px rgba(48,49,145,.12); }
+    .bk-step-dot.done { background: var(--green-lt); border-color: #9ae0bd; color: var(--green-dk); font-size: 0; }
+    .bk-step-dot.done::after {
+        content: ""; width: 14px; height: 14px; background: currentColor;
+        mask: url("{{ asset('images/flight-icons/check.svg') }}") center / contain no-repeat;
+        -webkit-mask: url("{{ asset('images/flight-icons/check.svg') }}") center / contain no-repeat;
+    }
+    .bk-step-txt { min-width: 0; }
+    .bk-step-label { display: block; font-size: 13px; font-weight: 600; color: var(--gray-500); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bk-step-label.active { color: var(--gray-900); font-weight: 700; }
+    .bk-step-sub { display: block; font-size: 11.5px; color: var(--gray-400); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bk-connector { display: none; }
 
-    /* â”€â”€ Accordion card â”€â”€ */
+    /* ── Accordion card ── */
     .bk-acc { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
     .bk-acc-head {
-        display: flex; align-items: center; gap: 12px; padding: 15px 20px;
-        cursor: pointer; user-select: none; transition: background .15s;
-        border-bottom: 1px solid transparent;
+        display: flex; align-items: center; gap: 12px; padding: 15px 18px;
+        cursor: pointer; user-select: none; border-bottom: 1px solid transparent;
+        transition: background .15s ease;
     }
-    .bk-acc-head:hover { background: var(--gray-50); }
-    .bk-acc-head.open  { border-bottom-color: var(--gray-100); }
-    .bk-acc-icon { width: 36px; height: 36px; border-radius: 9px; background: var(--blue-lt); color: var(--blue); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .bk-acc-title { font-size: 14.5px; font-weight: 800; color: var(--gray-900); }
-    .bk-acc-sub   { font-size: 11.5px; color: var(--gray-400); margin-top: 1px; }
-    .bk-acc-chevron { margin-left: auto; color: var(--gray-400); transition: transform .25s; flex-shrink: 0; }
+    .bk-acc-head:hover { background: #fbfcfe; }
+    .bk-acc-head.open { border-bottom-color: var(--gray-100); }
+    .bk-acc-icon { width: 34px; height: 34px; border-radius: 9px; background: var(--blue-lt); color: var(--blue); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .bk-acc-title { font-size: 14px; font-weight: 700; color: var(--gray-900); line-height: 1.35; }
+    .bk-acc-sub { font-size: 12px; color: var(--gray-500); margin-top: 1px; }
+    .bk-acc-chevron { margin-left: auto; color: var(--gray-400); transition: transform .25s ease; flex-shrink: 0; }
     .bk-acc-chevron.open { transform: rotate(180deg); }
-    .bk-acc-body  { padding: 18px 20px; }
+    .bk-acc-body { padding: 18px; }
 
-    /* â”€â”€ Notices â”€â”€ */
+    /*
+     * ── Traveller card ──
+     * One card per traveller. The head carries who it is and whether it is
+     * finished; the body groups fields by what the traveller is copying from
+     * — themselves, then their passport — instead of running eleven inputs
+     * together in one undifferentiated grid.
+     */
+    .bk-pax-card { border: 1px solid var(--gray-200); border-radius: 10px; overflow: hidden; background: #fff; transition: border-color .15s ease, box-shadow .15s ease; }
+    .bk-pax-card + .bk-pax-card { margin-top: 10px; }
+    .bk-pax-card:hover { border-color: var(--gray-300); }
+    .bk-pax-card.is-open { border-color: var(--blue-md); box-shadow: var(--shadow); }
+    .bk-pax-card-head { display: flex; align-items: center; gap: 11px; padding: 12px 14px; cursor: pointer; user-select: none; transition: background .15s ease; }
+    .bk-pax-card-head:hover { background: var(--gray-50); }
+    .bk-pax-index {
+        flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--gray-50); border: 1px solid var(--gray-200);
+        font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--gray-600);
+    }
+    .bk-pax-card.is-open .bk-pax-index { background: var(--blue-lt); border-color: var(--blue-md); color: var(--blue); }
+    .bk-pax-who { min-width: 0; flex: 1; }
+    .bk-pax-num-lbl { display: block; font-size: 13px; font-weight: 600; color: var(--gray-900); line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bk-pax-meta { display: flex; align-items: center; gap: 7px; margin-top: 2px; }
+    .bk-pax-badge { flex-shrink: 0; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; line-height: 1.45; }
+    .bk-pax-badge.adt { background: var(--blue-lt); color: var(--blue); }
+    .bk-pax-badge.chd { background: #fff4e5; color: var(--amber); }
+    .bk-pax-badge.inf { background: var(--green-lt); color: var(--green-dk); }
+    .bk-primary-chip { flex-shrink: 0; padding: 2px 8px; border-radius: 6px; background: var(--gray-50); border: 1px solid var(--gray-200); color: var(--gray-600); font-size: 11px; font-weight: 600; line-height: 1.45; }
+    .bk-pax-state { flex-shrink: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600; }
+    .bk-pax-complete { color: var(--green-dk); }
+    .bk-pax-progress { color: var(--gray-500); font-weight: 500; }
+    .bk-pax-chevron { flex-shrink: 0; color: var(--gray-400); transition: transform .2s ease; }
+    .bk-pax-age { font-size: 11.5px; color: var(--gray-400); }
+    .bk-tick { display: inline-block; width: 13px; height: 13px; background: currentColor;
+        mask: url("{{ asset('images/flight-icons/check.svg') }}") center / contain no-repeat;
+        -webkit-mask: url("{{ asset('images/flight-icons/check.svg') }}") center / contain no-repeat; }
+    .bk-pax-card.is-open .bk-pax-chevron { transform: rotate(180deg); }
+    .bk-pax-body { padding: 0 14px 16px; border-top: 1px solid var(--gray-100); }
+
+    /* ── Field groups ── */
+    .bk-fieldset { padding-top: 16px; }
+    .bk-fieldset + .bk-fieldset { margin-top: 16px; border-top: 1px solid var(--gray-100); }
+    .bk-fieldset-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin-bottom: 12px; }
+    .bk-fieldset-title { font-size: 12.5px; font-weight: 700; color: var(--gray-900); }
+    .bk-fieldset-note { font-size: 11.5px; color: var(--gray-500); line-height: 1.5; }
+
+    .bk-form-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px 12px; }
+    .bk-col-2 { grid-column: span 2; }
+    .bk-col-full { grid-column: 1 / -1; }
+    .bk-col-half { grid-column: span 1; }
+
+    .bk-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    /* Sentence case, muted. Every one of these used to be tracked-out capitals. */
+    .bk-label { display: flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 500; color: var(--gray-500); text-transform: none; letter-spacing: 0; }
+    /* Most fields here are required, so the optional few are marked instead —
+       a column of red asterisks says less than four quiet "Optional" tags. */
+    .bk-optional { font-size: 11px; font-weight: 400; color: var(--gray-400); }
+    .bk-req { display: none; }
+    .bk-input, .bk-select {
+        width: 100%; height: 44px; padding: 0 12px;
+        border: 1px solid var(--gray-200); border-radius: 9px;
+        background: #fff; color: var(--gray-900); font-size: 13.5px;
+        font-family: var(--font); outline: none;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .bk-input::placeholder { color: var(--gray-400); }
+    .bk-input:hover, .bk-select:hover { border-color: var(--gray-300); }
+    .bk-input:focus, .bk-select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(48,49,145,.11); }
+    .bk-select {
+        appearance: none; -webkit-appearance: none; cursor: pointer; padding-right: 34px;
+        background: #fff url("{{ asset('images/flight-icons/chevron-down.svg') }}") no-repeat right 12px center / 14px 14px;
+    }
+    .bk-error { font-size: 11.5px; color: var(--red); }
+    /* Mark the control itself, not just the message beneath it — with three
+       traveller cards stacked, a line of red text 40px below an otherwise
+       normal-looking field is easy to scroll straight past. */
+    .bk-field:has(.bk-error) .bk-input,
+    .bk-field:has(.bk-error) .bk-select,
+    .bk-field:has(.bk-error) .bk-radio-group { border-color: #f7b9b2; background-color: #fffbfa; }
+    .bk-field:has(.bk-error) .bk-input:focus,
+    .bk-field:has(.bk-error) .bk-select:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(180,35,24,.10); }
+    .bk-hint { font-size: 11.5px; color: var(--gray-400); line-height: 1.45; }
+
+    /* Gender: two mutually exclusive options, so a segmented control rather
+       than bare browser radios. The real inputs stay, for keyboard and forms. */
+    .bk-radio-group { display: inline-flex; gap: 3px; padding: 3px; height: 44px; border: 1px solid var(--gray-200); border-radius: 9px; background: var(--gray-50); }
+    .bk-radio-opt { position: relative; display: flex; }
+    .bk-radio-opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+    .bk-radio-opt span {
+        display: flex; align-items: center; justify-content: center;
+        min-width: 70px; padding: 0 14px; border-radius: 7px;
+        border: 1px solid transparent; background: transparent;
+        font-size: 13px; font-weight: 600; color: var(--gray-600);
+        transition: background .15s ease, color .15s ease, border-color .15s ease;
+    }
+    .bk-radio-opt input:hover + span { color: var(--gray-900); }
+    .bk-radio-opt input:checked + span { background: #fff; border-color: var(--gray-200); color: var(--blue); box-shadow: 0 1px 2px rgba(16,24,40,.07); }
+    .bk-radio-opt input:focus-visible + span { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(48,49,145,.11); }
+
+    /* ── Contact ── */
+    .bk-contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+    .bk-contact-full { grid-column: 1 / -1; }
+    .bk-phone-grid { grid-template-columns: 1fr 1fr; }
+    .bk-phone-input { font-family: var(--mono); }
+
+    /* ── Actions ── */
+    .bk-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 8px; }
+    .bk-btn-ghost {
+        display: inline-flex; align-items: center; gap: 8px;
+        height: 46px; padding: 0 20px; border-radius: 10px;
+        border: 1px solid var(--gray-200); background: #fff; color: var(--gray-700);
+        font-family: var(--font); font-size: 13.5px; font-weight: 600;
+        text-decoration: none; cursor: pointer;
+        transition: background .15s ease, border-color .15s ease;
+    }
+    .bk-btn-ghost:hover { background: var(--gray-50); border-color: var(--gray-300); }
+    /* Was a blue button carrying an orange box-shadow that turned orange on
+       hover, left over from when this button used to be orange. */
+    .bk-btn-next, .bk-btn-pay {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        height: 48px; padding: 0 26px; border: none; border-radius: 10px;
+        background: var(--blue); color: #fff;
+        font-family: var(--font); font-size: 14px; font-weight: 700; cursor: pointer;
+        box-shadow: 0 6px 18px rgba(48,49,145,.20);
+        transition: background .18s ease, box-shadow .18s ease;
+    }
+    .bk-btn-next:hover, .bk-btn-pay:hover { background: var(--blue-dk); box-shadow: 0 10px 24px rgba(48,49,145,.26); }
+    .bk-btn-next[disabled], .bk-btn-pay[disabled] { opacity: .55; cursor: not-allowed; box-shadow: none; }
+    .bk-btn-pay { height: 52px; font-size: 15px; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Notices ── */
     .bk-notice { padding: 11px 14px; border-radius: 9px; font-size: 12.5px; display: flex; align-items: flex-start; gap: 9px; }
     .bk-notice svg { flex-shrink: 0; margin-top: 1px; }
     .bk-notice.info   { background: var(--blue-lt);  color: var(--blue);  border: 1px solid var(--blue-md); }
@@ -81,7 +254,7 @@
     .bk-notice.danger { background: var(--red-lt);   color: var(--red);   border: 1px solid #fca5a5; }
     .bk-notice.green  { background: var(--green-lt); color: var(--green); border: 1px solid #a7f3d0; }
 
-    /* â”€â”€ Itinerary (Image 1 style) â”€â”€ */
+    /* ── Itinerary (Image 1 style) ── */
     .bk-itin-leg { margin-bottom: 0; }
     .bk-itin-leg + .bk-itin-leg { border-top: 1px solid var(--gray-100); margin-top: 0; }
     .bk-itin-leg-head {
@@ -131,7 +304,7 @@
         border-radius: 8px; font-size: 11.5px; color: var(--amber); font-weight: 600;
     }
 
-    /* â”€â”€ Extra bags banner â”€â”€ */
+    /* ── Extra bags banner ── */
     .bk-bags-banner {
         display: flex; align-items: center; gap: 14px;
         padding: 14px 18px; background: #fff;
@@ -145,80 +318,6 @@
     .bk-bags-btn { padding: 7px 18px; border: 1.5px solid var(--blue); border-radius: 8px; background: #fff; color: var(--blue); font-size: 13px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: all .15s; flex-shrink: 0; }
     .bk-bags-btn:hover { background: var(--blue-lt); }
 
-    /* â”€â”€ Passenger counter â”€â”€ */
-    .bk-pax-counter { display: flex; border: 1.5px solid var(--gray-200); border-radius: 10px; overflow: hidden; }
-    .bk-pax-col     { flex: 1; padding: 14px 16px; border-right: 1px solid var(--gray-100); }
-    .bk-pax-col:last-child { border-right: none; }
-    .bk-pax-col-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gray-400); }
-    .bk-pax-col-sub   { font-size: 10.5px; color: var(--gray-400); margin-top: 1px; }
-    .bk-pax-ctr       { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-    .bk-pax-btn { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--gray-200); background: #fff; font-size: 18px; line-height: 1; color: var(--gray-700); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; padding: 0; font-family: var(--font); }
-    .bk-pax-btn:hover:not([disabled]) { background: var(--blue-lt); border-color: var(--blue); color: var(--blue); }
-    .bk-pax-btn[disabled] { opacity: .3; cursor: not-allowed; }
-    .bk-pax-num { font-size: 20px; font-weight: 800; color: var(--gray-900); min-width: 24px; text-align: center; }
-    .bk-total-bar { display: flex; align-items: center; justify-content: space-between; padding: 11px 16px; background: var(--blue-lt); border-radius: 8px; margin-top: 14px; }
-    .bk-total-label { font-size: 13px; font-weight: 700; color: var(--blue); }
-    .bk-total-val   { font-size: 15px; font-weight: 800; color: var(--blue); font-family: var(--mono); }
-
-    .bk-pax-info { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-    .bk-pax-col-label { font-weight: 600; font-size: 13px; }
-    .bk-pax-col-sub { font-size: 11px; color: #6b7280;}
-    .bk-pax-ctr { display: flex; align-items: center;}
-
-    /* â”€â”€ Passenger card / form â”€â”€ */
-    .bk-pax-card { border: 1.5px solid var(--gray-200); border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
-    .bk-pax-card:last-child { margin-bottom: 0; }
-    .bk-pax-card-head {
-        display: flex; align-items: center; gap: 10px;
-        padding: 11px 15px; background: var(--gray-50);
-        border-bottom: 1px solid var(--gray-100);
-        cursor: pointer; user-select: none;
-    }
-    .bk-pax-card-head:hover { background: #eef2f7; }
-    .bk-pax-badge { padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; flex-shrink: 0; }
-    .bk-pax-badge.adt { background: var(--blue-lt);   color: var(--blue); }
-    .bk-pax-badge.chd { background: var(--amber-lt);  color: var(--amber); }
-    .bk-pax-badge.inf { background: var(--green-lt);  color: var(--green); }
-    .bk-pax-num-lbl { font-size: 13px; font-weight: 700; color: var(--gray-700); flex: 1; }
-    .bk-pax-progress { font-size: 11px; color: var(--gray-400); font-weight: 600; }
-    .bk-pax-complete { font-size: 11px; color: var(--green); font-weight: 700; }
-    .bk-primary-chip {
-        display: inline-flex;
-        align-items: center;
-        min-height: 20px;
-        margin-left: 6px;
-        padding: 2px 7px;
-        border-radius: 999px;
-        background: #eef2ff;
-        color: var(--blue);
-        font-size: 10px;
-        font-weight: 850;
-    }
-
-    /* Important notice in pax card */
-    .bk-pax-notice { margin: 0; padding: 9px 15px; background: #fff8e6; border-bottom: 1px solid #fde68a; font-size: 11.5px; color: #92400e; display: flex; align-items: flex-start; gap: 7px; }
-
-    /* Form grid */
-    .bk-form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 16px 15px; }
-    .bk-col-2    { grid-column: span 2; }
-    .bk-col-full { grid-column: 1 / -3; }
-    .bk-col-half { grid-column: span 1; }
-    .bk-field { display: flex; flex-direction: column; gap: 5px; }
-    .bk-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gray-400); }
-    .bk-req   { color: var(--red); margin-left: 2px; }
-    .bk-input, .bk-select {
-        height: 44px; padding: 0 12px; border: 1.5px solid var(--gray-200); border-radius: 9px;
-        font-size: 14px; color: var(--gray-900); background: var(--gray-50); outline: none;
-        font-family: var(--font); transition: border-color .15s, box-shadow .15s; width: 100%;
-    }
-    .bk-input:focus, .bk-select:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
-    .bk-select { appearance: none; cursor: pointer; padding-right: 30px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; background-color: var(--gray-50); }
-    .bk-radio-group { display: flex; gap: 14px; align-items: center; height: 44px; }
-    .bk-radio-opt   { display: flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--gray-700); }
-    .bk-radio-opt input { width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer; }
-    .bk-error { font-size: 11px; color: var(--red); margin-top: 2px; }
-    .bk-hint  { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
-
     /* Passport accordion */
     .bk-pp-toggle { display: flex; align-items: center; gap: 9px; cursor: pointer; width: 100%; padding: 10px 15px; background: var(--gray-50); border-top: 1px solid var(--gray-100); border-bottom: none; border-left: none; border-right: none; transition: background .15s; user-select: none; font-family: var(--font); text-align: left; }
     .bk-pp-toggle:hover { background: var(--blue-lt); }
@@ -229,11 +328,7 @@
     .bk-pp-chevron.open { transform: rotate(180deg); }
     .bk-pp-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px 15px; background: #fff; border-top: 1px solid var(--gray-100); }
 
-    /* â”€â”€ Contact â”€â”€ */
-    .bk-contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .bk-contact-full { grid-column: 3 / 3; }
-
-    /* â”€â”€ Seat selection (Image 3 style) â”€â”€ */
+    /* ── Seat selection (Image 3 style) ── */
     .bk-seat-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--gray-100); }
     .bk-seat-row:last-child { border-bottom: none; }
     .bk-seat-leg  { display: flex; align-items: center; gap: 8px; flex: 1; }
@@ -248,22 +343,12 @@
     .bk-seat-choose { padding: 6px 16px; border-radius: 7px; background: var(--blue); color: #fff; font-size: 12.5px; font-weight: 700; border: none; cursor: pointer; font-family: var(--font); transition: background .15s; }
     .bk-seat-choose:hover { background: #1e40af; }
 
-    /* â”€â”€ T&C bar â”€â”€ */
+    /* ── T&C bar ── */
     .bk-terms-bar { display: flex; align-items: center; gap: 10px; padding: 12px 0 0; font-size: 12.5px; color: var(--gray-500); }
     .bk-terms-bar a { color: var(--blue); font-weight: 600; }
     .bk-terms-bar input { width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer; }
 
-    /* â”€â”€ Action buttons â”€â”€ */
-    .bk-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px; }
-    .bk-btn-ghost { padding: 0 22px; height: 46px; background: #fff; border: 1.5px solid var(--gray-200); border-radius: 10px; font-size: 13.5px; font-weight: 700; color: var(--gray-700); cursor: pointer; font-family: var(--font); transition: all .15s; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
-    .bk-btn-ghost:hover { background: var(--gray-50); border-color: var(--gray-400); }
-    .bk-btn-next { padding: 0 28px; height: 48px; background: #165ef9; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: var(--font); box-shadow: 0 4px 16px rgba(249,115,22,.3); transition: all .2s; display: inline-flex; align-items: center; gap: 8px; }
-    .bk-btn-next:hover { background: #ea6c0a; transform: translateY(-1px); }
-    .bk-btn-next[disabled] { opacity: .6; cursor: not-allowed; transform: none; }
-    .bk-btn-pay { padding: 0 28px; height: 52px; background: #f97316; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 800; cursor: pointer; font-family: var(--font); box-shadow: 0 4px 16px rgba(249,115,22,.35); transition: all .2s; display: inline-flex; align-items: center; gap: 9px; }
-    .bk-btn-pay:hover { background: #ea6c0a; transform: translateY(-1px); }
-
-    /* â”€â”€ RIGHT RAIL: My Cart â”€â”€ */
+    /* ── RIGHT RAIL: My Cart ── */
     .bk-cart { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
     .bk-cart-head { background: var(--navy); padding: 14px 18px; }
     .bk-cart-title { font-size: 15px; font-weight: 800; color: #fff; }
@@ -300,14 +385,14 @@
     .bk-promo-btn { padding: 0 14px; height: 38px; background: var(--navy); color: #fff; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: background .15s; }
     .bk-promo-btn:hover { background: #0f2460; }
 
-    /* â”€â”€ Fare detail panel (tax breakdown) â”€â”€ */
+    /* ── Fare detail panel (tax breakdown) ── */
     .bk-tax-detail { padding-left: 10px; border-left: 2px solid var(--blue-md); margin: 4px 0 6px; }
     .bk-tax-row    { display: flex; align-items: center; justify-content: space-between; padding: 2px 0; font-size: 11.5px; }
     .bk-tax-lbl    { color: var(--gray-500); }
     .bk-tax-code   { font-size: 10px; opacity: .5; margin-left: 4px; }
     .bk-tax-val    { font-family: var(--mono); font-size: 11px; color: var(--gray-700); }
 
-    /* â”€â”€ Review step â”€â”€ */
+    /* ── Review step ── */
     .bk-review-section { margin-bottom: 20px; }
     .bk-review-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); padding-bottom: 8px; border-bottom: 1px solid var(--gray-100); margin-bottom: 10px; }
     .bk-review-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--gray-100); gap: 16px; font-size: 13px; }
@@ -335,96 +420,6 @@
         --shadow-md: 0 10px 28px rgba(16,24,40,.08);
         --font: var(--tw-font-sans, 'Open Sans', 'Plus Jakarta Sans', sans-serif);
     }
-    body {
-        background: linear-gradient(180deg, #fff 0%, var(--gray-50) 42%, #fff 100%);
-    }
-    .bk-wrap {
-        max-width: 1216px;
-        padding: 24px 16px 72px;
-    }
-    .bk-page {
-        grid-template-columns: minmax(0, 1fr) 340px;
-        gap: 18px;
-    }
-    .bk-main,
-    .bk-rail {
-        min-width: 0;
-    }
-    .bk-rail {
-        top: 18px;
-    }
-    .bk-crumb {
-        gap: 7px;
-        margin-bottom: 16px;
-        font-size: 12px;
-    }
-    .bk-crumb a:hover {
-        color: #252675;
-        text-decoration: none;
-    }
-    .bk-steps {
-        padding: 12px 16px;
-        border-radius: 12px;
-        background: rgba(255,255,255,.96);
-        box-shadow: var(--shadow-md);
-    }
-    .bk-step-dot {
-        transition: background .18s ease, box-shadow .18s ease, color .18s ease;
-    }
-    .bk-step-dot.active {
-        box-shadow: 0 0 0 4px rgba(48,49,145,.12);
-    }
-    .bk-step-label {
-        font-weight: 800;
-    }
-    .bk-acc {
-        border-radius: 12px;
-        border-color: var(--gray-200);
-        box-shadow: var(--shadow);
-    }
-    .bk-acc-head {
-        padding: 15px 18px;
-    }
-    .bk-acc-head:hover {
-        background: #fbfcfe;
-    }
-    .bk-acc-icon {
-        width: 34px;
-        height: 34px;
-        border-radius: 9px;
-    }
-    .bk-actions {
-        padding-top: 8px;
-    }
-    .bk-btn-ghost,
-    .bk-btn-next,
-    .bk-btn-pay {
-        border-radius: 10px;
-        letter-spacing: 0;
-        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
-    }
-    .bk-btn-ghost {
-        height: 46px;
-        border: 1px solid var(--gray-200);
-        color: var(--gray-700);
-        box-shadow: 0 1px 2px rgba(16,24,40,.04);
-    }
-    .bk-btn-ghost:hover {
-        border-color: #cfd2da;
-        background: #fbfcfe;
-        transform: translateY(-1px);
-    }
-    .bk-btn-next,
-    .bk-btn-pay {
-        background: var(--blue);
-        box-shadow: 0 12px 24px rgba(48,49,145,.18);
-    }
-    .bk-btn-next:hover,
-    .bk-btn-pay:hover {
-        background: #252675;
-        transform: translateY(-1px);
-        box-shadow: 0 16px 30px rgba(48,49,145,.24);
-    }
     .bk-cart {
         border: 1px solid var(--gray-200);
         border-radius: 12px;
@@ -450,8 +445,7 @@
         width: 22px;
         height: 22px;
         border-radius: 999px;
-        background: var(--blue-lt);
-        color: var(--blue);
+        background: var(--blue);
         mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 4h-2l-1 2h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 19h9v-2h-9l1.1-2h7.45a2 2 0 0 0 1.8-1.1L24 7H8.42L7 4Zm3 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm8 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z'/%3E%3C/svg%3E") center / 15px 15px no-repeat;
         -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 4h-2l-1 2h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 19h9v-2h-9l1.1-2h7.45a2 2 0 0 0 1.8-1.1L24 7H8.42L7 4Zm3 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm8 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z'/%3E%3C/svg%3E") center / 15px 15px no-repeat;
     }
@@ -599,19 +593,6 @@
         height: 18px;
         flex: 0 0 18px;
         color: var(--green);
-    }
-
-    /* Phase 2 itinerary and rules redesign */
-    .bk-main > .bk-acc:first-of-type {
-        overflow: visible;
-    }
-    .bk-main > .bk-acc:first-of-type .bk-acc-head {
-        background: #fff;
-        border-bottom-color: var(--gray-200);
-    }
-    .bk-main > .bk-acc:first-of-type .bk-acc-icon {
-        background: #f1f1ff;
-        color: var(--blue);
     }
     .bk-itin-leg {
         background: #fff;
@@ -807,25 +788,6 @@
         color: var(--gray-500);
         font-size: 12px;
     }
-    .bk-main > .bk-acc:nth-of-type(3) .bk-acc-head {
-        background: #fff;
-    }
-    .bk-main > .bk-acc:nth-of-type(3) .bk-acc-icon {
-        background: #fff1f2;
-        color: #dc2626;
-    }
-    .bk-main > .bk-acc:nth-of-type(3) .bk-acc-body {
-        background: #fff;
-    }
-    .bk-main > .bk-acc:nth-of-type(3) table {
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    .bk-main > .bk-acc:nth-of-type(3) div[style*="border:1px solid var(--gray-200)"] {
-        border-color: var(--gray-200) !important;
-        border-radius: 10px !important;
-        box-shadow: 0 1px 2px rgba(16,24,40,.04);
-    }
 
     /* Phase 3 traveller and contact form redesign */
     .bk-route-summary {
@@ -959,14 +921,6 @@
         background: #fff7ed;
         color: var(--amber);
     }
-    .bk-phone-grid {
-        grid-template-columns: 1fr;
-    }
-    .bk-phone-input {
-        font-size: 15px;
-        font-weight: 750;
-        letter-spacing: .01em;
-    }
     .bk-cart {
         border: 1px solid rgba(48,49,145,.12);
         border-radius: 16px;
@@ -1019,242 +973,25 @@
         font-size: clamp(21px, 2.4vw, 26px);
         line-height: 1.1;
     }
-    .bk-pax-counter {
-        border: 1px solid var(--gray-200);
-        border-radius: 12px;
-        background: #fff;
-        box-shadow: 0 1px 2px rgba(16,24,40,.04);
-    }
-    .bk-pax-col {
-        padding: 16px;
-        border-right-color: var(--gray-200);
-    }
-    .bk-pax-col-label {
-        color: var(--gray-500);
-        font-size: 11px;
-        font-weight: 850;
-        letter-spacing: .04em;
-    }
-    .bk-pax-col-sub {
-        color: var(--gray-400);
-        font-size: 11px;
-    }
-    .bk-pax-num {
-        color: var(--gray-900);
-        font-size: 21px;
-        letter-spacing: 0;
-    }
-    .bk-total-bar {
-        border: 1px solid rgba(48,49,145,.10);
-        border-radius: 10px;
-        background: linear-gradient(180deg, #f8f8ff 0%, #f1f1ff 100%);
-    }
-    .bk-pax-card {
-        border: 1px solid var(--gray-200);
-        border-radius: 12px;
-        background: #fff;
-        box-shadow: 0 1px 2px rgba(16,24,40,.04);
-        overflow: hidden;
-    }
-    .bk-pax-card-head {
-        padding: 13px 15px;
-        background: #fbfcfe;
-        border-bottom-color: var(--gray-200);
-        transition: background .18s ease;
-    }
-    .bk-pax-card-head:hover {
-        background: #f7f8fc;
-    }
-    .bk-pax-badge {
-        padding: 4px 10px;
-        border-radius: 999px;
-        font-size: 11px;
-        font-weight: 850;
-    }
-    .bk-pax-num-lbl {
-        color: var(--gray-900);
-        font-size: 13px;
-        font-weight: 850;
-    }
-    .bk-pax-progress {
-        padding: 3px 8px;
-        border-radius: 999px;
-        background: var(--gray-100);
-        color: var(--gray-500);
-        font-size: 10.5px;
-        font-weight: 800;
-    }
-    .bk-pax-complete {
-        padding: 3px 8px;
-        border-radius: 999px;
-        background: #eafff0;
-        color: var(--green);
-        font-size: 10.5px;
-        font-weight: 850;
-    }
-    .bk-pax-notice {
-        padding: 11px 15px;
-        border-bottom: 1px solid #fde68a;
-        background: #fff9eb;
-        color: #92400e;
-        font-size: 11.5px;
-        line-height: 1.45;
-    }
-    .bk-form-grid {
-        gap: 14px;
-        padding: 17px 15px 18px;
-    }
-    .bk-field {
-        gap: 6px;
-        min-width: 0;
-    }
-    .bk-label {
-        color: var(--gray-500);
-        font-size: 10.5px;
-        font-weight: 850;
-        letter-spacing: .035em;
-    }
-    .bk-input,
-    .bk-select {
-        height: 46px;
-        border: 1px solid var(--gray-200);
-        border-radius: 10px;
-        background-color: #fbfcfe;
-        color: var(--gray-900);
-        font-size: 13.5px;
-        font-weight: 600;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
-        transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
-    }
-    .bk-input::placeholder {
-        color: #a6afbf;
-        font-weight: 500;
-    }
-    .bk-input:focus,
-    .bk-select:focus {
-        border-color: var(--blue);
-        background: #fff;
-        box-shadow: 0 0 0 3px rgba(48,49,145,.10);
-    }
-    .bk-select {
-        background-color: #fbfcfe;
-        background-position: right 12px center;
-    }
-    .bk-radio-group {
-        gap: 8px;
-        height: auto;
-        min-height: 46px;
-        flex-wrap: wrap;
-    }
-    .bk-radio-opt {
-        min-height: 38px;
-        padding: 8px 12px;
-        border: 1px solid var(--gray-200);
-        border-radius: 999px;
-        background: #fff;
-        color: var(--gray-700);
-        font-size: 13px;
-        font-weight: 750;
-        transition: border-color .18s ease, background .18s ease, color .18s ease;
-    }
-    .bk-radio-opt:hover {
-        border-color: var(--blue-md);
-        background: var(--blue-lt);
-        color: var(--blue);
-    }
-    .bk-radio-opt input {
-        accent-color: var(--blue);
-    }
-    .bk-hint {
-        color: var(--gray-400);
-        font-size: 10.5px;
-        line-height: 1.35;
-    }
-    .bk-error {
-        color: var(--red);
-        font-size: 11px;
-        font-weight: 650;
-    }
-    .bk-contact-grid {
-        gap: 14px;
-    }
-    .bk-contact-grid + .bk-contact-grid {
-        padding-top: 14px;
-        border-top: 1px solid var(--gray-100);
-    }
 
-    /* â”€â”€ Responsive â”€â”€ */
+    /* ── Responsive ── */
     @media (max-width: 900px) { .bk-page { grid-template-columns: 1fr; } .bk-rail { position: static; } }
     @media (max-width: 580px) {
-        .bk-wrap { padding: 10px 10px 48px; }
-        .bk-form-grid { grid-template-columns: 1fr 1fr; }
-        .bk-form-grid .bk-col-2, .bk-form-grid .bk-col-full { grid-column: 1 / -1; }
-        .bk-contact-grid { grid-template-columns: 1fr; }
-        .bk-contact-full { grid-column: 1 / -1; }
         .bk-pp-body { grid-template-columns: 1fr; }
-        .bk-pax-counter { flex-wrap: wrap; }
-        .bk-pax-col { min-width: 50%; }
-        .bk-connector { display: none; }
-        .bk-btn-next, .bk-btn-pay { flex: 1; justify-content: center; }
-        .bk-actions { flex-wrap: wrap; }
         .bk-seg-stop { grid-template-columns: 60px 1fr; }
-        .bk-seg-bags { display: none; }
-    }
+        .bk-seg-bags { display: none; }}
     @media (max-width: 900px) {
-        .bk-page {
-            gap: 14px;
-        }
-        .bk-rail {
-            order: 2;
-        }
-        .bk-main {
-            order: 1;
-        }
         .bk-cart {
             box-shadow: 0 8px 22px rgba(16,24,40,.06);
-        }
-    }
+        }}
     @media (max-width: 640px) {
-        body {
-            margin-top: 0 !important;
-        }
+        body { margin-top: 0 !important; }
         section.navbarmain {
             padding-top: 104px !important;
         }
         main.navbarmain.upper-space {
             margin-top: 0 !important;
             padding-top: 0 !important;
-        }
-        .bk-wrap {
-            padding: 8px 12px 52px;
-        }
-        .bk-crumb {
-            margin-bottom: 12px;
-        }
-        .bk-steps {
-            align-items: flex-start;
-            gap: 10px;
-            padding: 12px;
-            overflow-x: auto;
-            scrollbar-width: none;
-        }
-        .bk-steps::-webkit-scrollbar {
-            display: none;
-        }
-        .bk-step {
-            min-width: 116px;
-            gap: 8px;
-        }
-        .bk-step-dot {
-            width: 28px;
-            height: 28px;
-        }
-        .bk-step-label {
-            font-size: 11.5px;
-            white-space: nowrap;
-        }
-        .bk-step-sub {
-            display: none;
         }
         .bk-route-summary {
             gap: 6px;
@@ -1263,12 +1000,6 @@
             min-height: 23px;
             padding: 4px 8px;
             font-size: 10.5px;
-        }
-        .bk-connector {
-            display: none;
-        }
-        .bk-acc-head {
-            padding: 13px 14px;
         }
         .bk-cart-head,
         .bk-cart-body,
@@ -1286,40 +1017,10 @@
         }
         .bk-promo-row {
             padding: 0 14px 14px;
-        }
-        .bk-actions {
-            gap: 10px;
-        }
-        .bk-btn-ghost,
-        .bk-btn-next,
-        .bk-btn-pay {
-            width: 100%;
-            justify-content: center;
-        }
-        .bk-form-grid,
-        .bk-contact-grid,
-        .bk-pp-body {
-            grid-template-columns: 1fr !important;
-        }
-        .bk-form-grid .bk-field,
-        .bk-form-grid .bk-col-2,
-        .bk-form-grid .bk-col-full,
-        .bk-form-grid .bk-col-half {
-            grid-column: 1 / -1 !important;
-        }
-        .bk-pax-card-head {
-            align-items: flex-start;
-            flex-wrap: wrap;
-        }
-        .bk-pax-progress,
-        .bk-pax-complete {
-            margin-left: 0;
-        }
-    }
-</style>
+        }}</style>
 
 @php
-    // â”€â”€ Core session data â”€â”€
+    // ── Core session data ──
     $flight        = session('bookingFlight') ?? [];
     $mappedFlight  = $flight['flight'] ?? $flight;
     $sessionId     = session('bookingSessionId') ?? null;
@@ -1327,7 +1028,7 @@
     $fareRulesData = session('fareRules') ?? [];
     $extraServices = session('extraServices') ?? [];
 
-    // â”€â”€ Parse revalidate data (raw from API) â”€â”€
+    // ── Parse revalidate data (raw from API) ──
     $revalidate    = $flight['revalidate'] ?? [];
     $fareItinerary = $revalidate['AirRevalidateResponse']['AirRevalidateResult']['FareItineraries']['FareItinerary'] ?? [];
     $airFareInfo   = $fareItinerary['AirItineraryFareInfo'] ?? [];
@@ -1335,18 +1036,18 @@
     $itinTotals    = $airFareInfo['ItinTotalFares'] ?? [];
     $originDest    = $fareItinerary['OriginDestinationOptions'] ?? [];
 
-    // â”€â”€ Parse Extra Services â”€â”€
+    // ── Parse Extra Services ──
     $esResult      = $extraServices['ExtraServicesResponse']['ExtraServicesResult']['ExtraServicesData'] ?? [];
     $dynBaggage    = $esResult['DynamicBaggage'] ?? [];
     $dynMeal       = $esResult['DynamicMeal'] ?? [];
     $dynSeat       = $esResult['DynamicSeat'] ?? [];
 
-    // â”€â”€ Parse Fare Rules â”€â”€
+    // ── Parse Fare Rules ──
     $fareRulesResult  = $fareRulesData['FareRules1_1Response']['FareRules1_1Result'] ?? [];
     $baggageInfos     = $fareRulesResult['BaggageInfos'] ?? [];
     $fareRulesList    = $fareRulesResult['FareRules'] ?? [];
 
-    // â”€â”€ Existing mapped fields (keep your existing ones) â”€â”€
+    // ── Existing mapped fields (keep your existing ones) ──
     $cabinMap = ['Y' => 'Economy', 'S' => 'Premium Economy', 'C' => 'Business', 'F' => 'First Class'];
     $cabin    = $cabinMap[$searchParams['flight_type'] ?? 'Y'] ?? 'Economy';
 
@@ -1410,7 +1111,7 @@
         }
     }
 
-    // â”€â”€ Parse DynamicBaggage for outbound/inbound options â”€â”€
+    // ── Parse DynamicBaggage for outbound/inbound options ──
     if ($isMulti && !empty($multiLegs)) {
         $allLegs = [];
         foreach ($multiLegs as $li => $leg) {
@@ -1435,7 +1136,7 @@
         if ($behavior === 'PER_PAX_INBOUND')   $baggageInbound  = $services;
     }
 
-    // â”€â”€ Parse DynamicMeal for outbound/inbound â”€â”€
+    // ── Parse DynamicMeal for outbound/inbound ──
     $mealOutbound = [];
     $mealInbound  = [];
     foreach ($dynMeal as $meal) {
@@ -1486,48 +1187,35 @@
 
         <div class="bk-page">
 
-            {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â• MAIN COLUMN â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
+            {{-- ══════════════ MAIN COLUMN ══════════════ --}}
             <div class="bk-main">
 
                 {{-- Stepper --}}
-                <div class="bk-steps">
-                    <div class="bk-step">
-                        <div class="bk-step-dot {{ $step > 1 ? 'done' : 'active' }}">
-                            @if($step > 1)
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            @else 1 @endif
+                @php
+                    $bkSteps = [
+                        ['label' => 'Traveller information', 'sub' => 'Names and documents'],
+                        ['label' => 'Trip customisation',    'sub' => 'Baggage and meals'],
+                        ['label' => 'Review and continue',   'sub' => $isTravelFlexCheckout ? 'Continue to TravelFlex' : 'Review and pay'],
+                    ];
+                @endphp
+                <div class="bk-steps" style="--bk-progress: {{ [1 => '16%', 2 => '50%', 3 => '84%'][$step] ?? '16%' }};">
+                    @foreach($bkSteps as $i => $bkStep)
+                        @php $n = $i + 1; @endphp
+                        <div class="bk-step">
+                            <div class="bk-step-dot {{ $step > $n ? 'done' : ($step === $n ? 'active' : '') }}"
+                                 aria-hidden="true">{{ $step > $n ? '' : $n }}</div>
+                            <div class="bk-step-txt">
+                                <span class="bk-step-label {{ $step === $n ? 'active' : '' }}">{{ $bkStep['label'] }}</span>
+                                <span class="bk-step-sub">{{ $step > $n ? 'Done' : $bkStep['sub'] }}</span>
+                            </div>
                         </div>
-                        <div>
-                            <div class="bk-step-label {{ $step === 1 ? 'active' : '' }}">Traveller Info</div>
-                            <div class="bk-step-sub">Names &amp; documents</div>
-                        </div>
-                    </div>
-                    <div class="bk-connector {{ $step > 1 ? 'done' : '' }}"></div>
-                    <div class="bk-step">
-                        <div class="bk-step-dot {{ $step > 2 ? 'done' : ($step === 2 ? 'active' : 'pending') }}">
-                            @if($step > 2)
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                            @else 2 @endif
-                        </div>
-                        <div>
-                            <div class="bk-step-label {{ $step === 2 ? 'active' : '' }}">Trip Customisation</div>
-                            <div class="bk-step-sub">Baggage &amp; meals</div>
-                        </div>
-                    </div>
-                    <div class="bk-connector {{ $step > 2 ? 'done' : '' }}"></div>
-                    <div class="bk-step">
-                        <div class="bk-step-dot {{ $step === 3 ? 'active' : 'pending' }}">3</div>
-                        <div>
-                            <div class="bk-step-label {{ $step === 3 ? 'active' : '' }}">Review &amp; Continue</div>
-                            <div class="bk-step-sub">{{ $isTravelFlexCheckout ? 'Continue to TravelFlex' : 'Review & pay' }}</div>
-                        </div>
-                    </div>
+                    @endforeach
                 </div>
 
-                {{-- â•â•â•â•â•â•â•â• STEP 1 â•â•â•â•â•â•â•â• --}}
+                {{-- ════════ STEP 1 ════════ --}}
                 @if(in_array($step, [1, 2], true))
 
-                    {{-- â”€â”€ 1. Flight Itinerary (accordion, open by default) â”€â”€ --}}
+                    {{-- ── 1. Flight Itinerary (accordion, open by default) ── --}}
                     <div class="bk-acc" x-data="{ open: false }">
                         @php
                             $routeStopCount = $flight['stops'] ?? max(0, count($segments) - 1);
@@ -1541,7 +1229,7 @@
                                 <span class="bk-icon-mask bk-icon-plane" style="width:17px;height:17px;"></span>
                             </div>
                             <div>
-                                <div class="bk-acc-title">Flight Itinerary</div>
+                                <div class="bk-acc-title">Flight itinerary</div>
                                 <div class="bk-acc-sub bk-route-summary-card">
                                     <div class="bk-route-pair">
                                         <span>{{ $firstSeg['from'] ?? '' }}</span>
@@ -1573,7 +1261,7 @@
 
                         <div x-show="open" x-transition>
                             @if(!$isMulti)
-                                {{-- â”€â”€ Outbound leg â”€â”€ --}}
+                                {{-- ── Outbound leg ── --}}
                                 @php
                                     $outStopCount = $flight['stops'] ?? max(0, count($segments) - 1);
                                     $outDuration  = $flight['totalTimeLabel'] ?? $flight['durationLabel'] ?? '';
@@ -1680,7 +1368,7 @@
                                 </div>
                             @endif
 
-                            {{-- â”€â”€ Return leg â”€â”€ --}}
+                            {{-- ── Return leg ── --}}
                             @if($isReturn && count($retSegs) > 0)
                                 @php
                                     $retFirst    = $retSegs[0];
@@ -1862,7 +1550,7 @@
                         </div>
                     </div>
 
-                    {{-- â”€â”€ 2. Extra Services (Baggage + Meals) â”€â”€ --}}
+                    {{-- ── 2. Extra Services (Baggage + Meals) ── --}}
                     @if($step === 2)
                     @if(!empty($baggageOutbound) || !empty($baggageInbound) || !empty($mealOutbound) || !empty($mealInbound))
                     <div class="bk-acc" x-data="{ open: true }">
@@ -1879,7 +1567,7 @@
                         <div x-show="open" x-transition>
                             <div class="bk-acc-body" style="padding-top:0;">
 
-                                {{-- â”€â”€ EXTRA BAGGAGE â”€â”€ --}}
+                                {{-- ── EXTRA BAGGAGE ── --}}
                                 @if(!empty($baggageOutbound) || !empty($baggageInbound))
                                 <div style="padding:14px 0 10px;border-bottom:1px solid var(--gray-100);">
 
@@ -1981,7 +1669,7 @@
                                 </div>
                                 @endif
 
-                                {{-- â”€â”€ MEALS â”€â”€ --}}
+                                {{-- ── MEALS ── --}}
                                 @if(!empty($mealOutbound) || !empty($mealInbound))
                                 <div style="padding-top:14px;">
 
@@ -2058,7 +1746,7 @@
                                 </div>
                                 @endif
 
-                                {{-- â”€â”€ LIVE EXTRAS SUMMARY (shows only when something selected) â”€â”€ --}}
+                                {{-- ── LIVE EXTRAS SUMMARY (shows only when something selected) ── --}}
                                 @if($extrasTotal > 0)
                                 <div style="margin-top:14px;padding:12px 16px;background:var(--green-lt);
                                             border:1.5px solid #a7f3d0;border-radius:10px;
@@ -2087,7 +1775,7 @@
                     </div>
                     @endif
 
-                    {{-- â”€â”€ Fare Rules (from BaggageInfos + FareRules) â”€â”€ --}}
+                    {{-- ── Fare Rules (from BaggageInfos + FareRules) ── --}}
                     @if(!empty($baggageInfos) || !empty($fareRulesList))
                     <div class="bk-acc" x-data="{ open: false }">
                         <div class="bk-acc-head" :class="{ open }" @click="open = !open">
@@ -2176,7 +1864,7 @@
                     </div>
                     @endif
 
-                    {{-- â”€â”€ 4. Passenger Count â”€â”€ --}}
+                    {{-- ── 4. Passenger Count ── --}}
                     <div class="bk-actions">
                         <button class="bk-btn-ghost" wire:click="back">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
@@ -2193,228 +1881,184 @@
                     @endif
 
                     @if($step === 1)
+                    {{-- ── Traveller details, one card per traveller ── --}}
                     <div class="bk-acc" x-data="{ open: true }">
                         <div class="bk-acc-head" :class="{ open }" @click="open = !open">
                             <div class="bk-acc-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                             </div>
                             <div>
-                                <div class="bk-acc-title">Passengers</div>
-                                <div class="bk-acc-sub">{{ $this->getTotalPassengers() }} passenger{{ $this->getTotalPassengers() > 1 ? 's' : '' }}</div>
+                                <div class="bk-acc-title">Traveller details</div>
+                                <div class="bk-acc-sub">{{ $this->getTotalPassengers() }} {{ $this->getTotalPassengers() === 1 ? 'passenger' : 'passengers' }} &middot; names must match the passport exactly</div>
                             </div>
                             <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
                         <div x-show="open" x-transition>
                             <div class="bk-acc-body">
-                                <div>
-                                    <div class="bk-pax-counter">
-                                        <div class="bk-pax-col">
-                                            <div class="bk-pax-info">
-                                                <div>
-                                                    <div class="bk-pax-col-label">Adults</div>
-                                                    <div class="bk-pax-col-sub">18+ years</div>
-                                                </div>
-
-                                                <div class="bk-pax-ctr">
-                                                    <span class="bk-pax-num">{{ $this->adultCount }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="bk-pax-col">
-                                            <div class="bk-pax-info">
-                                                <div>
-                                                    <div class="bk-pax-col-label">Children</div>
-                                                    <div class="bk-pax-col-sub">2-12 years</div>
-                                                </div>
-
-                                                <div class="bk-pax-ctr">
-                                                    <span class="bk-pax-num">{{ $this->childCount }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="bk-pax-col">
-                                            <div class="bk-pax-info">
-                                                <div>
-                                                    <div class="bk-pax-col-label">Infants</div>
-                                                    <div class="bk-pax-col-sub">Under 2</div>
-                                                </div>
-                                                <div class="bk-pax-ctr">
-                                                    <span class="bk-pax-num">{{ $this->infantCount }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="bk-total-bar">
-                                    <span class="bk-total-label" style="display:inline-flex;align-items:center;gap:7px;"><span class="bk-inline-icon bk-icon-users" aria-hidden="true"></span> Total passengers</span>
-                                    <span class="bk-total-val">{{ $this->getTotalPassengers() }} passenger{{ $this->getTotalPassengers() > 1 ? 's' : '' }}</span>
-                                </div>
-                                @error('passengers') <span class="bk-error">{{ $message }}</span> @enderror
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- â”€â”€ 5. Traveller Details (accordion, one card per passenger) â”€â”€ --}}
-                    <div class="bk-acc" x-data="{ open: true }">
-                        <div class="bk-acc-head" :class="{ open }" @click="open = !open">
-                            <div class="bk-acc-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-                            </div>
-                            <div>
-                                <div class="bk-acc-title">Traveller Details</div>
-                                <div class="bk-acc-sub">Names must match ID or passport exactly</div>
-                            </div>
-                            <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-                        </div>
-                        <div x-show="open" x-transition>
-                            <div class="bk-acc-body">
+                                @error('passengers') <span class="bk-error" style="display:block;margin-bottom:10px;">{{ $message }}</span> @enderror
 
                                 @foreach($this->passengers as $i => $pax)
                                     @php
-                                        $typeLabel  = match($pax['type']) { 'ADT' => 'Adult (18 yrs+)', 'CHD' => 'Child (2-12 yrs)', 'INF' => 'Infant (under 2)', default => 'Passenger' };
+                                        $typeLabel  = match($pax['type']) { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Traveller' };
+                                        $typeAge    = match($pax['type']) { 'ADT' => '18 yrs and over', 'CHD' => '2-12 yrs', 'INF' => 'Under 2', default => '' };
                                         $badgeClass = strtolower($pax['type']);
-                                        $showPp     = !empty($pax['show_passport']);
-                                        $hasPpData  = !empty($pax['passport_no']);
-                                        $isComplete = !empty($pax['first_name']) && !empty($pax['last_name']) && !empty($pax['dob']);
-                                        $filledCount= (int)!empty($pax['first_name']) + (int)!empty($pax['last_name']) + (int)!empty($pax['dob']) + (int)!empty($pax['nationality']);
+                                        $required   = ['title', 'last_name', 'first_name', 'dob', 'nationality', 'gender'];
+                                        $filled     = count(array_filter($required, fn ($f) => ! empty($pax[$f])));
+                                        $isComplete = $filled === count($required);
+                                        $fullName   = trim(($pax['first_name'] ?? '').' '.($pax['last_name'] ?? ''));
                                         $titleOptions = in_array($pax['type'], ['CHD', 'INF'], true)
                                             ? ['Master', 'Miss']
-                                            : ['Mr', 'Mrs', 'Ms', 'Miss', 'Dr', 'Master'];
+                                            : ['Mr', 'Mrs', 'Ms', 'Miss', 'Dr'];
                                     @endphp
 
                                     <div class="bk-pax-card" wire:key="pax-{{ $i }}-{{ $pax['type'] }}"
-                                        x-data="{ cardOpen: {{ $i === 0 ? 'true' : 'false' }} }">
+                                         x-data="{ cardOpen: {{ $i === 0 ? 'true' : 'false' }} }"
+                                         :class="{ 'is-open': cardOpen }">
 
-                                        <div class="bk-pax-card-head" @click="cardOpen = !cardOpen">
-                                            <span class="bk-pax-badge {{ $badgeClass }}">{{ $typeLabel }}</span>
-                                            <span class="bk-pax-num-lbl">
-                                                @if($pax['is_primary']) <span class="bk-primary-chip">Primary</span> @endif
-                                                Passenger {{ $i + 1 }}
+                                        <div class="bk-pax-card-head" @click="cardOpen = !cardOpen"
+                                             role="button" :aria-expanded="cardOpen ? 'true' : 'false'">
+                                            <span class="bk-pax-index" aria-hidden="true">{{ $i + 1 }}</span>
+                                            <span class="bk-pax-who">
+                                                <span class="bk-pax-num-lbl">{{ $fullName !== '' ? $fullName : $typeLabel.' '.($i + 1) }}</span>
+                                                <span class="bk-pax-meta">
+                                                    <span class="bk-pax-badge {{ $badgeClass }}">{{ $typeLabel }}</span>
+                                                    @if($pax['is_primary'])
+                                                        <span class="bk-primary-chip">Main contact</span>
+                                                    @endif
+                                                    <span class="bk-pax-age">{{ $typeAge }}</span>
+                                                </span>
                                             </span>
-                                            @if($isComplete)
-                                                <span class="bk-pax-complete">{{ strtoupper($pax['first_name']) }} {{ strtoupper($pax['last_name']) }}</span>
-                                            @else
-                                                <span class="bk-pax-progress">{{ $filledCount }}/4 added</span>
-                                            @endif
-                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="cardOpen ? 'transform:rotate(180deg)' : ''" style="color:var(--gray-400);flex-shrink:0;transition:transform .2s;"><polyline points="6 9 12 15 18 9"/></svg>
+                                            <span class="bk-pax-state {{ $isComplete ? 'bk-pax-complete' : 'bk-pax-progress' }}">
+                                                @if($isComplete)
+                                                    <span class="bk-tick" aria-hidden="true"></span> Complete
+                                                @else
+                                                    {{ count($required) - $filled }} left
+                                                @endif
+                                            </span>
+                                            <svg class="bk-pax-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                                         </div>
 
                                         <div x-show="cardOpen" x-transition>
-                                            <div class="bk-pax-notice">
-                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                Enter your name as it is mentioned on your passport. Passport should be valid for a minimum of 6 months from date of travel.
-                                            </div>
+                                            <div class="bk-pax-body">
 
-                                            <div class="bk-form-grid">
-                                                <div class="bk-field">
-                                                    <label class="bk-label">Title <span class="bk-req">*</span></label>
-                                                    <select class="bk-select" wire:model="passengers.{{ $i }}.title">
-                                                        <option value="">-</option>
-                                                        @foreach($titleOptions as $t)
-                                                            <option value="{{ $t }}">{{ $t }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    @error("passengers.{$i}.title") <span class="bk-error">{{ $message }}</span> @enderror
-                                                </div>
-
-                                                <div class="bk-field">
-                                                    <label class="bk-label">Last Name <span class="bk-req">*</span></label>
-                                                    <input class="bk-input" type="text" placeholder="Last Name"
-                                                        wire:model.blur="passengers.{{ $i }}.last_name">
-                                                    @error("passengers.{$i}.last_name") <span class="bk-error">{{ $message }}</span> @enderror
-                                                </div>
-
-                                                <div class="bk-field">
-                                                    <label class="bk-label">First Name <span class="bk-req">*</span></label>
-                                                    <input class="bk-input" type="text" placeholder="First Name"
-                                                        wire:model.blur="passengers.{{ $i }}.first_name">
-                                                    @error("passengers.{$i}.first_name") <span class="bk-error">{{ $message }}</span> @enderror
-                                                </div>
-
-                                                <div class="bk-field">
-                                                    <label class="bk-label">Middle Name</label>
-                                                    <input class="bk-input" type="text" placeholder="Middle Name"
-                                                        wire:model.blur="passengers.{{ $i }}.middle_name">
-                                                </div>
-
-                                                <div class="bk-field">
-                                                    <label class="bk-label">Date of Birth <span class="bk-req">*</span></label>
-                                                    <input class="bk-input" type="date"
-                                                        wire:model.blur="passengers.{{ $i }}.dob"
-                                                        placeholder="yyyy-mm-dd"
-                                                        max="{{ now()->subDay()->format('Y-m-d') }}">
-                                                    @if($pax['type'] === 'CHD') <span class="bk-hint">Must be 2-12 years old at travel</span>
-                                                    @elseif($pax['type'] === 'INF') <span class="bk-hint">Must be under 2 at travel</span> @endif
-                                                    @error("passengers.{$i}.dob") <span class="bk-error">{{ $message }}</span> @enderror
-                                                </div>
-
-                                                <div class="bk-field">
-                                                    <label class="bk-label">Nationality <span class="bk-req">*</span></label>
-                                                    <select class="bk-select" wire:model="passengers.{{ $i }}.nationality">
-                                                        @foreach($this->nationalities as $code => $name)
-                                                            <option value="{{ $code }}">{{ $name }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    @error("passengers.{$i}.nationality") <span class="bk-error">{{ $message }}</span> @enderror
-                                                </div>
-                                                <div class="bk-field">
-                                                    <label class="bk-label">Gender <span class="bk-req">*</span></label>
-                                                    <div class="bk-radio-group">
-                                                        <label class="bk-radio-opt">
-                                                            <input type="radio" wire:model="passengers.{{ $i }}.gender" value="M"> Male
-                                                        </label>
-                                                        <label class="bk-radio-opt">
-                                                            <input type="radio" wire:model="passengers.{{ $i }}.gender" value="F"> Female
-                                                        </label>
+                                                {{-- Identity: what the traveller copies off themselves --}}
+                                                <div class="bk-fieldset">
+                                                    <div class="bk-fieldset-head">
+                                                        <span class="bk-fieldset-title">Traveller</span>
+                                                        <span class="bk-fieldset-note">Exactly as printed on the passport or ID.</span>
                                                     </div>
-                                                    @error("passengers.{$i}.gender") <span class="bk-error">{{ $message }}</span> @enderror
+                                                    <div class="bk-form-grid">
+                                                        <div class="bk-field">
+                                                            <label class="bk-label">Title</label>
+                                                            <select class="bk-select" wire:model="passengers.{{ $i }}.title">
+                                                                <option value="">Select</option>
+                                                                @foreach($titleOptions as $t)
+                                                                    <option value="{{ $t }}">{{ $t }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                            @error("passengers.{$i}.title") <span class="bk-error">{{ $message }}</span> @enderror
+                                                        </div>
+                                                        <div class="bk-field bk-col-2">
+                                                            <label class="bk-label">First name</label>
+                                                            <input class="bk-input" type="text" placeholder="As on passport"
+                                                                   wire:model.blur="passengers.{{ $i }}.first_name">
+                                                            @error("passengers.{$i}.first_name") <span class="bk-error">{{ $message }}</span> @enderror
+                                                        </div>
+
+                                                        <div class="bk-field">
+                                                            <label class="bk-label">Middle name <span class="bk-optional">Optional</span></label>
+                                                            <input class="bk-input" type="text" placeholder="If any"
+                                                                   wire:model.blur="passengers.{{ $i }}.middle_name">
+                                                        </div>
+                                                        <div class="bk-field bk-col-2">
+                                                            <label class="bk-label">Last name</label>
+                                                            <input class="bk-input" type="text" placeholder="As on passport"
+                                                                   wire:model.blur="passengers.{{ $i }}.last_name">
+                                                            @error("passengers.{$i}.last_name") <span class="bk-error">{{ $message }}</span> @enderror
+                                                        </div>
+
+                                                        <div class="bk-field">
+                                                            <label class="bk-label">Date of birth</label>
+                                                            <input class="bk-input" type="date"
+                                                                   wire:model.blur="passengers.{{ $i }}.dob"
+                                                                   max="{{ now()->subDay()->format('Y-m-d') }}">
+                                                            @if($pax['type'] === 'CHD') <span class="bk-hint">2-12 years old on the travel date</span>
+                                                            @elseif($pax['type'] === 'INF') <span class="bk-hint">Under 2 on the travel date</span> @endif
+                                                            @error("passengers.{$i}.dob") <span class="bk-error">{{ $message }}</span> @enderror
+                                                        </div>
+                                                        <div class="bk-field">
+                                                            <label class="bk-label">Nationality</label>
+                                                            <select class="bk-select" wire:model="passengers.{{ $i }}.nationality">
+                                                                @foreach($this->nationalities as $code => $name)
+                                                                    <option value="{{ $code }}">{{ $name }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                            @error("passengers.{$i}.nationality") <span class="bk-error">{{ $message }}</span> @enderror
+                                                        </div>
+                                                        <div class="bk-field">
+                                                            <label class="bk-label">Gender</label>
+                                                            <div class="bk-radio-group" role="radiogroup">
+                                                                <label class="bk-radio-opt">
+                                                                    <input type="radio" wire:model="passengers.{{ $i }}.gender" value="M" aria-label="Male">
+                                                                    <span>Male</span>
+                                                                </label>
+                                                                <label class="bk-radio-opt">
+                                                                    <input type="radio" wire:model="passengers.{{ $i }}.gender" value="F" aria-label="Female">
+                                                                    <span>Female</span>
+                                                                </label>
+                                                            </div>
+                                                            @error("passengers.{$i}.gender") <span class="bk-error">{{ $message }}</span> @enderror
+                                                        </div>
+                                                    </div>
                                                 </div>
 
-                                                <div class="bk-field">
-                                                    <label class="bk-label">Passport Number</label>
-                                                    <input class="bk-input" type="text" placeholder="e.g. A12345678"
-                                                            wire:model.blur="passengers.{{ $i }}.passport_no">
-                                                    @error("passengers.{$i}.passport_no") <span class="bk-error">{{ $message }}</span> @enderror
-                                                </div>
-                                                <div class="bk-field">
-                                                    <label class="bk-label">Expiry Date</label>
-                                                    <input class="bk-input" type="date"
-                                                            wire:model.blur="passengers.{{ $i }}.passport_exp"
-                                                            min="{{ now()->addDay()->format('Y-m-d') }}">
-                                                    <span class="bk-hint">Must be valid beyond travel dates</span>
-                                                    @error("passengers.{$i}.passport_exp") <span class="bk-error">{{ $message }}</span> @enderror
-                                                </div>
-                                                {{-- Passport Issuing Country (passportIssueCountry in API) --}}
-                                                <div class="bk-field">
-                                                    <label class="bk-label">Passport Issuing Country</label>
-                                                    <select class="bk-select" wire:model="passengers.{{ $i }}.passport_issue_country">
-                                                        @foreach($this->nationalities as $code => $name)
-                                                            <option value="{{ $code }}">{{ $name }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                    @error("passengers.{$i}.passport_issue_country") <span class="bk-error">{{ $message }}</span> @enderror
+                                                {{-- Travel document: what the traveller copies off the passport --}}
+                                                <div class="bk-fieldset">
+                                                    <div class="bk-fieldset-head">
+                                                        <span class="bk-fieldset-title">Travel document</span>
+                                                        <span class="bk-fieldset-note">The passport must stay valid for 6 months after travel.</span>
+                                                    </div>
+                                                    <div class="bk-form-grid">
+                                                        <div class="bk-field">
+                                                            <label class="bk-label">Passport number <span class="bk-optional">Optional</span></label>
+                                                            <input class="bk-input" type="text" placeholder="A12345678"
+                                                                   wire:model.blur="passengers.{{ $i }}.passport_no">
+                                                            @error("passengers.{$i}.passport_no") <span class="bk-error">{{ $message }}</span> @enderror
+                                                        </div>
+                                                        <div class="bk-field">
+                                                            <label class="bk-label">Issuing country <span class="bk-optional">Optional</span></label>
+                                                            <select class="bk-select" wire:model="passengers.{{ $i }}.passport_issue_country">
+                                                                @foreach($this->nationalities as $code => $name)
+                                                                    <option value="{{ $code }}">{{ $name }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                            @error("passengers.{$i}.passport_issue_country") <span class="bk-error">{{ $message }}</span> @enderror
+                                                        </div>
+                                                        <div class="bk-field">
+                                                            <label class="bk-label">Frequent flyer <span class="bk-optional">Optional</span></label>
+                                                            <input class="bk-input" type="text" placeholder="BA12345678"
+                                                                   wire:model.blur="passengers.{{ $i }}.frequent_flyer_number">
+                                                            @error("passengers.{$i}.frequent_flyer_number") <span class="bk-error">{{ $message }}</span> @enderror
+                                                        </div>
+
+                                                        <div class="bk-field">
+                                                            <label class="bk-label">Issue date <span class="bk-optional">Optional</span></label>
+                                                            <input class="bk-input" type="date"
+                                                                   wire:model.blur="passengers.{{ $i }}.passport_issue_date"
+                                                                   max="{{ now()->format('Y-m-d') }}">
+                                                            @error("passengers.{$i}.passport_issue_date") <span class="bk-error">{{ $message }}</span> @enderror
+                                                        </div>
+                                                        <div class="bk-field">
+                                                            <label class="bk-label">Expiry date <span class="bk-optional">Optional</span></label>
+                                                            <input class="bk-input" type="date"
+                                                                   wire:model.blur="passengers.{{ $i }}.passport_exp"
+                                                                   min="{{ now()->addDay()->format('Y-m-d') }}">
+                                                            @error("passengers.{$i}.passport_exp") <span class="bk-error">{{ $message }}</span> @enderror
+                                                        </div>
+                                                    </div>
                                                 </div>
 
-                                                {{-- Passport Issue Date (passportIssueDate in API) --}}
-                                                <div class="bk-field">
-                                                    <label class="bk-label">Passport Issue Date</label>
-                                                    <input class="bk-input" type="date"
-                                                            wire:model.blur="passengers.{{ $i }}.passport_issue_date"
-                                                            max="{{ now()->format('Y-m-d') }}">
-                                                    <span class="bk-hint">Date passport was issued</span>
-                                                    @error("passengers.{$i}.passport_issue_date") <span class="bk-error">{{ $message }}</span> @enderror
-                                                </div>
-                                                <div class="bk-field">
-                                                    <label class="bk-label">Frequent Flyer Number</label>
-                                                    <input class="bk-input" type="text" placeholder="e.g. BA12345678"
-                                                        wire:model.blur="passengers.{{ $i }}.frequent_flyer_number">
-                                                    <span class="bk-hint">Optional - enter your airline loyalty number</span>
-                                                    @error("passengers.{$i}.frequent_flyer_number") <span class="bk-error">{{ $message }}</span> @enderror
-                                                </div>
                                             </div>
-
-
                                         </div>
                                     </div>
                                 @endforeach
@@ -2423,15 +2067,15 @@
                         </div>
                     </div>
 
-                    {{-- â”€â”€ 6. Contact Details (accordion) â”€â”€ --}}
+                    {{-- ── Contact details ── --}}
                     <div class="bk-acc" x-data="{ open: true }">
                         <div class="bk-acc-head" :class="{ open }" @click="open = !open">
                             <div class="bk-acc-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                             </div>
                             <div>
-                                <div class="bk-acc-title">Contact Details</div>
-                                <div class="bk-acc-sub">E-ticket and confirmation sent here</div>
+                                <div class="bk-acc-title">Contact details</div>
+                                <div class="bk-acc-sub">Where the e-ticket and any schedule changes are sent</div>
                             </div>
                             <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
@@ -2439,45 +2083,45 @@
                             <div class="bk-acc-body">
                                 <div class="bk-contact-grid">
                                     <div class="bk-field">
-                                        <label class="bk-label">Email Address <span class="bk-req">*</span></label>
+                                        <label class="bk-label">Email address</label>
                                         <input class="bk-input" type="email" placeholder="you@example.com"
-                                            wire:model.blur="contactEmail">
+                                               wire:model.blur="contactEmail">
                                         @error('contactEmail') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
                                     <div class="bk-field">
-                                        <label class="bk-label">Confirm Email <span class="bk-req">*</span></label>
-                                        <input class="bk-input" type="email" placeholder="Re-enter email"
-                                            wire:model.blur="contactEmailConfirm">
+                                        <label class="bk-label">Confirm email address</label>
+                                        <input class="bk-input" type="email" placeholder="Type it again"
+                                               wire:model.blur="contactEmailConfirm">
                                         @error('contactEmailConfirm') <span class="bk-error">{{ $message }}</span> @enderror
                                     </div>
-                                </div>
-                                <div class="bk-contact-grid bk-phone-grid" style="margin-top:15px;">
-                                    <div class="bk-field">
-                                        <label class="bk-label">Mobile Number <span class="bk-req">*</span></label>
+
+                                    <div class="bk-field bk-col-half">
+                                        <label class="bk-label">Mobile number</label>
                                         <input class="bk-input bk-phone-input" type="tel" placeholder="+234 800 000 0000"
-                                                                                wire:model.blur="contactPhoneFull">
-                                        <span class="bk-hint">Include country code. We will format it for ticketing.</span>
-                                        @error('contactPhoneFull') <span class="bk-error">{{ $message }}</span> @enderror
-                                        @error('contactPhone') <span class="bk-error">{{ $message }}</span> @enderror
-                                        @error('contactAreaCode') <span class="bk-error">{{ $message }}</span> @enderror
-                                        @error('contactCountryCode') <span class="bk-error">{{ $message }}</span> @enderror
+                                               wire:model.blur="contactPhoneFull">
+                                        <span class="bk-hint">Include the country code — the airline may use this to reach you about changes.</span>
+                                        {{-- contactPhone/AreaCode/CountryCode are all derived server-side from
+                                             this one input, so showing every one of their messages printed up to
+                                             four errors under a single field. Only the first is useful. --}}
+                                        @php
+                                            $phoneError = $errors->first('contactPhoneFull')
+                                                ?: $errors->first('contactPhone')
+                                                ?: $errors->first('contactAreaCode')
+                                                ?: $errors->first('contactCountryCode');
+                                        @endphp
+                                        @if($phoneError) <span class="bk-error">{{ $phoneError }}</span> @endif
                                     </div>
-                                    <div class="bk-field" style="display:none;">
-                                        <label class="bk-label">Area Code <span class="bk-req"></span></label>
-                                        <input class="bk-input" type="text" placeholder="e.g. 080"
-                                                                                wire:model.blur="contactAreaCode">
-                                        <span class="bk-hint">Local area code</span>
-                                        @error('contactAreaCode') <span class="bk-error">{{ $message }}</span> @enderror
-                                    </div>
+                                </div>
 
-                                    <div class="bk-field bk-contact-full" style="display:none;">
-                                        <label class="bk-label">Mobile No <span class="bk-req"></span></label>
-                                        <input class="bk-input" type="tel" placeholder="+234 800 000 0000"
-                                                                                wire:model.blur="contactPhone">
-                                        <span class="bk-hint">without country code · e.g. 800 000 0000</span>
-                                        @error('contactPhone') <span class="bk-error">{{ $message }}</span> @enderror
-                                    </div>
-
+                                {{-- Kept in the DOM: the controller still binds these split fields, and
+                                     contactPhoneFull is derived from them server-side. --}}
+                                <div class="bk-field" style="display:none;">
+                                    <label class="bk-label">Area code</label>
+                                    <input class="bk-input" type="text" wire:model.blur="contactAreaCode">
+                                </div>
+                                <div class="bk-field" style="display:none;">
+                                    <label class="bk-label">Mobile number</label>
+                                    <input class="bk-input" type="tel" wire:model.blur="contactPhone">
                                 </div>
                             </div>
                         </div>
@@ -2507,7 +2151,7 @@
                     @endif {{-- /STEP 1 TRAVELLER DETAILS --}}
                 @endif {{-- /STEPS 1 AND 2 --}}
 
-                {{-- â•â•â•â•â•â•â•â• STEP 2 â•â•â•â•â•â•â•â• --}}
+                {{-- ════════ STEP 2 ════════ --}}
                 @if($step === 3)
 
                     <div class="bk-notice info" style="margin-bottom:4px;">
@@ -2610,7 +2254,7 @@
                         @endforeach
                         @endforeach
 
-                        {{-- â”€â”€ Extra Services (baggage) â”€â”€ --}}
+                        {{-- ── Extra Services (baggage) ── --}}
                         @foreach($selectedBaggage as $direction => $items)
                             @foreach($items as $svcId => $qty)
                                 @if($qty > 0)
@@ -2619,7 +2263,7 @@
                             @endforeach
                         @endforeach
 
-                        {{-- â”€â”€ Extra Services (meals) â”€â”€ --}}
+                        {{-- ── Extra Services (meals) ── --}}
                         @foreach($selectedMeals as $direction => $segments)
                             @foreach($segments as $segmentIndex => $items)
                                 @foreach($items as $svcId => $checked)
@@ -2654,7 +2298,7 @@
             </div>{{-- /bk-main --}}
 
 
-            {{-- â•â•â•â•â•â•â•â•â•â•â•â•â•â• RIGHT RAIL: MY CART â•â•â•â•â•â•â•â•â•â•â•â•â•â• --}}
+            {{-- ══════════════ RIGHT RAIL: MY CART ══════════════ --}}
             <aside class="bk-rail">
 
                 {{-- My Cart --}}
@@ -2686,7 +2330,7 @@
                                 <div class="bk-cart-flight-row">
                                     <span class="bk-cart-plane"><span class="bk-icon-mask bk-icon-plane" style="width:14px;height:14px;" aria-hidden="true"></span></span>
                                     <div>
-                                        <div class="bk-cart-route">{{ ($firstSeg['from'] ?? '') }} to {{ ($lastSeg['to'] ?? '') }} ({{ strtoupper($firstSeg['from'] ?? '') }})</div>
+                                        <div class="bk-cart-route">{{ ($firstSeg['from'] ?? '') }} to {{ ($lastSeg['to'] ?? '') }}</div>
                                         <div class="bk-cart-sub">{{ $cabin }} · {{ $tripLabel }}</div>
                                     </div>
                                 </div>
@@ -2696,7 +2340,7 @@
                                     <div class="bk-cart-flight-row">
                                         <span class="bk-cart-plane" style="transform:scaleX(-1);"><span class="bk-icon-mask bk-icon-plane" style="width:14px;height:14px;" aria-hidden="true"></span></span>
                                         <div>
-                                            <div class="bk-cart-route">{{ ($retSegs[0]['from'] ?? '') }} to {{ ($retSegs[count($retSegs)-1]['to'] ?? '') }} ({{ strtoupper($retSegs[0]['from'] ?? '') }})</div>
+                                            <div class="bk-cart-route">{{ ($retSegs[0]['from'] ?? '') }} to {{ ($retSegs[count($retSegs)-1]['to'] ?? '') }}</div>
                                             <div class="bk-cart-sub">{{ $cabin }} · Round Trip</div>
                                         </div>
                                     </div>
