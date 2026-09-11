@@ -1376,7 +1376,7 @@ class FlightBookingController extends Controller
 
         // ── Fetch live trip details after successful gateway payment ──────────
         $tripDetails = [];
-        if ($uniqueId) {
+        if ($uniqueId && $this->_usesTripDetailsApi($dbBooking)) {
             $tripDetails = $this->_callTripDetailsApi($uniqueId);
         }
 
@@ -2793,7 +2793,7 @@ class FlightBookingController extends Controller
 
         // Fetch trip details from the API if the caller didn't supply them.
         // _callTripDetailsApi() already handles errors gracefully (returns []).
-        if (empty($tripDetails) && ! empty($booking->unique_id)) {
+        if (empty($tripDetails) && ! empty($booking->unique_id) && $this->_usesTripDetailsApi($booking)) {
             Log::info('_sendConfirmedEmail: fetching trip details', [
                 'booking_ref' => $booking->booking_ref,
                 'unique_id' => $booking->unique_id,
@@ -3024,6 +3024,39 @@ class FlightBookingController extends Controller
         session($preserved);
     }
 
+    /**
+     * Whether this booking's reference means anything to TravelNext.
+     *
+     * trip_details is a TravelNext endpoint and only recognises TravelNext
+     * booking references. A SkyLink booking's unique_id is its SkyLink PNR, so
+     * sending it there is a request that can only fail — and it fails silently,
+     * because _callTripDetailsApi() turns every failure into an empty array.
+     * Nothing visibly breaks; it is just real cross-supplier traffic on every
+     * SkyLink confirmation, latency the customer waits through, and misleading
+     * entries in TravelNext's logs.
+     *
+     * All three call sites used to gate on the reference merely being present,
+     * which is true of every booking whoever issued it. Gate on the supplier
+     * instead. SkyLink needs nothing from this endpoint: reserve() already
+     * returns PNR, carrier, status and ticket deadline, and
+     * _completeSkylinkReservation() stores that whole payload on the booking.
+     *
+     * Falls back to the session's flight when the booking row cannot be loaded,
+     * and to travelnext when neither is known — every booking that predates the
+     * supplier column is a TravelNext one, so that keeps old references working.
+     */
+    private function _usesTripDetailsApi(?FlightBooking $booking = null): bool
+    {
+        $bookingFlight = session('bookingFlight', []);
+
+        $supplier = $booking?->supplier
+            ?: data_get($bookingFlight, 'flight.source')
+            ?: data_get($bookingFlight, 'source')
+            ?: 'travelnext';
+
+        return $supplier === 'travelnext';
+    }
+
     private function _callTripDetailsApi(string $uniqueId): array
     {
         $payload = [
@@ -3119,7 +3152,7 @@ class FlightBookingController extends Controller
             || in_array($paymentMethod, ['gateway', 'flex_gateway'])
             || (session('ticketSuccess') === true);
 
-        if ($isTicketed && $uniqueId) {
+        if ($isTicketed && $uniqueId && $this->_usesTripDetailsApi($dbBooking)) {
             $tripDetails = $this->_callTripDetailsApi($uniqueId);
         }
 
