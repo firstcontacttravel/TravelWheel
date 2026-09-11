@@ -568,7 +568,15 @@ class FlightBookingController extends Controller
     {
         $validated = $request->validate([
             'fare_source_code' => 'required|string',
-            'session_id' => 'required|string',
+            // Same reason select() takes this as nullable: SkyLink has no
+            // session id at all, so bookingSessionId is legitimately '' for
+            // every SkyLink fare. Requiring it here rejected the booking at
+            // the final step with "The session id field is required.", bounced
+            // the customer back to step 1 and lost everything they had typed.
+            // Nothing in book() reads this value — the TravelNext calls that
+            // genuinely need it take it from session('bookingSessionId') — so
+            // it was only ever acting as a gate against one supplier.
+            'session_id' => 'nullable|string',
             'contact.email' => 'required|email',
             'contact.phone' => 'required|string|min:7',
             'contact.area_code' => 'required|string',
@@ -750,6 +758,9 @@ class FlightBookingController extends Controller
         return view('livewire.pages.flight.flight-payment-gateway', [
             'flight' => $mappedFlight,
             'contact' => session('bookingContact', []),
+            // The page states who is being ticketed; it previously showed the
+            // contact email alone, with no way to check the names one last time.
+            'passengers' => session('bookingPassengers', []),
             'selectedExtras' => $selectedExtras,
             'extraServices' => $extraServices,
             'extrasTotal' => $extrasTotal,

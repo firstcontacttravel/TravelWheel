@@ -57,6 +57,35 @@ class SkylinkBookingFlowTest extends TestCase
         $this->assertSame('skylink', session('bookingFlight')['source']);
     }
 
+    public function test_book_works_when_skylink_left_session_id_empty(): void
+    {
+        // The same gate as select() above, one step later and with more to
+        // lose: book() required session_id, which is legitimately '' for every
+        // SkyLink fare, so the final "Continue to payment" click failed with
+        // "The session id field is required.", bounced the customer back to
+        // step 1 and dropped every passenger detail they had entered. Nothing
+        // in book() reads the value — it was purely a gate against SkyLink.
+        $this->configureSkylink();
+
+        session([
+            'bookingFlight' => ['source' => 'skylink', 'price' => 750000, 'currency' => 'NGN', 'fareType' => 'Public'],
+            'bookingSearchParams' => ['adults' => 1, 'childs' => 0, 'kids' => 0],
+            'bookingSessionId' => '',
+        ]);
+
+        $this->post(route('flights.book'), [
+            'fare_source_code' => 'btk_refreshed',
+            'session_id' => '',
+            'contact' => ['email' => 'traveller@example.com', 'phone' => '8012345678', 'area_code' => '080', 'country_code' => '234'],
+            'passengers' => [[
+                'type' => 'ADT', 'title' => 'Mr', 'first_name' => 'JOHN', 'last_name' => 'OKAFOR',
+                'gender' => 'M', 'dob' => '1990-04-12', 'nationality' => 'NG',
+            ]],
+        ])
+            ->assertRedirect(route('flights.payment.gateway'))
+            ->assertSessionHasNoErrors();
+    }
+
     public function test_select_re_verifies_price_and_stores_a_bookable_skylink_flight(): void
     {
         $this->configureSkylink();
