@@ -161,7 +161,15 @@ class SkylinkBookingFlowTest extends TestCase
         $response = $this->get(route('flights.booking'));
 
         $response->assertOk();
-        $response->assertSeeText('3 Passengers');
+
+        // The summary has to add up on screen: base fare plus everything else
+        // charged must equal the total, with no unexplained gap between them.
+        $response->assertSeeText('Base fare');
+        $response->assertSeeText('Taxes, fees and charges');
+        $response->assertSeeText('₦3,263,911.00');   // base
+        $response->assertSeeText('₦90,000.00');      // 3,353,911 - 3,263,911
+        $response->assertSeeText('₦3,353,911.00');   // total to pay
+
         // The old broken branch would render these per-type labels instead.
         $response->assertDontSeeText('Adult x 2');
         $response->assertDontSeeText('Child x 1');

@@ -254,56 +254,6 @@
     .bk-notice.danger { background: var(--red-lt);   color: var(--red);   border: 1px solid #fca5a5; }
     .bk-notice.green  { background: var(--green-lt); color: var(--green); border: 1px solid #a7f3d0; }
 
-    /* ── Itinerary (Image 1 style) ── */
-    .bk-itin-leg { margin-bottom: 0; }
-    .bk-itin-leg + .bk-itin-leg { border-top: 1px solid var(--gray-100); margin-top: 0; }
-    .bk-itin-leg-head {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 13px 20px 11px; background: var(--gray-50);
-        cursor: pointer; user-select: none; transition: background .15s;
-    }
-    .bk-itin-leg-head:hover { background: #eef2f7; }
-    .bk-itin-leg-route { font-size: 14px; font-weight: 800; color: var(--gray-900); display: flex; align-items: center; gap: 8px; }
-    .bk-itin-leg-meta  { font-size: 11.5px; color: var(--gray-500); margin-top: 3px; display: flex; align-items: center; gap: 8px; }
-    .bk-itin-leg-badge { padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; background: var(--amber-lt); color: var(--amber); }
-    .bk-itin-leg-badge.direct { background: var(--green-lt); color: var(--green); }
-    .bk-itin-leg-body  { padding: 0 20px 16px; }
-    .bk-outbound-badge { padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; background: var(--amber-lt); color: var(--badgeOut); }
-
-
-    /* Flight segment row */
-    .bk-seg-group { margin-top: 12px; }
-    .bk-seg-airline-bar {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 7px 0 8px; font-size: 11.5px; color: var(--gray-500);
-        border-bottom: 1px solid var(--gray-100); margin-bottom: 10px;
-    }
-    .bk-seg-airline-left { display: flex; align-items: center; gap: 8px; }
-    .bk-seg-airline-logo { width: 22px; height: 22px; border-radius: 5px; object-fit: contain; background: var(--gray-100); }
-    .bk-seg-airline-name { font-weight: 700; color: var(--gray-700); }
-    .bk-seg-cabin-tag { font-size: 10.5px; color: var(--gray-400); }
-
-    .bk-seg-timeline { display: flex; gap: 0; align-items: stretch; }
-    .bk-seg-spine { display: flex; flex-direction: column; align-items: center; width: 20px; flex-shrink: 0; padding-top: 6px; }
-    .bk-seg-dot   { width: 9px; height: 9px; border-radius: 50%; background: var(--blue); flex-shrink: 0; }
-    .bk-seg-dot.end { background: var(--navy); }
-    .bk-seg-line  { flex: 1; width: 2px; background: var(--gray-200); margin: 3px 0; min-height: 30px; }
-    .bk-seg-stops { display: flex; flex-direction: column; flex: 1; gap: 0; }
-    .bk-seg-stop  { display: grid; grid-template-columns: 70px 1fr 120px; align-items: start; padding: 4px 0 12px 12px; gap: 10px; }
-    .bk-seg-stop:last-child { padding-bottom: 0; }
-    .bk-seg-time  { font-size: 14px; font-weight: 800; color: var(--gray-900); font-family: var(--mono); }
-    .bk-seg-place { font-size: 12px; color: var(--gray-700); font-weight: 500; }
-    .bk-seg-place-sub { font-size: 10.5px; color: var(--gray-400); margin-top: 1px; }
-    .bk-seg-bags { display: flex; flex-direction: column; gap: 3px; font-size: 11px; }
-    .bk-seg-bags-lbl { font-weight: 700; color: var(--gray-500); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
-    .bk-seg-bags-val { font-weight: 600; color: var(--gray-700); }
-
-    .bk-layover-strip {
-        display: flex; align-items: center; gap: 8px; margin: 6px 12px 8px;
-        padding: 7px 12px; background: var(--amber-lt); border: 1px solid #fed7aa;
-        border-radius: 8px; font-size: 11.5px; color: var(--amber); font-weight: 600;
-    }
-
     /* ── Extra bags banner ── */
     .bk-bags-banner {
         display: flex; align-items: center; gap: 14px;
@@ -348,50 +298,6 @@
     .bk-terms-bar a { color: var(--blue); font-weight: 600; }
     .bk-terms-bar input { width: 16px; height: 16px; accent-color: var(--blue); cursor: pointer; }
 
-    /* ── RIGHT RAIL: My Cart ── */
-    .bk-cart { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-    .bk-cart-head { background: var(--navy); padding: 14px 18px; }
-    .bk-cart-title { font-size: 15px; font-weight: 800; color: #fff; }
-    .bk-cart-body  { padding: 14px 18px; }
-    .bk-cart-section { margin-bottom: 14px; }
-    .bk-cart-section-lbl { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); margin-bottom: 8px; }
-    .bk-cart-flight-row { display: flex; align-items: flex-start; gap: 9px; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--gray-100); }
-    .bk-cart-flight-row:last-child { border-bottom: none; margin-bottom: 0; }
-    .bk-cart-plane { color: var(--blue); flex-shrink: 0; margin-top: 2px; }
-    .bk-cart-route { font-size: 12.5px; font-weight: 700; color: var(--gray-900); }
-    .bk-cart-sub   { font-size: 11px; color: var(--gray-400); margin-top: 1px; }
-    .bk-cart-divider { height: 1px; background: var(--gray-100); margin: 12px 0; }
-
-    /* Fare summary */
-    .bk-fare-section { padding: 12px 18px; border-top: 1px solid var(--gray-100); }
-    .bk-fare-title   { font-size: 13px; font-weight: 800; color: var(--gray-900); margin-bottom: 10px; }
-    .bk-fare-row  { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; font-size: 12.5px; }
-    .bk-fare-lbl  { color: var(--gray-500); }
-    .bk-fare-val  { font-family: var(--mono); font-size: 12px; color: var(--gray-900); font-weight: 600; }
-    .bk-fare-disc { color: var(--red); }
-    .bk-fare-view { font-size: 11px; color: var(--blue); cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; margin-top: 4px; }
-    .bk-fare-view:hover { text-decoration: underline; }
-    .bk-fare-total-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-top: 2px solid var(--gray-200); }
-    .bk-fare-total-lbl { font-size: 14px; font-weight: 800; color: var(--navy); }
-    .bk-fare-total-val { font-size: 22px; font-weight: 800; color: var(--navy); font-family: var(--mono); }
-
-    /* Promo code */
-    .bk-promo { padding: 12px 18px; border-top: 1px solid var(--gray-100); }
-    .bk-promo-title { font-size: 13px; font-weight: 800; color: var(--gray-900); margin-bottom: 10px; }
-    .bk-promo-row { display: flex; gap: 8px; }
-    .bk-promo-input { flex: 1; height: 38px; padding: 0 12px; border: 1.5px solid var(--gray-200); border-radius: 8px; font-size: 13px; color: var(--gray-900); background: var(--gray-50); outline: none; font-family: var(--font); transition: border-color .15s; }
-    .bk-promo-input:focus { border-color: var(--blue); background: #fff; }
-    .bk-promo-input::placeholder { color: var(--gray-300); }
-    .bk-promo-btn { padding: 0 14px; height: 38px; background: var(--navy); color: #fff; border: none; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: var(--font); transition: background .15s; }
-    .bk-promo-btn:hover { background: #0f2460; }
-
-    /* ── Fare detail panel (tax breakdown) ── */
-    .bk-tax-detail { padding-left: 10px; border-left: 2px solid var(--blue-md); margin: 4px 0 6px; }
-    .bk-tax-row    { display: flex; align-items: center; justify-content: space-between; padding: 2px 0; font-size: 11.5px; }
-    .bk-tax-lbl    { color: var(--gray-500); }
-    .bk-tax-code   { font-size: 10px; opacity: .5; margin-left: 4px; }
-    .bk-tax-val    { font-family: var(--mono); font-size: 11px; color: var(--gray-700); }
-
     /* ── Review step ── */
     .bk-review-section { margin-bottom: 20px; }
     .bk-review-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: var(--gray-400); padding-bottom: 8px; border-bottom: 1px solid var(--gray-100); margin-bottom: 10px; }
@@ -420,350 +326,6 @@
         --shadow-md: 0 10px 28px rgba(16,24,40,.08);
         --font: var(--tw-font-sans, 'Open Sans', 'Plus Jakarta Sans', sans-serif);
     }
-    .bk-cart {
-        border: 1px solid var(--gray-200);
-        border-radius: 12px;
-        background: #fff;
-        box-shadow: 0 12px 30px rgba(16,24,40,.08);
-        overflow: hidden;
-    }
-    .bk-cart-head {
-        padding: 16px 18px 13px;
-        background: #fff;
-        border-bottom: 1px solid var(--gray-200);
-    }
-    .bk-cart-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--gray-900);
-        font-size: 15px;
-        font-weight: 850;
-    }
-    .bk-cart-title::before {
-        content: "";
-        width: 22px;
-        height: 22px;
-        border-radius: 999px;
-        background: var(--blue);
-        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 4h-2l-1 2h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 19h9v-2h-9l1.1-2h7.45a2 2 0 0 0 1.8-1.1L24 7H8.42L7 4Zm3 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm8 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z'/%3E%3C/svg%3E") center / 15px 15px no-repeat;
-        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 4h-2l-1 2h2l3.6 7.59-1.35 2.45A2 2 0 0 0 10 19h9v-2h-9l1.1-2h7.45a2 2 0 0 0 1.8-1.1L24 7H8.42L7 4Zm3 18a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm8 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z'/%3E%3C/svg%3E") center / 15px 15px no-repeat;
-    }
-    .bk-cart-body {
-        padding: 16px 18px 10px;
-    }
-    .bk-cart-section {
-        margin-bottom: 10px;
-    }
-    .bk-cart-section-lbl,
-    .bk-fare-title {
-        color: var(--gray-500);
-        font-size: 11px;
-        font-weight: 850;
-        letter-spacing: .04em;
-    }
-    .bk-cart-flight-row {
-        gap: 10px;
-        padding: 10px 0;
-        margin: 0;
-        border-bottom: 1px solid var(--gray-100);
-    }
-    .bk-cart-plane {
-        width: 16px;
-        height: 16px;
-        color: var(--blue);
-    }
-    .bk-cart-route {
-        color: var(--gray-900);
-        font-size: 13px;
-        line-height: 1.35;
-    }
-    .bk-cart-sub {
-        color: var(--gray-500);
-        font-size: 11.5px;
-    }
-    .bk-fare-section {
-        padding: 14px 18px;
-        border-top: 1px solid var(--gray-200);
-    }
-    .bk-fare-title {
-        margin-bottom: 12px;
-    }
-    .bk-fare-row {
-        gap: 12px;
-        padding: 5px 0;
-    }
-    .bk-fare-lbl {
-        color: var(--gray-500);
-        min-width: 0;
-    }
-    .bk-fare-val {
-        color: var(--gray-900);
-        white-space: nowrap;
-    }
-    .bk-fare-total-row {
-        padding: 16px 18px;
-        border-top: 1px solid var(--gray-200);
-        background: linear-gradient(180deg, #fff 0%, #fbfcff 100%);
-    }
-    .bk-fare-total-lbl {
-        color: var(--gray-900);
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: .02em;
-    }
-    .bk-fare-total-val {
-        color: var(--navy);
-        font-size: 24px;
-        letter-spacing: 0;
-    }
-    .bk-promo {
-        border-top: 1px solid var(--gray-200);
-        padding: 0;
-    }
-    .bk-promo > details {
-        padding: 0;
-    }
-    .bk-promo-summary {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        min-height: 46px;
-        padding: 0 18px;
-        color: var(--blue);
-        font-size: 13px;
-        font-weight: 750;
-        cursor: pointer;
-        list-style: none;
-    }
-    .bk-promo-summary::-webkit-details-marker {
-        display: none;
-    }
-    .bk-promo-summary::after {
-        content: "";
-        width: 14px;
-        height: 14px;
-        background: currentColor;
-        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
-        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
-        transition: transform .18s ease;
-    }
-    .bk-promo details[open] .bk-promo-summary::after {
-        transform: rotate(180deg);
-    }
-    .bk-promo-row {
-        padding: 0 18px 16px;
-    }
-    .bk-promo-input {
-        height: 42px;
-        border: 1px solid var(--gray-200);
-        border-radius: 9px;
-        background: #fbfcfe;
-    }
-    .bk-promo-input:focus {
-        border-color: var(--blue);
-        box-shadow: 0 0 0 3px rgba(48,49,145,.10);
-    }
-    .bk-promo-btn {
-        height: 42px;
-        border-radius: 9px;
-        background: var(--blue);
-    }
-    .bk-promo-btn:hover {
-        background: #252675;
-    }
-    .bk-rail-trust {
-        display: grid;
-        gap: 8px;
-        padding: 14px 18px 16px;
-        border-top: 1px solid var(--gray-200);
-        background: #fbfcfe;
-    }
-    .bk-rail-trust-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--gray-600, #475467);
-        font-size: 11.5px;
-        line-height: 1.35;
-    }
-    .bk-rail-trust-icon {
-        width: 18px;
-        height: 18px;
-        flex: 0 0 18px;
-        color: var(--green);
-    }
-    .bk-itin-leg {
-        background: #fff;
-    }
-    .bk-itin-leg + .bk-itin-leg {
-        border-top: 1px solid var(--gray-200);
-    }
-    .bk-itin-leg-head {
-        padding: 14px 18px;
-        background: #fbfcfe;
-        border-bottom: 1px solid var(--gray-100);
-        transition: background .18s ease;
-    }
-    .bk-itin-leg-head:hover {
-        background: #f7f8fc;
-    }
-    .bk-itin-leg-route {
-        gap: 9px;
-        color: var(--gray-900);
-        font-size: 15px;
-        line-height: 1.2;
-        letter-spacing: 0;
-    }
-    .bk-itin-leg-route svg {
-        color: var(--blue);
-        flex: 0 0 14px;
-    }
-    .bk-itin-leg-meta {
-        gap: 8px;
-        color: var(--gray-500);
-        font-size: 11.5px;
-        font-weight: 600;
-        flex-wrap: wrap;
-    }
-    .bk-itin-leg-badge,
-    .bk-outbound-badge {
-        display: inline-flex;
-        align-items: center;
-        min-height: 20px;
-        padding: 2px 9px;
-        border-radius: 999px;
-        font-size: 10.5px;
-        font-weight: 800;
-        letter-spacing: 0;
-    }
-    .bk-outbound-badge {
-        background: #eef2ff;
-        color: var(--blue);
-    }
-    .bk-itin-leg-badge {
-        background: #fff7ed;
-        color: #d97706;
-    }
-    .bk-itin-leg-badge.direct {
-        background: #eafff0;
-        color: var(--green);
-    }
-    .bk-itin-leg-body {
-        padding: 14px 18px 18px;
-    }
-    .bk-seg-group {
-        margin-top: 0;
-        padding: 15px 16px;
-        border: 1px solid var(--gray-200);
-        border-radius: 12px;
-        background: #fff;
-        box-shadow: 0 1px 2px rgba(16,24,40,.04);
-    }
-    .bk-seg-group + .bk-seg-group {
-        margin-top: 12px;
-    }
-    .bk-seg-airline-bar {
-        gap: 12px;
-        padding: 0 0 12px;
-        margin-bottom: 14px;
-        border-bottom: 1px solid var(--gray-100);
-    }
-    .bk-seg-airline-left {
-        min-width: 0;
-        flex-wrap: wrap;
-    }
-    .bk-seg-airline-logo {
-        width: 26px;
-        height: 26px;
-        border-radius: 7px;
-        background: #fff;
-        border: 1px solid var(--gray-200);
-    }
-    .bk-seg-airline-name {
-        color: var(--gray-900);
-        font-size: 13px;
-        font-weight: 850;
-    }
-    .bk-seg-cabin-tag {
-        display: inline-flex;
-        align-items: center;
-        padding: 3px 8px;
-        border-radius: 999px;
-        background: var(--gray-50);
-        color: var(--gray-500);
-        font-size: 10.5px;
-        font-weight: 750;
-        white-space: nowrap;
-    }
-    .bk-seg-timeline {
-        align-items: stretch;
-    }
-    .bk-seg-spine {
-        width: 22px;
-        padding-top: 8px;
-    }
-    .bk-seg-dot {
-        width: 8px;
-        height: 8px;
-        background: var(--blue);
-        box-shadow: 0 0 0 4px rgba(48,49,145,.10);
-    }
-    .bk-seg-dot.end {
-        background: var(--green);
-        box-shadow: 0 0 0 4px rgba(0,153,51,.10);
-    }
-    .bk-seg-line {
-        width: 1.5px;
-        background: #d8dbe3;
-        min-height: 52px;
-    }
-    .bk-seg-stop {
-        grid-template-columns: 82px minmax(0, 1fr) 128px;
-        gap: 12px;
-        padding: 2px 0 12px 12px;
-    }
-    .bk-seg-time {
-        color: #111827;
-        font-size: 17px;
-        line-height: 1.05;
-        letter-spacing: 0;
-    }
-    .bk-seg-place {
-        color: var(--gray-700);
-        font-size: 12.5px;
-        font-weight: 750;
-        line-height: 1.25;
-    }
-    .bk-seg-place-sub {
-        color: var(--gray-400);
-        font-size: 11px;
-        line-height: 1.35;
-    }
-    .bk-seg-bags {
-        align-self: start;
-        gap: 4px;
-        padding: 8px 10px;
-        border-radius: 10px;
-        background: #fbfcfe;
-        border: 1px solid var(--gray-100);
-    }
-    .bk-seg-bags-lbl {
-        color: var(--gray-400);
-        font-size: 9.5px;
-        letter-spacing: .04em;
-    }
-    .bk-seg-bags-val {
-        color: var(--gray-900);
-        font-size: 11px;
-        font-weight: 850;
-    }
-    .bk-layover-strip {
-        margin: 12px 0;
-        border-color: #fed7aa;
-        border-radius: 10px;
-    }
     .bk-bags-banner {
         border-radius: 12px;
         border-color: var(--gray-200);
@@ -787,46 +349,6 @@
     .bk-bags-sub {
         color: var(--gray-500);
         font-size: 12px;
-    }
-
-    /* Phase 3 traveller and contact form redesign */
-    .bk-route-summary {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        flex-wrap: wrap;
-        margin-top: 6px;
-    }
-    .bk-route-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        min-height: 24px;
-        padding: 4px 9px;
-        border: 1px solid var(--gray-200);
-        border-radius: 999px;
-        background: #fbfcfe;
-        color: var(--gray-600, #475467);
-        font-size: 11px;
-        font-weight: 750;
-        line-height: 1;
-        white-space: nowrap;
-    }
-    .bk-route-main {
-        border-color: rgba(48,49,145,.15);
-        background: linear-gradient(180deg, #fff 0%, #f7f7ff 100%);
-        color: var(--blue);
-        font-weight: 850;
-    }
-    .bk-route-main svg {
-        width: 13px;
-        height: 13px;
-        flex: 0 0 13px;
-    }
-    .bk-route-cabin {
-        border-color: rgba(0,153,51,.18);
-        background: #f1fff5;
-        color: var(--green);
     }
 
     /* Phase 4 review, contact and summary refinement */
@@ -861,129 +383,19 @@
         mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 2h2v8a3 3 0 0 1-2 2.83V22H5v-9.17A3 3 0 0 1 3 10V2h2v8h2V2Zm10 0c2.21 0 4 2.24 4 5v5h-3v10h-2V2h1Z'/%3E%3C/svg%3E");
         -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M7 2h2v8a3 3 0 0 1-2 2.83V22H5v-9.17A3 3 0 0 1 3 10V2h2v8h2V2Zm10 0c2.21 0 4 2.24 4 5v5h-3v10h-2V2h1Z'/%3E%3C/svg%3E");
     }
+    .bk-icon-clock {
+        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 6v6l4 2'/%3E%3C/svg%3E");
+        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 6v6l4 2'/%3E%3C/svg%3E");
+    }
     .bk-icon-users {
         mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.31 0-6 1.79-6 4v2h12v-2c0-2.21-2.69-4-6-4Zm7.5-.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm0 1.5c-.77 0-1.5.1-2.16.28 1.6.92 2.66 2.23 2.66 3.72v1h5v-1.5c0-1.93-2.46-3.5-5.5-3.5Z'/%3E%3C/svg%3E");
         -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.31 0-6 1.79-6 4v2h12v-2c0-2.21-2.69-4-6-4Zm7.5-.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm0 1.5c-.77 0-1.5.1-2.16.28 1.6.92 2.66 2.23 2.66 3.72v1h5v-1.5c0-1.93-2.46-3.5-5.5-3.5Z'/%3E%3C/svg%3E");
-    }
-    .bk-route-summary-card {
-        display: grid;
-        grid-template-columns: minmax(0, auto) auto;
-        gap: 7px 10px;
-        align-items: center;
-        margin-top: 7px;
-    }
-    .bk-route-pair {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--gray-900);
-        font-size: 14px;
-        font-weight: 900;
-        line-height: 1.1;
-        letter-spacing: 0;
-    }
-    .bk-route-arrow {
-        width: 18px;
-        height: 18px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 999px;
-        color: var(--blue);
-        background: #f1f1ff;
-    }
-    .bk-route-arrow svg {
-        width: 12px;
-        height: 12px;
-    }
-    .bk-route-meta {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        flex-wrap: wrap;
-        grid-column: 1 / -1;
-        color: var(--gray-500);
-        font-size: 11.5px;
-        font-weight: 650;
-    }
-    .bk-route-status {
-        display: inline-flex;
-        align-items: center;
-        min-height: 22px;
-        padding: 3px 9px;
-        border-radius: 999px;
-        background: #ecfdf3;
-        color: var(--green);
-        font-size: 11px;
-        font-weight: 850;
-    }
-    .bk-route-status.stop {
-        background: #fff7ed;
-        color: var(--amber);
-    }
-    .bk-cart {
-        border: 1px solid rgba(48,49,145,.12);
-        border-radius: 16px;
-        box-shadow: 0 18px 48px rgba(16,24,40,.10);
-    }
-    .bk-cart-head {
-        padding: 18px 18px 14px;
-        background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
-    }
-    .bk-cart-title::before {
-        mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M6 2h12a2 2 0 0 1 2 2v18l-4-2-4 2-4-2-4 2V4a2 2 0 0 1 2-2Zm2 6h8V6H8v2Zm0 4h8v-2H8v2Zm0 4h5v-2H8v2Z'/%3E%3C/svg%3E");
-        -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpath d='M6 2h12a2 2 0 0 1 2 2v18l-4-2-4 2-4-2-4 2V4a2 2 0 0 1 2-2Zm2 6h8V6H8v2Zm0 4h8v-2H8v2Zm0 4h5v-2H8v2Z'/%3E%3C/svg%3E");
-    }
-    .bk-cart-subtitle {
-        margin-top: 4px;
-        color: var(--gray-500);
-        font-size: 11.5px;
-        font-weight: 600;
-    }
-    .bk-cart-flight-row {
-        align-items: center;
-        padding: 11px 0;
-    }
-    .bk-cart-plane {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 30px;
-        height: 30px;
-        border-radius: 999px;
-        color: var(--blue);
-        background: #f1f1ff;
-        padding: 8px;
-    }
-    .bk-cart-route {
-        font-size: 13.5px;
-        font-weight: 850;
-    }
-    .bk-fare-section {
-        background: linear-gradient(180deg, #fff 0%, #fcfcff 100%);
-    }
-    .bk-fare-total-row {
-        margin: 0 14px 14px;
-        padding: 16px;
-        border: 1px solid rgba(48,49,145,.12);
-        border-radius: 14px;
-        background: #f8f9ff;
-    }
-    .bk-fare-total-val {
-        font-size: clamp(21px, 2.4vw, 26px);
-        line-height: 1.1;
     }
 
     /* ── Responsive ── */
     @media (max-width: 900px) { .bk-page { grid-template-columns: 1fr; } .bk-rail { position: static; } }
     @media (max-width: 580px) {
-        .bk-pp-body { grid-template-columns: 1fr; }
-        .bk-seg-stop { grid-template-columns: 60px 1fr; }
-        .bk-seg-bags { display: none; }}
-    @media (max-width: 900px) {
-        .bk-cart {
-            box-shadow: 0 8px 22px rgba(16,24,40,.06);
-        }}
+        .bk-pp-body { grid-template-columns: 1fr; }}
     @media (max-width: 640px) {
         body { margin-top: 0 !important; }
         section.navbarmain {
@@ -992,32 +404,154 @@
         main.navbarmain.upper-space {
             margin-top: 0 !important;
             padding-top: 0 !important;
-        }
-        .bk-route-summary {
-            gap: 6px;
-        }
-        .bk-route-chip {
-            min-height: 23px;
-            padding: 4px 8px;
-            font-size: 10.5px;
-        }
-        .bk-cart-head,
-        .bk-cart-body,
-        .bk-fare-section,
-        .bk-fare-total-row,
-        .bk-rail-trust {
-            padding-left: 14px;
-            padding-right: 14px;
-        }
-        .bk-fare-total-val {
-            font-size: 21px;
-        }
-        .bk-promo-summary {
-            padding: 0 14px;
-        }
-        .bk-promo-row {
-            padding: 0 14px 14px;
-        }}</style>
+        }}
+
+    /*
+     * ── Flight itinerary ──
+     * The same trip was previously stated three times on the way down: the
+     * accordion head, then a leg header repeating it verbatim, then the
+     * segment card. For a one-way non-stop the middle one carried no new
+     * information at all. The head now holds the whole trip on one line and
+     * the leg caption only appears where there is more than one leg to tell
+     * apart.
+     */
+    .bk-itin-facts { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; margin-top: 3px; }
+    .bk-itin-route { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--gray-900); }
+    .bk-itin-route .bk-itin-arrow { width: 14px; height: 14px; color: var(--gray-400); flex-shrink: 0; }
+    .bk-itin-fact { font-size: 12px; color: var(--gray-500); }
+    .bk-itin-fact.mono { font-family: var(--mono); }
+    .bk-itin-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--gray-300); flex-shrink: 0; }
+    .bk-itin-chip { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; line-height: 1.45; background: var(--gray-50); border: 1px solid var(--gray-200); color: var(--gray-600); }
+    .bk-itin-chip.direct { background: var(--green-lt); border-color: #9ae0bd; color: var(--green-dk); }
+
+    .bk-itin-body { padding: 4px 18px 18px; }
+    .bk-itin-leg + .bk-itin-leg { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--gray-100); }
+    .bk-itin-leg-caption { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin: 12px 0 10px; }
+    .bk-itin-leg-name { font-size: 12.5px; font-weight: 700; color: var(--gray-900); }
+    .bk-itin-leg-when { font-size: 11.5px; color: var(--gray-500); }
+
+    /* One segment: who flies it, then the two ends of it, then what you may carry. */
+    .bk-seg-group { border: 1px solid var(--gray-200); border-radius: 10px; overflow: hidden; background: #fff; }
+    .bk-seg-group + .bk-seg-group { margin-top: 10px; }
+    .bk-seg-airline-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: var(--gray-50); border-bottom: 1px solid var(--gray-100); }
+    .bk-seg-airline-left { display: flex; align-items: center; gap: 9px; min-width: 0; flex-wrap: wrap; }
+    .bk-seg-airline-logo { width: 22px; height: 22px; border-radius: 5px; object-fit: contain; background: #fff; border: 1px solid var(--gray-200); flex-shrink: 0; }
+    .bk-seg-airline-name { font-size: 12.5px; font-weight: 600; color: var(--gray-900); }
+    .bk-seg-airline-meta { font-size: 11.5px; color: var(--gray-500); }
+    .bk-seg-cabin-tag { flex-shrink: 0; padding: 2px 8px; border-radius: 6px; background: #fff; border: 1px solid var(--gray-200); font-size: 11px; font-weight: 600; color: var(--gray-600); line-height: 1.45; }
+
+    .bk-seg-body { padding: 14px; }
+    .bk-seg-timeline { position: relative; padding-left: 24px; }
+    .bk-seg-timeline::before { content: ""; position: absolute; left: 4px; top: 8px; bottom: 8px; width: 1px; background: var(--gray-200); }
+    .bk-seg-stop { position: relative; display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+    .bk-seg-stop::before {
+        content: ""; position: absolute; left: -24px; top: 6px;
+        width: 9px; height: 9px; border-radius: 50%; box-sizing: border-box;
+        background: #fff; border: 2px solid var(--blue);
+    }
+    .bk-seg-stop.arrive::before { border-color: var(--green); }
+    .bk-seg-time { flex: 0 0 52px; font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--gray-900); line-height: 1.5; }
+    .bk-seg-place-wrap { min-width: 0; }
+    .bk-seg-place { font-size: 12.5px; font-weight: 600; color: var(--gray-900); line-height: 1.5; }
+    .bk-seg-place-sub { font-size: 11.5px; color: var(--gray-500); line-height: 1.45; }
+    .bk-seg-duration { display: flex; align-items: center; gap: 12px; padding: 7px 0; font-size: 11.5px; color: var(--gray-500); font-family: var(--mono); }
+    .bk-seg-duration span:first-child { flex: 0 0 52px; }
+
+    /* Allowances read as facts about the flight, not as a floating side panel. */
+    .bk-seg-allow { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--gray-100); }
+    .bk-allow-chip { display: inline-flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: 7px; background: var(--gray-50); border: 1px solid var(--gray-100); font-size: 11.5px; color: var(--gray-600); line-height: 1.45; }
+    .bk-allow-chip strong { color: var(--gray-900); font-weight: 600; }
+    .bk-allow-chip .bk-mini-icon { color: var(--gray-400); }
+    .bk-layover-strip .bk-mini-icon { color: var(--amber); }
+
+    .bk-layover-strip {
+        position: relative; display: inline-flex; align-items: center; gap: 8px;
+        margin: 10px 0 10px 24px; padding: 6px 11px;
+        background: var(--amber-lt); border: 1px solid #fde8c8; border-radius: 7px;
+        font-size: 11.5px; color: var(--amber); font-weight: 600;
+    }
+
+    /*
+     * ── Booking summary ──
+     * Read as a receipt: what you are buying, what it costs, what you pay.
+     * The old version printed the trip total twice — once as a row labelled
+     * with the passenger count and again as Trip Total — and showed a base
+     * fare whose difference from the total was never accounted for on screen.
+     */
+    .bk-cart { background: #fff; border: 1px solid var(--gray-200); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .bk-cart-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--gray-200); }
+    .bk-cart-title { font-size: 14px; font-weight: 700; color: var(--gray-900); line-height: 1.35; }
+    .bk-cart-icon {
+        flex-shrink: 0; width: 30px; height: 30px; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--blue-lt);
+    }
+    .bk-cart-icon::after {
+        content: ""; width: 16px; height: 16px; background: var(--blue);
+        mask: url("{{ asset('images/flight-icons/tag.svg') }}") center / contain no-repeat;
+        -webkit-mask: url("{{ asset('images/flight-icons/tag.svg') }}") center / contain no-repeat;
+    }
+    .bk-cart-head-txt { min-width: 0; }
+    .bk-cart-subtitle { font-size: 11.5px; color: var(--gray-500); line-height: 1.45; margin-top: 1px; }
+
+    .bk-cart-body { padding: 14px 18px; }
+    .bk-cart-section-lbl { font-size: 12px; font-weight: 700; color: var(--gray-900); margin-bottom: 9px; text-transform: none; letter-spacing: 0; }
+    .bk-cart-flight-row { display: flex; align-items: flex-start; gap: 10px; }
+    .bk-cart-flight-row + .bk-cart-flight-row { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--gray-100); }
+    .bk-cart-plane { flex-shrink: 0; width: 26px; height: 26px; border-radius: 7px; background: var(--blue-lt); color: var(--blue); display: flex; align-items: center; justify-content: center; }
+    .bk-cart-route { font-size: 12.5px; font-weight: 600; color: var(--gray-900); line-height: 1.4; }
+    .bk-cart-sub { font-size: 11.5px; color: var(--gray-500); margin-top: 1px; line-height: 1.45; }
+    .bk-cart-divider { height: 1px; background: var(--gray-100); margin: 12px 0; }
+
+    .bk-fare-section { padding: 14px 18px; border-top: 1px solid var(--gray-100); }
+    .bk-fare-title { font-size: 12px; font-weight: 700; color: var(--gray-900); margin-bottom: 9px; }
+    .bk-fare-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 5px 0; font-size: 12.5px; }
+    .bk-fare-lbl { color: var(--gray-500); min-width: 0; }
+    .bk-fare-val { flex-shrink: 0; font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--gray-900); }
+    .bk-fare-row.sum { margin-top: 5px; padding-top: 9px; border-top: 1px solid var(--gray-100); }
+    .bk-fare-row.sum .bk-fare-lbl { color: var(--gray-900); font-weight: 600; }
+    .bk-fare-row.sum .bk-fare-val { font-weight: 600; }
+    .bk-fare-disc { color: var(--green-dk); }
+    .bk-fare-view { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; font-size: 11.5px; font-weight: 600; color: var(--blue); cursor: pointer; }
+    .bk-fare-view:hover { text-decoration: underline; }
+
+    /* The one number the page is really about. */
+    .bk-fare-total-row {
+        display: flex; align-items: flex-end; justify-content: space-between; gap: 14px;
+        padding: 14px 18px; border-top: 1px solid var(--gray-200);
+        background: linear-gradient(180deg, #fbfbff 0%, #f7f7fd 100%);
+    }
+    .bk-fare-total-lbl { font-size: 12.5px; font-weight: 600; color: var(--gray-700); }
+    .bk-fare-total-note { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+    .bk-fare-total-val { display: block; font-family: var(--mono); font-size: 21px; font-weight: 500; color: var(--gray-900); line-height: 1.2; letter-spacing: -.02em; }
+
+    .bk-promo { padding: 12px 18px; border-top: 1px solid var(--gray-100); }
+    .bk-promo-summary { font-size: 12.5px; font-weight: 600; color: var(--blue); cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+    .bk-promo-summary::-webkit-details-marker { display: none; }
+    .bk-promo-summary::after {
+        content: ""; width: 14px; height: 14px; background: currentColor; transition: transform .2s ease;
+        mask: url("{{ asset('images/flight-icons/chevron-down.svg') }}") center / contain no-repeat;
+        -webkit-mask: url("{{ asset('images/flight-icons/chevron-down.svg') }}") center / contain no-repeat;
+    }
+    .bk-promo details[open] .bk-promo-summary::after,
+    details[open] > .bk-promo-summary::after { transform: rotate(180deg); }
+    .bk-promo-row { display: flex; gap: 8px; margin-top: 10px; }
+    .bk-promo-input { flex: 1; min-width: 0; height: 38px; padding: 0 12px; border: 1px solid var(--gray-200); border-radius: 8px; background: #fff; color: var(--gray-900); font-family: var(--font); font-size: 12.5px; outline: none; transition: border-color .15s ease, box-shadow .15s ease; }
+    .bk-promo-input::placeholder { color: var(--gray-400); }
+    .bk-promo-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(48,49,145,.11); }
+    .bk-promo-btn { flex-shrink: 0; height: 38px; padding: 0 16px; border: 1px solid var(--blue); border-radius: 8px; background: var(--blue); color: #fff; font-family: var(--font); font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background .15s ease; }
+    .bk-promo-btn:hover { background: var(--blue-dk); border-color: var(--blue-dk); }
+
+    .bk-rail-trust { display: flex; flex-direction: column; gap: 9px; padding: 13px 18px 15px; border-top: 1px solid var(--gray-100); }
+    .bk-rail-trust-item { display: flex; align-items: flex-start; gap: 9px; font-size: 11.5px; color: var(--gray-500); line-height: 1.5; }
+    .bk-rail-trust-icon { flex-shrink: 0; width: 15px; height: 15px; margin-top: 1px; color: var(--green-dk); }
+
+    .bk-tax-detail { padding-left: 10px; border-left: 2px solid var(--blue-md); margin: 4px 0 6px; }
+    .bk-tax-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 2px 0; font-size: 11.5px; }
+    .bk-tax-lbl { color: var(--gray-500); }
+    .bk-tax-code { font-size: 10.5px; color: var(--gray-400); margin-left: 4px; }
+    .bk-tax-val { font-family: var(--mono); font-size: 11px; color: var(--gray-700); }
+</style>
 
 @php
     // ── Core session data ──
@@ -1054,6 +588,16 @@
     $currency = $mappedFlight['currency'] ?? ($itinTotals['TotalFare']['CurrencyCode'] ?? 'NGN');
     $sym      = $currency === 'NGN' ? html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8') : ($currency === 'USD' ? '$' : $currency . ' ');
     $fmt      = fn($v) => $sym . number_format((float) $v, 2);
+
+    // SkyLink reports 12-hour clock times ("07:15 pm"); TravelNext reports
+    // 24-hour. The results page normalises the same way, so a departure does
+    // not change format between choosing the flight and booking it.
+    $bkTime = function ($value): string {
+        $raw = trim((string) $value);
+        if (! preg_match('/^(\d{1,2}):(\d{2})\s*([ap])\.?m\.?$/i', $raw, $m)) { return $raw; }
+        $hour = ((int) $m[1] % 12) + (strtolower($m[3]) === 'p' ? 12 : 0);
+        return str_pad((string) $hour, 2, '0', STR_PAD_LEFT).':'.$m[2];
+    };
 
     $segments  = $flight['segments'] ?? ($mappedFlight['segments'] ?? []);
     $retSegs   = $mappedFlight['returnSegments'] ?? [];
@@ -1228,246 +772,93 @@
                             <div class="bk-acc-icon">
                                 <span class="bk-icon-mask bk-icon-plane" style="width:17px;height:17px;"></span>
                             </div>
-                            <div>
-                                <div class="bk-acc-title">Flight itinerary</div>
-                                <div class="bk-acc-sub bk-route-summary-card">
-                                    <div class="bk-route-pair">
-                                        <span>{{ $firstSeg['from'] ?? '' }}</span>
-                                        <span class="bk-route-arrow">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                <path d="M5 12h14"/>
-                                                <path d="m13 6 6 6-6 6"/>
-                                            </svg>
-                                        </span>
-                                        <span>{{ $lastSeg['to'] ?? '' }}</span>
-                                    </div>
-                                    <span class="bk-route-chip">{{ $tripLabel }}</span>
-                                    <div class="bk-route-meta">
-                                        @if($routeDate)
-                                            <span>{{ $routeDate }}</span>
-                                        @endif
-                                        <span class="bk-route-status {{ $routeStopCount > 0 ? 'stop' : '' }}">
-                                            {{ $routeStopCount > 0 ? $routeStopCount . ' stop' . ($routeStopCount > 1 ? 's' : '') : 'Non stop' }}
-                                        </span>
-                                        @if($routeDuration)
-                                            <span>&middot; {{ $routeDuration }}</span>
-                                        @endif
-                                        <span>&middot; {{ $cabin }}</span>
-                                    </div>
+                            <div style="min-width:0;">
+                                <div class="bk-itin-route">
+                                    <span>{{ $firstSeg['from'] ?? '' }}</span>
+                                    <svg class="bk-itin-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>
+                                    </svg>
+                                    <span>{{ $lastSeg['to'] ?? '' }}</span>
+                                </div>
+                                {{-- One line of facts. The leg header below used to repeat all
+                                     of this verbatim, which said nothing new on a one-way. --}}
+                                <div class="bk-itin-facts">
+                                    <span class="bk-itin-chip">{{ $tripLabel }}</span>
+                                    @if($routeDate)
+                                        <span class="bk-itin-dot" aria-hidden="true"></span>
+                                        <span class="bk-itin-fact">{{ $routeDate }}</span>
+                                    @endif
+                                    @if($routeDuration)
+                                        <span class="bk-itin-dot" aria-hidden="true"></span>
+                                        <span class="bk-itin-fact mono">{{ $routeDuration }}</span>
+                                    @endif
+                                    <span class="bk-itin-dot" aria-hidden="true"></span>
+                                    <span class="bk-itin-chip {{ $routeStopCount === 0 ? 'direct' : '' }}">
+                                        {{ $routeStopCount > 0 ? $routeStopCount . ' stop' . ($routeStopCount > 1 ? 's' : '') : 'Non-stop' }}
+                                    </span>
+                                    <span class="bk-itin-dot" aria-hidden="true"></span>
+                                    <span class="bk-itin-fact">{{ $cabin }}</span>
                                 </div>
                             </div>
                             <svg class="bk-acc-chevron" :class="{ open }" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                         </div>
 
-                        <div x-show="open" x-transition>
+                        <div class="bk-itin-body" x-show="open" x-transition>
                             @if(!$isMulti)
-                                {{-- ── Outbound leg ── --}}
-                                @php
-                                    $outStopCount = $flight['stops'] ?? max(0, count($segments) - 1);
-                                    $outDuration  = $flight['totalTimeLabel'] ?? $flight['durationLabel'] ?? '';
-                                @endphp
-                                <div class="bk-itin-leg" x-data="{ legOpen: true }">
-                                    <div class="bk-itin-leg-head" @click="legOpen = !legOpen">
-                                        <div>
-                                            <div class="bk-itin-leg-route">
-                                                {{ $firstSeg['from'] ?? '' }}
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                                                {{ $lastSeg['to'] ?? '' }}
-                                                <span class="bk-outbound-badge">
-                                                    Outbound
-                                                </span>
-                                            </div>
-                                            <div class="bk-itin-leg-meta">
-                                                @if(!empty($flight['departDateLabel'])) <span>{{ $flight['departDateLabel'] }}</span> @endif
-                                                <span class="bk-itin-leg-badge {{ $outStopCount === 0 ? 'direct' : '' }}">
-                                                    {{ $outStopCount === 0 ? 'Non stop' : $outStopCount . ' stop' . ($outStopCount > 1 ? 's' : '') }}
-                                                </span>
-                                                @if($outDuration) <span>· {{ $outDuration }}</span> @endif
-                                            </div>
+                                <div class="bk-itin-leg">
+                                    {{-- Only named when there is another leg to tell it apart from. --}}
+                                    @if($isReturn && count($retSegs) > 0)
+                                        <div class="bk-itin-leg-caption">
+                                            <span class="bk-itin-leg-name">Outbound</span>
+                                            @if(!empty($flight['departDateLabel']))
+                                                <span class="bk-itin-leg-when">{{ $flight['departDateLabel'] }}</span>
+                                            @endif
                                         </div>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="legOpen ? 'transform:rotate(180deg)' : ''"><polyline points="6 9 12 15 18 9"/></svg>
-                                    </div>
+                                    @endif
 
-                                    <div x-show="legOpen" x-transition>
-                                        <div class="bk-itin-leg-body">
-                                            @foreach($segments as $si => $seg)
-                                                @php
-                                                    $equip   = $seg['equipment'] ?? '';
-                                                    $equipLbl= $equipMap[$equip] ?? $equip;
-                                                    $bagStr  = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 23kg';
-                                                    $cabinBag= implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 7kg';
-                                                @endphp
-
-                                                @if($si > 0 && !empty($flight['layoverDurations'][$si - 1]))
-                                                    <div class="bk-layover-strip">
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                        Layover in {{ $segments[$si-1]['toCity'] ?? $segments[$si-1]['to'] ?? '' }}
-                                                        · {{ $flight['layoverDurations'][$si-1] }}
-                                                    </div>
-                                                @endif
-
-                                                <div class="bk-seg-group">
-                                                    <div class="bk-seg-airline-bar">
-                                                        <div class="bk-seg-airline-left">
-                                                            @if(!empty($seg['airlineLogo']))
-                                                                <img class="bk-seg-airline-logo" src="{{ $seg['airlineLogo'] }}" alt="{{ $seg['airline'] ?? '' }}">
-                                                            @endif
-                                                            <span class="bk-seg-airline-name">{{ $seg['airline'] ?? '' }}</span>
-                                                            @if($equipLbl) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $equipLbl }}</span> @endif
-                                                            @if(!empty($seg['flightNo'])) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $seg['flightNo'] }}</span> @endif
-                                                        </div>
-                                                        <div>
-                                                            <span class="bk-seg-cabin-tag">{{ $seg['cabin'] ?? $cabin }}</span>
-                                                            @if(!empty($seg['resBookCode'])) <span class="bk-seg-cabin-tag" style="margin-left:5px;">Class{{ $seg['resBookCode'] }}</span> @endif
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="bk-seg-timeline">
-                                                        <div class="bk-seg-spine">
-                                                            <div class="bk-seg-dot"></div>
-                                                            <div class="bk-seg-line"></div>
-                                                            <div class="bk-seg-dot end"></div>
-                                                        </div>
-                                                        <div class="bk-seg-stops">
-                                                            <div class="bk-seg-stop">
-                                                                <div class="bk-seg-time">{{ $seg['departTime'] }}</div>
-                                                                <div>
-                                                                    <div class="bk-seg-place">{{ $seg['fromCity'] ?? $seg['from'] ?? '' }}</div>
-                                                                    <div class="bk-seg-place-sub">{{ $seg['fromAirport'] ?? '' }}</div>
-                                                                </div>
-                                                                <div class="bk-seg-bags">
-                                                                    <span class="bk-seg-bags-lbl">Baggage</span>
-                                                                    <span class="bk-seg-bags-val">{{ $bagStr }}</span>
-                                                                    <span class="bk-seg-bags-lbl" style="margin-top:4px;">Check In</span>
-                                                                    <span class="bk-seg-bags-val">{{ $bagStr }}</span>
-                                                                    <span class="bk-seg-bags-lbl" style="margin-top:4px;">Cabin</span>
-                                                                    <span class="bk-seg-bags-val">{{ $cabinBag }}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div class="bk-seg-stop" style="padding-bottom:0;">
-                                                                <div class="bk-seg-time" style="color:var(--gray-500);font-size:12px;">
-                                                                    {{ floor($seg['duration']/60) }}h {{ $seg['duration']%60 }}m
-                                                                </div>
-                                                                <div></div>
-                                                                <div></div>
-                                                            </div>
-                                                            <div class="bk-seg-stop" style="padding-top:4px;padding-bottom:0;">
-                                                                <div class="bk-seg-time">{{ $seg['arriveTime'] }}</div>
-                                                                <div>
-                                                                    <div class="bk-seg-place">{{ $seg['toCity'] ?? $seg['to'] ?? '' }}</div>
-                                                                    <div class="bk-seg-place-sub">{{ $seg['toAirport'] ?? '' }}</div>
-                                                                </div>
-                                                                <div></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
+                                    @foreach($segments as $si => $seg)
+                                        @php
+                                            $equip    = $seg['equipment'] ?? '';
+                                            $equipLbl = $equipMap[$equip] ?? $equip;
+                                            $bagStr   = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 23kg';
+                                            $cabinBag = implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 7kg';
+                                            $layover  = ($si > 0 && !empty($flight['layoverDurations'][$si - 1]))
+                                                ? $flight['layoverDurations'][$si - 1].' layover in '.($segments[$si-1]['toCity'] ?? $segments[$si-1]['to'] ?? '')
+                                                : '';
+                                        @endphp
+                                        @include('livewire.pages.flight.partials.booking-segment', [
+                                            'seg' => $seg, 'bagStr' => $bagStr, 'cabinBag' => $cabinBag,
+                                            'equipLbl' => $equipLbl, 'cabin' => $cabin, 'layover' => $layover,
+                                        ])
+                                    @endforeach
                                 </div>
                             @endif
 
                             {{-- ── Return leg ── --}}
                             @if($isReturn && count($retSegs) > 0)
-                                @php
-                                    $retFirst    = $retSegs[0];
-                                    $retLast     = $retSegs[count($retSegs)-1];
-                                    $retStops    = $flight['returnStops'] ?? max(0, count($retSegs)-1);
-                                    $retDuration = $flight['returnTotalTimeLabel'] ?? $flight['returnDurationLabel'] ?? '';
-                                @endphp
-                                <div class="bk-itin-leg" x-data="{ legOpen: true }">
-                                    <div class="bk-itin-leg-head" @click="legOpen = !legOpen">
-                                        <div>
-                                            <div class="bk-itin-leg-route">
-                                                {{ $retFirst['from'] ?? '' }}
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                                                {{ $retLast['to'] ?? '' }}
-                                                <span class="bk-outbound-badge">
-                                                    Return
-                                                </span>
-                                            </div>
-                                            <div class="bk-itin-leg-meta">
-                                                @if(!empty($flight['returnDateLabel'])) <span>{{ $flight['returnDateLabel'] }}</span> @endif
-                                                <span class="bk-itin-leg-badge {{ $retStops === 0 ? 'direct' : '' }}">
-                                                    {{ $retStops === 0 ? 'Non stop' : $retStops . ' stop' . ($retStops > 1 ? 's' : '') }}
-                                                </span>
-                                                @if($retDuration) <span>· {{ $retDuration }}</span> @endif
-                                            </div>
-                                        </div>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="legOpen ? 'transform:rotate(180deg)' : ''"><polyline points="6 9 12 15 18 9"/></svg>
+                                <div class="bk-itin-leg">
+                                    <div class="bk-itin-leg-caption">
+                                        <span class="bk-itin-leg-name">Return</span>
+                                        @if(!empty($flight['returnDateLabel']))
+                                            <span class="bk-itin-leg-when">{{ $flight['returnDateLabel'] }}</span>
+                                        @endif
                                     </div>
 
-                                    <div x-show="legOpen" x-transition>
-                                        <div class="bk-itin-leg-body">
-                                            @foreach($retSegs as $si => $seg)
-                                                @php
-                                                    $equip    = $seg['equipment'] ?? '';
-                                                    $equipLbl = $equipMap[$equip] ?? $equip;
-                                                    $bagStr   = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 23kg';
-                                                    $cabinBag = implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 7kg';
-                                                @endphp
-
-                                                @if($si > 0 && !empty($flight['returnLayoverDurations'][$si-1]))
-                                                    <div class="bk-layover-strip">
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                        Layover in {{ $retSegs[$si-1]['toCity'] ?? $retSegs[$si-1]['to'] ?? '' }}
-                                                        · {{ $flight['returnLayoverDurations'][$si-1] }}
-                                                    </div>
-                                                @endif
-
-                                                <div class="bk-seg-group">
-                                                    <div class="bk-seg-airline-bar">
-                                                        <div class="bk-seg-airline-left">
-                                                            @if(!empty($seg['airlineLogo']))
-                                                                <img class="bk-seg-airline-logo" src="{{ $seg['airlineLogo'] }}" alt="{{ $seg['airline'] ?? '' }}">
-                                                            @endif
-                                                            <span class="bk-seg-airline-name">{{ $seg['airline'] ?? '' }}</span>
-                                                            @if($equipLbl) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $equipLbl }}</span> @endif
-                                                            @if(!empty($seg['flightNo'])) <span style="color:var(--gray-300)">·</span> <span style="font-size:11px;color:var(--gray-400);">{{ $seg['flightNo'] }}</span> @endif
-                                                        </div>
-                                                        <span class="bk-seg-cabin-tag">{{ $seg['cabin'] ?? $cabin }}</span>
-                                                    </div>
-                                                    <div class="bk-seg-timeline">
-                                                        <div class="bk-seg-spine">
-                                                            <div class="bk-seg-dot"></div>
-                                                            <div class="bk-seg-line"></div>
-                                                            <div class="bk-seg-dot end"></div>
-                                                        </div>
-                                                        <div class="bk-seg-stops">
-                                                            <div class="bk-seg-stop">
-                                                                <div class="bk-seg-time">{{ $seg['departTime'] }}</div>
-                                                                <div>
-                                                                    <div class="bk-seg-place">{{ $seg['fromCity'] ?? $seg['from'] ?? '' }}</div>
-                                                                    <div class="bk-seg-place-sub">{{ $seg['fromAirport'] ?? '' }}</div>
-                                                                </div>
-                                                                <div class="bk-seg-bags">
-                                                                    <span class="bk-seg-bags-lbl">Baggage</span>
-                                                                    <span class="bk-seg-bags-val">{{ $bagStr }}</span>
-                                                                    <span class="bk-seg-bags-lbl" style="margin-top:4px;">Check In</span>
-                                                                    <span class="bk-seg-bags-val">{{ $bagStr }}</span>
-                                                                    <span class="bk-seg-bags-lbl" style="margin-top:4px;">Cabin</span>
-                                                                    <span class="bk-seg-bags-val">{{ $cabinBag }}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div class="bk-seg-stop" style="padding-bottom:0;">
-                                                                <div class="bk-seg-time" style="color:var(--gray-500);font-size:12px;">{{ floor($seg['duration']/60) }}h {{ $seg['duration']%60 }}m</div>
-                                                                <div></div><div></div>
-                                                            </div>
-                                                            <div class="bk-seg-stop" style="padding-top:4px;padding-bottom:0;">
-                                                                <div class="bk-seg-time">{{ $seg['arriveTime'] }}</div>
-                                                                <div>
-                                                                    <div class="bk-seg-place">{{ $seg['toCity'] ?? $seg['to'] ?? '' }}</div>
-                                                                    <div class="bk-seg-place-sub">{{ $seg['toAirport'] ?? '' }}</div>
-                                                                </div>
-                                                                <div></div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
+                                    @foreach($retSegs as $si => $seg)
+                                        @php
+                                            $equip    = $seg['equipment'] ?? '';
+                                            $equipLbl = $equipMap[$equip] ?? $equip;
+                                            $bagStr   = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 23kg';
+                                            $cabinBag = implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 7kg';
+                                            $layover  = ($si > 0 && !empty($flight['returnLayoverDurations'][$si - 1]))
+                                                ? $flight['returnLayoverDurations'][$si - 1].' layover in '.($retSegs[$si-1]['toCity'] ?? $retSegs[$si-1]['to'] ?? '')
+                                                : '';
+                                        @endphp
+                                        @include('livewire.pages.flight.partials.booking-segment', [
+                                            'seg' => $seg, 'bagStr' => $bagStr, 'cabinBag' => $cabinBag,
+                                            'equipLbl' => $equipLbl, 'cabin' => $cabin, 'layover' => $layover,
+                                        ])
+                                    @endforeach
                                 </div>
                             @endif
 
@@ -1478,71 +869,31 @@
                                         $legSegs  = $leg['segments'] ?? [];
                                         $legFirst = $legSegs[0] ?? [];
                                         $legLast  = count($legSegs) > 0 ? $legSegs[count($legSegs)-1] : [];
-                                        $legStops = $leg['stops'] ?? max(0, count($legSegs)-1);
                                     @endphp
                                     @if(!empty($legSegs))
-                                        <div class="bk-itin-leg" x-data="{ legOpen: true }">
-                                            <div class="bk-itin-leg-head" @click="legOpen = !legOpen">
-                                                <div>
-                                                    <div class="bk-itin-leg-route">
-                                                        {{ $legFirst['from'] ?? '' }}
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                                                        {{ $legLast['to'] ?? '' }}
-                                                    </div>
-                                                    <div class="bk-itin-leg-meta">
-                                                        <span>Leg {{ $li + 1 }}</span>
-                                                        @if(!empty($leg['departDateLabel'])) <span>· {{ $leg['departDateLabel'] }}</span> @endif
-                                                        <span class="bk-itin-leg-badge {{ $legStops === 0 ? 'direct' : '' }}">{{ $legStops === 0 ? 'Non stop' : $legStops . ' stop' }}</span>
-                                                        @if(!empty($leg['totalTimeLabel'])) <span>· {{ $leg['totalTimeLabel'] }}</span> @endif
-                                                    </div>
-                                                </div>
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" :style="legOpen ? 'transform:rotate(180deg)' : ''"><polyline points="6 9 12 15 18 9"/></svg>
+                                        <div class="bk-itin-leg">
+                                            <div class="bk-itin-leg-caption">
+                                                <span class="bk-itin-leg-name">Leg {{ $li + 1 }} · {{ $legFirst['from'] ?? '' }} to {{ $legLast['to'] ?? '' }}</span>
+                                                @if(!empty($leg['departDateLabel']))
+                                                    <span class="bk-itin-leg-when">{{ $leg['departDateLabel'] }}</span>
+                                                @endif
                                             </div>
-                                            <div x-show="legOpen" x-transition>
-                                                <div class="bk-itin-leg-body">
-                                                    @foreach($legSegs as $si => $seg)
-                                                        @if($si > 0 && !empty($leg['layoverDurations'][$si-1]))
-                                                            <div class="bk-layover-strip">
-                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                                                                Layover · {{ $leg['layoverDurations'][$si-1] }}
-                                                            </div>
-                                                        @endif
-                                                        <div class="bk-seg-group">
-                                                            <div class="bk-seg-airline-bar">
-                                                                <div class="bk-seg-airline-left">
-                                                                    @if(!empty($seg['airlineLogo'])) <img class="bk-seg-airline-logo" src="{{ $seg['airlineLogo'] }}" alt=""> @endif
-                                                                    <span class="bk-seg-airline-name">{{ $seg['airline'] ?? '' }}</span>
-                                                                    @if(!empty($seg['flightNo'])) <span style="font-size:11px;color:var(--gray-400);">· {{ $seg['flightNo'] }}</span> @endif
-                                                                </div>
-                                                                <span class="bk-seg-cabin-tag">{{ $seg['cabin'] ?? $cabin }}</span>
-                                                            </div>
-                                                            <div class="bk-seg-timeline">
-                                                                <div class="bk-seg-spine">
-                                                                    <div class="bk-seg-dot"></div>
-                                                                    <div class="bk-seg-line"></div>
-                                                                    <div class="bk-seg-dot end"></div>
-                                                                </div>
-                                                                <div class="bk-seg-stops">
-                                                                    <div class="bk-seg-stop">
-                                                                        <div class="bk-seg-time">{{ $seg['departTime'] }}</div>
-                                                                        <div><div class="bk-seg-place">{{ $seg['fromCity'] ?? $seg['from'] ?? '' }}</div><div class="bk-seg-place-sub">{{ $seg['fromAirport'] ?? '' }}</div></div>
-                                                                        <div></div>
-                                                                    </div>
-                                                                    <div class="bk-seg-stop" style="padding-bottom:0;">
-                                                                        <div class="bk-seg-time" style="color:var(--gray-500);font-size:12px;">{{ floor($seg['duration']/60) }}h {{ $seg['duration']%60 }}m</div>
-                                                                        <div></div><div></div>
-                                                                    </div>
-                                                                    <div class="bk-seg-stop" style="padding-top:4px;padding-bottom:0;">
-                                                                        <div class="bk-seg-time">{{ $seg['arriveTime'] }}</div>
-                                                                        <div><div class="bk-seg-place">{{ $seg['toCity'] ?? $seg['to'] ?? '' }}</div><div class="bk-seg-place-sub">{{ $seg['toAirport'] ?? '' }}</div></div>
-                                                                        <div></div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            </div>
+
+                                            @foreach($legSegs as $si => $seg)
+                                                @php
+                                                    $equip    = $seg['equipment'] ?? '';
+                                                    $equipLbl = $equipMap[$equip] ?? $equip;
+                                                    $bagStr   = implode(' / ', array_unique(array_filter((array)($breakdown[0]['baggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 23kg';
+                                                    $cabinBag = implode(' / ', array_unique(array_filter((array)($breakdown[0]['cabinBaggage'] ?? []), fn($v) => $v !== ''))) ?: '1 x 7kg';
+                                                    $layover  = ($si > 0 && !empty($leg['layoverDurations'][$si - 1]))
+                                                        ? $leg['layoverDurations'][$si - 1].' layover in '.($legSegs[$si-1]['toCity'] ?? $legSegs[$si-1]['to'] ?? '')
+                                                        : '';
+                                                @endphp
+                                                @include('livewire.pages.flight.partials.booking-segment', [
+                                                    'seg' => $seg, 'bagStr' => $bagStr, 'cabinBag' => $cabinBag,
+                                                    'equipLbl' => $equipLbl, 'cabin' => $cabin, 'layover' => $layover,
+                                                ])
+                                            @endforeach
                                         </div>
                                     @endif
                                 @endforeach
@@ -2304,16 +1655,19 @@
                 {{-- My Cart --}}
                 <div class="bk-cart">
                     <div class="bk-cart-head">
-                        <div class="bk-cart-title">Booking Summary</div>
-                        <div class="bk-cart-subtitle">
-                            {{ $isTravelFlexCheckout
-                                ? 'Fare, route and extras for your TravelFlex application'
-                                : 'Fare, route and extras reviewed before payment' }}
+                        <span class="bk-cart-icon" aria-hidden="true"></span>
+                        <div class="bk-cart-head-txt">
+                            <div class="bk-cart-title">Booking summary</div>
+                            <div class="bk-cart-subtitle">
+                                {{ $isTravelFlexCheckout
+                                    ? 'Reviewed before your TravelFlex application'
+                                    : 'Reviewed before payment' }}
+                            </div>
                         </div>
                     </div>
                     <div class="bk-cart-body">
                         <div class="bk-cart-section">
-                            <div class="bk-cart-section-lbl">Flight</div>
+                            <div class="bk-cart-section-lbl">Your flight</div>
 
                             @if($isMulti && !empty($allLegs))
                                 @foreach($allLegs as $leg)
@@ -2321,27 +1675,29 @@
                                         <span class="bk-cart-plane"><span class="bk-icon-mask bk-icon-plane" style="width:14px;height:14px;" aria-hidden="true"></span></span>
                                         <div>
                                             <div class="bk-cart-route">{{ $leg['route'] ?? '' }}</div>
-                                            <div class="bk-cart-sub">{{ $cabin }} · {{ $leg['label'] ?? 'Multi-city' }}</div>
+                                            <div class="bk-cart-sub">{{ $leg['label'] ?? 'Multi-city' }} &middot; {{ $cabin }}</div>
                                         </div>
                                     </div>
                                 @endforeach
                             @else
-                                {{-- Outbound --}}
                                 <div class="bk-cart-flight-row">
                                     <span class="bk-cart-plane"><span class="bk-icon-mask bk-icon-plane" style="width:14px;height:14px;" aria-hidden="true"></span></span>
                                     <div>
                                         <div class="bk-cart-route">{{ ($firstSeg['from'] ?? '') }} to {{ ($lastSeg['to'] ?? '') }}</div>
-                                        <div class="bk-cart-sub">{{ $cabin }} · {{ $tripLabel }}</div>
+                                        <div class="bk-cart-sub">
+                                            @if(!empty($flight['departDateLabel'])){{ $flight['departDateLabel'] }} &middot; @endif{{ $tripLabel }} &middot; {{ $cabin }}
+                                        </div>
                                     </div>
                                 </div>
 
-                                {{-- Return --}}
                                 @if($isReturn && !empty($retSegs))
                                     <div class="bk-cart-flight-row">
                                         <span class="bk-cart-plane" style="transform:scaleX(-1);"><span class="bk-icon-mask bk-icon-plane" style="width:14px;height:14px;" aria-hidden="true"></span></span>
                                         <div>
                                             <div class="bk-cart-route">{{ ($retSegs[0]['from'] ?? '') }} to {{ ($retSegs[count($retSegs)-1]['to'] ?? '') }}</div>
-                                            <div class="bk-cart-sub">{{ $cabin }} · Round Trip</div>
+                                            <div class="bk-cart-sub">
+                                                @if(!empty($flight['returnDateLabel'])){{ $flight['returnDateLabel'] }} &middot; @endif Return &middot; {{ $cabin }}
+                                            </div>
                                         </div>
                                     </div>
                                 @endif
@@ -2353,39 +1709,48 @@
 
 
                     <div class="bk-fare-section">
-                        <div class="bk-fare-title">Flight Fare Summary</div>
+                        <div class="bk-fare-title">Fare breakdown</div>
 
                         {{-- SkyLink-sourced fares carry no real per-passenger-type tax/markup
                              breakdown (no such endpoint exists for that supplier) — show one
-                             blended total row instead. This used to be guarded by
-                             empty($breakdown) alone, back when SkyLink's fareBreakdown was
-                             always []; once that got populated (for the Fare Rules tab, which
-                             only needs baggage/refund info, not fare math) this branch stopped
-                             firing for SkyLink and the per-type branch below rendered instead —
-                             with no tax data to work with, it silently showed "Taxes & Fees:
-                             ₦0.00" per passenger while Trip Total (computed separately, unaffected)
-                             legitimately included real taxes and markup, so the two didn't
-                             reconcile on screen. Found via live testing. Trip Total below is
-                             driven by $this->getTotalPrice(), not this section, so the actual
-                             charged amount was never wrong either way — only this display. --}}
+                             blended total instead. This used to be guarded by empty($breakdown)
+                             alone, back when SkyLink's fareBreakdown was always []; once that
+                             got populated (for the Fare Rules tab, which only needs
+                             baggage/refund info, not fare math) this branch stopped firing for
+                             SkyLink and the per-type branch below rendered instead — with no tax
+                             data to work with it silently showed "Taxes & Fees: ₦0.00" per
+                             passenger while Trip Total (computed separately) legitimately
+                             included real taxes and markup, so the two did not reconcile on
+                             screen. Trip Total is driven by $this->getTotalPrice(), not this
+                             section, so the charged amount was never wrong — only this display. --}}
                         @if(empty($breakdown) || ($mappedFlight['source'] ?? null) === 'skylink')
                             @php
                                 $blendedPax = max(1, (int) ($searchParams['adults'] ?? 1) + (int) ($searchParams['childs'] ?? 0) + (int) ($searchParams['kids'] ?? 0));
+                                // Whatever sits between the base fare and what is actually
+                                // charged is taxes, carrier fees and our service charge. It was
+                                // previously left off the summary entirely, so a base fare and a
+                                // trip total appeared with an unexplained gap between them.
+                                $totalFees = max(0, $totalPrice - $totalBase);
                             @endphp
-                            <div style="padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--gray-100);">
-                                <div class="bk-fare-row" style="padding-bottom:4px;">
-                                    <span class="bk-fare-lbl" style="font-weight:700;color:var(--gray-700);">{{ $blendedPax }} {{ $blendedPax === 1 ? 'Passenger' : 'Passengers' }}</span>
-                                    <span class="bk-fare-val" style="font-weight:800;">{{ $fmt($totalPrice) }}</span>
-                                </div>
+                            <div>
                                 <div class="bk-fare-row">
-                                    <span class="bk-fare-lbl">Base Fare</span>
+                                    <span class="bk-fare-lbl">Base fare</span>
                                     <span class="bk-fare-val">{{ $fmt($totalBase) }}</span>
                                 </div>
-                                @if($totalTax > 0)
-                                <div class="bk-fare-row">
-                                    <span class="bk-fare-lbl">Taxes &amp; Fees</span>
-                                    <span class="bk-fare-val">{{ $fmt($totalTax) }}</span>
-                                </div>
+                                @if($totalFees > 0)
+                                    <div class="bk-fare-row">
+                                        <span class="bk-fare-lbl">Taxes, fees and charges</span>
+                                        <span class="bk-fare-val">{{ $fmt($totalFees) }}</span>
+                                    </div>
+                                @endif
+                                {{-- Only worth a line of its own when it differs from the total
+                                     below; with no extras or discount the two are the same
+                                     number printed twice, a few pixels apart. --}}
+                                @if($extrasTotal > 0 || $discount > 0)
+                                    <div class="bk-fare-row sum">
+                                        <span class="bk-fare-lbl">Flight for {{ $blendedPax }} {{ $blendedPax === 1 ? 'traveller' : 'travellers' }}</span>
+                                        <span class="bk-fare-val">{{ $fmt($totalPrice) }}</span>
+                                    </div>
                                 @endif
                             </div>
                         @endif
@@ -2571,21 +1936,29 @@
                         @endif
                     </div>
 
+                    @php
+                        $payNow  = (float) $this->getTotalPrice();
+                        $payPax  = max(1, $this->getTotalPassengers());
+                    @endphp
                     <div class="bk-fare-total-row">
                         <div>
-                            <span class="bk-fare-total-lbl">Trip Total</span>
-                            @if($extrasTotal > 0)
-                            <div style="font-size:10.5px;color:var(--gray-400);margin-top:2px;">
-                                Flight + Extras
+                            <span class="bk-fare-total-lbl">Total to pay</span>
+                            <div class="bk-fare-total-note">
+                                @if($extrasTotal > 0)
+                                    Flight and extras
+                                @elseif($payPax > 1)
+                                    {{ $fmt($payNow / $payPax) }} per traveller
+                                @else
+                                    All taxes and charges included
+                                @endif
                             </div>
-                            @endif
                         </div>
                         <div style="text-align:right;">
-                            <span class="bk-fare-total-val">{{ $fmt($this->getTotalPrice()) }}</span>
+                            <span class="bk-fare-total-val">{{ $fmt($payNow) }}</span>
                             @if($extrasTotal > 0)
-                            <div style="font-size:10.5px;color:var(--gray-400);margin-top:1px;">
-                                incl. {{ $esFmt(['ServiceCost' => ['CurrencyCode' => 'USD', 'Amount' => $extrasTotal]]) }} extras
-                            </div>
+                                <div class="bk-fare-total-note">
+                                    incl. {{ $esFmt(['ServiceCost' => ['CurrencyCode' => 'USD', 'Amount' => $extrasTotal]]) }} extras
+                                </div>
                             @endif
                         </div>
                     </div>
