@@ -27,6 +27,7 @@ class ViewFlightBooking extends ViewRecord
 
             ActionGroup::make([
                 FlightBookingsTable::orderTicketAction(),
+                FlightBookingsTable::recordSkylinkTicketsAction(),
                 FlightBookingsTable::fetchTripDetailsAction(),
                 FlightBookingsTable::resendETicketAction(),
                 FlightBookingsTable::sendTicketingFailureAlertAction(),

@@ -122,7 +122,11 @@
 
     @if(!$isTicketed)
     <div class="notice">
-        Ticketing is in progress. Your ticket will be emailed to {{ $contactEmail ?: 'your registered email' }} shortly.
+        @if($awaitingSupplierTicket ?? false)
+            Your seat is reserved and your payment is complete. The airline issues your ticket separately, and it will be emailed to {{ $contactEmail ?: 'your registered email' }} as soon as it is issued.
+        @else
+            Ticketing is in progress. Your ticket will be emailed to {{ $contactEmail ?: 'your registered email' }} shortly.
+        @endif
     </div>
     @endif
 

@@ -14,6 +14,7 @@ use App\Services\DurableMailService;
 use App\Services\SeerbitPaymentService;
 use App\Services\TravelFlexApplicationService;
 use App\Services\TravelFlexFlowService;
+use App\Support\FlightDisplay;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
@@ -34,7 +35,9 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -284,6 +287,7 @@ class FlightBookingsTable
                     self::verifySeerbitPaymentAction(),
                     self::sendPaymentReceiptAction(),
                     self::orderTicketAction(),
+                    self::recordSkylinkTicketsAction(),
                     self::fetchTripDetailsAction(),
                     self::resendETicketAction(),
                     self::sendTicketingFailureAlertAction(),
@@ -1043,13 +1047,167 @@ class FlightBookingsTable
             });
     }
 
+    /**
+     * SkyLink's API ends at reserve: it returns a PNR and a ticketing deadline
+     * but never a ticket number, and has no endpoint to fetch one later. Until
+     * it does, ops receive the numbers from SkyLink out of band and enter them
+     * here — which marks the booking ticketed and emails the customer the
+     * e-ticket they were promised at confirmation.
+     */
+    public static function recordSkylinkTicketsAction(): Action
+    {
+        return Action::make('recordSkylinkTickets')
+            ->label('Record ticket numbers')
+            ->icon('heroicon-o-ticket')
+            ->color('success')
+            ->visible(fn (FlightBooking $record): bool => self::canRecordSkylinkTickets($record))
+            ->modalHeading(fn (FlightBooking $record): string => 'Record ticket numbers for '.($record->booking_ref ?: 'booking'))
+            ->modalDescription("SkyLink issues tickets outside its API. Enter each passenger's e-ticket number once SkyLink provides it. Saving marks the booking ticketed and emails the customer their e-ticket.")
+            ->modalIcon('heroicon-o-ticket')
+            ->modalIconColor('success')
+            ->modalSubmitActionLabel('Save and email e-ticket')
+            ->modalWidth('lg')
+            ->form(fn (FlightBooking $record): array => [
+                Placeholder::make('booking_context')
+                    ->hiddenLabel()
+                    ->content(fn () => self::actionContext($record, 'SkyLink ticket numbers')),
+                ...collect(FlightDisplay::passengers($record->passengers_snapshot ?? []))
+                    ->map(fn (array $passenger, int $index): TextInput => TextInput::make("tickets.{$index}")
+                        ->label(self::passengerTicketLabel($passenger))
+                        ->required()
+                        ->placeholder('157 2345678901')
+                        // 13 digits: the 3-digit airline code then a 10-digit
+                        // serial. Spaces and dashes are accepted because that
+                        // is how carriers and GDS screens usually print them.
+                        ->regex('/^(?:[\s-]*\d){13}[\s-]*$/')
+                        ->validationMessages([
+                            'regex' => 'An e-ticket number is 13 digits: the 3-digit airline code followed by 10 digits.',
+                        ])
+                        ->dehydrateStateUsing(fn (?string $state): string => preg_replace('/\D+/', '', (string) $state)))
+                    ->all(),
+            ])
+            ->action(function (FlightBooking $record, array $data, Action $action): void {
+                $numbers = array_values(array_map(
+                    fn ($number): string => preg_replace('/\D+/', '', (string) $number),
+                    (array) ($data['tickets'] ?? [])
+                ));
+
+                if (count($numbers) !== count(array_unique($numbers))) {
+                    Notification::make()
+                        ->title('Duplicate ticket number')
+                        ->body('Every passenger has their own e-ticket number, but two of the numbers entered are the same.')
+                        ->danger()
+                        ->send();
+
+                    $action->halt();
+                }
+
+                $previousStatus = $record->booking_status;
+
+                // Re-read under a row lock so two people saving the same booking
+                // at once cannot both mark it ticketed and email the customer twice.
+                $recorded = DB::transaction(function () use ($record, $numbers): bool {
+                    $booking = FlightBooking::query()->lockForUpdate()->find($record->id);
+
+                    if (! $booking || ! self::canRecordSkylinkTickets($booking)) {
+                        return false;
+                    }
+
+                    $passengers = array_values($booking->passengers_snapshot ?? []);
+                    foreach ($numbers as $index => $number) {
+                        if (isset($passengers[$index]) && is_array($passengers[$index])) {
+                            $passengers[$index]['eticket'] = $number;
+                        }
+                    }
+
+                    $booking->update([
+                        'passengers_snapshot' => $passengers,
+                        'booking_status' => 'ticketed',
+                        'ticket_ordered' => true,
+                        'ticket_ordered_at' => now(),
+                    ]);
+
+                    return true;
+                });
+
+                if (! $recorded) {
+                    Notification::make()
+                        ->title('Ticket numbers not saved')
+                        ->body('This booking is no longer waiting for ticket numbers. Someone else may have just recorded them. Refresh to see its current state.')
+                        ->warning()
+                        ->send();
+
+                    return;
+                }
+
+                $record->refresh();
+
+                self::recordTicketing($record, [
+                    'action' => 'skylink_tickets_recorded',
+                    'previous_booking_status' => $previousStatus,
+                    'new_booking_status' => 'ticketed',
+                    'ticket_status' => 'TICKETED',
+                    'unique_id' => $record->unique_id,
+                    'message' => 'E-ticket numbers recorded manually: '.implode(', ', $numbers),
+                    'request_payload' => ['tickets' => $numbers],
+                ]);
+
+                try {
+                    // Its own outbox key: the booking-confirmed email already
+                    // used the default one, and the outbox treats a delivered
+                    // key as done, so reusing it would drop this email silently.
+                    app(AdminTicketingService::class)->sendETicket($record, [], 'flight-eticket:'.$record->id.':ticketed');
+                } catch (Throwable $exception) {
+                    Notification::make()
+                        ->title('Ticket numbers saved')
+                        ->body('The e-ticket email did not go out yet and will be retried automatically. '.$exception->getMessage())
+                        ->warning()
+                        ->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->title('Ticket numbers saved')
+                    ->body('The e-ticket was emailed to '.$record->contact_email.'.')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    private static function canRecordSkylinkTickets(FlightBooking $record): bool
+    {
+        return $record->isSkylink()
+            && $record->payment_status === 'paid'
+            && $record->booking_status === 'confirmed'
+            && ! $record->ticket_ordered
+            && filled($record->unique_id);
+    }
+
+    private static function passengerTicketLabel(array $passenger): string
+    {
+        $name = trim(implode(' ', array_filter([
+            $passenger['title'] ?? null,
+            $passenger['first_name'] ?? null,
+            $passenger['last_name'] ?? null,
+        ])));
+
+        $type = match (strtoupper((string) ($passenger['type'] ?? 'ADT'))) {
+            'CHD' => 'child',
+            'INF' => 'infant',
+            default => 'adult',
+        };
+
+        return ($name ?: 'Passenger').' · '.$type;
+    }
+
     public static function fetchTripDetailsAction(): Action
     {
         return Action::make('fetchTripDetails')
             ->label('Trip details')
             ->icon('heroicon-o-identification')
             ->color('info')
-            ->visible(fn (FlightBooking $record): bool => filled($record->unique_id))
+            ->visible(fn (FlightBooking $record): bool => filled($record->unique_id) && $record->usesTravelNextApi())
             ->modalHeading(fn (FlightBooking $record): string => 'Fetch Trip Details for '.($record->booking_ref ?: 'booking'))
             ->modalDescription('Refresh the latest ticket status, airline PNR, and itinerary details for this booking.')
             ->modalIcon('heroicon-o-identification')
@@ -1114,6 +1272,12 @@ class FlightBookingsTable
             ->modalIconColor('success')
             ->modalSubmitActionLabel('Resend e-ticket')
             ->action(function (FlightBooking $record): void {
+                if ($record->isSkylink()) {
+                    self::resendSkylinkETicket($record);
+
+                    return;
+                }
+
                 try {
                     $tripResult = app(AdminTicketingService::class)->tripDetails($record);
                     $tripDetails = self::tripDetailsWithLatestReissueTickets($record->fresh(), $tripResult['trip_details'] ?? []);
@@ -1159,6 +1323,49 @@ class FlightBookingsTable
                     ->success()
                     ->send();
             });
+    }
+
+    /**
+     * SkyLink has no trip-details endpoint: the ticket numbers ops recorded
+     * live on the passengers snapshot, so the e-ticket renders from the
+     * booking alone. Each resend is a deliberate new email and gets its own
+     * outbox key, because a key the outbox has already delivered is treated
+     * as done and nothing is sent.
+     */
+    private static function resendSkylinkETicket(FlightBooking $record): void
+    {
+        try {
+            app(AdminTicketingService::class)->sendETicket($record, [], 'flight-eticket:'.$record->id.':resend:'.Str::uuid());
+        } catch (Throwable $exception) {
+            self::recordTicketing($record, [
+                'action' => 'eticket_resend_failed',
+                'previous_booking_status' => $record->booking_status,
+                'new_booking_status' => $record->booking_status,
+                'unique_id' => $record->unique_id,
+                'message' => $exception->getMessage(),
+            ]);
+
+            Notification::make()
+                ->title('E-ticket not sent')
+                ->body($exception->getMessage())
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        self::recordTicketing($record, [
+            'action' => 'eticket_resent',
+            'previous_booking_status' => $record->booking_status,
+            'new_booking_status' => $record->booking_status,
+            'unique_id' => $record->unique_id,
+            'message' => 'E-ticket resent to '.$record->contact_email,
+        ]);
+
+        Notification::make()
+            ->title('E-ticket sent')
+            ->success()
+            ->send();
     }
 
     public static function sendTicketingFailureAlertAction(): Action
@@ -1227,6 +1434,7 @@ class FlightBookingsTable
         }
 
         return $paymentReady
+            && $record->usesTravelNextApi()
             && filled($record->unique_id)
             && (! $record->tkt_time_limit || $record->tkt_time_limit->isFuture())
             && ! $record->ticket_ordered
@@ -1311,7 +1519,7 @@ class FlightBookingsTable
             ->label('PTR status')
             ->icon('heroicon-o-magnifying-glass-circle')
             ->color('info')
-            ->visible(fn (FlightBooking $record): bool => filled($record->unique_id) && $record->postTicketingRequests()->whereNotNull('ptr_unique_id')->exists())
+            ->visible(fn (FlightBooking $record): bool => $record->usesTravelNextApi() && filled($record->unique_id) && $record->postTicketingRequests()->whereNotNull('ptr_unique_id')->exists())
             ->modalHeading(fn (FlightBooking $record): string => 'Check PTR status for '.($record->booking_ref ?: 'booking'))
             ->modalDescription('Check the latest status of a refund, void, reissue, or cancellation request.')
             ->modalIcon('heroicon-o-magnifying-glass-circle')
@@ -3452,7 +3660,8 @@ class FlightBookingsTable
 
     private static function canRunCancelBooking(FlightBooking $record): bool
     {
-        return filled($record->unique_id)
+        return $record->usesTravelNextApi()
+            && filled($record->unique_id)
             && $record->booking_status !== 'cancelled'
             && $record->booking_status !== 'ticketed'
             && ! $record->ticket_ordered
@@ -3505,7 +3714,7 @@ class FlightBookingsTable
 
     private static function canRunPostTicketing(FlightBooking $record, string $operationType, ?string $requiresQuoteType = null): bool
     {
-        if (! filled($record->unique_id) || $record->booking_status !== 'ticketed') {
+        if (! $record->usesTravelNextApi() || ! filled($record->unique_id) || $record->booking_status !== 'ticketed') {
             return false;
         }
 

@@ -20,6 +20,16 @@ class AdminPostTicketingService
 
     public function call(FlightBooking $booking, string $operationType, array $extraPayload = []): array
     {
+        if (! $booking->usesTravelNextApi()) {
+            return [
+                'ok' => false,
+                'status' => 'failed',
+                'message' => 'Cancellations, voids, refunds and reissues go through TravelNext and are not available for SkyLink bookings.',
+                'request' => [],
+                'response' => [],
+            ];
+        }
+
         $tripDetails = app(AdminTicketingService::class)->tripDetails($booking);
 
         if (! ($tripDetails['ok'] ?? false)) {

@@ -25,8 +25,22 @@ class ETicketMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your E-Ticket - '.$this->booking->booking_ref.' | TravelWheel',
+            subject: $this->awaitingSupplierTicket()
+                ? 'Booking confirmed - '.$this->booking->booking_ref.' | TravelWheel'
+                : 'Your E-Ticket - '.$this->booking->booking_ref.' | TravelWheel',
         );
+    }
+
+    /**
+     * A SkyLink booking is emailed at reservation, before any ticket exists:
+     * SkyLink issues tickets outside its API. Titling that email "Your
+     * E-Ticket" tells the customer they already hold something they don't.
+     */
+    private function awaitingSupplierTicket(): bool
+    {
+        return $this->booking->isSkylink()
+            && ! $this->booking->isTicketed()
+            && ! $this->booking->ticket_ordered;
     }
 
     public function content(): Content

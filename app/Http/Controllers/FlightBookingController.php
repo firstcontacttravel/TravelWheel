@@ -1694,6 +1694,13 @@ class FlightBookingController extends Controller
             'booking_status' => 'confirmed',
             'payment_status' => 'paid',
             'payment_method' => 'gateway',
+            // SkyLink's reserve holds the seat until this deadline unless a
+            // ticket is issued first. Stored where TravelNext's hold deadline
+            // lives, so the admin deadline column, the expired-hold filter and
+            // the system health check all see SkyLink bookings too.
+            'tkt_time_limit' => filled($result['data']['ticketDeadlineAt'] ?? null)
+                ? Carbon::parse($result['data']['ticketDeadlineAt'])->setTimezone(config('app.timezone'))
+                : null,
             'booking_api_response' => $result['data'],
         ]);
 

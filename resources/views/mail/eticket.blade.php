@@ -43,7 +43,7 @@
                 {{ $isTicketed ? 'Your e-ticket is ready' : 'Your booking is confirmed' }}
             </div>
             <div style="font-size:13px;line-height:1.7;color:#edf4ff;margin-top:8px;max-width:520px;">
-                Hi {{ $firstName }}, {{ $isTicketed ? 'your ticket has been issued and the PDF copy is attached to this email.' : 'your seat is reserved and ticketing is in progress. We will email your ticket shortly.' }}
+                Hi {{ $firstName }}, {{ $isTicketed ? 'your ticket has been issued and the PDF copy is attached to this email.' : (($awaitingSupplierTicket ?? false) ? 'your seat is reserved and your payment is complete. The airline issues your ticket separately, and we will email it to you as soon as it is issued.' : 'your seat is reserved and ticketing is in progress. We will email your ticket shortly.') }}
             </div>
         </td>
     </tr>
