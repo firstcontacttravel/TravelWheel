@@ -53,6 +53,14 @@ return [
         // it back off is instant — no redeploy, just an env change (plus
         // `php artisan config:clear` if the target env caches config).
         'enabled' => env('SKYLINK_ENABLED', false),
+
+        // SkyLink's timestamps (ticket_deadline, the invoice_id stamp) carry
+        // no UTC offset. They are Lagos time: across sandbox reservations the
+        // invoice stamp ran exactly an hour ahead of our UTC send time.
+        // Inferred, and pending SkyLink's confirmation. Read in the wrong zone,
+        // every stored ticketing deadline is an hour off in the direction that
+        // tells ops they have more time than they do.
+        'timezone' => env('SKYLINK_TIMEZONE', 'Africa/Lagos'),
     ],
 
     'seerbit' => [

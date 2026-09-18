@@ -294,6 +294,9 @@ class SkylinkFlightService
                 'carrier' => data_get($decoded, 'data.carrier'),
                 'status' => data_get($decoded, 'data.status'),
                 'ticketDeadline' => data_get($decoded, 'data.ticket_deadline'),
+                // The same instant as ISO 8601 with an explicit offset, so
+                // nothing downstream needs to know SkyLink's clock is Lagos time.
+                'ticketDeadlineAt' => $this->supplierTime(data_get($decoded, 'data.ticket_deadline'))?->toIso8601String(),
                 'raw' => (array) data_get($decoded, 'data', []),
             ],
         ];
@@ -528,6 +531,25 @@ class SkylinkFlightService
 
         try {
             return Carbon::createFromFormat('d-m-Y h:i a', $date.' '.strtolower($time));
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Parses one of SkyLink's offset-less "Y-m-d H:i:s" timestamps in the
+     * supplier's own timezone (services.skylink.timezone) and returns it in
+     * the app's. A value that does carry an offset keeps it.
+     */
+    private function supplierTime(mixed $value): ?Carbon
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value, (string) config('services.skylink.timezone', 'Africa/Lagos'))
+                ->setTimezone((string) config('app.timezone', 'UTC'));
         } catch (\Throwable) {
             return null;
         }

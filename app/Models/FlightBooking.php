@@ -107,6 +107,26 @@ class FlightBooking extends Model
         return $this->booking_status === 'ticketed';
     }
 
+    public function isSkylink(): bool
+    {
+        return $this->supplier === 'skylink';
+    }
+
+    /**
+     * Whether unique_id is a reference TravelNext issued.
+     *
+     * TravelNext's ticket_order, trip_details, cancel and post-ticketing
+     * endpoints all key on unique_id. On a SkyLink booking that field holds
+     * the SkyLink PNR, which TravelNext has never seen — every one of those
+     * calls fails, and ticket_order also leaves the booking marked
+     * ticketing_failed. Rows written before the supplier column existed are
+     * TravelNext (the column defaults to it), hence the fallback.
+     */
+    public function usesTravelNextApi(): bool
+    {
+        return ($this->supplier ?: 'travelnext') === 'travelnext';
+    }
+
     public function tktTimeLimitFormatted(): string
     {
         return $this->tkt_time_limit

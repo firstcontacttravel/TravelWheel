@@ -135,8 +135,13 @@
             @endif
         </td>
         <td>
-            <div class="data-label">{{ $isTicketed ? 'Issued' : 'Hold expires' }}</div>
-            <div class="data-value">{{ ($isTicketed ? $issuedAt : $holdUntil)?->timezone('Africa/Lagos')->format('M j, Y') ?? '-' }}</div>
+            @if($awaitingSupplierTicket ?? false)
+                <div class="data-label">Payment</div>
+                <div class="data-value">Received</div>
+            @else
+                <div class="data-label">{{ $isTicketed ? 'Issued' : 'Hold expires' }}</div>
+                <div class="data-value">{{ ($isTicketed ? $issuedAt : $holdUntil)?->timezone('Africa/Lagos')->format('M j, Y') ?? '-' }}</div>
+            @endif
         </td>
         <td><div class="data-label">Travel date</div><div class="data-value">{{ $travelDate?->format('M j, Y') ?? '-' }}</div></td>
         <td class="status-cell"><span class="status">● {{ $statusLabel }}</span></td>

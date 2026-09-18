@@ -56,6 +56,10 @@
     $ticketSuccess = (bool) ($ticketSuccess ?? session('ticketSuccess', false));
     $isTicketed = $ticketSuccess || $dbBooking?->isTicketed() || $ticketStatusText === 'TICKETED';
     $isProcessing = ! $isTicketed && in_array($bookingStatusText, ['CONFIRMED', 'BOOKED', 'PAID_UNTICKETED', 'ON_HOLD'], true);
+    // SkyLink reserves the seat but issues tickets outside its API, on no
+    // schedule it tells us, so the TravelNext timing promises on this page
+    // don't hold for its bookings.
+    $isSkylink = ($dbBooking?->supplier ?: ($flight['source'] ?? null)) === 'skylink';
 
     $baseTotal = (float) ($flight['price'] ?? $dbBooking?->total_price ?? 0);
     $extraServices = $dbBooking?->extra_services_snapshot ?? session('selectedExtras', []);
@@ -114,7 +118,9 @@
     $statusTitle = $isTicketed ? 'Booking confirmed and ticketed' : 'Booking confirmed';
     $statusCopy = $isTicketed
         ? 'Your ticket has been issued. A copy of your itinerary has been sent to your email.'
-        : 'Your seat is reserved and ticketing is in progress. Your e-ticket will be sent to your email once issued.';
+        : ($isSkylink
+            ? 'Your seat is reserved and your payment is complete. The airline issues your ticket separately, and we will email it to you as soon as it is issued.'
+            : 'Your seat is reserved and ticketing is in progress. Your e-ticket will be sent to your email once issued.');
 @endphp
 
 <style>
@@ -808,7 +814,7 @@
                     Ticket issued
                 @else
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                    Ticketing in progress
+                    {{ $isSkylink ? 'Awaiting ticket' : 'Ticketing in progress' }}
                 @endif
             </div>
             <h1 class="cf-title">{{ $statusTitle }}</h1>
@@ -948,7 +954,11 @@
             @if($isProcessing)
                 <div class="cf-alert">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
-                    <span>Your booking is confirmed and your seat is reserved. Ticketing usually completes within 15 to 30 minutes. Keep this reference handy: <strong>{{ $bookingRef ?: $uniqueId }}</strong>.</span>
+                    @if($isSkylink)
+                        <span>Your seat is reserved and your payment is complete. The airline issues your ticket separately, and we'll email it to {{ ($contact['email'] ?? null) ?: 'your email address' }} as soon as it's issued. Keep this reference handy: <strong>{{ $bookingRef ?: $uniqueId }}</strong>.</span>
+                    @else
+                        <span>Your booking is confirmed and your seat is reserved. Ticketing usually completes within 15 to 30 minutes. Keep this reference handy: <strong>{{ $bookingRef ?: $uniqueId }}</strong>.</span>
+                    @endif
                 </div>
             @endif
 

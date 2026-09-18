@@ -70,7 +70,8 @@ class ItineraryPdfService
         $state = $documentState === 'auto' ? $this->stateFor($booking, $isTicketed) : $documentState;
         if ($state === 'ticketed' && ! $isTicketed) $state = 'ticketing_required';
         $showTicketData = $isTicketed || $audience === 'internal';
-        $pnr = $this->airlinePnr($tripDetails);
+        // SkyLink has no trip details; its reserve() PNR is the airline reference.
+        $pnr = $this->airlinePnr($tripDetails) ?: ($booking->isSkylink() ? $booking->unique_id : null);
 
         $stateDetails = match ($state) {
             'ticketed' => ['E-TICKET ITINERARY', 'Ticketed', '#039855', '#ecfdf3'],
@@ -97,6 +98,10 @@ class ItineraryPdfService
             'ticketPNR' => $showTicketData ? $pnr : null,
             'issuedAt' => $isTicketed ? ($booking->ticket_ordered_at ?: $booking->updated_at) : null,
             'holdUntil' => ! $isTicketed ? $booking->tkt_time_limit : null,
+            // A paid SkyLink booking waiting on its ticket. Its deadline is a
+            // hold between us and SkyLink, not something the customer can act
+            // on, so customers never see it; the internal copy keeps it.
+            'awaitingSupplierTicket' => ! $isTicketed && $booking->isSkylink() && $booking->payment_status === 'paid' && $audience !== 'internal',
             'tripLabel' => collect($groups)->contains(fn ($group) => $group['type'] === 'leg') ? 'Multi-City' : (collect($groups)->contains(fn ($group) => $group['type'] === 'return') ? 'Round Trip' : 'One Way'),
             'airline' => $flight['airline'] ?? $booking->airline ?? ($first['airline'] ?? 'Airline'),
             'airlineCode' => $first['airline_code'] ?? '',
