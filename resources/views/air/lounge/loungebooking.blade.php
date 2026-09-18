@@ -121,69 +121,9 @@
                                 <input type="time" class="form-control" name="d_time" required>
                             </div>
 
-                            {{-- International airlines --}}
-                            <div class="col-sm-6 lounge-field {{ $airport === 'International' ? '' : 'lounge-hide' }}" id="airline1Div">
-                                <label class="lounge-label">Select Airline</label>
-                                <select class="form-select" id="airlineselect1" name="airline1">
-                                    <option value="">-- Choose Airline --</option>
-                                    <option value="AIR COTE D'IVOIRE">AIR COTE D'IVOIRE</option>
-                                    <option value="ARIK AIR">ARIK AIR</option>
-                                    <option value="ASKY AIRLINES">ASKY AIRLINES</option>
-                                    <option value="AIR FRANCE">AIR FRANCE</option>
-                                    <option value="AIR NAMIBIA">AIR NAMIBIA</option>
-                                    <option value="BRITISH AIRWAYS">BRITISH AIRWAYS</option>
-                                    <option value="DELTA AIRLINES">DELTA AIRLINES</option>
-                                    <option value="Egypt Airline">Egypt Airline</option>
-                                    <option value="Emirates Airlines">Emirates Airlines</option>
-                                    <option value="ETHIOPIAN AIRLINES">ETHIOPIAN AIRLINES</option>
-                                    <option value="ETIHAD AIRWAYS">ETIHAD AIRWAYS</option>
-                                    <option value="KENYA AIRWAYS">KENYA AIRWAYS</option>
-                                    <option value="KLM">KLM</option>
-                                    <option value="LUFTHANSA">LUFTHANSA</option>
-                                    <option value="QATAR AIRWAYS">QATAR AIRWAYS</option>
-                                    <option value="ROYAL AIR MAROC">ROYAL AIR MAROC</option>
-                                    <option value="RWANDA AIR">RWANDA AIR</option>
-                                    <option value="SOUTH AFRICAN AIRWAYS">SOUTH AFRICAN AIRWAYS</option>
-                                    <option value="TURKISH AIRLINE">TURKISH AIRLINE</option>
-                                    <option value="VIRGIN ATLANTIC">VIRGIN ATLANTIC</option>
-                                    <option value="TAP PORTUGAL">TAP PORTUGAL</option>
-                                    <option value="AFRICAN WORLD AIRLINES">AFRICAN WORLD AIRLINES</option>
-                                    <option value="MID AFRICA AIRLINES">MID AFRICA AIRLINES</option>
-                                    <option value="SAUDI ARABIAN AIRLINE">SAUDI ARABIAN AIRLINE</option>
-                                    <option value="AIRPEACE">AIRPEACE</option>
-                                    <option value="OTHERS">OTHERS</option>
-                                </select>
-                            </div>
-                            <div class="col-sm-6 lounge-field lounge-hide" id="other1Div">
-                                <label class="lounge-label">Other Airline (International)</label>
-                                <input type="text" class="form-control" name="other1" placeholder="Enter airline name">
-                            </div>
-
-                            {{-- Local airlines --}}
-                            <div class="col-sm-6 lounge-field {{ $airport === 'Local' ? '' : 'lounge-hide' }}" id="airline2Div">
-                                <label class="lounge-label">Select Airline</label>
-                                <select class="form-select" id="airlineselect2" name="airline2">
-                                    <option value="">-- Choose Airline --</option>
-                                    <option value="AIR PEACE">AIR PEACE</option>
-                                    <option value="DANA AIR">DANA AIR</option>
-                                    <option value="MAX AIR">MAX AIR</option>
-                                    <option value="OVERLAND AIRWAYS">OVERLAND AIRWAYS</option>
-                                    <option value="AERO">AERO</option>
-                                    <option value="IBOM AIR">IBOM AIR</option>
-                                    <option value="UNITED NIGERIA">UNITED NIGERIA</option>
-                                    <option value="AZMAN">AZMAN</option>
-                                    <option value="ARIK">ARIK</option>
-                                    <option value="GREEN AFRICA">GREEN AFRICA</option>
-                                    <option value="VALUE JET">VALUE JET</option>
-                                    <option value="FIRST NATION AIRLINE">FIRST NATION AIRLINE</option>
-                                    <option value="IRS AIRLINE">IRS AIRLINE</option>
-                                    <option value="KABO AIR">KABO AIR</option>
-                                    <option value="OTHERS">OTHERS</option>
-                                </select>
-                            </div>
-                            <div class="col-sm-6 lounge-field lounge-hide" id="other2Div">
-                                <label class="lounge-label">Other Airline (Local)</label>
-                                <input type="text" class="form-control" name="other2" placeholder="Enter airline name">
+                            <div class="col-sm-6 lounge-field">
+                                <label class="lounge-label">Ticket No.</label>
+                                <input type="text" class="form-control" name="ticket_no" placeholder="Enter your flight ticket number">
                             </div>
 
                             <div class="col-sm-6 lounge-field">
@@ -314,25 +254,6 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('selectedAmount').value = amtA + amtB + amtC;
         textValue.textContent = (amtA + amtB + amtC).toLocaleString('en-US');
     }
-
-    // Airline visibility
-    const airportVal  = document.getElementById('airport').value;
-    const airline1Div = document.getElementById('airline1Div');
-    const airline2Div = document.getElementById('airline2Div');
-    const other1Div   = document.getElementById('other1Div');
-    const other2Div   = document.getElementById('other2Div');
-    const sel1 = document.getElementById('airlineselect1');
-    const sel2 = document.getElementById('airlineselect2');
-
-    if (airportVal === 'International') { airline1Div.classList.remove('lounge-hide'); }
-    else if (airportVal === 'Local')    { airline2Div.classList.remove('lounge-hide'); }
-
-    sel1.addEventListener('change', function () {
-        other1Div.classList.toggle('lounge-hide', this.value !== 'OTHERS');
-    });
-    sel2.addEventListener('change', function () {
-        other2Div.classList.toggle('lounge-hide', this.value !== 'OTHERS');
-    });
 
     // Phone validation
     document.getElementById('myForm').addEventListener('submit', function (e) {

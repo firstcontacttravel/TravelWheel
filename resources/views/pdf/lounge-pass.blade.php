@@ -47,8 +47,8 @@
                     <div class="value">{{ $booking->d_time }}</div>
                 </div>
                 <div class="grid-cell">
-                    <div class="label">Airline</div>
-                    <div class="value">{{ $booking->airline }}</div>
+                    <div class="label">Ticket No.</div>
+                    <div class="value">{{ $booking->ticket_no }}</div>
                 </div>
             </div>
             <div class="grid-row">

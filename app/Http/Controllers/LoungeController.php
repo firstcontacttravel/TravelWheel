@@ -110,14 +110,6 @@ class LoungeController extends Controller
 
         $dataform = $request->all();
 
-        $airlineKey = $dataform['airport'] === 'International' ? 'airline1' : 'airline2';
-        $otherKey   = $dataform['airport'] === 'International' ? 'other1'   : 'other2';
-        $airline    = $dataform[$airlineKey] ?? null;
-        if ($airline === 'OTHERS') {
-            $airline = $dataform[$otherKey] ?? null;
-        }
-        $dataform['airline'] = $airline;
-
         return view('air.lounge.loungecheckout', compact('dataform'));
     }
 
@@ -199,7 +191,7 @@ class LoungeController extends Controller
             'noc'            => (int)($dataform['noc'] ?? 0),
             'noi'            => (int)($dataform['noi'] ?? 0),
             'travel_date'    => $dataform['travel_date'] ?? now()->toDateString(),
-            'airline'        => $dataform['airline'] ?? '',
+            'ticket_no'      => $dataform['ticket_no'] ?? '',
             'd_time'         => $dataform['d_time'] ?? '',
             'amount'         => (float) str_replace(',', '', (string)($dataform['c_amount'] ?? 0)),
             'amountA'        => (float) str_replace(',', '', (string)($dataform['adultAmount'] ?? 0)),

@@ -34,7 +34,7 @@
                     <div class="lounge-detail"><span>Lounge</span><strong>{{ $booking->lounge_name }}</strong></div>
                     <div class="lounge-detail"><span>Travel Date</span><strong>{{ $booking->travel_date?->format('d M Y') }}</strong></div>
                     <div class="lounge-detail"><span>Time</span><strong>{{ $booking->d_time }}</strong></div>
-                    <div class="lounge-detail"><span>Airline</span><strong>{{ $booking->airline }}</strong></div>
+                    <div class="lounge-detail"><span>Ticket No.</span><strong>{{ $booking->ticket_no }}</strong></div>
                     <div class="lounge-detail"><span>Passengers</span><strong>Adult ({{ $booking->noa }}) Child ({{ $booking->noc }}) Infant ({{ $booking->noi }})</strong></div>
                     <div class="lounge-detail"><span>Phone</span><strong>{{ $booking->phone_no }}</strong></div>
                     <div class="lounge-detail"><span>Email</span><strong>{{ $booking->email }}</strong></div>

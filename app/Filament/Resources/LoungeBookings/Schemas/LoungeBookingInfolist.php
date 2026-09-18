@@ -40,7 +40,7 @@ class LoungeBookingInfolist
                         TextEntry::make('lounge_name')->label('Lounge'),
                         TextEntry::make('terminal'),
                         TextEntry::make('service'),
-                        TextEntry::make('airline'),
+                        TextEntry::make('ticket_no')->label('Ticket No.'),
                         TextEntry::make('travel_date')->date(),
                         TextEntry::make('d_time')->label('Departure time'),
                     ])

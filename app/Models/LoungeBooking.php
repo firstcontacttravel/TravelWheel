@@ -28,7 +28,7 @@ class LoungeBooking extends Model
         'noc',
         'noi',
         'travel_date',
-        'airline',
+        'ticket_no',
         'd_time',
         'amount',
         'amountA',

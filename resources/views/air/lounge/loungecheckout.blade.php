@@ -30,7 +30,7 @@
             <input type="hidden" name="email"      value="{{ $dataform['email'] ?? '' }}">
             <input type="hidden" name="travel_date" value="{{ $dataform['service_date'] ?? '' }}">
             <input type="hidden" name="d_time"     value="{{ $dataform['d_time'] ?? '' }}">
-            <input type="hidden" name="airline"    value="{{ $dataform['airline'] ?? '' }}">
+            <input type="hidden" name="ticket_no"  value="{{ $dataform['ticket_no'] ?? '' }}">
             <input type="hidden" name="nop"        value="{{ $dataform['nop'] ?? 0 }}">
             <input type="hidden" name="noa"        value="{{ $dataform['adultValue'] ?? 0 }}">
             <input type="hidden" name="noc"        value="{{ $dataform['childValue'] ?? 0 }}">
@@ -55,7 +55,7 @@
                         <div class="lounge-detail"><span>Airport</span><strong>{{ $dataform['airport'] ?? '' }}</strong></div>
                         <div class="lounge-detail"><span>Service Date</span><strong>{{ $dataform['service_date'] ?? '' }}</strong></div>
                         <div class="lounge-detail"><span>Time</span><strong>{{ $dataform['d_time'] ?? '' }}</strong></div>
-                        <div class="lounge-detail"><span>Airline</span><strong>{{ $dataform['airline'] ?? '' }}</strong></div>
+                        <div class="lounge-detail"><span>Ticket No.</span><strong>{{ $dataform['ticket_no'] ?? '' }}</strong></div>
                         <div class="lounge-detail"><span>Passengers</span><strong>Adult ({{ $dataform['adultValue'] ?? 0 }}) Child ({{ $dataform['childValue'] ?? 0 }}) Infant ({{ $dataform['infantValue'] ?? 0 }})</strong></div>
                     </div>
 
