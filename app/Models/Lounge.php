@@ -75,12 +75,16 @@ class Lounge extends Model
         return str_starts_with($localImage, 'http') ? $localImage : asset('assets/lounge/'.$localImage);
     }
 
+    /** Flat markup added to a converted LoungePair price, by whether the lounge's airport is in Nigeria. */
+    private const PROVIDER_MARKUP_NIGERIA = 10000.0;
+
+    private const PROVIDER_MARKUP_INTERNATIONAL = 15000.0;
+
     /**
      * Convert a LoungePair price (given_Price* is stored in provider_currency,
      * not NGN) using the project's own exchange rate — the same table flight
-     * pricing reads from. $field is one of given_PriceA/B/C. Returns null when
-     * there's nothing to convert; we never charge our own markup on the
-     * conversion itself since it just mirrors LoungePair's own price.
+     * pricing reads from — then add our markup on top. $field is one of
+     * given_PriceA/B/C. Returns null when there's nothing to convert.
      */
     public function priceInNgn(string $field = 'given_PriceA'): ?float
     {
@@ -92,20 +96,36 @@ class Lounge extends Model
 
         $currency = $this->provider_currency ?: 'USD';
 
-        return round($amount * ExchangeRate::rateFor($currency), 2);
+        return round(($amount * ExchangeRate::rateFor($currency)) + $this->providerMarkup(), 2);
     }
 
     /**
      * The amount actually charged for a booking, in NGN, regardless of
      * whether this is a locally managed lounge (priceA/B/C, vendor price +
-     * markup) or a LoungePair lounge (converted from provider_currency, no
-     * markup — that booking happens on LoungePair's site, we just record it).
+     * markup) or a LoungePair lounge (converted from provider_currency, plus
+     * our own markup — that booking happens on LoungePair's site, we just
+     * record it, but the markup is ours to keep).
      */
     public function bookingPrice(string $tier = 'A'): float
     {
         $tier = strtoupper($tier);
 
         return $this->priceInNgn('given_Price'.$tier) ?? (float) $this->{'price'.$tier};
+    }
+
+    /**
+     * LoungePair gives us no per-lounge cost breakdown to margin against, so
+     * the markup is a flat amount by whether the lounge's airport is in
+     * Nigeria — cheaper domestically, since international lounge access
+     * costs LoungePair (and so us) more to fulfil.
+     */
+    private function providerMarkup(): float
+    {
+        $country = (string) data_get($this->provider_payload, 'airport.country');
+
+        return strcasecmp(trim($country), 'Nigeria') === 0
+            ? self::PROVIDER_MARKUP_NIGERIA
+            : self::PROVIDER_MARKUP_INTERNATIONAL;
     }
 
     public function getPriceAAttribute(): float
