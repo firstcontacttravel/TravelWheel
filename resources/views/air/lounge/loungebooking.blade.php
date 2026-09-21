@@ -23,21 +23,16 @@
             <div class="lounge-grid">
                 <div>
                     <div class="lounge-hero-main" style="padding:0; overflow:hidden;">
-                        @if($lounge->provider === 'loungepair')
-                            {{-- LoungePair only gives us one photo per lounge — no carousel needed. --}}
+                        @if($lounge->imageCount() <= 1)
                             <img src="{{ $lounge->imageUrl(0) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
                         @else
                             <div id="carouselBook{{ $lounge->id }}" class="carousel slide" data-bs-ride="carousel">
                                 <div class="carousel-inner">
-                                    <div class="carousel-item active">
-                                        <img src="{{ $lounge->imageUrl(0) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
-                                    </div>
-                                    <div class="carousel-item">
-                                        <img src="{{ $lounge->imageUrl(1) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
-                                    </div>
-                                    <div class="carousel-item">
-                                        <img src="{{ $lounge->imageUrl(2) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
-                                    </div>
+                                    @for($i = 0; $i < $lounge->imageCount(); $i++)
+                                        <div class="carousel-item {{ $i === 0 ? 'active' : '' }}">
+                                            <img src="{{ $lounge->imageUrl($i) }}" class="d-block w-100" style="aspect-ratio:4/3; object-fit:cover;" alt="">
+                                        </div>
+                                    @endfor
                                 </div>
                                 <button class="carousel-control-prev" type="button" data-bs-target="#carouselBook{{ $lounge->id }}" data-bs-slide="prev">
                                     <span class="carousel-control-prev-icon"></span>

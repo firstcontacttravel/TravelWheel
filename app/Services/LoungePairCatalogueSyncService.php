@@ -77,14 +77,28 @@ class LoungePairCatalogueSyncService
         $pageUrl = $this->value($record, ['url', 'deepLink', 'deep_link', 'link']);
 
         // The airport-list payload LoungePair grants us access to doesn't
-        // include amenities (the lounge-detail endpoint that would requires
-        // a 'lounges:read' scope our credentials don't have). Fall back to
-        // the public lounge page's embedded Schema.org data, but only for
-        // lounges that don't already have real facilities on file, so a
-        // routine re-sync doesn't re-fetch every page every time.
+        // include amenities or a photo gallery (the lounge-detail endpoint
+        // that would requires a 'lounges:read' scope our credentials don't
+        // have — confirmed with LoungePair support, this tenant can't be
+        // granted it). Both live in the same public lounge page's Schema.org
+        // data, so one scrape covers both. Only re-scrape lounges that don't
+        // already have real facilities or more than the API's single image,
+        // so a routine re-sync doesn't re-fetch every page every time.
         $alreadyHasFacilities = $existing && $existing->facilities1 !== null && $existing->facilities1 !== 'Not specified';
-        if ($facilities === [] && ! $alreadyHasFacilities && is_string($pageUrl) && $pageUrl !== '') {
-            $facilities = $this->amenitiesFromPublicPage($pageUrl);
+        $alreadyHasGallery = $existing && is_array($existing->provider_images) && count($existing->provider_images) > 1;
+
+        if ((! $alreadyHasFacilities || ! $alreadyHasGallery) && is_string($pageUrl) && $pageUrl !== '') {
+            $scraped = $this->scrapePublicLoungePage($pageUrl);
+
+            if ($facilities === [] && ! $alreadyHasFacilities && $scraped['amenities'] !== []) {
+                $facilities = $scraped['amenities'];
+            }
+
+            if ($scraped['images'] !== []) {
+                // The page's own gallery is richer than the single image the
+                // airport-list API gives us — prefer it when we found one.
+                $images = $scraped['images'];
+            }
         }
 
         return [
@@ -170,61 +184,88 @@ class LoungePairCatalogueSyncService
     }
 
     /**
-     * Scrape amenities from a lounge's public LoungePair page. That page
-     * embeds a Schema.org JSON-LD block (a 'Place' node with an
-     * amenityFeature list) meant for search engines — it's structured data,
-     * not screen-scraped text, but it's still an unofficial fallback: cached
-     * for a week per URL, and any failure just yields an empty list rather
-     * than breaking the sync.
+     * Scrape a lounge's public LoungePair page for the two things the
+     * airport-list API doesn't give us: amenities (a 'Place' node's
+     * amenityFeature list) and a full photo gallery (a 'Product' node's
+     * image array — the API only gives one image, this page often has
+     * several). Both live in the same Schema.org JSON-LD block meant for
+     * search engines, so one fetch covers both — it's structured data, not
+     * screen-scraped text, but still an unofficial fallback.
      *
-     * @return array<int, string>
+     * A real result is cached for a week per URL; an empty/failed scrape is
+     * cached for only an hour so a transient network error or a not-yet-
+     * indexed page gets retried on the next sync instead of being locked in
+     * as "no data" for a week.
+     *
+     * @return array{amenities: array<int, string>, images: array<int, string>}
      */
-    private function amenitiesFromPublicPage(string $url): array
+    private function scrapePublicLoungePage(string $url): array
     {
-        return Cache::remember('loungepair:amenities:'.md5($url), now()->addWeek(), function () use ($url): array {
-            try {
-                $response = Http::timeout(10)->connectTimeout(5)->get($url);
-            } catch (\Throwable $exception) {
-                Log::warning('LoungePair amenities scrape failed', ['url' => $url, 'error' => $exception->getMessage()]);
+        $cacheKey = 'loungepair:page:'.md5($url);
+        $cached = Cache::get($cacheKey);
 
-                return [];
-            }
+        if ($cached !== null) {
+            return $cached;
+        }
 
-            if ($response->failed()) {
-                return [];
-            }
+        $result = $this->fetchPublicLoungePage($url);
+        $foundSomething = $result['amenities'] !== [] || $result['images'] !== [];
 
-            if (! preg_match_all('#<script type="application/ld\+json">(.*?)</script>#s', $response->body(), $matches)) {
-                return [];
-            }
+        Cache::put($cacheKey, $result, $foundSomething ? now()->addWeek() : now()->addHour());
 
-            foreach ($matches[1] as $json) {
-                $data = json_decode($json, true);
-                $nodes = is_array($data['@graph'] ?? null) ? $data['@graph'] : [$data];
+        return $result;
+    }
 
-                foreach ($nodes as $node) {
-                    $features = $node['amenityFeature'] ?? null;
+    /** @return array{amenities: array<int, string>, images: array<int, string>} */
+    private function fetchPublicLoungePage(string $url): array
+    {
+        $empty = ['amenities' => [], 'images' => []];
 
-                    if (! is_array($features)) {
-                        continue;
-                    }
+        try {
+            $response = Http::timeout(10)->connectTimeout(5)->get($url);
+        } catch (\Throwable $exception) {
+            Log::warning('LoungePair page scrape failed', ['url' => $url, 'error' => $exception->getMessage()]);
 
-                    $names = collect($features)
+            return $empty;
+        }
+
+        if ($response->failed()) {
+            return $empty;
+        }
+
+        if (! preg_match_all('#<script type="application/ld\+json">(.*?)</script>#s', $response->body(), $matches)) {
+            return $empty;
+        }
+
+        $amenities = [];
+        $images = [];
+
+        foreach ($matches[1] as $json) {
+            $data = json_decode($json, true);
+            $nodes = is_array($data['@graph'] ?? null) ? $data['@graph'] : [$data];
+
+            foreach ($nodes as $node) {
+                if ($amenities === [] && is_array($node['amenityFeature'] ?? null)) {
+                    $amenities = collect($node['amenityFeature'])
                         ->filter(fn ($feature) => is_array($feature) && ($feature['value'] ?? false))
                         ->map(fn ($feature) => is_string($feature['name'] ?? null) ? $feature['name'] : null)
                         ->filter()
                         ->take(5)
                         ->values()
                         ->all();
+                }
 
-                    if ($names !== []) {
-                        return $names;
-                    }
+                if ($images === [] && is_array($node['image'] ?? null)) {
+                    $images = collect($node['image'])
+                        ->filter(fn ($image) => is_string($image) && filter_var($image, FILTER_VALIDATE_URL))
+                        ->take(5)
+                        ->values()
+                        ->all();
                 }
             }
+        }
 
-            return [];
-        });
+        return ['amenities' => $amenities, 'images' => $images];
     }
 
     /** @param array<string, mixed> $record */

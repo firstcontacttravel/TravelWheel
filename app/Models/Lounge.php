@@ -75,6 +75,20 @@ class Lounge extends Model
         return str_starts_with($localImage, 'http') ? $localImage : asset('assets/lounge/'.$localImage);
     }
 
+    /**
+     * How many photos are available to show. LoungePair's own count varies
+     * per lounge (1-5, from provider_images); local lounges always have the
+     * fixed pics1-3 slots.
+     */
+    public function imageCount(): int
+    {
+        if ($this->provider === 'loungepair') {
+            return max(1, count($this->provider_images ?? []));
+        }
+
+        return 3;
+    }
+
     /** Flat markup added to a converted LoungePair price, by whether the lounge's airport is in Nigeria. */
     private const PROVIDER_MARKUP_NIGERIA = 10000.0;
 
