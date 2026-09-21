@@ -203,7 +203,7 @@ class LoungeController extends Controller
         ]);
 
         Mail::to($dataform['email'] ?? '')->send(
-            new LoungeBookingMail($fullname, $paymentReference)
+            new LoungeBookingMail($fullname, $paymentReference, $lounge?->provider === 'loungepair')
         );
         Session::forget('lounge_checkout_form');
 
