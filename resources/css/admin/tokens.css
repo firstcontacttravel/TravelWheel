@@ -1,0 +1,292 @@
+/*
+ * TravelWheel Console — design tokens
+ * ===================================
+ *
+ * Two layers, and the distinction is the whole point of the system:
+ *
+ *   PALETTE tokens (--tc-n-500, --tc-brand-600) name a COLOUR. There are a
+ *   fixed number of them and they never appear in a component rule.
+ *
+ *   ROLE tokens (--tc-text-secondary, --tc-status-critical) name a JOB.
+ *   Components only ever reference these. That is what lets dark mode be a
+ *   remapping of roles rather than a parallel set of rules, and what stops
+ *   the next person reaching for "that grey, about 60% dark" and inventing a
+ *   fourteenth one.
+ *
+ * Palette is expressed in OKLCH so the ramps are perceptually even — equal
+ * numeric steps look like equal steps, which sRGB hex ramps do not. Every
+ * value is authored here; nothing is generated at runtime.
+ */
+
+:root {
+    /* ── Palette · neutral ────────────────────────────────────────────────
+       Very slightly cool (hue 270) so it sits with the indigo rather than
+       fighting it. A pure grey next to a blue-violet reads as dirty. */
+    --tc-n-0: oklch(1 0 0);
+    --tc-n-25: oklch(0.989 0.0015 270);
+    --tc-n-50: oklch(0.977 0.003 270);
+    --tc-n-100: oklch(0.958 0.005 270);
+    --tc-n-200: oklch(0.923 0.008 270);
+    --tc-n-300: oklch(0.869 0.011 270);
+    --tc-n-400: oklch(0.717 0.015 270);
+    --tc-n-500: oklch(0.587 0.017 270);
+    --tc-n-600: oklch(0.483 0.018 270);
+    --tc-n-700: oklch(0.397 0.019 270);
+    --tc-n-800: oklch(0.287 0.019 270);
+    --tc-n-900: oklch(0.207 0.017 270);
+    --tc-n-950: oklch(0.150 0.015 270);
+    --tc-n-1000: oklch(0.107 0.013 270);
+
+    /* ── Palette · brand ──────────────────────────────────────────────────
+       config/brand.php #303191 is oklch(0.378 0.154 275.68) and IS shade 600.
+       The panel previously generated this ramp with Filament's Color::hex(),
+       which keeps only the hue and rebuilds lightness from a template — the
+       brand navy came back at L 0.598 and never appeared on screen at all. */
+    --tc-brand-50: oklch(0.970 0.018 275.68);
+    --tc-brand-100: oklch(0.938 0.036 275.68);
+    --tc-brand-200: oklch(0.880 0.068 275.68);
+    --tc-brand-300: oklch(0.800 0.104 275.68);
+    --tc-brand-400: oklch(0.640 0.155 275.68);
+    --tc-brand-500: oklch(0.500 0.170 275.68);
+    --tc-brand-600: oklch(0.378 0.154 275.68); /* #303191 */
+    --tc-brand-700: oklch(0.330 0.134 275.68);
+    --tc-brand-800: oklch(0.285 0.112 275.68);
+    --tc-brand-900: oklch(0.245 0.092 275.68);
+    --tc-brand-950: oklch(0.180 0.070 275.68);
+
+    /* ── Palette · accent ─────────────────────────────────────────────────
+       config/brand.php #00a859 is oklch(0.641 0.165 152.96) — shade 500 by
+       lightness. Used for the active marker and positive confirmation, never
+       as a surface. */
+    --tc-accent-100: oklch(0.945 0.045 153);
+    --tc-accent-300: oklch(0.830 0.110 153);
+    --tc-accent-500: oklch(0.641 0.165 153); /* #00a859 */
+    --tc-accent-600: oklch(0.560 0.145 153);
+    --tc-accent-700: oklch(0.470 0.120 153);
+
+    /* ── Palette · status ─────────────────────────────────────────────────
+       Four hues, five steps each. These have to survive being an 8px dot AND
+       12px text on both canvases, so the mid steps are chroma-boosted. */
+    --tc-red-100: oklch(0.940 0.035 25);
+    --tc-red-300: oklch(0.800 0.110 25);
+    --tc-red-500: oklch(0.585 0.215 27);
+    --tc-red-600: oklch(0.520 0.205 27);
+    --tc-red-700: oklch(0.450 0.170 27);
+
+    --tc-amber-100: oklch(0.955 0.045 80);
+    --tc-amber-300: oklch(0.860 0.120 75);
+    --tc-amber-500: oklch(0.750 0.170 62);
+    --tc-amber-600: oklch(0.660 0.155 55);
+    --tc-amber-700: oklch(0.540 0.125 50);
+
+    --tc-green-100: oklch(0.945 0.045 153);
+    --tc-green-300: oklch(0.830 0.110 153);
+    --tc-green-500: oklch(0.690 0.160 153);
+    --tc-green-600: oklch(0.580 0.140 155);
+    --tc-green-700: oklch(0.470 0.115 155);
+
+    --tc-blue-100: oklch(0.950 0.035 245);
+    --tc-blue-300: oklch(0.840 0.095 245);
+    --tc-blue-500: oklch(0.650 0.180 250);
+    --tc-blue-600: oklch(0.560 0.190 253);
+    --tc-blue-700: oklch(0.470 0.165 253);
+
+    /* ── Space ────────────────────────────────────────────────────────────
+       4px base. Named by step, not by size, so "space-3" stays meaningful if
+       the base ever changes. */
+    --tc-space-0: 0;
+    --tc-space-px: 1px;
+    --tc-space-1: 0.25rem; /*  4 */
+    --tc-space-2: 0.375rem; /*  6 */
+    --tc-space-3: 0.5rem; /*  8 */
+    --tc-space-4: 0.75rem; /* 12 */
+    --tc-space-5: 1rem; /* 16 */
+    --tc-space-6: 1.25rem; /* 20 */
+    --tc-space-7: 1.5rem; /* 24 */
+    --tc-space-8: 2rem; /* 32 */
+    --tc-space-9: 2.5rem; /* 40 */
+    --tc-space-10: 3rem; /* 48 */
+    --tc-space-12: 4rem; /* 64 */
+
+    /* ── Radius ───────────────────────────────────────────────────────────
+       A console reads as precise. Tighter than the 10–14px of the previous
+       attempt, which made a dense table look like a stack of pill buttons. */
+    --tc-radius-xs: 3px;
+    --tc-radius-sm: 4px;
+    --tc-radius-md: 6px;
+    --tc-radius-lg: 8px;
+    --tc-radius-xl: 12px;
+    --tc-radius-full: 999px;
+
+    /* ── Elevation ────────────────────────────────────────────────────────
+       Deliberately only three. This design separates surfaces with BORDERS,
+       not shadows — shadows are reserved for things that genuinely float
+       above the page, which is why cards and table rows have none. */
+    --tc-shadow-popover:
+        0 1px 1px rgb(0 0 0 / 0.04), 0 4px 12px -2px rgb(0 0 0 / 0.10),
+        0 2px 4px -2px rgb(0 0 0 / 0.06);
+    --tc-shadow-modal:
+        0 8px 24px -6px rgb(0 0 0 / 0.16), 0 24px 56px -12px rgb(0 0 0 / 0.20);
+    --tc-shadow-rail: 1px 0 0 0 var(--tc-border-subtle);
+
+    /* ── Motion ───────────────────────────────────────────────────────────
+       Fast enough to feel mechanical rather than animated. Nothing in an ops
+       tool should make someone wait for a transition to finish. */
+    --tc-duration-instant: 60ms;
+    --tc-duration-fast: 100ms;
+    --tc-duration-base: 150ms;
+    --tc-duration-slow: 240ms;
+    --tc-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --tc-ease-entrance: cubic-bezier(0, 0, 0, 1);
+    --tc-ease-exit: cubic-bezier(0.3, 0, 1, 1);
+
+    /* ── Layout constants ─────────────────────────────────────────────────*/
+    --tc-rail-width: 56px;
+    --tc-rail-width-expanded: 232px;
+    --tc-topbar-height: 48px;
+    --tc-row-height: 40px;
+    --tc-control-height: 30px;
+    --tc-control-height-lg: 36px;
+
+    /* ═══ ROLES ═══════════════════════════════════════════════════════════
+       Everything below is what components are allowed to use. */
+
+    /* Surfaces */
+    --tc-bg-canvas: var(--tc-n-50);
+    --tc-bg-surface: var(--tc-n-0);
+    --tc-bg-raised: var(--tc-n-0);
+    --tc-bg-sunken: var(--tc-n-100);
+    --tc-bg-rail: var(--tc-n-950);
+    --tc-bg-rail-hover: oklch(1 0 0 / 0.08);
+    --tc-bg-rail-active: oklch(1 0 0 / 0.14);
+    --tc-bg-input: var(--tc-n-0);
+    --tc-bg-hover: oklch(0.378 0.154 275.68 / 0.045);
+    --tc-bg-selected: oklch(0.378 0.154 275.68 / 0.085);
+    --tc-bg-overlay: oklch(0.207 0.017 270 / 0.45);
+
+    /* Borders */
+    --tc-border-subtle: var(--tc-n-200);
+    --tc-border-default: var(--tc-n-300);
+    --tc-border-strong: var(--tc-n-400);
+    --tc-border-focus: var(--tc-brand-500);
+
+    /* Text */
+    --tc-text-primary: var(--tc-n-900);
+    --tc-text-secondary: var(--tc-n-600);
+    --tc-text-tertiary: var(--tc-n-500);
+    --tc-text-disabled: var(--tc-n-400);
+    --tc-text-inverse: var(--tc-n-0);
+    --tc-text-on-rail: oklch(1 0 0 / 0.72);
+    --tc-text-on-rail-active: var(--tc-n-0);
+    --tc-text-brand: var(--tc-brand-600);
+    --tc-text-link: var(--tc-brand-600);
+
+    /* Interactive — the brand as an action colour */
+    --tc-action-bg: var(--tc-brand-600);
+    --tc-action-bg-hover: var(--tc-brand-700);
+    --tc-action-bg-active: var(--tc-brand-800);
+    --tc-action-text: var(--tc-n-0);
+
+    /* Status — ink for text and dots, bg/border for the rare tinted block.
+       Named by what they MEAN, not by colour, so "blocked" can stop being
+       red without touching a component. */
+    --tc-status-critical: var(--tc-red-600);
+    --tc-status-critical-bg: var(--tc-red-100);
+    --tc-status-critical-border: var(--tc-red-300);
+    --tc-status-critical-dot: var(--tc-red-500);
+
+    --tc-status-warning: var(--tc-amber-700);
+    --tc-status-warning-bg: var(--tc-amber-100);
+    --tc-status-warning-border: var(--tc-amber-300);
+    --tc-status-warning-dot: var(--tc-amber-500);
+
+    --tc-status-positive: var(--tc-green-700);
+    --tc-status-positive-bg: var(--tc-green-100);
+    --tc-status-positive-border: var(--tc-green-300);
+    --tc-status-positive-dot: var(--tc-green-500);
+
+    --tc-status-info: var(--tc-blue-700);
+    --tc-status-info-bg: var(--tc-blue-100);
+    --tc-status-info-border: var(--tc-blue-300);
+    --tc-status-info-dot: var(--tc-blue-500);
+
+    --tc-status-idle: var(--tc-n-600);
+    --tc-status-idle-bg: var(--tc-n-100);
+    --tc-status-idle-border: var(--tc-n-300);
+    --tc-status-idle-dot: var(--tc-n-400);
+
+    /* Focus — two rings so it stays visible on any surface, including on top
+       of a selected row or a coloured button. */
+    --tc-focus-ring:
+        0 0 0 2px var(--tc-bg-surface), 0 0 0 4px var(--tc-border-focus);
+}
+
+/*
+ * Dark is a remapping of roles. No component rule below this line, and none
+ * in any later phase, should need a `.tc-dark` variant — if one does, that is
+ * a sign a component reached past the roles into the palette.
+ */
+.tc-dark,
+:root:where(.tc-dark) {
+    --tc-bg-canvas: var(--tc-n-1000);
+    --tc-bg-surface: var(--tc-n-950);
+    --tc-bg-raised: var(--tc-n-900);
+    --tc-bg-sunken: oklch(0.107 0.013 270 / 0.6);
+    --tc-bg-rail: oklch(0.128 0.014 270);
+    --tc-bg-rail-hover: oklch(1 0 0 / 0.07);
+    --tc-bg-rail-active: oklch(1 0 0 / 0.12);
+    --tc-bg-input: oklch(1 0 0 / 0.04);
+    --tc-bg-hover: oklch(1 0 0 / 0.045);
+    --tc-bg-selected: oklch(0.640 0.155 275.68 / 0.16);
+    --tc-bg-overlay: oklch(0.107 0.013 270 / 0.72);
+
+    --tc-border-subtle: oklch(1 0 0 / 0.08);
+    --tc-border-default: oklch(1 0 0 / 0.14);
+    --tc-border-strong: oklch(1 0 0 / 0.24);
+    --tc-border-focus: var(--tc-brand-400);
+
+    --tc-text-primary: var(--tc-n-50);
+    --tc-text-secondary: var(--tc-n-300);
+    --tc-text-tertiary: var(--tc-n-400);
+    --tc-text-disabled: var(--tc-n-600);
+    --tc-text-inverse: var(--tc-n-950);
+    --tc-text-brand: var(--tc-brand-300);
+    --tc-text-link: var(--tc-brand-300);
+
+    /* On a dark canvas the 600 navy is nearly invisible as a filled button,
+       so actions move up the ramp rather than keeping the light-mode value. */
+    --tc-action-bg: var(--tc-brand-500);
+    --tc-action-bg-hover: var(--tc-brand-400);
+    --tc-action-bg-active: var(--tc-brand-300);
+    --tc-action-text: var(--tc-n-0);
+
+    /* Status ink lightens; the tinted backgrounds become low-alpha washes of
+       the dot colour rather than the light-mode pastels, which turn muddy. */
+    --tc-status-critical: var(--tc-red-300);
+    --tc-status-critical-bg: oklch(0.585 0.215 27 / 0.15);
+    --tc-status-critical-border: oklch(0.585 0.215 27 / 0.35);
+
+    --tc-status-warning: var(--tc-amber-300);
+    --tc-status-warning-bg: oklch(0.750 0.170 62 / 0.15);
+    --tc-status-warning-border: oklch(0.750 0.170 62 / 0.35);
+
+    --tc-status-positive: var(--tc-green-300);
+    --tc-status-positive-bg: oklch(0.690 0.160 153 / 0.15);
+    --tc-status-positive-border: oklch(0.690 0.160 153 / 0.35);
+
+    --tc-status-info: var(--tc-blue-300);
+    --tc-status-info-bg: oklch(0.650 0.180 250 / 0.15);
+    --tc-status-info-border: oklch(0.650 0.180 250 / 0.35);
+
+    --tc-status-idle: var(--tc-n-400);
+    --tc-status-idle-bg: oklch(1 0 0 / 0.06);
+    --tc-status-idle-border: oklch(1 0 0 / 0.14);
+
+    --tc-shadow-popover:
+        0 1px 1px rgb(0 0 0 / 0.30), 0 4px 12px -2px rgb(0 0 0 / 0.45),
+        0 2px 4px -2px rgb(0 0 0 / 0.35);
+    --tc-shadow-modal:
+        0 8px 24px -6px rgb(0 0 0 / 0.55), 0 24px 56px -12px rgb(0 0 0 / 0.65);
+
+    color-scheme: dark;
+}

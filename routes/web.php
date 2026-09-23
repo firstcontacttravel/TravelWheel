@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminReportExportController;
 use App\Http\Controllers\AdminVisaDocumentController;
 use App\Http\Controllers\AirCargoController;
 use App\Http\Controllers\CarController;
+use App\Http\Controllers\DesignSystemController;
 use App\Http\Controllers\FlightBookingController;
 use App\Http\Controllers\FlightController;
 use App\Http\Controllers\FlightSearchController;
@@ -283,3 +284,16 @@ Route::get('/legal/travel-insurance-terms', TravelInsuranceTerms::class)->name('
 Route::get('/legal/airport-protocol-service-terms', AirportProtocolServiceTerms::class)->name('legal.protocol-terms');
 Route::get('/legal/cookie-policy', CookiePolicy::class)->name('legal.cookies');
 Route::get('/legal/disclaimer', Disclaimer::class)->name('legal.disclaimer');
+
+/*
+ * Design-system specimen and responsive harness — internal design tooling.
+ *
+ * Gated to users who can already reach the admin panel, because both render
+ * real booking references and amounts. Deliberately NOT under /admin: the
+ * specimen has to load without the panel's existing theme.css, so the new
+ * language can be judged on its own rather than fighting the old one.
+ */
+Route::get('/design-system', [DesignSystemController::class, 'index'])
+    ->name('design-system');
+Route::get('/design-system/responsive', [DesignSystemController::class, 'responsive'])
+    ->name('design-system.responsive');

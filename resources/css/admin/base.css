@@ -1,0 +1,124 @@
+/*
+ * TravelWheel Console — base layer
+ * ================================
+ *
+ * The minimum the system assumes about the document. Deliberately small:
+ * this is not a CSS reset, it is the handful of decisions every component
+ * after it depends on.
+ */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+.tc-root {
+    margin: 0;
+    background: var(--tc-bg-canvas);
+    color: var(--tc-text-primary);
+    font-family: var(--tc-font-sans);
+    font-size: var(--tc-text-body);
+    line-height: var(--tc-leading-body);
+    letter-spacing: var(--tc-tracking-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Inter's default figures are proportional; in a panel that is almost
+       entirely numbers, tabular is the better default and .tc-num becomes
+       an override for the rare case it is not. */
+    font-feature-settings: "cv05" 1, "cv08" 1, "ss03" 1;
+}
+
+/* ── Focus ────────────────────────────────────────────────────────────────
+   One treatment, everywhere, keyboard only. The double ring survives being
+   drawn on a selected row or a filled button, which a single outline does
+   not. */
+.tc-root :focus-visible {
+    outline: none;
+    box-shadow: var(--tc-focus-ring);
+    border-radius: var(--tc-radius-sm);
+}
+
+.tc-root :focus:not(:focus-visible) {
+    outline: none;
+}
+
+.tc-root ::selection {
+    background: var(--tc-bg-selected);
+    color: var(--tc-text-primary);
+}
+
+/* ── Scrollbars ───────────────────────────────────────────────────────────
+   A dense console shows a lot of scrollbars. They should read as part of the
+   surface rather than as chrome bolted on top. */
+.tc-root {
+    scrollbar-width: thin;
+    scrollbar-color: var(--tc-border-strong) transparent;
+}
+
+.tc-root ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.tc-root ::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tc-root ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: var(--tc-radius-full);
+    background: var(--tc-border-strong);
+    background-clip: content-box;
+}
+
+.tc-root ::-webkit-scrollbar-thumb:hover {
+    background: var(--tc-text-tertiary);
+    background-clip: content-box;
+}
+
+.tc-root ::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────────────
+   Durations collapse rather than animations being disabled outright, so
+   anything that relies on a transitionend still fires. */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --tc-duration-instant: 1ms;
+        --tc-duration-fast: 1ms;
+        --tc-duration-base: 1ms;
+        --tc-duration-slow: 1ms;
+    }
+
+    .tc-root *,
+    .tc-root *::before,
+    .tc-root *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ── Utilities the system leans on ────────────────────────────────────────*/
+
+.tc-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+.tc-truncate {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

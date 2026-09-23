@@ -1,0 +1,316 @@
+/*
+ * TravelWheel Console — primitives
+ * ================================
+ *
+ * The small, shared pieces every later phase composes with. Kept deliberately
+ * short in this phase: these exist so the design language can be JUDGED on a
+ * real screen, not because the component library is finished. Phases 2–4
+ * build the shell, tables and forms on top of these.
+ *
+ * Rule for everything here and after: reference role tokens only. If a value
+ * below reaches for --tc-n-400 or --tc-red-500 directly, that is a bug.
+ */
+
+/* ── Status ───────────────────────────────────────────────────────────────
+   In this design status is a DOT plus a word, not a filled pill. Eleven
+   coloured pills in a table is a fruit salad; eleven dots in a fixed left
+   column is a scannable stripe, and the eye finds the red one without
+   reading anything. */
+
+.tc-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tc-space-2);
+    font-size: var(--tc-text-body);
+    line-height: var(--tc-leading-body);
+    color: var(--tc-text-primary);
+    white-space: nowrap;
+}
+
+.tc-status::before {
+    content: "";
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: var(--tc-radius-full);
+    background: var(--tc-dot, var(--tc-status-idle-dot));
+    /* A ring rather than a raw circle: it keeps the dot legible on both the
+       canvas and a selected row, where a flat 7px circle disappears. */
+    box-shadow: 0 0 0 2.5px color-mix(in oklab, var(--tc-dot, var(--tc-status-idle-dot)) 22%, transparent);
+}
+
+.tc-status-critical { --tc-dot: var(--tc-status-critical-dot); }
+.tc-status-warning  { --tc-dot: var(--tc-status-warning-dot); }
+.tc-status-positive { --tc-dot: var(--tc-status-positive-dot); }
+.tc-status-info     { --tc-dot: var(--tc-status-info-dot); }
+.tc-status-idle     { --tc-dot: var(--tc-status-idle-dot); }
+
+/* An open ring means "not started"; a half-filled dot means "in progress".
+   Shape carries meaning so the system is not colour-alone. */
+.tc-status-pending::before {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--tc-dot, var(--tc-status-idle-dot));
+}
+
+.tc-status-progress::before {
+    background: linear-gradient(
+        90deg,
+        var(--tc-dot) 0 50%,
+        transparent 50% 100%
+    );
+    box-shadow: inset 0 0 0 1.5px var(--tc-dot, var(--tc-status-idle-dot));
+}
+
+/* ── Tag ──────────────────────────────────────────────────────────────────
+   For categories and counts — never for status, which is the dot's job. */
+
+.tc-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tc-space-1);
+    height: 18px;
+    padding-inline: var(--tc-space-2);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-xs);
+    background: var(--tc-bg-sunken);
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-micro);
+    line-height: 1;
+    font-weight: var(--tc-weight-medium);
+    white-space: nowrap;
+}
+
+.tc-tag-count {
+    min-width: 18px;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.tc-tag-critical {
+    border-color: var(--tc-status-critical-border);
+    background: var(--tc-status-critical-bg);
+    color: var(--tc-status-critical);
+}
+
+.tc-tag-warning {
+    border-color: var(--tc-status-warning-border);
+    background: var(--tc-status-warning-bg);
+    color: var(--tc-status-warning);
+}
+
+.tc-tag-positive {
+    border-color: var(--tc-status-positive-border);
+    background: var(--tc-status-positive-bg);
+    color: var(--tc-status-positive);
+}
+
+.tc-tag-info {
+    border-color: var(--tc-status-info-border);
+    background: var(--tc-status-info-bg);
+    color: var(--tc-status-info);
+}
+
+/* ── Button ───────────────────────────────────────────────────────────────
+   30px default, which is what lets a table's action column sit inside a 40px
+   row. No shadow: buttons sit ON the surface, they do not float above it. */
+
+.tc-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tc-space-2);
+    height: var(--tc-control-height);
+    padding-inline: var(--tc-space-4);
+    border: 1px solid var(--tc-border-default);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-bg-surface);
+    color: var(--tc-text-primary);
+    font-family: inherit;
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-medium);
+    letter-spacing: var(--tc-tracking-body);
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        background-color var(--tc-duration-fast) var(--tc-ease-standard),
+        border-color var(--tc-duration-fast) var(--tc-ease-standard),
+        color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.tc-btn:hover {
+    background: var(--tc-bg-sunken);
+    border-color: var(--tc-border-strong);
+}
+
+.tc-btn:active {
+    background: var(--tc-bg-hover);
+}
+
+.tc-btn[disabled],
+.tc-btn[aria-disabled="true"] {
+    color: var(--tc-text-disabled);
+    background: var(--tc-bg-sunken);
+    border-color: var(--tc-border-subtle);
+    cursor: not-allowed;
+}
+
+.tc-btn-primary {
+    border-color: transparent;
+    background: var(--tc-action-bg);
+    color: var(--tc-action-text);
+}
+
+.tc-btn-primary:hover {
+    background: var(--tc-action-bg-hover);
+    border-color: transparent;
+}
+
+.tc-btn-primary:active {
+    background: var(--tc-action-bg-active);
+}
+
+.tc-btn-danger {
+    border-color: transparent;
+    background: var(--tc-status-critical-dot);
+    color: var(--tc-n-0);
+}
+
+.tc-btn-quiet {
+    border-color: transparent;
+    background: transparent;
+    color: var(--tc-text-secondary);
+}
+
+.tc-btn-quiet:hover {
+    background: var(--tc-bg-sunken);
+    border-color: transparent;
+    color: var(--tc-text-primary);
+}
+
+.tc-btn-lg {
+    height: var(--tc-control-height-lg);
+    padding-inline: var(--tc-space-5);
+}
+
+.tc-btn-sm {
+    height: 24px;
+    padding-inline: var(--tc-space-3);
+    font-size: var(--tc-text-small);
+}
+
+/* ── Field ────────────────────────────────────────────────────────────────*/
+
+.tc-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--tc-space-2);
+}
+
+.tc-field-label {
+    font-size: var(--tc-text-body);
+    line-height: var(--tc-leading-body);
+    font-weight: var(--tc-weight-medium);
+    color: var(--tc-text-primary);
+}
+
+.tc-field-hint {
+    font-size: var(--tc-text-small);
+    line-height: var(--tc-leading-small);
+    color: var(--tc-text-tertiary);
+}
+
+.tc-input {
+    height: var(--tc-control-height);
+    width: 100%;
+    padding-inline: var(--tc-space-3);
+    border: 1px solid var(--tc-border-default);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-bg-input);
+    color: var(--tc-text-primary);
+    font-family: inherit;
+    font-size: var(--tc-text-body);
+    letter-spacing: var(--tc-tracking-body);
+    transition:
+        border-color var(--tc-duration-fast) var(--tc-ease-standard),
+        box-shadow var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.tc-input::placeholder {
+    color: var(--tc-text-disabled);
+}
+
+.tc-input:hover {
+    border-color: var(--tc-border-strong);
+}
+
+.tc-input:focus {
+    outline: none;
+    border-color: var(--tc-border-focus);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--tc-border-focus) 20%, transparent);
+}
+
+.tc-input-invalid,
+.tc-input[aria-invalid="true"] {
+    border-color: var(--tc-status-critical-border);
+}
+
+.tc-input-invalid:focus,
+.tc-input[aria-invalid="true"]:focus {
+    border-color: var(--tc-status-critical-dot);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--tc-status-critical-dot) 20%, transparent);
+}
+
+/* ── Surface ──────────────────────────────────────────────────────────────
+   Borders, not shadows. A page of shadowed cards reads as a pile of
+   receipts; a page of hairline-bordered panels reads as an instrument. */
+
+.tc-surface {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+}
+
+.tc-surface-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tc-space-4);
+    padding: var(--tc-space-4) var(--tc-space-5);
+    border-bottom: 1px solid var(--tc-border-subtle);
+}
+
+.tc-surface-body {
+    padding: var(--tc-space-5);
+}
+
+/* ── Journey connector ────────────────────────────────────────────────────
+   The route indicator, drawn rather than typed. → (U+2192) is in no Inter
+   subset, so a typed arrow silently falls back to a system font in the middle
+   of a route; and this scales with the row instead of with the font. */
+
+.tc-route {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tc-space-3);
+    white-space: nowrap;
+}
+
+.tc-route-line {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 24px;
+    height: 1px;
+    background: var(--tc-border-default);
+}
+
+.tc-route-line::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: 0;
+    top: 50%;
+    width: 4px;
+    height: 4px;
+    border-top: 1px solid var(--tc-border-strong);
+    border-inline-end: 1px solid var(--tc-border-strong);
+    transform: translateY(-50%) rotate(45deg);
+}
