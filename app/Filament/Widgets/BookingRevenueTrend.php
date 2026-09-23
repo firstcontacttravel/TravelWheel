@@ -18,9 +18,21 @@ class BookingRevenueTrend extends ChartWidget
 
     protected string $color = 'primary';
 
+    /** Kept in step with config/brand.php — see AdminThemeUsesBrandPaletteTest. */
+    private const BRAND = '#303191';
+
+    private const ACCENT = '#00a859';
+
+    private const AMBER = '#f79009';
+
     protected function getType(): string
     {
         return 'bar';
+    }
+
+    protected function getMaxHeight(): ?string
+    {
+        return '18rem';
     }
 
     protected function getData(): array
@@ -59,25 +71,76 @@ class BookingRevenueTrend extends ChartWidget
                 [
                     'label' => 'Paid revenue',
                     'data' => $revenue,
-                    'backgroundColor' => '#0d1883',
-                    'borderRadius' => 6,
+                    'backgroundColor' => self::BRAND,
+                    'borderRadius' => 4,
+                    'yAxisID' => 'money',
                 ],
                 [
                     'label' => 'Service charges',
                     'data' => $serviceCharges,
-                    'backgroundColor' => '#f59e0b',
-                    'borderRadius' => 6,
+                    'backgroundColor' => self::AMBER,
+                    'borderRadius' => 4,
+                    'yAxisID' => 'money',
                 ],
                 [
                     'label' => 'Bookings',
                     'data' => $bookings,
                     'type' => 'line',
-                    'borderColor' => '#00a85a',
-                    'backgroundColor' => '#00a85a',
+                    'borderColor' => self::ACCENT,
+                    'backgroundColor' => self::ACCENT,
+                    'borderWidth' => 2,
+                    'pointRadius' => 2,
+                    'pointBackgroundColor' => self::ACCENT,
+                    'pointBorderColor' => self::ACCENT,
                     'tension' => 0.35,
+                    'yAxisID' => 'count',
                 ],
             ],
             'labels' => $labels,
+        ];
+    }
+
+    /*
+     * Revenue is in hundreds of thousands of naira and the booking count is in
+     * single digits. Sharing one axis meant the axis was scaled by whichever
+     * number happened to be larger, and on a quiet fortnight it settled on the
+     * count's 0-1 range and drew revenue and the booking line as one flat rule
+     * along the bottom. Money on the left, volume on the right.
+     */
+    protected function getOptions(): array | \Filament\Support\RawJs | null
+    {
+        return [
+            'maintainAspectRatio' => false,
+            'interaction' => ['mode' => 'index', 'intersect' => false],
+            'scales' => [
+                // Every dataset names an axis explicitly, but Chart.js still
+                // materialises its default 'y' and drew a second, empty 0-1
+                // ruler alongside the money one.
+                'y' => ['display' => false],
+                'money' => [
+                    'type' => 'linear',
+                    'position' => 'left',
+                    'beginAtZero' => true,
+                    'title' => ['display' => true, 'text' => 'NGN'],
+                    'grid' => ['drawOnChartArea' => true],
+                ],
+                'count' => [
+                    'type' => 'linear',
+                    'position' => 'right',
+                    'beginAtZero' => true,
+                    'title' => ['display' => true, 'text' => 'Bookings'],
+                    'ticks' => ['precision' => 0],
+                    // A second set of gridlines over the same plot area reads as
+                    // noise, so only the money axis draws them.
+                    'grid' => ['drawOnChartArea' => false],
+                ],
+                'x' => [
+                    'grid' => ['display' => false],
+                ],
+            ],
+            'plugins' => [
+                'legend' => ['position' => 'bottom', 'labels' => ['boxWidth' => 10, 'usePointStyle' => true]],
+            ],
         ];
     }
 }

@@ -46,7 +46,9 @@ class FlightBookingsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->heading('Flight Bookings')
+            // No ->heading(): the page title directly above already says
+            // "Flight Bookings", as does the breadcrumb above that. The
+            // description earns its place; a third copy of the name does not.
             ->description('Operational queue for payment verification, ticketing, and customer support.')
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
@@ -408,7 +410,7 @@ class FlightBookingsTable
             $html .= '<div class="tw-journey-leg-top">';
             $html .= '<div class="tw-journey-route">';
             $html .= '<span>'.e($origin ?: '-').'</span>';
-            $html .= '<span class="tw-journey-arrow">-></span>';
+            $html .= '<span class="tw-journey-arrow">&rarr;</span>';
             $html .= '<span>'.e($destination ?: '-').'</span>';
             $html .= '</div>';
             $html .= '<span class="tw-journey-label">'.e($group['label']).'</span>';
@@ -2682,7 +2684,7 @@ class FlightBookingsTable
         $segments = self::reissueScopeSegments($record, $scope);
         $first = $segments[0] ?? [];
         $last = $segments === [] ? [] : $segments[array_key_last($segments)];
-        $route = trim((string) self::segmentValue($first, ['from', 'airportOriginCode'], '').' -> '.(string) self::segmentValue($last, ['to', 'airportDestinationCode'], ''));
+        $route = trim((string) self::segmentValue($first, ['from', 'airportOriginCode'], '').' → '.(string) self::segmentValue($last, ['to', 'airportDestinationCode'], ''));
         $date = self::dateFromSegment($first);
 
         $prefix = match (true) {
@@ -2691,7 +2693,7 @@ class FlightBookingsTable
             default => 'Outbound flight',
         };
 
-        return trim($prefix.(filled($route) && $route !== '->' ? ': '.$route : '').(filled($date) ? ' - '.$date : ''));
+        return trim($prefix.(filled($route) && $route !== '→' ? ': '.$route : '').(filled($date) ? ' - '.$date : ''));
     }
 
     private static function reissueWholeItineraryScopes(FlightBooking $record): array
@@ -2798,7 +2800,7 @@ class FlightBookingsTable
             $html .= '<div class="flex flex-wrap items-start justify-between gap-3">';
             $html .= '<div>';
             $html .= '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e($label).'</div>';
-            $html .= '<div class="mt-1 text-base font-semibold text-gray-950 dark:text-white">'.e((string) self::segmentValue($first, ['from', 'airportOriginCode'], '-').' -> '.(string) self::segmentValue($last, ['to', 'airportDestinationCode'], '-')).'</div>';
+            $html .= '<div class="mt-1 text-base font-semibold text-gray-950 dark:text-white">'.e((string) self::segmentValue($first, ['from', 'airportOriginCode'], '-').' → '.(string) self::segmentValue($last, ['to', 'airportDestinationCode'], '-')).'</div>';
             $html .= '</div>';
             $html .= '<div class="text-right text-sm text-gray-600 dark:text-gray-300">'.e(self::watDateTime(self::segmentValue($first, ['departDT', 'departureDate', 'departDate'], null), 'D, d M Y H:i')).'<br>'.e($flights ?: '-').'</div>';
             $html .= '</div>';
@@ -3297,7 +3299,7 @@ class FlightBookingsTable
                 $first = $firstSegments[0];
                 $last = $lastSegments[array_key_last($lastSegments)];
 
-                return trim(($first['from'] ?? '').' -> '.($last['to'] ?? ''));
+                return trim(($first['from'] ?? '').' → '.($last['to'] ?? ''));
             }
         }
 
@@ -3310,7 +3312,7 @@ class FlightBookingsTable
         $first = $segments[0];
         $last = $segments[array_key_last($segments)];
 
-        return trim(($first['from'] ?? '').' -> '.($last['to'] ?? ''));
+        return trim(($first['from'] ?? '').' → '.($last['to'] ?? ''));
     }
 
     private static function cabinLabel(string $code): string
@@ -3564,7 +3566,7 @@ class FlightBookingsTable
         $html .= '<div class="flex flex-wrap items-start justify-between gap-4">';
         $html .= '<div>';
         $html .= '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Selected replacement itinerary</div>';
-        $html .= '<div class="mt-1 text-lg font-semibold text-gray-950 dark:text-white">'.e(($first['airportOriginCode'] ?? '-').' -> '.($last['airportDestinationCode'] ?? '-')).'</div>';
+        $html .= '<div class="mt-1 text-lg font-semibold text-gray-950 dark:text-white">'.e(($first['airportOriginCode'] ?? '-').' → '.($last['airportDestinationCode'] ?? '-')).'</div>';
         $html .= '<div class="mt-1 text-sm text-gray-600 dark:text-gray-300">'.e(self::formatDateTime($first['departDT'] ?? null).' to '.self::formatDateTime($last['arriveDT'] ?? null)).'</div>';
         $html .= '</div>';
         $html .= '<div class="grid grid-cols-2 gap-3 text-right sm:grid-cols-4">';
@@ -3583,7 +3585,7 @@ class FlightBookingsTable
             $html .= '<div class="flex flex-wrap items-start justify-between gap-4">';
             $html .= '<div class="min-w-0">';
             $html .= '<div class="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">Segment '.e((string) ($index + 1)).'</div>';
-            $html .= '<div class="mt-1 text-base font-semibold text-gray-950 dark:text-white">'.e(($segment['airportOriginCode'] ?? '-').' -> '.($segment['airportDestinationCode'] ?? '-')).'</div>';
+            $html .= '<div class="mt-1 text-base font-semibold text-gray-950 dark:text-white">'.e(($segment['airportOriginCode'] ?? '-').' → '.($segment['airportDestinationCode'] ?? '-')).'</div>';
             $html .= '<div class="mt-1 text-sm text-gray-600 dark:text-gray-300">'.e(trim(($segment['airline'] ?? $segment['airlineCode'] ?? '-').' '.($segment['airlineCode'] ?? '').' '.($segment['flightNumber'] ?? ''))).'</div>';
             $html .= '</div>';
             $html .= '<div class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">';
