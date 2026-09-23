@@ -20,6 +20,17 @@ class PaymentOperationsOverview extends StatsOverviewWidget
 
     protected ?string $description = 'High-priority payment, ticketing, and support queues.';
 
+    /*
+     * Filament's default for a stats overview is ['@xl' => 3, '!@lg' => 3] —
+     * three across at every container width, so on a phone each tile was about
+     * 110px wide and "NGN 370,009.40" broke across two lines and overflowed.
+     * One column on a phone, widening with the space available.
+     */
+    protected function getColumns(): int | array | null
+    {
+        return ['default' => 1, '@sm' => 2, '@3xl' => 3, '@6xl' => 4];
+    }
+
     protected function getStats(): array
     {
         $todayBookings = FlightBooking::query()
@@ -36,7 +47,10 @@ class PaymentOperationsOverview extends StatsOverviewWidget
             ->where('created_at', '>=', now()->subDays(30))
             ->sum('markup_amount');
         $schedulerHeartbeat = SystemHeartbeat::query()->where('name', 'scheduler')->first()?->last_seen_at;
-        $schedulerHealthy = $schedulerHeartbeat && now()->diffInMinutes($schedulerHeartbeat) <= 3;
+        // Carbon's diffInMinutes is signed: now()->diffInMinutes(<a past time>) is
+        // negative, so the old `<= 3` was true for any heartbeat in the past and
+        // this tile reported "Healthy" while printing "Last seen 1 month ago".
+        $schedulerHealthy = $schedulerHeartbeat?->isAfter(now()->subMinutes(3)) ?? false;
 
         return [
             Stat::make('Today bookings', number_format($todayBookings))
@@ -69,7 +83,7 @@ class PaymentOperationsOverview extends StatsOverviewWidget
                 ->count())
                 ->description('Ready for ticketing review')
                 ->descriptionIcon(Heroicon::OutlinedTicket)
-                ->color('success')
+                ->color('info')
                 ->url(FlightBookingResource::getUrl()),
 
             Stat::make('Failed payment', FlightBooking::query()
