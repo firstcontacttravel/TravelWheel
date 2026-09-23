@@ -98,7 +98,7 @@
     <div class="note warn">
         <strong>This is not a ticket yet.</strong>
         @if ($awaitingSupplierTicket ?? false)
-            Your seat is reserved and your payment is complete. The airline issues the ticket separately; it will be
+            Your seat is reserved and your payment is complete. The airline issues your ticket separately; it will be
             emailed to {{ $contactEmail ?: 'your registered address' }} as soon as it is issued.
         @else
             Ticketing is in progress. Your ticket will be emailed to {{ $contactEmail ?: 'your registered address' }} shortly.
