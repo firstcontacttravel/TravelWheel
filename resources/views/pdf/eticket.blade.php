@@ -1,237 +1,218 @@
+@php
+    $c = config('brand.colors');
+
+    $allSegments = collect([$outboundSegments ?? [], $returnSegments ?? []])
+        ->merge(collect($multiLegs ?? [])->pluck('segments'))
+        ->flatten(1)
+        ->filter(fn ($s) => is_array($s))
+        ->values();
+
+    $first = $allSegments->first() ?? [];
+    $last = $allSegments->last() ?? [];
+
+    // On a return trip the journey ends where it began, so the hero shows the
+    // outbound destination — the place you are actually going.
+    $heroEnd = ! empty($returnSegments)
+        ? (collect($outboundSegments)->last() ?? $last)
+        : $last;
+
+    $departAt = ! empty($first['departDT']) ? \Carbon\Carbon::parse($first['departDT']) : null;
+    $arriveAt = ! empty($heroEnd['arriveDT']) ? \Carbon\Carbon::parse($heroEnd['arriveDT']) : null;
+    $journey = $departAt && $arriveAt
+        ? intdiv((int) $departAt->diffInMinutes($arriveAt, false), 60).'h '
+            .str_pad((string) ((int) $departAt->diffInMinutes($arriveAt, false) % 60), 2, '0', STR_PAD_LEFT).'m'
+        : null;
+
+    $outboundStops = max(0, count($outboundSegments ?? []) - 1);
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-<title>E-Ticket - {{ $bookingRef }}</title>
-<style>
-    * { box-sizing: border-box; }
-    body {
-        margin: 0;
-        padding: 0;
-        background: #ffffff;
-        color: #111827;
-        font-family: DejaVu Sans, sans-serif;
-        font-size: 10px;
-        line-height: 1.45;
-    }
-    .page { padding: 24px 30px; }
-    .hero {
-        background: #303191;
-        color: #ffffff;
-        border-radius: 12px;
-        padding: 22px 24px;
-    }
-    .hero table { width: 100%; border-collapse: collapse; }
-    .brand { font-size: 22px; font-weight: 800; letter-spacing: -.2px; }
-    .brand-sub { margin-top: 3px; color: #dfffea; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .9px; }
-    .status { display: inline-block; padding: 6px 12px; border-radius: 20px; background: #eafff0; color: #007a2a; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; }
-    .status.pending { background: #fff7ed; color: #b45309; }
-    .hero-title { margin-top: 22px; font-size: 18px; font-weight: 800; }
-    .hero-copy { margin-top: 5px; color: #edf4ff; font-size: 9px; max-width: 430px; }
-    .meta-grid { width: 100%; margin-top: 14px; border-collapse: separate; border-spacing: 0; border: 1px solid #e6e8ee; border-radius: 10px; overflow: hidden; }
-    .meta-grid td { width: 33.33%; padding: 13px 14px; border-right: 1px solid #e6e8ee; background: #fbfcfe; vertical-align: top; }
-    .meta-grid td.last { border-right: none; }
-    .label { color: #667085; font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; }
-    .value { margin-top: 4px; color: #111827; font-size: 12px; font-weight: 800; }
-    .mono { font-family: DejaVu Sans Mono, monospace; }
-    .primary { color: #303191; }
-    .section-title { margin: 16px 0 8px; color: #667085; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; }
-    .notice { margin-top: 12px; padding: 10px 12px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 9px; color: #7c2d12; font-size: 8.5px; }
-    .flight-card { margin-bottom: 10px; border: 1px solid #e6e8ee; border-radius: 10px; overflow: hidden; page-break-inside: avoid; }
-    .flight-head { width: 100%; border-collapse: collapse; }
-    .flight-head td { padding: 10px 12px; background: #fbfcfe; border-bottom: 1px solid #eef0f4; vertical-align: top; }
-    .leg-badge { display: inline-block; padding: 3px 8px; border-radius: 20px; background: #f7f7ff; color: #303191; font-size: 7px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px; }
-    .leg-badge.return { background: #eafff0; color: #009933; }
-    .leg-badge.leg { background: #eef2ff; color: #254277; }
-    .flight-no { margin-left: 8px; font-size: 10px; font-weight: 800; color: #111827; }
-    .flight-airline { margin-top: 3px; color: #667085; font-size: 8px; }
-    .flight-date { text-align: right; color: #303191; font-size: 8px; font-weight: 800; }
-    .route-table { width: 100%; border-collapse: collapse; }
-    .route-table td { padding: 13px 12px; vertical-align: middle; }
-    .route-point { width: 30%; }
-    .route-point.right { text-align: right; }
-    .time { color: #111827; font-size: 15px; font-weight: 800; }
-    .iata { margin-top: 2px; color: #303191; font-size: 22px; font-weight: 800; line-height: 1; }
-    .city { margin-top: 3px; color: #667085; font-size: 7.5px; }
-    .route-mid { width: 40%; text-align: center; }
-    .duration { color: #111827; font-size: 8px; font-weight: 800; }
-    .route-line { height: 1px; margin: 7px 10px 5px; background: #a6adbb; }
-    .stops { color: #009933; font-size: 7px; font-weight: 800; }
-    .flight-meta-row { width: 100%; border-collapse: collapse; background: #fbfcfe; border-top: 1px solid #eef0f4; }
-    .flight-meta-row td { width: 25%; padding: 8px 10px; vertical-align: top; }
-    .flight-meta-row span { display: block; color: #667085; font-size: 7px; font-weight: 800; text-transform: uppercase; }
-    .flight-meta-row strong { display: block; margin-top: 2px; color: #111827; font-size: 8px; }
-    .pax-table { width: 100%; border-collapse: collapse; border: 1px solid #e6e8ee; border-radius: 8px; overflow: hidden; page-break-inside: avoid; }
-    .pax-table th { background: #fbfcfe; color: #667085; font-size: 7px; font-weight: 800; text-transform: uppercase; text-align: left; padding: 8px 9px; border-bottom: 1px solid #e6e8ee; }
-    .pax-table td { padding: 8px 9px; border-top: 1px solid #eef0f4; font-size: 8px; vertical-align: top; }
-    .two-col { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 14px; }
-    .two-col td { vertical-align: top; width: 50%; }
-    .card { border: 1px solid #e6e8ee; border-radius: 10px; overflow: hidden; page-break-inside: avoid; }
-    .card-head { padding: 9px 12px; background: #fbfcfe; color: #111827; font-size: 9px; font-weight: 800; border-bottom: 1px solid #eef0f4; }
-    .card-body { padding: 10px 12px; }
-    .row { width: 100%; border-collapse: collapse; }
-    .row td { padding: 5px 0; border-bottom: 1px solid #f1f3f7; font-size: 8px; }
-    .row td:first-child { color: #667085; }
-    .row td:last-child { text-align: right; color: #111827; font-weight: 800; }
-    .total td { border-bottom: none; padding-top: 8px; font-size: 10px; font-weight: 800; }
-    .reminders { margin-top: 12px; padding: 11px 13px; background: #f7f7ff; border: 1px solid #d7d8ff; border-radius: 10px; color: #30364a; font-size: 8px; page-break-inside: avoid; }
-    .reminders strong { color: #303191; }
-    .footer { margin-top: 14px; padding-top: 10px; border-top: 1px solid #e6e8ee; color: #98a2b3; font-size: 7.5px; }
-    .footer table { width: 100%; border-collapse: collapse; }
-    .right { text-align: right; }
-</style>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>E-ticket {{ $bookingRef }}</title>
+<style>@include('pdf.partials.styles')</style>
 </head>
 <body>
-<div class="page">
-    <div class="hero">
-        <table>
-            <tr>
-                <td>
-                    <div class="brand">TravelWheel</div>
-                    <div class="brand-sub">Electronic ticket</div>
-                </td>
-                <td class="right">
-                    <span class="status {{ $isTicketed ? '' : 'pending' }}">{{ $isTicketed ? 'Ticketed' : 'Confirmed' }}</span>
-                </td>
-            </tr>
-        </table>
-        <div class="hero-title">{{ $isTicketed ? 'E-ticket issued' : 'Booking confirmed' }}</div>
-        <div class="hero-copy">
-            {{ $isTicketed ? 'This document is your official e-ticket. Present it at airport check-in with a valid ID or passport.' : 'Your booking is confirmed and ticketing is in progress. A final ticket will be sent once issued.' }}
-        </div>
-    </div>
 
-    <table class="meta-grid">
-        <tr>
-            <td>
-                <div class="label">Booking reference</div>
-                <div class="value mono primary">{{ $bookingRef }}</div>
-            </td>
-            <td>
-                <div class="label">Airline PNR</div>
-                <div class="value mono primary">{{ $ticketPNR ?? '-' }}</div>
-            </td>
-            <td class="last">
-                <div class="label">Trip</div>
-                <div class="value">{{ $tripLabel ?? 'Flight' }}</div>
-                <div style="margin-top:2px;color:#667085;font-size:8px;">{{ $cabin ?? '-' }}</div>
-            </td>
-        </tr>
-    </table>
+@unless ($isTicketed)
+    <div class="watermark">NOT YET A TICKET</div>
+@endunless
 
-    @if(!$isTicketed)
-    <div class="notice">
-        @if($awaitingSupplierTicket ?? false)
-            Your seat is reserved and your payment is complete. The airline issues your ticket separately, and it will be emailed to {{ $contactEmail ?: 'your registered email' }} as soon as it is issued.
+<table class="masthead">
+    <tr>
+        <td>
+            <div class="wordmark">TravelWheel</div>
+            <div class="doctype">{{ $isTicketed ? 'Electronic ticket' : 'Booking confirmation' }}</div>
+        </td>
+        <td class="right" style="width:120px;">
+            <span class="stamp">{{ $isTicketed ? 'TICKETED' : 'CONFIRMED' }}</span>
+        </td>
+    </tr>
+</table>
+
+<table class="hero">
+    <tr>
+        <td style="width:27%;">
+            <div class="code">{{ $first['from'] ?? '—' }}</div>
+            <div class="place">{{ $first['fromCity'] ?? ($first['fromAirport'] ?? '') }}</div>
+        </td>
+        <td class="mid center">
+            <div class="dur">{{ $journey ?: ($tripLabel ?? 'Flight') }}</div>
+            <div class="rule"></div>
+            <div class="stops">
+                {{ $outboundStops === 0 ? 'Non-stop' : $outboundStops.' stop'.($outboundStops === 1 ? '' : 's') }}@if (! empty($returnSegments) && ! empty($returnSegments[0]['departDT'])) &nbsp;·&nbsp; back {{ \Carbon\Carbon::parse($returnSegments[0]['departDT'])->format('d M') }}@endif
+            </div>
+        </td>
+        <td class="right" style="width:27%;">
+            <div class="code">{{ $heroEnd['to'] ?? '—' }}</div>
+            <div class="place">{{ $heroEnd['toCity'] ?? ($heroEnd['toAirport'] ?? '') }}</div>
+        </td>
+    </tr>
+</table>
+
+<table class="refs">
+    <tr>
+        <td>
+            <div class="k">Booking reference</div>
+            <div class="v code">{{ $bookingRef }}</div>
+        </td>
+        <td>
+            <div class="k">Airline reference (PNR)</div>
+            <div class="v code">{{ $ticketPNR ?: '—' }}</div>
+        </td>
+        <td>
+            <div class="k">Trip</div>
+            <div class="v">{{ $tripLabel ?? 'Flight' }}</div>
+            <div class="sub">{{ $cabin ?: '—' }}</div>
+        </td>
+        <td class="last">
+            <div class="k">Travellers</div>
+            <div class="v">{{ count($passengers ?? []) ?: 1 }}</div>
+            <div class="sub">{{ $airline ?: '' }}</div>
+        </td>
+    </tr>
+</table>
+
+@unless ($isTicketed)
+    <div class="note warn">
+        <strong>This is not a ticket yet.</strong>
+        @if ($awaitingSupplierTicket ?? false)
+            Your seat is reserved and your payment is complete. The airline issues the ticket separately; it will be
+            emailed to {{ $contactEmail ?: 'your registered address' }} as soon as it is issued.
         @else
-            Ticketing is in progress. Your ticket will be emailed to {{ $contactEmail ?: 'your registered email' }} shortly.
+            Ticketing is in progress. Your ticket will be emailed to {{ $contactEmail ?: 'your registered address' }} shortly.
         @endif
+        Do not travel on this document.
     </div>
+@endunless
+
+{{-- A multi-city booking carries its first leg in BOTH flight_snapshot
+     .segments and .multiLegs[0], so rendering outbound unconditionally
+     alongside the legs printed that leg twice. multiLegs wins when present. --}}
+@if (! empty($multiLegs))
+    @foreach ($multiLegs as $index => $leg)
+        @include('pdf.partials.journey', [
+            'segments' => $leg['segments'] ?? [],
+            'label' => 'Leg '.($index + 1).' · '.($leg['from'] ?? '').' to '.($leg['to'] ?? ''),
+        ])
+    @endforeach
+@else
+    @if (! empty($outboundSegments))
+        @include('pdf.partials.journey', [
+            'segments' => $outboundSegments,
+            'label' => empty($returnSegments) ? 'Your flight' : 'Outbound',
+        ])
     @endif
 
-    @if(!empty($outboundSegments))
-        <div class="section-title">Outbound flight{{ count($outboundSegments) > 1 ? 's' : '' }}</div>
-        @foreach($outboundSegments as $seg)
-            @include('pdf.partials.flight-segment', ['seg' => $seg, 'badge' => 'outbound'])
-        @endforeach
+    @if (! empty($returnSegments))
+        @include('pdf.partials.journey', ['segments' => $returnSegments, 'label' => 'Return'])
     @endif
+@endif
 
-    @if(!empty($returnSegments))
-        <div class="section-title">Return flight{{ count($returnSegments) > 1 ? 's' : '' }}</div>
-        @foreach($returnSegments as $seg)
-            @include('pdf.partials.flight-segment', ['seg' => $seg, 'badge' => 'return'])
-        @endforeach
-    @endif
-
-    @if(!empty($multiLegs))
-        @foreach($multiLegs as $li => $leg)
-            <div class="section-title">Leg {{ $li + 1 }}: {{ $leg['from'] ?? '' }} to {{ $leg['to'] ?? '' }}</div>
-            @foreach($leg['segments'] ?? [] as $seg)
-                @include('pdf.partials.flight-segment', ['seg' => $seg, 'badge' => 'leg'])
-            @endforeach
-        @endforeach
-    @endif
-
-    @if(!empty($passengers))
-    <div class="section-title">Passenger details</div>
-    <table class="pax-table">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Passenger</th>
-                <th>Type</th>
-                <th>Passport</th>
-                <th>E-ticket</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($passengers as $i => $pax)
-            <tr>
-                <td>{{ $i + 1 }}</td>
-                <td><strong>{{ trim(($pax['title'] ?? '') . ' ' . strtoupper($pax['first_name'] ?? '') . ' ' . strtoupper($pax['last_name'] ?? '')) }}</strong></td>
-                <td>{{ match($pax['type'] ?? 'ADT') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' } }}</td>
-                <td class="mono">{{ $pax['passport_no'] ?? '-' }}</td>
-                <td class="mono primary">{{ $pax['eticket'] ?? ($isTicketed ? '-' : 'Pending') }}</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-    @endif
-
-    <table class="two-col">
+@if (! empty($passengers))
+    <div class="section">
+        {{ count($passengers) === 1 ? 'Traveller' : 'Travellers' }}
+        <span class="count">&nbsp;Names must match the travel document exactly</span>
+    </div>
+    <table class="grid">
         <tr>
-            <td style="padding-right:7px;">
-                <div class="card">
-                    <div class="card-head">Fare summary</div>
-                    <div class="card-body">
-                        <table class="row">
-                            @foreach($fareBreakdown ?? [] as $fb)
-                                @php
-                                    $ptLabel = match($fb['passengerType'] ?? 'ADT') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' };
-                                    $qty = $fb['qty'] ?? 1;
-                                @endphp
-                                <tr>
-                                    <td>{{ $ptLabel }} x {{ $qty }}</td>
-                                    <td>{{ $currencySymbol }}{{ number_format((float)($fb['totalFare'] ?? 0) * $qty, 2) }}</td>
-                                </tr>
-                            @endforeach
-                            <tr class="total">
-                                <td>Total paid</td>
-                                <td>{{ $currencySymbol }}{{ number_format((float)$totalAmount, 2) }}</td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </td>
-            <td style="padding-left:7px;">
-                <div class="card">
-                    <div class="card-head">Contact and support</div>
-                    <div class="card-body">
-                        <table class="row">
-                            <tr><td>Email</td><td>{{ $contactEmail ?: '-' }}</td></tr>
-                            <tr><td>Phone</td><td>{{ $contactPhone ?: '-' }}</td></tr>
-                            <tr><td>Support</td><td>support@travelwheel.ng</td></tr>
-                            <tr><td>Hotline</td><td>+2348056265618</td></tr>
-                        </table>
-                    </div>
-                </div>
-            </td>
+            <th style="width:38%;">Name</th>
+            <th style="width:14%;">Type</th>
+            <th style="width:22%;">Passport</th>
+            <th style="width:26%;">E-ticket number</th>
+        </tr>
+        @foreach ($passengers as $pax)
+            <tr>
+                <td class="name">{{ trim(($pax['title'] ?? '').' '.strtoupper($pax['first_name'] ?? '').' '.strtoupper($pax['last_name'] ?? '')) }}</td>
+                <td class="muted">{{ match ($pax['type'] ?? 'ADT') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' } }}</td>
+                <td class="mono">{{ $pax['passport_no'] ?? '—' }}</td>
+                <td class="mono brand-ink">{{ $pax['eticket'] ?? ($isTicketed ? '—' : 'Pending') }}</td>
+            </tr>
+        @endforeach
+    </table>
+@endif
+
+<table style="margin-top:16px;">
+    <tr>
+        <td style="width:50%;padding-right:8px;">
+            <div class="section" style="margin-top:0;">Fare summary</div>
+            <table class="money">
+                @foreach ($fareBreakdown ?? [] as $fb)
+                    @php $qty = (int) ($fb['qty'] ?? 1); @endphp
+                    <tr>
+                        <td>{{ match ($fb['passengerType'] ?? 'ADT') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Passenger' } }} &times; {{ $qty }}</td>
+                        <td class="amt">{{ $currencySymbol }}{{ number_format((float) ($fb['totalFare'] ?? 0) * $qty, 2) }}</td>
+                    </tr>
+                @endforeach
+                @if (($extrasTotal ?? 0) > 0)
+                    <tr>
+                        <td>Extras and services</td>
+                        <td class="amt">{{ $currencySymbol }}{{ number_format((float) $extrasTotal, 2) }}</td>
+                    </tr>
+                @endif
+                <tr class="total">
+                    <td>Total paid</td>
+                    <td class="amt">{{ $currencySymbol }}{{ number_format((float) $totalAmount, 2) }}</td>
+                </tr>
+            </table>
+        </td>
+        <td style="width:50%;padding-left:8px;">
+            <div class="section" style="margin-top:0;">Contact</div>
+            <table class="pair">
+                <tr>
+                    <td><div class="k">Booked by</div><div class="v">{{ $contactEmail ?: '—' }}</div></td>
+                </tr>
+                <tr>
+                    <td><div class="k">Phone</div><div class="v">{{ $contactPhone ?: '—' }}</div></td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="k">TravelWheel support</div>
+                        <div class="v">{{ config('brand.support_email') }}</div>
+                        <div class="k" style="margin-top:2px;">{{ config('brand.support_phone') }}</div>
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+<div class="note">
+    <strong>Before you travel.</strong>
+    Arrive 3 hours before international flights and 2 hours before domestic ones. Carry the passport or ID used to
+    book. Check the airline's baggage rules and any visa or health requirements for your destination before you
+    leave. Quote {{ $bookingRef }} whenever you contact us about this trip.
+</div>
+
+<div class="footer">
+    <table>
+        <tr>
+            <td>TravelWheel &nbsp;·&nbsp; {{ config('brand.address') }}</td>
+            <td class="right">{{ $isTicketed ? 'E-ticket' : 'Booking confirmation' }} {{ $bookingRef }} &nbsp;·&nbsp; issued {{ now()->timezone('Africa/Lagos')->format('d M Y H:i') }} WAT</td>
         </tr>
     </table>
-
-    <div class="reminders">
-        <strong>Travel reminders:</strong> Arrive 2 hours before domestic flights and 3 hours before international flights. Carry a valid ID or passport. Names must match the travel document exactly. Check airline baggage rules before departure.
-    </div>
-
-    <div class="footer">
-        <table>
-            <tr>
-                <td>TravelWheel Limited. This e-ticket was generated for booking {{ $bookingRef }}.</td>
-                <td class="right">Generated {{ now()->timezone('Africa/Lagos')->format('d M Y H:i') }}</td>
-            </tr>
-        </table>
-    </div>
 </div>
+
 </body>
 </html>

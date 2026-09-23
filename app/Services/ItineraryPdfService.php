@@ -116,7 +116,12 @@ class ItineraryPdfService
             'passengers' => $passengers,
             'contactEmail' => $booking->contact_email,
             'cabin' => \App\Support\FlightDisplay::cabin($flight, $booking),
-            'travelwheelLogo' => extension_loaded('gd') ? $this->imageDataUri(public_path('assets/img/alt-logo.png')) : null,
+            // No travelwheelLogo. public/assets/img/alt-logo.png is a white
+            // wordmark on a near-opaque white field, so it rendered invisible on
+            // this document's white header while base64-encoding 272 KB into
+            // every generation — the itinerary weighed 347 KB against the
+            // e-ticket's 51 KB for a logo nobody could see. The masthead is set
+            // in type until a usable asset exists.
             'generatedAt' => now('Africa/Lagos'),
         ];
     }
