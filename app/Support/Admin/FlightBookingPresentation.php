@@ -211,7 +211,7 @@ class FlightBookingPresentation
                     $html .= '<div class="tw-detail-segment-main">';
                     $html .= '<div class="tw-detail-segment-title">'.e(self::segmentFlightLabel($segment, $flight)).'</div>';
                     $html .= '<div class="tw-detail-segment-sub">'.e(collect([
-                        self::segmentDateTime($segment, 'depart').' → '.self::segmentDateTime($segment, 'arrive'),
+                        self::segmentDateTime($segment, 'depart').' -> '.self::segmentDateTime($segment, 'arrive'),
                         self::segmentDurationLabel($segment),
                         self::cabinText($segment, $flight),
                     ])->filter(fn ($value): bool => filled(trim((string) $value, ' ->')))->implode(' | ')).'</div>';
@@ -1190,7 +1190,7 @@ class FlightBookingPresentation
         $first = $segments[0];
         $last = $segments[array_key_last($segments)];
 
-        return trim((self::value($first, 'from', self::value($first, 'airportOriginCode', '')) ?: '-').' → '.(self::value($last, 'to', self::value($last, 'airportDestinationCode', '')) ?: '-'));
+        return trim((self::value($first, 'from', self::value($first, 'airportOriginCode', '')) ?: '-').' -> '.(self::value($last, 'to', self::value($last, 'airportDestinationCode', '')) ?: '-'));
     }
 
     private static function detailAirportNode(string $label, array $segment, string $prefix, string $timePrefix): string

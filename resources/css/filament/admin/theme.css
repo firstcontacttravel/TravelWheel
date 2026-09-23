@@ -9,869 +9,161 @@
 
 @variant dark (&:where(.dark, .dark *));
 
-/*
- * TravelWheel admin console.
- *
- * Everything below is deliberately UNLAYERED. Filament ships its own component
- * CSS inside `@layer components`, and unlayered rules beat layered ones outright
- * regardless of specificity — so plain, readable selectors are enough here and
- * !important is almost never needed.
- *
- * Structure:
- *   1. Tokens          — one palette, redefined once for dark mode
- *   2. Shell           — body, sidebar, topbar, page header
- *   3. Surfaces        — sections, cards, modals, dropdowns
- *   4. Controls        — buttons, badges, inputs, tabs, pagination
- *   5. Tables          — the screen ops actually live in
- *   6. Widgets         — dashboard stats and charts
- *   7. Login
- *   8. TravelWheel components (tw-*) — booking, flight, ticket, report views
- *   9. Responsive
- */
-
 @theme {
     --font-sans:
-        Inter, "Segoe UI Variable Text", "Segoe UI", ui-sans-serif, system-ui,
-        -apple-system, BlinkMacSystemFont, sans-serif;
+        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", sans-serif;
 }
 
-/* ─── 1. Tokens ─────────────────────────────────────────────────────────────
-   The brand values come from config/brand.php. They used to be #0d1883 and
-   #00a85a here while the site, the emails and the PDFs used #303191/#00a859 —
-   the same drift that had 26 email templates carrying three different blues.
-   AdminThemeUsesBrandPaletteTest pins these two to the config so it cannot
-   happen again. */
 :root {
-    --tw-brand: #303191;
-    --tw-brand-rgb: 48 49 145;
-    --tw-brand-soft: #4a4bbd;
-    --tw-brand-deep: #23246b;
-    --tw-brand-ink: #1b1c56;
-
-    --tw-accent: #00a859;
-    --tw-accent-rgb: 0 168 89;
-    --tw-accent-deep: #047a43;
-
-    --tw-shadow-rgb: 15 23 42;
-
-    /* Surfaces */
-    --tw-canvas: #f5f6fa;
-    --tw-surface: #ffffff;
-    --tw-surface-2: #f8f9fc;
-    --tw-surface-3: #eef1f7;
-
-    /* Lines */
-    --tw-line: #e3e7f0;
-    --tw-line-soft: #edf0f6;
-    --tw-line-strong: #cfd5e4;
-
-    /* Type */
-    --tw-ink: #101426;
-    --tw-text: #3b4256;
-    --tw-muted: #6b7386;
-    --tw-subtle: #949bad;
-
-    /* Semantics — foreground, tinted fill, tinted border, and a solid for bars */
-    --tw-danger: #b42318;
-    --tw-danger-bg: #fef3f2;
-    --tw-danger-line: #fecdca;
-    --tw-danger-solid: #d92d20;
-
-    --tw-warning: #b54708;
-    --tw-warning-bg: #fffaeb;
-    --tw-warning-line: #fedf89;
-    --tw-warning-solid: #f79009;
-
-    --tw-success: #067647;
-    --tw-success-bg: #ecfdf3;
-    --tw-success-line: #a9efc5;
-    --tw-success-solid: #17b26a;
-
-    --tw-info: #175cd3;
-    --tw-info-bg: #eff8ff;
-    --tw-info-line: #b2ddff;
-    --tw-info-solid: #2e90fa;
-
-    --tw-neutral-bg: #f2f4f7;
-
-    /* The navigation rail keeps its own tokens so it stays dark in light mode
-       and simply deepens in dark mode, rather than inverting with the page. */
-    --tw-nav-bg: #22236c;
-    --tw-nav-bg-2: #1a1b55;
-    --tw-nav-fg: #eef0fb;
-    --tw-nav-muted: #b8bce6;
-    --tw-nav-label: #9ba1d6;
-    --tw-nav-hover: rgb(255 255 255 / 0.07);
-    --tw-nav-active: rgb(255 255 255 / 0.13);
-    --tw-nav-line: rgb(255 255 255 / 0.09);
-
-    /* Geometry */
-    --tw-r-xs: 6px;
-    --tw-r-sm: 8px;
-    --tw-r: 10px;
-    --tw-r-lg: 14px;
-
-    --tw-shadow-xs: 0 1px 2px rgb(var(--tw-shadow-rgb) / 0.05);
-    --tw-shadow-sm: 0 1px 3px rgb(var(--tw-shadow-rgb) / 0.07), 0 1px 2px rgb(var(--tw-shadow-rgb) / 0.04);
-    --tw-shadow-md: 0 4px 12px rgb(var(--tw-shadow-rgb) / 0.07), 0 1px 3px rgb(var(--tw-shadow-rgb) / 0.05);
-    --tw-shadow-lg: 0 16px 40px rgb(var(--tw-shadow-rgb) / 0.13), 0 2px 8px rgb(var(--tw-shadow-rgb) / 0.06);
-
-    /* Legacy aliases — older Blade views still reference these names. */
-    --tw-brand-blue: var(--tw-brand);
-    --tw-brand-green: var(--tw-accent);
-    --tw-admin-bg: var(--tw-surface);
-    --tw-admin-muted-bg: var(--tw-surface-2);
-    --tw-admin-border: var(--tw-line);
-    --tw-admin-text: var(--tw-ink);
-    --tw-admin-muted: var(--tw-muted);
+    --tw-brand-blue: #0d1883;
+    --tw-brand-green: #00a85a;
+    --tw-admin-bg: #ffffff;
+    --tw-admin-muted-bg: #f7f9fc;
+    --tw-admin-border: #e5e7eb;
+    --tw-admin-text: #111827;
+    --tw-admin-muted: #667085;
 }
-
-/* Dark mode moves the tokens, not the rules. The previous sheet carried ~60
-   lines of `.dark .tw-…` overrides that had to be kept in sync by hand and
-   already covered only part of the custom components. */
-.dark {
-    --tw-brand: #7d7ee8;
-    --tw-brand-rgb: 125 126 232;
-    --tw-brand-soft: #9a9bf0;
-    --tw-brand-deep: #4a4bbd;
-    --tw-brand-ink: #c9caf8;
-
-    --tw-accent: #34d399;
-    --tw-accent-rgb: 52 211 153;
-    --tw-accent-deep: #10b981;
-
-    --tw-shadow-rgb: 0 0 0;
-
-    --tw-canvas: #0a0d1c;
-    --tw-surface: #121729;
-    --tw-surface-2: #171d33;
-    --tw-surface-3: #1e253f;
-
-    --tw-line: rgb(255 255 255 / 0.09);
-    --tw-line-soft: rgb(255 255 255 / 0.06);
-    --tw-line-strong: rgb(255 255 255 / 0.16);
-
-    --tw-ink: #f4f6fb;
-    --tw-text: #c6ccdb;
-    --tw-muted: #949cb2;
-    --tw-subtle: #79819a;
-
-    --tw-danger: #fda29b;
-    --tw-danger-bg: rgb(217 45 32 / 0.14);
-    --tw-danger-line: rgb(217 45 32 / 0.38);
-
-    --tw-warning: #fec84b;
-    --tw-warning-bg: rgb(247 144 9 / 0.14);
-    --tw-warning-line: rgb(247 144 9 / 0.36);
-
-    --tw-success: #75e0a7;
-    --tw-success-bg: rgb(23 178 106 / 0.14);
-    --tw-success-line: rgb(23 178 106 / 0.36);
-
-    --tw-info: #84caff;
-    --tw-info-bg: rgb(46 144 250 / 0.14);
-    --tw-info-line: rgb(46 144 250 / 0.36);
-
-    --tw-neutral-bg: rgb(255 255 255 / 0.06);
-
-    --tw-nav-bg: #191d40;
-    --tw-nav-bg-2: #131734;
-    --tw-nav-fg: #e8ebf7;
-    --tw-nav-muted: #9099b5;
-    --tw-nav-label: #79819e;
-    --tw-nav-line: rgb(255 255 255 / 0.07);
-}
-
-/* ─── 2. Shell ──────────────────────────────────────────────────────────────*/
 
 .fi-body {
-    background: var(--tw-canvas);
-    color: var(--tw-text);
-    -webkit-font-smoothing: antialiased;
+    background:
+        linear-gradient(
+            180deg,
+            rgba(13, 24, 131, 0.035),
+            rgba(255, 255, 255, 0) 18rem
+        ),
+        var(--tw-admin-bg);
+    color: var(--tw-admin-text);
+}
+
+.fi-sidebar {
+    border-right: 1px solid rgba(13, 24, 131, 0.08);
+    background: #ffffff;
+    box-shadow: 8px 0 30px rgba(15, 23, 42, 0.035);
+}
+
+.fi-sidebar-header {
+    border-bottom: 1px solid rgba(13, 24, 131, 0.08);
+}
+
+.fi-logo,
+.fi-sidebar-header .fi-logo {
+    color: var(--tw-brand-blue);
+    font-weight: 800;
+}
+
+.fi-sidebar-nav-item a {
+    border-radius: 8px;
+}
+
+.fi-sidebar-nav-item-active a {
+    background: rgba(13, 24, 131, 0.08);
+    color: var(--tw-brand-blue);
+}
+
+.fi-sidebar-nav-item-active .fi-icon {
+    color: var(--tw-brand-green);
+}
+
+.fi-topbar {
+    border-bottom: 1px solid rgba(13, 24, 131, 0.08);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(16px);
 }
 
 .fi-main,
-.fi-page,
-.fi-main-ctn {
+.fi-page {
     background: transparent;
-}
-
-/* Sidebar — a dark brand rail against the light workspace. This is the panel's
-   identity; the content area stays neutral so data reads as data. */
-.fi-sidebar {
-    border-right: 0;
-    background: linear-gradient(180deg, var(--tw-nav-bg), var(--tw-nav-bg-2));
-    box-shadow: inset -1px 0 0 var(--tw-nav-line);
-    color: var(--tw-nav-fg);
-}
-
-.fi-sidebar-header,
-.fi-sidebar-header-ctn {
-    border-bottom: 1px solid var(--tw-nav-line);
-    background: transparent;
-    box-shadow: none;
-}
-
-.fi-sidebar-nav {
-    padding-inline: 0.625rem;
-    scrollbar-width: thin;
-    scrollbar-color: rgb(255 255 255 / 0.18) transparent;
-}
-
-.fi-sidebar-nav::-webkit-scrollbar { width: 6px; }
-.fi-sidebar-nav::-webkit-scrollbar-thumb {
-    border-radius: 999px;
-    background: rgb(255 255 255 / 0.16);
-}
-
-/* With sidebarCollapsibleOnDesktop() Filament moves the brand out of the
-   sidebar and into the topbar, so the wordmark has to know which surface it is
-   sitting on — white on the rail, brand on the light bar. */
-.fi-logo {
-    font-size: 1.0625rem;
-    font-weight: 700;
-    letter-spacing: -0.015em;
-}
-
-.fi-sidebar .fi-logo,
-.fi-sidebar-header .fi-logo {
-    color: #ffffff;
-}
-
-.fi-topbar .fi-logo {
-    color: var(--tw-brand);
-}
-
-/* Group labels: quiet, tracked-out, clearly subordinate to the items. */
-.fi-sidebar-group-label {
-    color: var(--tw-nav-label);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.fi-sidebar-group-btn,
-.fi-sidebar-group-collapse-btn {
-    color: var(--tw-nav-label);
-}
-
-.fi-sidebar-group-collapse-btn:hover {
-    color: var(--tw-nav-fg);
-}
-
-.fi-sidebar-group + .fi-sidebar-group {
-    margin-top: 0.125rem;
-}
-
-.fi-sidebar-item-btn {
-    position: relative;
-    border-radius: var(--tw-r-sm);
-    padding-block: 0.4375rem;
-    color: var(--tw-nav-muted);
-    font-size: 0.8125rem;
-    font-weight: 500;
-    transition: background-color 120ms ease, color 120ms ease;
-}
-
-/* Filament colours the icon by inheritance but paints .fi-sidebar-item-label
-   slate-700 of its own accord, which on a dark rail is unreadable. Both have
-   to be set. */
-.fi-sidebar-item-btn .fi-sidebar-item-icon,
-.fi-sidebar-item-btn .fi-sidebar-item-label {
-    color: inherit;
-    transition: color 120ms ease;
-}
-
-.fi-sidebar-item-btn:hover,
-.fi-sidebar-item-btn:focus-visible {
-    background: var(--tw-nav-hover);
-    color: var(--tw-nav-fg);
-}
-
-.fi-sidebar-item-btn:hover .fi-sidebar-item-icon,
-.fi-sidebar-item-btn:hover .fi-sidebar-item-label,
-.fi-sidebar-item-btn:focus-visible .fi-sidebar-item-label {
-    color: var(--tw-nav-fg);
-}
-
-/* Active item: a filled pill plus a green marker on the leading edge, so the
-   current page is readable at a glance and not just "slightly lighter". */
-.fi-sidebar-item.fi-active > .fi-sidebar-item-btn {
-    background: var(--tw-nav-active);
-    color: #ffffff;
-    font-weight: 600;
-}
-
-.fi-sidebar-item.fi-active > .fi-sidebar-item-btn::before {
-    content: "";
-    position: absolute;
-    inset-block: 0.375rem;
-    inset-inline-start: -0.625rem;
-    width: 3px;
-    border-radius: 0 3px 3px 0;
-    background: var(--tw-accent);
-}
-
-.fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-sidebar-item-label {
-    color: #ffffff;
-}
-
-.fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-sidebar-item-icon {
-    color: var(--tw-accent);
-}
-
-.fi-sidebar-item-has-active-child-items > .fi-sidebar-item-btn {
-    color: var(--tw-nav-fg);
-}
-
-.fi-sidebar-item-grouped-border-part,
-.fi-sidebar-item-grouped-border-part-not-first,
-.fi-sidebar-item-grouped-border-part-not-last {
-    background: var(--tw-nav-line);
-}
-
-.fi-sidebar-footer,
-.fi-sidebar-close-collapse-sidebar-btn,
-.fi-sidebar-open-collapse-sidebar-btn {
-    color: var(--tw-nav-muted);
-}
-
-.fi-sidebar .fi-badge {
-    border-color: transparent;
-    background: rgb(255 255 255 / 0.14);
-    color: #ffffff;
-}
-
-/* Topbar */
-.fi-topbar {
-    border-bottom: 1px solid var(--tw-line);
-    background: color-mix(in srgb, var(--tw-surface) 88%, transparent);
-    backdrop-filter: blur(14px) saturate(1.4);
-    box-shadow: none;
-}
-
-.fi-topbar-item-btn,
-.fi-topbar-open-sidebar-btn,
-.fi-topbar-close-sidebar-btn,
-.fi-layout-sidebar-toggle-btn {
-    color: var(--tw-muted);
-}
-
-.fi-topbar-item-btn:hover,
-.fi-layout-sidebar-toggle-btn:hover {
-    color: var(--tw-brand);
-}
-
-.fi-global-search-field .fi-input-wrp {
-    border-color: var(--tw-line);
-    background: var(--tw-surface-2);
-}
-
-.fi-avatar {
-    background: var(--tw-surface-3);
-}
-
-/* Page header: the heading is ink, not brand blue. Blue belongs to things you
-   can click; a page title that is the same colour as every link teaches the
-   eye nothing. */
-.fi-header {
-    gap: 0.75rem;
 }
 
 .fi-header-heading {
-    color: var(--tw-ink);
-    font-size: clamp(1.25rem, 1.05rem + 0.9vw, 1.6rem);
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 1.2;
+    color: var(--tw-brand-blue);
+    font-weight: 800;
+    letter-spacing: 0;
 }
 
 .fi-header-subheading {
-    margin-top: 0.125rem;
-    color: var(--tw-muted);
-    font-size: 0.875rem;
+    color: var(--tw-admin-muted);
 }
-
-.fi-breadcrumbs {
-    margin-bottom: 0.125rem;
-}
-
-.fi-breadcrumbs-item-label {
-    color: var(--tw-muted);
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.fi-breadcrumbs-item:last-child .fi-breadcrumbs-item-label {
-    color: var(--tw-text);
-}
-
-.fi-breadcrumbs-item-separator {
-    color: var(--tw-subtle);
-}
-
-/* ─── 3. Surfaces ───────────────────────────────────────────────────────────*/
 
 .fi-section,
-.fi-ta-ctn,
+.fi-ta,
 .fi-wi-stats-overview-stat,
-.fi-fieldset {
-    border: 1px solid var(--tw-line);
-    border-radius: var(--tw-r);
-    background: var(--tw-surface);
-    box-shadow: var(--tw-shadow-sm);
+.fi-modal-window {
+    border: 1px solid var(--tw-admin-border);
+    border-radius: 8px;
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
 }
 
 .fi-section-header {
-    border-bottom: 1px solid var(--tw-line-soft);
-    padding-block: 0.875rem;
+    border-bottom-color: rgba(13, 24, 131, 0.08);
 }
 
 .fi-section-header-heading {
-    color: var(--tw-ink);
-    font-size: 0.9375rem;
-    font-weight: 650;
-    letter-spacing: -0.01em;
+    color: #101828;
+    font-weight: 700;
 }
 
-.fi-section-header-description {
-    color: var(--tw-muted);
-    font-size: 0.8125rem;
-}
-
-.fi-section-footer {
-    border-top: 1px solid var(--tw-line-soft);
-    background: var(--tw-surface-2);
-}
-
-.fi-modal-window {
-    border: 1px solid var(--tw-line);
-    border-radius: var(--tw-r-lg);
-    background: var(--tw-surface);
-    box-shadow: var(--tw-shadow-lg);
-}
-
-.fi-modal-heading {
-    color: var(--tw-ink);
-    font-weight: 650;
-    letter-spacing: -0.01em;
-}
-
-.fi-modal-description {
-    color: var(--tw-muted);
-}
-
-.fi-modal-footer {
-    border-top: 1px solid var(--tw-line-soft);
-}
-
-.fi-dropdown-panel {
-    border: 1px solid var(--tw-line);
-    border-radius: var(--tw-r);
-    background: var(--tw-surface);
-    box-shadow: var(--tw-shadow-lg);
-}
-
-.fi-dropdown-list-item {
-    border-radius: var(--tw-r-xs);
-    font-size: 0.8125rem;
-}
-
-.fi-dropdown-header {
-    color: var(--tw-muted);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
-
-.fi-callout {
-    border-radius: var(--tw-r-sm);
-}
-
-/* ─── 4. Controls ───────────────────────────────────────────────────────────*/
-
-/* The previous sheet gave EVERY .fi-btn `width: 100%` to fix the login page's
-   sign-in button. That stretched table actions, header actions and the
-   pagination "Next" button across whatever space they sat in. Full width is
-   now scoped to the one form that wanted it (see §7). */
 .fi-btn {
-    border-radius: var(--tw-r-sm);
-    font-weight: 600;
+    border-radius: 8px;
+    font-weight: 700;
     letter-spacing: 0;
-    box-shadow: var(--tw-shadow-xs);
-    transition: transform 90ms ease, box-shadow 120ms ease, background-color 120ms ease;
 }
 
-.fi-btn:active {
-    transform: translateY(0.5px);
+.fi-btn.fi-color-primary {
+    box-shadow: 0 10px 22px rgba(13, 24, 131, 0.16);
 }
 
-.fi-btn.fi-size-sm {
-    font-size: 0.75rem;
-}
-
-.fi-icon-btn {
-    border-radius: var(--tw-r-xs);
-    color: var(--tw-muted);
-}
-
-.fi-icon-btn:hover {
-    background: var(--tw-surface-3);
-    color: var(--tw-ink);
-}
-
-.fi-link {
-    font-weight: 550;
+.fi-btn.fi-color-success {
+    box-shadow: 0 10px 22px rgba(0, 168, 90, 0.14);
 }
 
 .fi-badge {
     border-radius: 999px;
-    padding-inline: 0.5rem;
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    white-space: nowrap;
+    font-weight: 700;
 }
 
-/* Inputs */
-.fi-input-wrp,
-.fi-fo-textarea-wrp,
-.fi-fo-select-wrp {
-    border-radius: var(--tw-r-sm);
-    border-color: var(--tw-line-strong);
-    background: var(--tw-surface);
-    transition: border-color 120ms ease, box-shadow 120ms ease;
-}
-
-.fi-input-wrp:focus-within,
-.fi-fo-textarea-wrp:focus-within,
-.fi-fo-select-wrp:focus-within {
-    border-color: var(--tw-brand);
-    box-shadow: 0 0 0 3px rgb(var(--tw-brand-rgb) / 0.16);
-}
-
-.fi-input-wrp.fi-invalid,
-.fi-input-wrp:has(.fi-invalid) {
-    border-color: var(--tw-danger-line);
-}
-
-.fi-fo-field-label,
-.fi-fo-field-label-content {
-    color: var(--tw-text);
-    font-size: 0.8125rem;
-    font-weight: 550;
-}
-
-.fi-fo-field-wrp-error-message {
-    color: var(--tw-danger);
-    font-size: 0.75rem;
-}
-
-.fi-checkbox-input:checked,
-.fi-radio-input:checked {
-    background-color: var(--tw-brand);
-    border-color: var(--tw-brand);
-}
-
-/* Tabs — v5 marks the current tab with `fi-active`; the old sheet was still
-   styling `.fi-tabs-item-active`, a Filament v3 class name that no longer
-   ships, so the active tab had no treatment at all. */
-.fi-tabs {
-    gap: 0.25rem;
-    border: 1px solid var(--tw-line);
-    border-radius: var(--tw-r);
-    background: var(--tw-surface);
-    padding: 0.3125rem;
-    box-shadow: var(--tw-shadow-xs);
-    overflow-x: auto;
-    scrollbar-width: none;
-}
-
-.fi-tabs::-webkit-scrollbar { display: none; }
-
-.fi-tabs-item {
-    border-radius: var(--tw-r-xs);
-    color: var(--tw-muted);
-    font-size: 0.8125rem;
-    font-weight: 550;
-    white-space: nowrap;
-    transition: background-color 120ms ease, color 120ms ease;
-}
-
-.fi-tabs-item:hover {
-    background: var(--tw-surface-2);
-    color: var(--tw-ink);
-}
-
-.fi-tabs-item.fi-active {
-    background: rgb(var(--tw-brand-rgb) / 0.1);
-    color: var(--tw-brand);
-    font-weight: 650;
-}
-
-.fi-tabs-item.fi-active .fi-badge {
-    background: rgb(var(--tw-brand-rgb) / 0.14);
-    color: var(--tw-brand);
-}
-
-/* Pagination */
-.fi-pagination-item-btn {
-    border-radius: var(--tw-r-xs);
-    font-size: 0.8125rem;
-}
-
-.fi-pagination-overview,
-.fi-pagination-records-per-page-select-ctn {
-    color: var(--tw-muted);
-    font-size: 0.8125rem;
-}
-
-/* ─── 5. Tables ─────────────────────────────────────────────────────────────*/
-
-.fi-ta-header-ctn {
-    border-bottom: 1px solid var(--tw-line-soft);
-}
-
-/* Subordinate to the page heading above it. Most list screens print the
-   resource name three times — breadcrumb, page title, table heading — and
-   the old sheet set this one in 800-weight brand blue, louder than the page
-   title itself. */
-.fi-ta-header-heading {
-    color: var(--tw-ink);
-    font-size: 0.9375rem;
-    font-weight: 650;
-    letter-spacing: -0.01em;
-}
-
-.fi-ta-header-description {
-    color: var(--tw-muted);
-    font-size: 0.8125rem;
-}
-
-.fi-ta-header-toolbar {
-    padding-block: 0.625rem;
-}
-
-.fi-ta-content {
-    background: var(--tw-surface);
-}
-
-/* Column headers read as labels, not as content. */
-.fi-ta-header-cell {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    border-bottom: 1px solid var(--tw-line);
-    background: var(--tw-surface-2);
-    padding-block: 0.625rem;
-    color: var(--tw-muted);
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
-
-.fi-ta-header-cell .fi-icon {
-    text-transform: none;
-}
-
-.fi-ta-header-cell-sorted {
-    color: var(--tw-brand);
-}
-
-/* Rows were ~126px tall, so a 1517px screen showed three bookings. Tightening
-   the cell padding roughly doubles that without touching legibility. */
-.fi-ta-text:not(.fi-inline) {
-    padding-block: 0.625rem;
+.fi-ta-header,
+.fi-ta-content,
+.fi-ta-table thead {
+    background: #ffffff;
 }
 
 .fi-ta-row {
-    border-top: 1px solid var(--tw-line-soft);
-}
-
-.fi-ta-row.fi-striped {
-    background: transparent;
+    transition: background-color 120ms ease;
 }
 
 .fi-ta-row:hover {
-    background: rgb(var(--tw-brand-rgb) / 0.035);
+    background: rgba(13, 24, 131, 0.025);
 }
 
-.fi-ta-cell {
-    color: var(--tw-text);
+.fi-tabs {
+    gap: 0.35rem;
+    border-radius: 8px;
 }
 
-.fi-ta-text-item-label,
-.fi-ta-text .fi-ta-text-item {
-    font-size: 0.8125rem;
+.fi-tabs-item {
+    border-radius: 8px;
 }
 
-.fi-ta-text-description {
-    color: var(--tw-muted);
-    font-size: 0.75rem;
+.fi-tabs-item-active {
+    background: rgba(13, 24, 131, 0.08);
+    color: var(--tw-brand-blue);
 }
 
-.fi-ta-empty-state-heading {
-    color: var(--tw-ink);
+.fi-ta-header-heading {
+    color: var(--tw-brand-blue);
+    font-weight: 800;
 }
 
-.fi-ta-empty-state-description {
-    color: var(--tw-muted);
+.fi-ta-header-description {
+    color: var(--tw-admin-muted);
 }
 
-/* Wide operational tables have to scroll rather than push the page sideways. */
-.fi-ta-content-ctn,
-.fi-ta-content {
-    max-width: 100%;
-    overflow-x: auto;
-    scrollbar-width: thin;
+.fi-ta-cell .fi-ta-text-item-label {
+    letter-spacing: 0;
 }
-
-.fi-ta-content::-webkit-scrollbar { height: 9px; }
-.fi-ta-content::-webkit-scrollbar-track { background: var(--tw-surface-2); }
-.fi-ta-content::-webkit-scrollbar-thumb {
-    border: 2px solid var(--tw-surface-2);
-    border-radius: 999px;
-    background: var(--tw-line-strong);
-}
-
-/* ─── 6. Widgets ────────────────────────────────────────────────────────────*/
-
-.fi-wi-stats-overview-stat {
-    position: relative;
-    overflow: hidden;
-    padding-inline-start: 1.125rem;
-    transition: box-shadow 140ms ease, transform 140ms ease;
-}
-
-.fi-wi-stats-overview-stat:hover {
-    box-shadow: var(--tw-shadow-md);
-}
-
-/* Filament puts the stat's colour on the DESCRIPTION only, which is why a
-   failed-payment count and a revenue figure looked identical apart from a 12px
-   icon at the end of a sentence. :has() hoists that colour to the whole tile:
-   problems get a red rail and a red number, everything else stays calm. An ops
-   dashboard that cannot separate trouble from good news is not a dashboard. */
-.fi-wi-stats-overview-stat::before {
-    content: "";
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: 0;
-    width: 4px;
-    background: var(--tw-stat-tone, var(--tw-line-strong));
-}
-
-.fi-wi-stats-overview-stat:has(.fi-color-danger) {
-    --tw-stat-tone: var(--tw-danger-solid);
-    --tw-stat-ink: var(--tw-danger);
-    background: linear-gradient(90deg, var(--tw-danger-bg), var(--tw-surface) 65%);
-}
-
-.fi-wi-stats-overview-stat:has(.fi-color-warning) {
-    --tw-stat-tone: var(--tw-warning-solid);
-    --tw-stat-ink: var(--tw-warning);
-    background: linear-gradient(90deg, var(--tw-warning-bg), var(--tw-surface) 65%);
-}
-
-.fi-wi-stats-overview-stat:has(.fi-color-success) { --tw-stat-tone: var(--tw-success-solid); }
-.fi-wi-stats-overview-stat:has(.fi-color-info)    { --tw-stat-tone: var(--tw-info-solid); }
-.fi-wi-stats-overview-stat:has(.fi-color-primary) { --tw-stat-tone: var(--tw-brand); }
-
-.fi-wi-stats-overview-stat-label {
-    color: var(--tw-muted);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-}
-
-.fi-wi-stats-overview-stat-value {
-    margin-top: 0.1875rem;
-    color: var(--tw-stat-ink, var(--tw-ink));
-    font-size: clamp(1.25rem, 1.1rem + 0.5vw, 1.625rem);
-    font-weight: 700;
-    letter-spacing: -0.025em;
-    line-height: 1.15;
-    /* Currency figures line up column to column instead of jittering. */
-    font-variant-numeric: tabular-nums;
-}
-
-.fi-wi-stats-overview-stat-description {
-    margin-top: 0.3125rem;
-    color: var(--tw-muted);
-    font-size: 0.75rem;
-    line-height: 1.35;
-}
-
-/* The description carries Filament's colour classes. Leave the icon coloured —
-   it is a useful second cue — but stop the sentence itself being tinted, which
-   made every caption on the dashboard a different hue. */
-.fi-wi-stats-overview-stat-description.fi-color {
-    color: var(--tw-muted);
-}
-
-.fi-wi-stats-overview-stat-description .fi-icon {
-    color: var(--tw-stat-tone, var(--tw-subtle));
-}
-
-.fi-wi-widget .fi-section-header-heading {
-    font-size: 0.9375rem;
-}
-
-.fi-wi-chart-canvas-ctn {
-    /* A 14-day revenue line does not need a full screen of height. */
-    max-height: 18rem;
-}
-
-/* ─── 7. Login ──────────────────────────────────────────────────────────────*/
-
-.fi-simple-layout {
-    background:
-        radial-gradient(1200px 620px at 50% -18%, rgb(var(--tw-brand-rgb) / 0.26), transparent 72%),
-        radial-gradient(760px 420px at 85% 108%, rgb(var(--tw-accent-rgb) / 0.12), transparent 70%),
-        var(--tw-canvas);
-}
-
-.fi-simple-main {
-    border: 1px solid var(--tw-line);
-    border-radius: var(--tw-r-lg);
-    background: var(--tw-surface);
-    box-shadow: var(--tw-shadow-lg);
-}
-
-.fi-simple-layout .fi-logo {
-    color: var(--tw-brand);
-    font-size: 1.375rem;
-}
-
-.fi-simple-header-heading {
-    color: var(--tw-ink);
-    font-size: 1.125rem;
-    font-weight: 650;
-    letter-spacing: -0.01em;
-}
-
-.fi-simple-header-subheading {
-    color: var(--tw-muted);
-}
-
-/* The one place a button should fill its container — the original reason the
-   old sheet reached for a global `.fi-btn { width: 100% }`. */
-.fi-simple-main .fi-form .fi-btn {
-    width: 100%;
-    justify-content: center;
-    min-height: 2.625rem;
-    box-shadow: 0 6px 16px rgb(var(--tw-brand-rgb) / 0.22);
-}
-
-/* ─── 8. TravelWheel components ─────────────────────────────────────────────
-   Booking hero, flight detail, ticket card, history feed, passenger cards,
-   report page and the journey cell used inside tables. These were already
-   written against --tw-brand-blue/--tw-brand-green plus a scattering of hard
-   -coded neutrals; they now read the tokens above, so dark mode comes for
-   free instead of needing a parallel set of `.dark .tw-…` rules. */
 
 .tw-booking-hero {
     display: grid;
@@ -883,13 +175,13 @@
 }
 
 .tw-booking-hero {
-    border: 1px solid rgb(var(--tw-brand-rgb) / 0.1);
+    border: 1px solid rgba(13, 24, 131, 0.1);
     border-radius: 8px;
     background:
-        linear-gradient(180deg, rgb(var(--tw-brand-rgb) / 0.025), rgba(255, 255, 255, 0) 52%),
-        var(--tw-surface);
+        linear-gradient(180deg, rgba(13, 24, 131, 0.025), rgba(255, 255, 255, 0) 52%),
+        #ffffff;
     padding: 1rem;
-    box-shadow: 0 12px 28px rgb(var(--tw-shadow-rgb) / 0.045);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.045);
 }
 
 .tw-booking-hero > .tw-booking-hero-main,
@@ -898,7 +190,7 @@
 }
 
 .tw-booking-eyebrow {
-    color: var(--tw-accent);
+    color: var(--tw-brand-green);
     font-size: 0.7rem;
     font-weight: 800;
     letter-spacing: 0;
@@ -914,10 +206,10 @@
 }
 
 .tw-booking-trip-pill {
-    border: 1px solid rgb(var(--tw-brand-rgb) / 0.12);
+    border: 1px solid rgba(13, 24, 131, 0.12);
     border-radius: 999px;
-    background: rgb(var(--tw-brand-rgb) / 0.045);
-    color: var(--tw-brand);
+    background: rgba(13, 24, 131, 0.045);
+    color: var(--tw-brand-blue);
     padding: 0.15rem 0.55rem;
     font-size: 0.68rem;
     font-weight: 800;
@@ -926,7 +218,7 @@
 }
 
 .tw-booking-title {
-    color: var(--tw-brand);
+    color: var(--tw-brand-blue);
     font-size: 1.45rem;
     font-weight: 850;
     line-height: 1.15;
@@ -943,14 +235,14 @@
 
 .tw-booking-subtitle {
     margin-top: 0.15rem;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.78rem;
     font-weight: 650;
 }
 
 .tw-booking-route {
     margin-top: 0.75rem;
-    color: var(--tw-ink);
+    color: #111827;
     font-size: 1.15rem;
     font-weight: 850;
     line-height: 1.2;
@@ -966,13 +258,13 @@
 
 .tw-booking-meta {
     margin-top: 0.65rem;
-    color: var(--tw-muted);
+    color: #667085;
     font-size: 0.8rem;
 }
 
 .tw-booking-meta span {
     border-radius: 999px;
-    background: rgb(var(--tw-brand-rgb) / 0.045);
+    background: rgba(13, 24, 131, 0.045);
     padding: 0.22rem 0.55rem;
 }
 
@@ -984,23 +276,23 @@
 }
 
 .tw-booking-price {
-    color: var(--tw-ink);
+    color: #111827;
     font-size: 1.05rem;
     font-weight: 850;
 }
 
 .tw-booking-amount {
     min-width: 9rem;
-    border: 1px solid rgb(var(--tw-brand-rgb) / 0.08);
+    border: 1px solid rgba(13, 24, 131, 0.08);
     border-radius: 8px;
-    background: var(--tw-surface);
+    background: #ffffff;
     padding: 0.65rem 0.75rem;
     text-align: right;
 }
 
 .tw-booking-amount span {
     display: block;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.68rem;
     font-weight: 750;
     text-transform: uppercase;
@@ -1009,7 +301,7 @@
 .tw-booking-amount strong {
     display: block;
     margin-top: 0.2rem;
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 0.95rem;
     font-weight: 850;
     line-height: 1.2;
@@ -1030,29 +322,29 @@
 }
 
 .tw-status-good {
-    background: rgb(var(--tw-accent-rgb) / 0.12);
-    color: var(--tw-success);
+    background: rgba(0, 168, 90, 0.12);
+    color: #006b3a;
 }
 
 .tw-status-warn {
-    background: var(--tw-warning-bg);
-    color: var(--tw-warning);
+    background: rgba(245, 158, 11, 0.14);
+    color: #92400e;
 }
 
 .tw-status-bad {
-    background: var(--tw-danger-bg);
-    color: var(--tw-danger);
+    background: rgba(220, 38, 38, 0.12);
+    color: #991b1b;
 }
 
 .tw-status-neutral {
-    background: var(--tw-neutral-bg);
-    color: var(--tw-text);
+    background: rgba(100, 116, 139, 0.12);
+    color: #334155;
 }
 
 .tw-booking-timeline {
     display: grid;
     gap: 0.65rem;
-    border-top: 1px solid rgb(var(--tw-brand-rgb) / 0.08);
+    border-top: 1px solid rgba(13, 24, 131, 0.08);
     padding-top: 0.9rem;
 }
 
@@ -1067,25 +359,25 @@
     margin-top: 0.28rem;
     width: 0.65rem;
     height: 0.65rem;
-    border: 2px solid var(--tw-line-strong);
+    border: 2px solid #cbd5e1;
     border-radius: 999px;
-    background: var(--tw-surface);
+    background: #ffffff;
 }
 
 .tw-timeline-item.is-complete .tw-timeline-dot {
-    border-color: var(--tw-accent);
-    background: var(--tw-accent);
+    border-color: var(--tw-brand-green);
+    background: var(--tw-brand-green);
 }
 
 .tw-timeline-label {
-    color: var(--tw-muted);
+    color: #667085;
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
 }
 
 .tw-timeline-value {
-    color: var(--tw-ink);
+    color: #111827;
     font-size: 0.86rem;
     font-weight: 650;
 }
@@ -1094,7 +386,7 @@
     display: grid;
     grid-column: 1 / -1;
     gap: 0.55rem;
-    border-top: 1px solid rgb(var(--tw-brand-rgb) / 0.08);
+    border-top: 1px solid rgba(13, 24, 131, 0.08);
     padding-top: 0.9rem;
 }
 
@@ -1115,14 +407,14 @@
 }
 
 .tw-booking-leg-head span {
-    color: var(--tw-accent);
+    color: var(--tw-brand-green);
     font-size: 0.68rem;
     font-weight: 850;
     text-transform: uppercase;
 }
 
 .tw-booking-leg-head strong {
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 0.88rem;
     font-weight: 850;
 }
@@ -1131,7 +423,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem 0.65rem;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.74rem;
     line-height: 1.25;
 }
@@ -1161,9 +453,9 @@
 .tw-booking-route-board {
     display: grid;
     gap: 0.75rem;
-    border: 1px solid rgb(var(--tw-brand-rgb) / 0.08);
+    border: 1px solid rgba(13, 24, 131, 0.08);
     border-radius: 8px;
-    background: var(--tw-surface-2);
+    background: rgba(247, 249, 252, 0.78);
     padding: 0.85rem;
 }
 
@@ -1174,7 +466,7 @@
 .tw-booking-airport span,
 .tw-booking-fact span {
     display: block;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.68rem;
     font-weight: 800;
     line-height: 1;
@@ -1184,7 +476,7 @@
 .tw-booking-airport strong {
     display: block;
     margin-top: 0.3rem;
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 2rem;
     font-weight: 900;
     line-height: 1;
@@ -1193,7 +485,7 @@
 .tw-booking-airport small {
     display: block;
     margin-top: 0.25rem;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.78rem;
     line-height: 1.25;
     overflow-wrap: anywhere;
@@ -1204,9 +496,9 @@
 }
 
 .tw-booking-route-full {
-    border-top: 1px solid rgb(var(--tw-brand-rgb) / 0.08);
+    border-top: 1px solid rgba(13, 24, 131, 0.08);
     padding-top: 0.65rem;
-    color: var(--tw-brand);
+    color: var(--tw-brand-blue);
     font-size: 0.88rem;
     font-weight: 850;
     overflow-wrap: anywhere;
@@ -1220,14 +512,14 @@
 
 .tw-booking-fact {
     min-width: 0;
-    border-bottom: 1px solid rgb(var(--tw-brand-rgb) / 0.08);
+    border-bottom: 1px solid rgba(13, 24, 131, 0.08);
     padding-bottom: 0.65rem;
 }
 
 .tw-booking-fact strong {
     display: block;
     margin-top: 0.3rem;
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 0.9rem;
     font-weight: 850;
     line-height: 1.25;
@@ -1250,10 +542,10 @@
 
 .tw-flight-overview,
 .tw-detail-leg {
-    border: 1px solid rgb(var(--tw-brand-rgb) / 0.1);
+    border: 1px solid rgba(13, 24, 131, 0.1);
     border-radius: 8px;
-    background: var(--tw-surface);
-    box-shadow: 0 10px 24px rgb(var(--tw-shadow-rgb) / 0.04);
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
 }
 
 .tw-flight-overview {
@@ -1273,9 +565,9 @@
     width: 2.5rem;
     height: 2.5rem;
     flex-shrink: 0;
-    border: 1px solid rgb(var(--tw-brand-rgb) / 0.1);
+    border: 1px solid rgba(13, 24, 131, 0.1);
     border-radius: 8px;
-    background: var(--tw-surface);
+    background: #ffffff;
     object-fit: contain;
     padding: 0.25rem;
 }
@@ -1285,7 +577,7 @@
 }
 
 .tw-flight-name {
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 1rem;
     font-weight: 800;
     line-height: 1.25;
@@ -1294,7 +586,7 @@
 
 .tw-flight-sub {
     margin-top: 0.15rem;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.78rem;
 }
 
@@ -1313,7 +605,7 @@
 
 .tw-flight-fact span {
     display: block;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.68rem;
     font-weight: 750;
     line-height: 1;
@@ -1323,7 +615,7 @@
 .tw-flight-fact strong {
     display: block;
     margin-top: 0.3rem;
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 0.86rem;
     font-weight: 800;
     line-height: 1.25;
@@ -1345,12 +637,12 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 0.75rem;
-    border-bottom: 1px solid rgb(var(--tw-brand-rgb) / 0.08);
+    border-bottom: 1px solid rgba(13, 24, 131, 0.08);
     padding: 0.9rem 1rem;
 }
 
 .tw-detail-leg-label {
-    color: var(--tw-accent);
+    color: var(--tw-brand-green);
     font-size: 0.72rem;
     font-weight: 800;
     line-height: 1rem;
@@ -1359,7 +651,7 @@
 
 .tw-detail-leg-route {
     margin-top: 0.1rem;
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 1rem;
     font-weight: 850;
     line-height: 1.25;
@@ -1374,8 +666,8 @@
 .tw-detail-leg-meta span,
 .tw-detail-segment-index {
     border-radius: 999px;
-    background: rgb(var(--tw-brand-rgb) / 0.06);
-    color: var(--tw-brand);
+    background: rgba(13, 24, 131, 0.06);
+    color: var(--tw-brand-blue);
     font-size: 0.7rem;
     font-weight: 750;
     line-height: 1rem;
@@ -1396,7 +688,7 @@
 }
 
 .tw-detail-airport-kicker {
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.68rem;
     font-weight: 750;
     text-transform: uppercase;
@@ -1404,7 +696,7 @@
 
 .tw-detail-airport-code {
     margin-top: 0.15rem;
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 1.3rem;
     font-weight: 850;
     line-height: 1;
@@ -1412,14 +704,14 @@
 
 .tw-detail-airport-time {
     margin-top: 0.3rem;
-    color: var(--tw-brand);
+    color: var(--tw-brand-blue);
     font-size: 0.83rem;
     font-weight: 750;
 }
 
 .tw-detail-airport-name {
     margin-top: 0.15rem;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.78rem;
     line-height: 1.3;
     overflow-wrap: anywhere;
@@ -1432,7 +724,7 @@
 .tw-detail-segments {
     display: grid;
     gap: 0;
-    border-top: 1px solid rgb(var(--tw-brand-rgb) / 0.08);
+    border-top: 1px solid rgba(13, 24, 131, 0.08);
 }
 
 .tw-detail-segment {
@@ -1443,7 +735,7 @@
 }
 
 .tw-detail-segment + .tw-detail-segment {
-    border-top: 1px solid rgb(var(--tw-brand-rgb) / 0.06);
+    border-top: 1px solid rgba(13, 24, 131, 0.06);
 }
 
 .tw-detail-segment-index {
@@ -1459,7 +751,7 @@
 }
 
 .tw-detail-segment-title {
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 0.86rem;
     font-weight: 800;
     line-height: 1.25;
@@ -1468,7 +760,7 @@
 
 .tw-detail-segment-sub,
 .tw-detail-segment-route {
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.76rem;
     line-height: 1.35;
     overflow-wrap: anywhere;
@@ -1486,10 +778,10 @@
 .tw-ticket-card,
 .tw-history-item,
 .tw-history-more {
-    border: 1px solid rgb(var(--tw-brand-rgb) / 0.1);
+    border: 1px solid rgba(13, 24, 131, 0.1);
     border-radius: 8px;
-    background: var(--tw-surface);
-    box-shadow: 0 10px 24px rgb(var(--tw-shadow-rgb) / 0.04);
+    background: #ffffff;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
 }
 
 .tw-ticket-card {
@@ -1508,7 +800,7 @@
 
 .tw-ticket-kicker,
 .tw-history-section-label {
-    color: var(--tw-accent);
+    color: var(--tw-brand-green);
     font-size: 0.7rem;
     font-weight: 800;
     line-height: 1rem;
@@ -1517,7 +809,7 @@
 
 .tw-ticket-title {
     margin-top: 0.1rem;
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 1.35rem;
     font-weight: 850;
     line-height: 1.15;
@@ -1542,7 +834,7 @@
     top: 1rem;
     bottom: -0.7rem;
     width: 1px;
-    background: rgb(var(--tw-brand-rgb) / 0.12);
+    background: rgba(13, 24, 131, 0.12);
 }
 
 .tw-ticket-step > span {
@@ -1551,19 +843,19 @@
     margin-top: 0.25rem;
     width: 0.72rem;
     height: 0.72rem;
-    border: 2px solid var(--tw-line-strong);
+    border: 2px solid #cbd5e1;
     border-radius: 999px;
-    background: var(--tw-surface);
+    background: #ffffff;
 }
 
 .tw-ticket-step.is-complete > span {
-    border-color: var(--tw-accent);
-    background: var(--tw-accent);
+    border-color: var(--tw-brand-green);
+    background: var(--tw-brand-green);
 }
 
 .tw-ticket-step strong {
     display: block;
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 0.84rem;
     font-weight: 800;
     line-height: 1.2;
@@ -1572,7 +864,7 @@
 .tw-ticket-step small {
     display: block;
     margin-top: 0.1rem;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.74rem;
     line-height: 1.25;
 }
@@ -1592,7 +884,7 @@
 
 .tw-ticket-metric span {
     display: block;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.67rem;
     font-weight: 750;
     line-height: 1;
@@ -1602,7 +894,7 @@
 .tw-ticket-metric strong {
     display: block;
     margin-top: 0.3rem;
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 0.8rem;
     font-weight: 800;
     line-height: 1.25;
@@ -1624,7 +916,7 @@
 }
 
 .tw-history-title {
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 0.92rem;
     font-weight: 850;
     line-height: 1.25;
@@ -1632,7 +924,7 @@
 
 .tw-history-date {
     margin-top: 0.15rem;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.74rem;
 }
 
@@ -1659,15 +951,15 @@
 }
 
 .tw-history-more summary span {
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 0.86rem;
     font-weight: 800;
 }
 
 .tw-history-more summary small {
     border-radius: 999px;
-    background: rgb(var(--tw-brand-rgb) / 0.06);
-    color: var(--tw-brand);
+    background: rgba(13, 24, 131, 0.06);
+    color: var(--tw-brand-blue);
     padding: 0.18rem 0.5rem;
     font-size: 0.68rem;
     font-weight: 750;
@@ -1677,7 +969,7 @@
 .tw-history-stack {
     display: grid;
     gap: 0.65rem;
-    border-top: 1px solid rgb(var(--tw-brand-rgb) / 0.08);
+    border-top: 1px solid rgba(13, 24, 131, 0.08);
     background: var(--tw-admin-muted-bg);
     padding: 0.75rem;
 }
@@ -1685,20 +977,20 @@
 .tw-action-context {
     display: grid;
     gap: 1rem;
-    border: 1px solid rgb(var(--tw-brand-rgb) / 0.1);
+    border: 1px solid rgba(13, 24, 131, 0.1);
     border-radius: 8px;
     background:
         linear-gradient(
             135deg,
-            rgb(var(--tw-brand-rgb) / 0.06),
-            rgb(var(--tw-accent-rgb) / 0.08)
+            rgba(13, 24, 131, 0.06),
+            rgba(0, 168, 90, 0.08)
         ),
-        var(--tw-surface);
+        #ffffff;
     padding: 1rem;
 }
 
 .tw-action-context-kicker {
-    color: var(--tw-accent);
+    color: var(--tw-brand-green);
     font-size: 0.72rem;
     font-weight: 800;
     text-transform: uppercase;
@@ -1706,14 +998,14 @@
 
 .tw-action-context-title {
     margin-top: 0.2rem;
-    color: var(--tw-brand);
+    color: var(--tw-brand-blue);
     font-size: 1.05rem;
     font-weight: 850;
 }
 
 .tw-action-context-sub {
     margin-top: 0.15rem;
-    color: var(--tw-muted);
+    color: #667085;
     font-size: 0.82rem;
 }
 
@@ -1723,7 +1015,7 @@
 }
 
 .tw-action-context dt {
-    color: var(--tw-muted);
+    color: #667085;
     font-size: 0.7rem;
     font-weight: 750;
     text-transform: uppercase;
@@ -1731,7 +1023,7 @@
 
 .tw-action-context dd {
     margin: 0.1rem 0 0;
-    color: var(--tw-ink);
+    color: #111827;
     font-size: 0.85rem;
     font-weight: 700;
     overflow-wrap: anywhere;
@@ -1750,11 +1042,11 @@
     height: 100%;
     flex-direction: column;
     gap: 1rem;
-    border: 1px solid rgb(var(--tw-brand-rgb) / 0.1);
+    border: 1px solid rgba(13, 24, 131, 0.1);
     border-radius: 8px;
-    background: var(--tw-surface);
+    background: #ffffff;
     padding: 1rem;
-    box-shadow: 0 12px 28px rgb(var(--tw-shadow-rgb) / 0.045);
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.045);
 }
 
 .tw-passenger-head {
@@ -1765,7 +1057,7 @@
 }
 
 .tw-passenger-name {
-    color: var(--tw-ink);
+    color: #111827;
     font-size: 0.98rem;
     font-weight: 850;
     line-height: 1.25;
@@ -1774,7 +1066,7 @@
 
 .tw-passenger-type {
     margin-top: 0.25rem;
-    color: var(--tw-brand);
+    color: var(--tw-brand-blue);
     font-size: 0.75rem;
     font-weight: 800;
     text-transform: uppercase;
@@ -1792,7 +1084,7 @@
 }
 
 .tw-passenger-doc-grid {
-    border-top: 1px solid rgb(var(--tw-brand-rgb) / 0.08);
+    border-top: 1px solid rgba(13, 24, 131, 0.08);
     padding-top: 1rem;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
 }
@@ -1802,7 +1094,7 @@
 }
 
 .tw-passenger-detail dt {
-    color: var(--tw-muted);
+    color: #667085;
     font-size: 0.7rem;
     font-weight: 800;
     line-height: 1.2;
@@ -1811,7 +1103,7 @@
 
 .tw-passenger-detail dd {
     margin: 0.25rem 0 0;
-    color: var(--tw-ink);
+    color: #111827;
     font-size: 0.88rem;
     font-weight: 700;
     line-height: 1.35;
@@ -1827,10 +1119,10 @@
 .tw-report-export-bar,
 .tw-report-panel,
 .tw-report-stat {
-    border: 1px solid rgb(var(--tw-brand-rgb) / 0.1);
+    border: 1px solid rgba(13, 24, 131, 0.1);
     border-radius: 8px;
-    background: var(--tw-surface);
-    box-shadow: 0 14px 35px rgb(var(--tw-shadow-rgb) / 0.045);
+    background: #ffffff;
+    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.045);
 }
 
 .tw-report-hero {
@@ -1840,14 +1132,14 @@
     background:
         linear-gradient(
             135deg,
-            rgb(var(--tw-brand-rgb) / 0.08),
-            rgb(var(--tw-accent-rgb) / 0.08)
+            rgba(13, 24, 131, 0.08),
+            rgba(0, 168, 90, 0.08)
         ),
-        var(--tw-surface);
+        #ffffff;
 }
 
 .tw-report-eyebrow {
-    color: var(--tw-accent);
+    color: var(--tw-brand-green);
     font-size: 0.75rem;
     font-weight: 850;
     text-transform: uppercase;
@@ -1857,7 +1149,7 @@
 .tw-report-export-bar h3,
 .tw-report-panel h3 {
     margin: 0;
-    color: var(--tw-brand);
+    color: var(--tw-brand-blue);
     font-weight: 850;
     letter-spacing: 0;
 }
@@ -1872,7 +1164,7 @@
 .tw-report-export-bar p,
 .tw-report-panel p {
     margin: 0.25rem 0 0;
-    color: var(--tw-muted);
+    color: #667085;
     font-size: 0.875rem;
 }
 
@@ -1883,7 +1175,7 @@
 
 .tw-report-filters label span {
     display: block;
-    color: var(--tw-text);
+    color: #344054;
     font-size: 0.78rem;
     font-weight: 750;
 }
@@ -1891,11 +1183,11 @@
 .tw-report-filters input {
     margin-top: 0.25rem;
     width: 100%;
-    border: 1px solid var(--tw-line-strong);
+    border: 1px solid #d0d5dd;
     border-radius: 8px;
-    background: var(--tw-surface);
+    background: #ffffff;
     padding: 0.55rem 0.7rem;
-    color: var(--tw-ink);
+    color: #111827;
     font-size: 0.9rem;
 }
 
@@ -1916,7 +1208,7 @@
     display: inline-flex;
     align-items: center;
     border-radius: 8px;
-    background: var(--tw-brand);
+    background: var(--tw-brand-blue);
     padding: 0.5rem 0.75rem;
     color: #ffffff;
     font-size: 0.82rem;
@@ -1934,30 +1226,30 @@
 }
 
 .tw-report-stat {
-    border-left: 4px solid var(--tw-brand);
+    border-left: 4px solid var(--tw-brand-blue);
     padding: 1rem;
 }
 
 .tw-report-stat-green {
-    border-left-color: var(--tw-accent);
+    border-left-color: var(--tw-brand-green);
 }
 
 .tw-report-stat-amber {
-    border-left-color: var(--tw-warning-solid);
+    border-left-color: #f59e0b;
 }
 
 .tw-report-stat-red {
-    border-left-color: var(--tw-danger);
+    border-left-color: #dc2626;
 }
 
 .tw-report-stat-slate {
-    border-left-color: var(--tw-muted);
+    border-left-color: #64748b;
 }
 
 .tw-report-stat span,
 .tw-report-stat small {
     display: block;
-    color: var(--tw-muted);
+    color: #667085;
     font-size: 0.8rem;
     font-weight: 700;
 }
@@ -1965,7 +1257,7 @@
 .tw-report-stat strong {
     display: block;
     margin-top: 0.35rem;
-    color: var(--tw-ink);
+    color: #111827;
     font-size: 1.35rem;
     font-weight: 850;
     line-height: 1.15;
@@ -1986,14 +1278,14 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
-    border-bottom: 1px solid rgb(var(--tw-brand-rgb) / 0.08);
+    border-bottom: 1px solid rgba(13, 24, 131, 0.08);
     padding: 1rem;
 }
 
 .tw-report-panel header > a {
     flex-shrink: 0;
-    background: rgb(var(--tw-brand-rgb) / 0.08);
-    color: var(--tw-brand);
+    background: rgba(13, 24, 131, 0.08);
+    color: var(--tw-brand-blue);
 }
 
 .tw-report-table-wrap {
@@ -2008,7 +1300,7 @@
 
 .tw-report-table-wrap th {
     padding: 0.8rem 1rem;
-    color: var(--tw-muted);
+    color: #667085;
     font-size: 0.72rem;
     font-weight: 850;
     text-align: left;
@@ -2017,22 +1309,22 @@
 }
 
 .tw-report-table-wrap td {
-    border-top: 1px solid var(--tw-line-soft);
+    border-top: 1px solid #eef2f7;
     padding: 0.8rem 1rem;
-    color: var(--tw-text);
+    color: #344054;
     vertical-align: top;
 }
 
 .tw-report-table-wrap td strong {
     display: block;
-    color: var(--tw-ink);
+    color: #111827;
     font-weight: 800;
 }
 
 .tw-report-table-wrap td span:not(.tw-report-badge) {
     display: block;
     margin-top: 0.15rem;
-    color: var(--tw-muted);
+    color: #667085;
     font-size: 0.78rem;
 }
 
@@ -2040,9 +1332,9 @@
     display: inline-flex;
     width: fit-content;
     border-radius: 999px;
-    background: var(--tw-neutral-bg);
+    background: rgba(100, 116, 139, 0.12);
     padding: 0.2rem 0.5rem;
-    color: var(--tw-text);
+    color: #334155;
     font-size: 0.72rem;
     font-weight: 800;
 }
@@ -2052,22 +1344,22 @@
 }
 
 .tw-report-badge-good {
-    background: rgb(var(--tw-accent-rgb) / 0.12);
-    color: var(--tw-success);
+    background: rgba(0, 168, 90, 0.12);
+    color: #006b3a;
 }
 
 .tw-report-badge-warn {
-    background: var(--tw-warning-bg);
-    color: var(--tw-warning);
+    background: rgba(245, 158, 11, 0.14);
+    color: #92400e;
 }
 
 .tw-report-badge-bad {
-    background: var(--tw-danger-bg);
-    color: var(--tw-danger);
+    background: rgba(220, 38, 38, 0.12);
+    color: #991b1b;
 }
 
 .tw-report-empty {
-    color: var(--tw-muted) !important;
+    color: #667085 !important;
     text-align: center;
 }
 
@@ -2114,7 +1406,7 @@
         display: block;
         position: relative;
         height: 1px;
-        background: linear-gradient(90deg, rgb(var(--tw-accent-rgb) / 0.1), rgb(var(--tw-accent-rgb) / 0.75), rgb(var(--tw-brand-rgb) / 0.16));
+        background: linear-gradient(90deg, rgba(0, 168, 90, 0.1), rgba(0, 168, 90, 0.75), rgba(13, 24, 131, 0.16));
     }
 
     .tw-booking-route-line span::after {
@@ -2124,8 +1416,8 @@
         right: 0;
         width: 0.45rem;
         height: 0.45rem;
-        border-top: 1px solid rgb(var(--tw-accent-rgb) / 0.85);
-        border-right: 1px solid rgb(var(--tw-accent-rgb) / 0.85);
+        border-top: 1px solid rgba(0, 168, 90, 0.85);
+        border-right: 1px solid rgba(0, 168, 90, 0.85);
         transform: translateY(-50%) rotate(45deg);
     }
 
@@ -2177,7 +1469,7 @@
         display: block;
         width: 100%;
         height: 1px;
-        background: linear-gradient(90deg, rgb(var(--tw-accent-rgb) / 0.1), rgb(var(--tw-accent-rgb) / 0.75), rgb(var(--tw-brand-rgb) / 0.16));
+        background: linear-gradient(90deg, rgba(0, 168, 90, 0.1), rgba(0, 168, 90, 0.75), rgba(13, 24, 131, 0.16));
     }
 
     .tw-detail-path-line span::after {
@@ -2187,8 +1479,8 @@
         right: 0;
         width: 0.45rem;
         height: 0.45rem;
-        border-top: 1px solid rgb(var(--tw-accent-rgb) / 0.85);
-        border-right: 1px solid rgb(var(--tw-accent-rgb) / 0.85);
+        border-top: 1px solid rgba(0, 168, 90, 0.85);
+        border-right: 1px solid rgba(0, 168, 90, 0.85);
         transform: translateY(-50%) rotate(45deg);
     }
 
@@ -2227,6 +1519,17 @@
     }
 }
 
+.fi-input-wrp,
+.fi-fo-field-wrp input,
+.fi-fo-field-wrp select,
+.fi-fo-field-wrp textarea {
+    border-radius: 8px;
+}
+
+.fi-input-wrp:focus-within {
+    box-shadow: 0 0 0 3px rgba(0, 168, 90, 0.16);
+}
+
 .tw-journey-cell {
     min-width: 18rem;
     max-width: 24rem;
@@ -2236,11 +1539,11 @@
 
 .tw-journey-kind {
     width: fit-content;
-    border: 1px solid rgb(var(--tw-brand-rgb) / 0.12);
+    border: 1px solid rgba(13, 24, 131, 0.12);
     border-radius: 999px;
-    background: rgb(var(--tw-brand-rgb) / 0.04);
+    background: rgba(13, 24, 131, 0.04);
     padding: 0.125rem 0.5rem;
-    color: var(--tw-brand);
+    color: var(--tw-brand-blue);
     font-size: 0.66rem;
     font-weight: 700;
     line-height: 1rem;
@@ -2261,7 +1564,7 @@
     top: 1rem;
     bottom: -0.45rem;
     width: 1px;
-    background: linear-gradient(180deg, rgb(var(--tw-accent-rgb) / 0.45), rgb(var(--tw-brand-rgb) / 0.08));
+    background: linear-gradient(180deg, rgba(0, 168, 90, 0.45), rgba(13, 24, 131, 0.08));
 }
 
 .tw-journey-dot {
@@ -2270,9 +1573,9 @@
     margin-top: 0.28rem;
     width: 0.625rem;
     height: 0.625rem;
-    border: 2px solid rgb(var(--tw-accent-rgb) / 0.75);
+    border: 2px solid rgba(0, 168, 90, 0.75);
     border-radius: 999px;
-    background: var(--tw-surface);
+    background: #ffffff;
 }
 
 .tw-journey-leg-main {
@@ -2282,12 +1585,9 @@
 
 .tw-journey-leg-top {
     display: flex;
-    align-items: baseline;
-    /* space-between threw the leg label ("Flight", "Outbound") to the far edge
-       of the cell, where it read as a stray column header sitting between
-       Journey and Airline. It belongs beside the route it names. */
-    justify-content: flex-start;
-    gap: 0.5rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
 }
 
 .tw-journey-route {
@@ -2295,21 +1595,21 @@
     min-width: 0;
     align-items: center;
     gap: 0.35rem;
-    color: var(--tw-ink);
+    color: var(--tw-admin-text);
     font-size: 0.875rem;
     font-weight: 700;
     line-height: 1.15rem;
 }
 
 .tw-journey-arrow {
-    color: var(--tw-accent);
+    color: var(--tw-brand-green);
     font-size: 0.72rem;
     font-weight: 800;
 }
 
 .tw-journey-label {
     flex-shrink: 0;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.68rem;
     font-weight: 600;
     line-height: 1rem;
@@ -2317,7 +1617,7 @@
 
 .tw-journey-date {
     margin-top: 0.05rem;
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
     font-size: 0.73rem;
     line-height: 1rem;
 }
@@ -2334,112 +1634,157 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.35rem;
-    color: var(--tw-text);
+    color: #344054;
     font-size: 0.74rem;
     line-height: 1.05rem;
 }
 
 .tw-journey-time {
-    color: var(--tw-ink);
+    color: #101828;
     font-weight: 650;
 }
 
 .tw-journey-cabin {
-    color: var(--tw-muted);
+    color: var(--tw-admin-muted);
 }
 
-/* ─── 9. Responsive ─────────────────────────────────────────────────────────
-   The admin is used on phones by support staff checking a booking, so the
-   breakpoints below are about making narrow screens usable rather than about
-   shrinking the desktop layout. */
-
-/* Phones */
-@media (max-width: 639px) {
-    .fi-page-content,
-    .fi-main {
-        padding-inline: 0.875rem;
-    }
-
-    .fi-header {
-        flex-wrap: wrap;
-    }
-
-    .fi-header-actions-ctn {
-        width: 100%;
-    }
-
-    .fi-header-actions-ctn .fi-btn {
-        flex: 1 1 auto;
-        justify-content: center;
-    }
-
-    .fi-section,
-    .fi-ta-ctn,
-    .fi-wi-stats-overview-stat {
-        border-radius: var(--tw-r-sm);
-    }
-
-    .fi-ta-header-toolbar {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .fi-ta-search-field {
-        min-width: 0;
-        flex: 1 1 100%;
-    }
-
-    /* A modal that cannot be dismissed because its footer is off-screen is
-       worse than a cramped one. */
-    .fi-modal-footer-actions {
-        flex-wrap: wrap;
-    }
-
-    .fi-modal-footer-actions .fi-btn {
-        flex: 1 1 auto;
-        justify-content: center;
-    }
-
-    .fi-pagination {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .fi-breadcrumbs {
-        display: none;
-    }
+/* Fix for sign-in button cutoff on login page */
+.fi-btn,
+button.fi-btn,
+.fi-form-container .fi-btn {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* Tablets and small laptops */
-@media (max-width: 1023px) {
-    .fi-wi-chart-canvas-ctn {
-        max-height: 14rem;
-    }
-
-    .fi-simple-main {
-        margin-inline: 0.875rem;
-    }
+.fi-form .fi-btn {
+    min-height: 2.5rem;
 }
 
-/* ─── Misc ──────────────────────────────────────────────────────────────────*/
-
-/* One focus treatment across the panel, so keyboard users get the same signal
-   on a link, a button and a table row. */
-:where(.fi-body) :focus-visible {
-    outline: 2px solid var(--tw-brand);
-    outline-offset: 2px;
+.fi-dropdown-panel {
+    border-radius: 8px;
+    border-color: rgba(13, 24, 131, 0.1);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
 }
 
-.fi-body ::selection {
-    background: rgb(var(--tw-brand-rgb) / 0.2);
+.fi-wi-stats-overview-stat-value {
+    color: var(--tw-brand-blue);
+    font-weight: 800;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .fi-body *,
-    .fi-body *::before,
-    .fi-body *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
+.fi-wi-stats-overview-stat-description {
+    color: var(--tw-admin-muted);
+}
+
+.dark .fi-body {
+    background: #070b1f;
+}
+
+.dark .fi-sidebar,
+.dark .fi-topbar,
+.dark .fi-section,
+.dark .fi-ta,
+.dark .fi-wi-stats-overview-stat,
+.dark .fi-modal-window {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: #0b1028;
+}
+
+.dark .tw-booking-hero,
+.dark .tw-flight-overview,
+.dark .tw-detail-leg,
+.dark .tw-passenger-card,
+.dark .tw-ticket-card,
+.dark .tw-history-item,
+.dark .tw-history-more {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: #0b1028;
+}
+
+.dark .tw-booking-route-board {
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.dark .tw-booking-route,
+.dark .tw-booking-price,
+.dark .tw-booking-amount strong,
+.dark .tw-booking-leg-head strong,
+.dark .tw-booking-airport strong,
+.dark .tw-booking-fact strong,
+.dark .tw-timeline-value,
+.dark .tw-flight-name,
+.dark .tw-flight-fact strong,
+.dark .tw-detail-leg-route,
+.dark .tw-detail-airport-code,
+.dark .tw-detail-segment-title,
+.dark .tw-ticket-title,
+.dark .tw-ticket-step strong,
+.dark .tw-ticket-metric strong,
+.dark .tw-history-title,
+.dark .tw-history-more summary span,
+.dark .tw-passenger-name,
+.dark .tw-passenger-detail dd {
+    color: #f8fafc;
+}
+
+.dark .tw-booking-meta span,
+.dark .tw-booking-trip-pill,
+.dark .tw-booking-amount,
+.dark .tw-booking-leg,
+.dark .tw-flight-fact,
+.dark .tw-detail-leg-meta span,
+.dark .tw-detail-segment-index,
+.dark .tw-ticket-metric,
+.dark .tw-history-more summary small {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.dark .tw-flight-sub,
+.dark .tw-flight-fact span,
+.dark .tw-booking-subtitle,
+.dark .tw-booking-amount span,
+.dark .tw-booking-leg-meta,
+.dark .tw-booking-airport span,
+.dark .tw-booking-airport small,
+.dark .tw-booking-fact span,
+.dark .tw-detail-airport-kicker,
+.dark .tw-detail-airport-name,
+.dark .tw-detail-segment-sub,
+.dark .tw-detail-segment-route,
+.dark .tw-ticket-step small,
+.dark .tw-ticket-metric span,
+.dark .tw-history-date {
+    color: #94a3b8;
+}
+
+.dark .tw-ticket-step > span {
+    background: #0b1028;
+}
+
+.dark .tw-history-stack {
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.dark .tw-journey-kind {
+    border-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: #dbe4ff;
+}
+
+.dark .tw-journey-dot {
+    background: #0b1028;
+}
+
+.dark .tw-journey-route,
+.dark .tw-journey-time {
+    color: #f8fafc;
+}
+
+.dark .tw-journey-flight {
+    color: #cbd5e1;
 }

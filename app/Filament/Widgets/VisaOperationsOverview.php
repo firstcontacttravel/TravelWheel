@@ -22,17 +22,6 @@ class VisaOperationsOverview extends StatsOverviewWidget
         return auth()->user()?->canViewVisaOperations() ?? false;
     }
 
-    /*
-     * Filament's default for a stats overview is ['@xl' => 3, '!@lg' => 3] —
-     * three across at every container width, so on a phone each tile was about
-     * 110px wide and "NGN 370,009.40" broke across two lines and overflowed.
-     * One column on a phone, widening with the space available.
-     */
-    protected function getColumns(): int | array | null
-    {
-        return ['default' => 1, '@sm' => 2, '@3xl' => 3, '@6xl' => 4];
-    }
-
     protected function getStats(): array
     {
         $url = VisaApplicationResource::getUrl();
