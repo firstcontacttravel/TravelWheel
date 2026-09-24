@@ -295,6 +295,14 @@
     white-space: nowrap;
 }
 
+/* Intermediate stops step back so the endpoints stay dominant. A return trip
+   stores as LOS - IST - DXB - IST - LOS; giving all five codes equal weight
+   makes a cell you have to read rather than glance at. */
+.tc-route-via {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+}
+
 .tc-route-line {
     position: relative;
     flex: 1 1 auto;

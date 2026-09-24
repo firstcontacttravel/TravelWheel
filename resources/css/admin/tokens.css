@@ -226,8 +226,13 @@
  * in any later phase, should need a `.tc-dark` variant — if one does, that is
  * a sign a component reached past the roles into the palette.
  */
+/* Two hooks, one token set. Inside the panel Filament's dark-mode.js toggles
+   `.dark` on <html> and that is not ours to rename; the standalone specimen has
+   no Filament, so it uses `.tc-dark`. Both are class selectors of the same
+   specificity as the :root block above and come later in the file, so they win
+   on source order. */
 .tc-dark,
-:root:where(.tc-dark) {
+.dark {
     --tc-bg-canvas: var(--tc-n-1000);
     --tc-bg-surface: var(--tc-n-950);
     --tc-bg-raised: var(--tc-n-900);

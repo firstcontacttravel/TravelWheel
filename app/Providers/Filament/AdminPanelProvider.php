@@ -2,15 +2,18 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Dashboard;
+use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use App\Filament\Pages\Dashboard;
+use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Enums\ThemeMode;
+use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -20,6 +23,35 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
+    /**
+     * An indigo ramp anchored so shade 600 is exactly #303191, the brand navy
+     * from config/brand.php.
+     *
+     * Not handed to Color::hex(), which keeps only the HUE of what it is given
+     * and rebuilds lightness from a fixed template: #303191 (oklch L 0.378)
+     * came back as shade 600 = L 0.598, and since Filament paints solid buttons
+     * with shade 600, every primary button in the panel rendered as a pale
+     * periwinkle that read as disabled. The brand navy never appeared at all.
+     *
+     * These are the same values the console's --tc-brand-* tokens carry;
+     * ConsoleShellTest asserts the two stay in step.
+     *
+     * @var array<int, string>
+     */
+    private const BRAND_RAMP = [
+        50 => 'oklch(0.970 0.018 275.68)',
+        100 => 'oklch(0.938 0.036 275.68)',
+        200 => 'oklch(0.880 0.068 275.68)',
+        300 => 'oklch(0.800 0.104 275.68)',
+        400 => 'oklch(0.640 0.155 275.68)',
+        500 => 'oklch(0.500 0.170 275.68)',
+        600 => 'oklch(0.378 0.154 275.68)',
+        700 => 'oklch(0.330 0.134 275.68)',
+        800 => 'oklch(0.285 0.112 275.68)',
+        900 => 'oklch(0.245 0.092 275.68)',
+        950 => 'oklch(0.180 0.070 275.68)',
+    ];
+
     public function panel(Panel $panel): Panel
     {
         return $panel
@@ -28,13 +60,40 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
-            ->brandName('TravelWheel Admin')
+            ->brandName('TravelWheel')
             ->defaultThemeMode(ThemeMode::Light)
+            // Operational tables carry ten columns; the console uses the whole
+            // window rather than Filament's centred reading column.
+            ->maxContentWidth(Width::Full)
+            ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
             ->colors([
-                'primary' => Color::hex('#0d1883'),
-                'success' => Color::hex('#00a85a'),
-                'info' => Color::hex('#2563eb'),
+                'primary' => self::BRAND_RAMP,
+                'success' => Color::hex('#00a859'),
+                'danger' => Color::hex('#d92d20'),
+                'warning' => Color::hex('#f79009'),
+                'info' => Color::hex('#2e90fa'),
                 'gray' => Color::Slate,
+            ])
+            /*
+             * The console navigates by GROUP from a 56px icon rail, so every
+             * group needs an icon — an icon rail with blank squares in it is
+             * just a worse sidebar.
+             *
+             * Order is by how often ops opens them. Discovered alphabetically,
+             * Flight Bookings — the busiest screen in the panel — sat below Air
+             * Cargo and Car Hire.
+             */
+            ->navigationGroups([
+                NavigationGroup::make('Operations')->icon(Heroicon::OutlinedPaperAirplane),
+                NavigationGroup::make('Visa Operations')->icon(Heroicon::OutlinedIdentification),
+                NavigationGroup::make('Support Requests')->icon(Heroicon::OutlinedLifebuoy),
+                NavigationGroup::make('Insights')->icon(Heroicon::OutlinedChartBar),
+                NavigationGroup::make('Air Cargo')->icon(Heroicon::OutlinedCube),
+                NavigationGroup::make('Car Hire & Transfer')->icon(Heroicon::OutlinedTruck),
+                NavigationGroup::make('Visa Catalogue')->icon(Heroicon::OutlinedBookOpen),
+                NavigationGroup::make('Insurance')->icon(Heroicon::OutlinedShieldCheck),
+                NavigationGroup::make('Lounge')->icon(Heroicon::OutlinedSparkles),
+                NavigationGroup::make('Protocol')->icon(Heroicon::OutlinedUserGroup),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')

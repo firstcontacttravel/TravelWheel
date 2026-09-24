@@ -145,7 +145,7 @@
                                 <span class="sp-before-pill">{{ $b['queue'] }}</span>
                                 <span>
                                     <strong style="display:block;font-weight:700">{{ $b['ref'] }}</strong>
-                                    <span style="color:#667085;font-size:14px">{{ $b['from'] }} -&gt; {{ $b['to'] }} · {{ $b['airline'] }}</span>
+                                    <span style="color:#667085;font-size:14px">{{ implode(' -> ', $b['legs']) }} · {{ $b['airline'] }}</span>
                                 </span>
                                 <span style="white-space:nowrap">NGN {{ $b['amount'] }}</span>
                             </div>
@@ -168,9 +168,10 @@
                                 <span class="tc-mono tc-t-body">{{ $b['ref'] }}</span>
                                 <span class="tc-status tc-status-{{ $b['tone'] }} {{ $b['shape'] }} tc-t-small">{{ $b['queue'] }}</span>
                                 <span class="tc-route tc-t-body">
-                                    <span class="tc-mono">{{ $b['from'] }}</span>
-                                    <span class="tc-route-line"></span>
-                                    <span class="tc-mono">{{ $b['to'] }}</span>
+                                    @foreach ($b['legs'] as $leg)
+                                        @if (! $loop->first)<span class="tc-route-line"></span>@endif
+                                        <span class="tc-mono @unless ($loop->first || $loop->last) tc-route-via @endunless">{{ $leg }}</span>
+                                    @endforeach
                                 </span>
                                 <span class="tc-t-small tc-truncate">{{ $b['airline'] }}</span>
                                 <span class="tc-money tc-t-body sp-end">&#8358;{{ $b['amount'] }}</span>

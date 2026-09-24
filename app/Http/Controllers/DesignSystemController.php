@@ -123,35 +123,18 @@ class DesignSystemController extends Controller
         return ['rows' => $this->fallbackRows(), 'live' => false];
     }
 
-    /** @return array<string, string> */
+    /** @return array<string, mixed> */
     private function row(FlightBooking $booking): array
     {
-        $segments = (array) data_get($booking->flight_snapshot, 'segments', []);
-        $first = (array) ($segments[0] ?? []);
-        $last = (array) ($segments[array_key_last($segments) ?? 0] ?? []);
-
-        // Snapshots carry two shapes depending on the supplier that wrote them:
-        // TravelNext uses from/to, SkyLink writes airportOriginCode /
-        // airportDestinationCode. Reading only the first leaves half the rows
-        // showing an em dash.
-        $code = static function (array $segment, array $keys): string {
-            foreach ($keys as $key) {
-                $value = trim((string) ($segment[$key] ?? ''));
-
-                if ($value !== '' && $value !== '-') {
-                    return $value;
-                }
-            }
-
-            return '---';
-        };
-
         [$queue, $tone, $shape] = $this->queue($booking);
 
         return [
-            'ref' => (string) ($booking->booking_ref ?: '—'),
-            'from' => $code($first, ['from', 'airportOriginCode', 'origin']),
-            'to' => $code($last, ['to', 'airportDestinationCode', 'destination']),
+            'ref' => (string) ($booking->booking_ref ?: '---'),
+            // The stored route column, not flight_snapshot.segments: a
+            // multi-city booking keeps its legs in .multiLegs and leaves
+            // .segments empty, so reading segments showed those trips with no
+            // route at all.
+            'legs' => $booking->routeLegs() ?: ['---'],
             'airline' => (string) ($booking->airline ?: 'Unknown airline'),
             'amount' => number_format((float) $booking->total_price, 2),
             'queue' => $queue,
@@ -187,22 +170,22 @@ class DesignSystemController extends Controller
         return ['Pending payment', 'idle', 'tc-status-pending'];
     }
 
-    /** @return Collection<int, array<string, string>> */
+    /** @return Collection<int, array<string, mixed>> */
     private function fallbackRows(): Collection
     {
         return collect([
-            ['TW-A35H22EI', 'LOS', 'DXB', 'Egyptair', '925,023.49', 'Ticketed', 'positive', ''],
-            ['TW-1B747VAP', 'LOS', 'DXB', 'Egyptair', '925,023.49', 'Pending payment', 'idle', 'tc-status-pending'],
-            ['TW-KLZOZ1Y', 'LOS', 'DXB', 'Turkish Airlines', '872,688.13', 'Ready to ticket', 'info', 'tc-status-progress'],
-            ['TW-AP6P911G', 'LOS', 'DOH', 'Turkish Airlines', '872,688.13', 'Ticketing failed', 'critical', ''],
-            ['TW-2N0Z0DHO', 'SHJ', 'DOH', 'Air Arabia', '284,194.33', 'Awaiting transfer', 'warning', 'tc-status-progress'],
-            ['TW-CIR3U56T', 'LOS', 'DXB', 'Saudi Arabian Airlines', '874,845.91', 'Ticketed', 'positive', ''],
-            ['TW-CLSUVL7A', 'LOS', 'DOH', 'Egyptair', '863,205.79', 'Ready to ticket', 'info', 'tc-status-progress'],
-            ['TW-BHM26MVW', 'LOS', 'ABV', 'Transaero Airlines', '255,566.89', 'Ticketed', 'positive', ''],
-            ['TW-10LYE2M5', 'LOS', 'ABV', 'Transaero Airlines', '254,821.48', 'Awaiting transfer', 'warning', 'tc-status-progress'],
+            ['TW-A35H22EI', ['LOS', 'DXB'], 'Egyptair', '925,023.49', 'Ticketed', 'positive', ''],
+            ['TW-1B747VAP', ['LOS', 'DXB'], 'Egyptair', '925,023.49', 'Pending payment', 'idle', 'tc-status-pending'],
+            ['TW-KLZOZ1Y', ['LOS', 'DXB'], 'Turkish Airlines', '872,688.13', 'Ready to ticket', 'info', 'tc-status-progress'],
+            ['TW-BHM26MVW', ['LOS', 'ABV', 'LOS'], 'Transaero Airlines', '255,566.89', 'Ticketed', 'positive', ''],
+            ['TW-2N0Z0DHO', ['SHJ', 'DOH'], 'Air Arabia', '284,194.33', 'Awaiting transfer', 'warning', 'tc-status-progress'],
+            ['TW-CIR3U56T', ['LOS', 'DXB'], 'Saudi Arabian Airlines', '874,845.91', 'Ticketed', 'positive', ''],
+            ['TW-CLSUVL7A', ['LOS', 'DOH'], 'Egyptair', '863,205.79', 'Ready to ticket', 'info', 'tc-status-progress'],
+            ['TW-AP6P911G', ['LOS', 'DOH'], 'Turkish Airlines', '872,688.13', 'Ticketing failed', 'critical', ''],
+            ['TW-10LYE2M5', ['LOS', 'ABV'], 'Transaero Airlines', '254,821.48', 'Awaiting transfer', 'warning', 'tc-status-progress'],
         ])->map(fn (array $r): array => [
-            'ref' => $r[0], 'from' => $r[1], 'to' => $r[2], 'airline' => $r[3],
-            'amount' => $r[4], 'queue' => $r[5], 'tone' => $r[6], 'shape' => $r[7],
+            'ref' => $r[0], 'legs' => $r[1], 'airline' => $r[2],
+            'amount' => $r[3], 'queue' => $r[4], 'tone' => $r[5], 'shape' => $r[6],
         ]);
     }
 }

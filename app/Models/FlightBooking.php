@@ -161,6 +161,30 @@ class FlightBooking extends Model
         return $this->adult_count + $this->child_count + $this->infant_count;
     }
 
+    /**
+     * The airport codes of this booking's journey, in order.
+     *
+     * The `route` column is written once at booking time and is the only field
+     * that is correct for all three trip types. Re-deriving a route from
+     * flight_snapshot.segments looks equivalent but is not: on a multi-city
+     * booking the legs live in .multiLegs and .segments is deliberately empty,
+     * so anything reading .segments shows a multi-city trip as having no route
+     * at all.
+     *
+     * 119 of the stored routes separate codes with "→" and 2 with "->", so both
+     * are accepted. Callers get the codes rather than the string because the
+     * console draws its connectors — "→" (U+2192) is in none of Inter's
+     * subsets, so a typed arrow falls back to a system font mid-route.
+     *
+     * @return list<string>
+     */
+    public function routeLegs(): array
+    {
+        $parts = preg_split('/\s*(?:→|->|—|–)\s*/u', (string) $this->route) ?: [];
+
+        return array_values(array_filter(array_map('trim', $parts), fn (string $leg): bool => $leg !== ''));
+    }
+
     public function paymentVerificationRecords(): HasMany
     {
         return $this->hasMany(PaymentVerificationRecord::class);

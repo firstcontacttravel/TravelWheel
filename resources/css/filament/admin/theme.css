@@ -1,168 +1,51 @@
 @import "tailwindcss" source(none);
 @import "../../../../vendor/filament/filament/resources/css/theme.css";
 
+/*
+ * TravelWheel Console.
+ *
+ * The design system is imported FIRST so its tokens exist before anything
+ * below consumes them. Phase 2 replaced this file's old shell rules — body,
+ * sidebar, topbar, header — with resources/css/admin/shell.css, and replaced
+ * the markup they targeted by forking three of Filament's layout views.
+ *
+ * A third of what was here targeted Filament v3 class names that v5 no longer
+ * emits (.fi-sidebar-nav-item, .fi-tabs-item-active, .fi-ta-text-item-label),
+ * so those rules had never matched anything.
+ *
+ * What remains below is the tw-* component CSS for the booking, flight,
+ * ticket, passenger and report views. Those screens are rebuilt on the system
+ * in Phases 6 and 7, and this file goes away with them.
+ */
+@import "../../admin/system.css";
+
 @source '../../../../app/Filament/**/*.php';
 @source '../../../../app/Support/Admin/**/*.php';
 @source '../../../../resources/views/filament/**/*.blade.php';
 @source '../../../../resources/views/livewire/**/*.blade.php';
+@source '../../../../resources/views/vendor/filament-panels/**/*.blade.php';
 @source '../../../../vendor/filament/**/*.blade.php';
 
 @variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans:
-        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-        "Segoe UI", sans-serif;
+    --font-sans: "Inter Variable", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono Variable", ui-monospace, Consolas, monospace;
 }
 
+/*
+ * Legacy aliases. The tw-* components below still reference these names; they
+ * now resolve to console role tokens, so those screens follow the system's
+ * light and dark modes instead of carrying their own palette.
+ */
 :root {
-    --tw-brand-blue: #0d1883;
-    --tw-brand-green: #00a85a;
-    --tw-admin-bg: #ffffff;
-    --tw-admin-muted-bg: #f7f9fc;
-    --tw-admin-border: #e5e7eb;
-    --tw-admin-text: #111827;
-    --tw-admin-muted: #667085;
-}
-
-.fi-body {
-    background:
-        linear-gradient(
-            180deg,
-            rgba(13, 24, 131, 0.035),
-            rgba(255, 255, 255, 0) 18rem
-        ),
-        var(--tw-admin-bg);
-    color: var(--tw-admin-text);
-}
-
-.fi-sidebar {
-    border-right: 1px solid rgba(13, 24, 131, 0.08);
-    background: #ffffff;
-    box-shadow: 8px 0 30px rgba(15, 23, 42, 0.035);
-}
-
-.fi-sidebar-header {
-    border-bottom: 1px solid rgba(13, 24, 131, 0.08);
-}
-
-.fi-logo,
-.fi-sidebar-header .fi-logo {
-    color: var(--tw-brand-blue);
-    font-weight: 800;
-}
-
-.fi-sidebar-nav-item a {
-    border-radius: 8px;
-}
-
-.fi-sidebar-nav-item-active a {
-    background: rgba(13, 24, 131, 0.08);
-    color: var(--tw-brand-blue);
-}
-
-.fi-sidebar-nav-item-active .fi-icon {
-    color: var(--tw-brand-green);
-}
-
-.fi-topbar {
-    border-bottom: 1px solid rgba(13, 24, 131, 0.08);
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(16px);
-}
-
-.fi-main,
-.fi-page {
-    background: transparent;
-}
-
-.fi-header-heading {
-    color: var(--tw-brand-blue);
-    font-weight: 800;
-    letter-spacing: 0;
-}
-
-.fi-header-subheading {
-    color: var(--tw-admin-muted);
-}
-
-.fi-section,
-.fi-ta,
-.fi-wi-stats-overview-stat,
-.fi-modal-window {
-    border: 1px solid var(--tw-admin-border);
-    border-radius: 8px;
-    background: #ffffff;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
-}
-
-.fi-section-header {
-    border-bottom-color: rgba(13, 24, 131, 0.08);
-}
-
-.fi-section-header-heading {
-    color: #101828;
-    font-weight: 700;
-}
-
-.fi-btn {
-    border-radius: 8px;
-    font-weight: 700;
-    letter-spacing: 0;
-}
-
-.fi-btn.fi-color-primary {
-    box-shadow: 0 10px 22px rgba(13, 24, 131, 0.16);
-}
-
-.fi-btn.fi-color-success {
-    box-shadow: 0 10px 22px rgba(0, 168, 90, 0.14);
-}
-
-.fi-badge {
-    border-radius: 999px;
-    font-weight: 700;
-}
-
-.fi-ta-header,
-.fi-ta-content,
-.fi-ta-table thead {
-    background: #ffffff;
-}
-
-.fi-ta-row {
-    transition: background-color 120ms ease;
-}
-
-.fi-ta-row:hover {
-    background: rgba(13, 24, 131, 0.025);
-}
-
-.fi-tabs {
-    gap: 0.35rem;
-    border-radius: 8px;
-}
-
-.fi-tabs-item {
-    border-radius: 8px;
-}
-
-.fi-tabs-item-active {
-    background: rgba(13, 24, 131, 0.08);
-    color: var(--tw-brand-blue);
-}
-
-.fi-ta-header-heading {
-    color: var(--tw-brand-blue);
-    font-weight: 800;
-}
-
-.fi-ta-header-description {
-    color: var(--tw-admin-muted);
-}
-
-.fi-ta-cell .fi-ta-text-item-label {
-    letter-spacing: 0;
+    --tw-brand-blue: var(--tc-brand-600);
+    --tw-brand-green: var(--tc-accent-500);
+    --tw-admin-bg: var(--tc-bg-surface);
+    --tw-admin-muted-bg: var(--tc-bg-sunken);
+    --tw-admin-border: var(--tc-border-subtle);
+    --tw-admin-text: var(--tc-text-primary);
+    --tw-admin-muted: var(--tc-text-secondary);
 }
 
 .tw-booking-hero {
@@ -1648,22 +1531,13 @@
     color: var(--tw-admin-muted);
 }
 
-/* Fix for sign-in button cutoff on login page */
-.fi-btn,
-button.fi-btn,
-.fi-form-container .fi-btn {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.fi-form .fi-btn {
-    min-height: 2.5rem;
-}
+/*
+ * Removed in Phase 2: a `.fi-btn { width: 100% }` written to fix the cramped
+ * sign-in button, which stretched EVERY button in the panel — table actions,
+ * header actions, and the pagination "Next" control across its whole row.
+ * The login screen is rebuilt on the system in Phase 7; until then it keeps
+ * Filament's own button width, which is merely plain rather than broken.
+ */
 
 .fi-dropdown-panel {
     border-radius: 8px;
@@ -1680,19 +1554,16 @@ button.fi-btn,
     color: var(--tw-admin-muted);
 }
 
-.dark .fi-body {
-    background: #070b1f;
-}
-
-.dark .fi-sidebar,
-.dark .fi-topbar,
-.dark .fi-section,
-.dark .fi-ta,
-.dark .fi-wi-stats-overview-stat,
-.dark .fi-modal-window {
-    border-color: rgba(255, 255, 255, 0.08);
-    background: #0b1028;
-}
+/*
+ * Removed in Phase 2: hand-picked dark surfaces for .fi-body, .fi-sidebar,
+ * .fi-topbar, .fi-section, .fi-ta, .fi-wi-stats-overview-stat and
+ * .fi-modal-window. Those are now role tokens that remap under `.dark`, and
+ * these rules were overriding the shell with a second, slightly different
+ * near-black (#070b1f against the token's #0b0d1a).
+ *
+ * The `.dark .tw-…` rules below stay until Phases 6 and 7 rebuild those
+ * screens on the system.
+ */
 
 .dark .tw-booking-hero,
 .dark .tw-flight-overview,
