@@ -21,7 +21,7 @@ class ReportingAlertResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedExclamationTriangle;
     protected static string|\UnitEnum|null $navigationGroup = 'Insights';
     protected static ?string $navigationLabel = 'Report Alerts';
-    protected static ?int $navigationSort = 43;
+    protected static ?int $navigationSort = 60;
 
     public static function table(Table $table): Table
     {

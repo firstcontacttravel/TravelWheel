@@ -18,7 +18,7 @@ class ReportingExportAuditResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentArrowDown;
     protected static string|\UnitEnum|null $navigationGroup = 'Insights';
     protected static ?string $navigationLabel = 'Export Audit';
-    protected static ?int $navigationSort = 44;
+    protected static ?int $navigationSort = 65;
 
     public static function table(Table $table): Table
     {

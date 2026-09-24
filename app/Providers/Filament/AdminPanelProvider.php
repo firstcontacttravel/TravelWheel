@@ -79,21 +79,33 @@ class AdminPanelProvider extends PanelProvider
              * group needs an icon — an icon rail with blank squares in it is
              * just a worse sidebar.
              *
-             * Order is by how often ops opens them. Discovered alphabetically,
-             * Flight Bookings — the busiest screen in the panel — sat below Air
-             * Cargo and Car Hire.
+             * ONE PRINCIPLE: a group is a service, and it owns both the queue
+             * you work and the data that configures it. The panel used to mix
+             * two — cargo, lounge and protocol grouped by service, while visa
+             * split by activity into a five-item `Visa Catalogue` and a
+             * `Visa Operations` that held exactly one link. `Operations` had
+             * become the junk drawer that mixing produces: the flight queue,
+             * two pricing tables, a mail log and a diagnostics page.
+             *
+             * What is genuinely shared does NOT get filed under a service.
+             * Exchange rates are read by flight markup, visa quotation AND
+             * lounge pricing, so they sit in System next to the mail outbox
+             * and the health page rather than under Flights.
+             *
+             * Order is by how often ops opens them, and within a group the
+             * queues sort before the setup that feeds them (10..40 against
+             * 50+), so the first thing in every flyout is work.
              */
             ->navigationGroups([
-                NavigationGroup::make('Operations')->icon(Heroicon::OutlinedPaperAirplane),
-                NavigationGroup::make('Visa Operations')->icon(Heroicon::OutlinedIdentification),
+                NavigationGroup::make('Flights')->icon(Heroicon::OutlinedPaperAirplane),
+                NavigationGroup::make('Visas')->icon(Heroicon::OutlinedIdentification),
                 NavigationGroup::make('Support Requests')->icon(Heroicon::OutlinedLifebuoy),
-                NavigationGroup::make('Insights')->icon(Heroicon::OutlinedChartBar),
                 NavigationGroup::make('Air Cargo')->icon(Heroicon::OutlinedCube),
-                NavigationGroup::make('Car Hire & Transfer')->icon(Heroicon::OutlinedTruck),
-                NavigationGroup::make('Visa Catalogue')->icon(Heroicon::OutlinedBookOpen),
+                NavigationGroup::make('Ground Transport')->icon(Heroicon::OutlinedTruck),
+                NavigationGroup::make('Airport Services')->icon(Heroicon::OutlinedSparkles),
                 NavigationGroup::make('Insurance')->icon(Heroicon::OutlinedShieldCheck),
-                NavigationGroup::make('Lounge')->icon(Heroicon::OutlinedSparkles),
-                NavigationGroup::make('Protocol')->icon(Heroicon::OutlinedUserGroup),
+                NavigationGroup::make('Insights')->icon(Heroicon::OutlinedChartBar),
+                NavigationGroup::make('System')->icon(Heroicon::OutlinedCog6Tooth),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')

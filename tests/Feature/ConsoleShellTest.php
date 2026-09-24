@@ -75,17 +75,129 @@ class ConsoleShellTest extends TestCase
      * Discovered alphabetically, Flight Bookings — the busiest screen in the
      * panel — sat below Air Cargo and Car Hire.
      */
-    public function test_operations_is_the_first_group_in_the_rail(): void
+    public function test_flights_is_the_first_group_in_the_rail(): void
     {
         $this->actingAs($this->admin());
         $this->get('/admin');
 
-        $labels = array_values(array_map(
-            fn ($group) => $group->getLabel(),
+        $this->assertSame('Flights', $this->declaredGroups()[0] ?? null);
+    }
+
+    /**
+     * A group is a SERVICE, owning both the queue you work and the data that
+     * configures it. The panel used to mix that with grouping by activity,
+     * which is what produced a one-link `Visa Operations` group and an
+     * `Operations` junk drawer holding a queue, two pricing tables, a mail log
+     * and a diagnostics page.
+     */
+    public function test_every_group_a_resource_names_is_declared_by_the_panel(): void
+    {
+        $this->actingAs($this->admin());
+        $this->get('/admin');
+
+        $declared = $this->declaredGroups();
+
+        // An undeclared group still appears — appended at the end, with no
+        // icon — which on a 56px icon rail is a blank square.
+        foreach ($this->groupsUsedByResources() as $used) {
+            $this->assertContains(
+                $used,
+                $declared,
+                "`{$used}` is used by a resource but never declared in navigationGroups().",
+            );
+        }
+
+        // And the reverse: a declared group nothing uses is a dead icon.
+        foreach ($declared as $group) {
+            $this->assertContains(
+                $group,
+                $this->groupsUsedByResources(),
+                "`{$group}` is declared but holds nothing.",
+            );
+        }
+    }
+
+    /** A group exists to hold a list. One item is a link wearing a flyout. */
+    public function test_no_navigation_group_holds_a_single_item(): void
+    {
+        $counts = array_count_values($this->groupsUsedByResources(unique: false));
+
+        foreach ($counts as $group => $count) {
+            $this->assertGreaterThan(
+                1,
+                $count,
+                "The `{$group}` group holds one item; it should be a link, not a group.",
+            );
+        }
+    }
+
+    /**
+     * Within a group the queues sort before the setup that feeds them, so the
+     * first thing in every flyout is work rather than a pricing table.
+     */
+    public function test_queues_sort_above_the_setup_that_feeds_them(): void
+    {
+        $panel = Filament::getPanel('admin');
+
+        $lowest = [];
+
+        foreach ($panel->getResources() as $resource) {
+            if (! $resource::shouldRegisterNavigation()) {
+                continue;
+            }
+
+            $group = (string) ($resource::getNavigationGroup() ?? '');
+
+            if ($group === '') {
+                continue;
+            }
+
+            $sort = $resource::getNavigationSort();
+
+            if ($sort === null) {
+                $this->fail("{$resource} sits in `{$group}` without a navigation sort.");
+            }
+
+            $lowest[$group][$resource] = $sort;
+        }
+
+        foreach ($lowest as $group => $sorts) {
+            $this->assertSame(
+                count($sorts),
+                count(array_unique($sorts)),
+                "Two items in `{$group}` share a navigation sort, so their order is whatever discovery returned.",
+            );
+        }
+    }
+
+    /** @return array<int, string> */
+    private function declaredGroups(): array
+    {
+        return array_values(array_map(
+            fn ($group) => (string) $group->getLabel(),
             Filament::getPanel('admin')->getNavigationGroups(),
         ));
+    }
 
-        $this->assertSame('Operations', $labels[0] ?? null);
+    /** @return array<int, string> */
+    private function groupsUsedByResources(bool $unique = true): array
+    {
+        $panel = Filament::getPanel('admin');
+        $used = [];
+
+        foreach ([...$panel->getResources(), ...$panel->getPages()] as $item) {
+            if (! $item::shouldRegisterNavigation()) {
+                continue;
+            }
+
+            $group = (string) ($item::getNavigationGroup() ?? '');
+
+            if ($group !== '') {
+                $used[] = $group;
+            }
+        }
+
+        return $unique ? array_values(array_unique($used)) : $used;
     }
 
     /*

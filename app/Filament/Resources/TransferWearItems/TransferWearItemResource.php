@@ -24,9 +24,9 @@ class TransferWearItemResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedWrenchScrewdriver;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Car Hire & Transfer';
+    protected static string|\UnitEnum|null $navigationGroup = 'Ground Transport';
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 65;
 
     protected static ?string $navigationLabel = 'Transfer Wear Items';
 

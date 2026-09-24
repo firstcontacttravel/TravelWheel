@@ -20,7 +20,7 @@ class LoungeBookingResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedSparkles;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Lounge';
+    protected static string|\UnitEnum|null $navigationGroup = 'Airport Services';
 
     protected static ?int $navigationSort = 10;
 

@@ -26,9 +26,9 @@ class LoungeResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Lounge';
+    protected static string|\UnitEnum|null $navigationGroup = 'Airport Services';
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 50;
 
     protected static ?string $navigationLabel = 'Lounges';
 
