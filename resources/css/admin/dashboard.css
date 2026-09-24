@@ -194,6 +194,48 @@ a.tc-queue:hover {
     color: var(--tc-text-primary);
 }
 
+/* ── Loading ──────────────────────────────────────────────────────────────
+   Filament's lazy widgets render a featureless empty card until their content
+   arrives. That is what made a dashboard that was merely loading look like a
+   dashboard that had failed — it cost me an hour of misdiagnosis before I
+   measured it. A moving sheen says "working" where a blank box says "broken". */
+
+.fi-loading-section {
+    position: relative;
+    min-height: 96px;
+    overflow: hidden;
+    border-color: var(--tc-border-subtle);
+    background: var(--tc-bg-surface);
+}
+
+.fi-loading-section::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--tc-bg-sunken) 45%,
+        var(--tc-bg-sunken) 55%,
+        transparent
+    );
+    background-size: 220% 100%;
+    animation: tc-sheen 1.4s var(--tc-ease-standard) infinite;
+}
+
+@keyframes tc-sheen {
+    from { background-position: 120% 0; }
+    to { background-position: -120% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fi-loading-section::after {
+        animation: none;
+        background: var(--tc-bg-sunken);
+        opacity: 0.6;
+    }
+}
+
 /* ── Responsive ───────────────────────────────────────────────────────────*/
 
 @media (max-width: 767px) {
