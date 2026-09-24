@@ -1,0 +1,484 @@
+/*
+ * TravelWheel Console — controls, forms and detail
+ * ================================================
+ *
+ * Buttons, inputs, fields, infolist entries, modals, dropdowns and
+ * notifications. This is the layer that reaches every create, edit and view
+ * page in the panel — 19 Edit, 16 Create and 14 View pages across 36 resources
+ * — without any of them being touched individually.
+ *
+ * One structural note that shapes most of this file: Filament draws control
+ * edges with Tailwind's `ring-1`, which is a BOX-SHADOW, not a border. Setting
+ * `border` alone therefore gives you two edges, one inside the other. Every
+ * rule that takes over an edge below also clears `--tw-ring-shadow`.
+ *
+ * Role tokens only, no `.tc-dark` block, unlayered so it beats Filament's own
+ * `@layer components` rules without !important.
+ */
+
+/* ── Buttons ──────────────────────────────────────────────────────────────
+   30px default, which is what lets an action sit inside a 40px table row. No
+   shadow: buttons sit ON the surface rather than floating above it. */
+
+.fi-btn {
+    min-height: var(--tc-control-height);
+    padding: 0 var(--tc-space-4);
+    border-radius: var(--tc-radius-sm);
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-medium);
+    letter-spacing: var(--tc-tracking-body);
+    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+    transition:
+        background-color var(--tc-duration-fast) var(--tc-ease-standard),
+        color var(--tc-duration-fast) var(--tc-ease-standard),
+        box-shadow var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.fi-btn.fi-size-xs,
+.fi-btn.fi-size-sm {
+    min-height: 26px;
+    padding-inline: var(--tc-space-3);
+    font-size: var(--tc-text-small);
+}
+
+.fi-btn.fi-size-lg,
+.fi-btn.fi-size-xl {
+    min-height: var(--tc-control-height-lg);
+    padding-inline: var(--tc-space-5);
+}
+
+.fi-btn > .fi-icon {
+    width: 15px;
+    height: 15px;
+    color: currentColor;
+}
+
+/* An outlined or plain button owns its edge, so it gets a real border. */
+.fi-btn.fi-outlined,
+.fi-btn.fi-color-gray:not(.fi-link) {
+    border: 1px solid var(--tc-border-default);
+    background: var(--tc-bg-surface);
+    color: var(--tc-text-primary);
+}
+
+.fi-btn.fi-outlined:hover,
+.fi-btn.fi-color-gray:not(.fi-link):hover {
+    background: var(--tc-bg-sunken);
+    border-color: var(--tc-border-strong);
+}
+
+.fi-btn:focus-visible {
+    box-shadow: var(--tc-focus-ring);
+}
+
+.fi-icon-btn {
+    border-radius: var(--tc-radius-sm);
+    color: var(--tc-text-secondary);
+    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+    transition:
+        background-color var(--tc-duration-fast) var(--tc-ease-standard),
+        color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.fi-icon-btn:hover {
+    background: var(--tc-bg-sunken);
+    color: var(--tc-text-primary);
+}
+
+.fi-link {
+    color: var(--tc-text-link);
+    font-weight: var(--tc-weight-medium);
+}
+
+/* ── Badges ───────────────────────────────────────────────────────────────*/
+
+.fi-badge {
+    border-radius: var(--tc-radius-xs);
+    padding-inline: var(--tc-space-2);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-medium);
+    letter-spacing: 0;
+    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+/* ── Inputs ───────────────────────────────────────────────────────────────*/
+
+.fi-input-wrp,
+.fi-fo-select-wrp,
+.fi-fo-textarea-wrp {
+    min-height: var(--tc-control-height);
+    border: 1px solid var(--tc-border-default);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-bg-input);
+    box-shadow: none;
+    /* Filament's edge is a ring; leaving it on would double the border. */
+    --tw-ring-shadow: 0 0 #0000;
+    transition:
+        border-color var(--tc-duration-fast) var(--tc-ease-standard),
+        box-shadow var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.fi-input-wrp:hover:not(.fi-disabled),
+.fi-fo-select-wrp:hover {
+    border-color: var(--tc-border-strong);
+}
+
+.fi-input-wrp:focus-within:not(.fi-disabled),
+.fi-fo-select-wrp:focus-within,
+.fi-fo-textarea-wrp:focus-within {
+    border-color: var(--tc-border-focus);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--tc-border-focus) 18%, transparent);
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-input-wrp.fi-invalid {
+    border-color: var(--tc-status-critical-dot);
+}
+
+.fi-input-wrp.fi-invalid:focus-within {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--tc-status-critical-dot) 18%, transparent);
+}
+
+.fi-input-wrp.fi-disabled {
+    background: var(--tc-bg-sunken);
+    border-color: var(--tc-border-subtle);
+}
+
+.fi-input,
+.fi-select-input,
+.fi-fo-textarea textarea {
+    padding: 0 var(--tc-space-3);
+    background: transparent;
+    color: var(--tc-text-primary);
+    font-family: inherit;
+    font-size: var(--tc-text-body);
+    letter-spacing: var(--tc-tracking-body);
+}
+
+.fi-fo-textarea textarea {
+    padding-block: var(--tc-space-2);
+    line-height: var(--tc-leading-base);
+}
+
+.fi-input::placeholder,
+.fi-select-input::placeholder {
+    color: var(--tc-text-disabled);
+}
+
+.fi-input-wrp-prefix,
+.fi-input-wrp-suffix {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-body);
+}
+
+.fi-input-wrp-prefix:not(.fi-inline),
+.fi-input-wrp-suffix:not(.fi-inline) {
+    border-color: var(--tc-border-subtle);
+    background: var(--tc-bg-sunken);
+}
+
+/* Money and identifiers get the mono face wherever a field is marked for it. */
+.fi-input-wrp:has(.tc-mono) .fi-input,
+.fi-input.tc-mono {
+    font-family: var(--tc-font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+.fi-checkbox-input,
+.fi-radio-input {
+    border-color: var(--tc-border-strong);
+    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-checkbox-input:checked,
+.fi-radio-input:checked {
+    background-color: var(--tc-action-bg);
+    border-color: var(--tc-action-bg);
+}
+
+.fi-toggle.fi-toggle-on {
+    background: var(--tc-action-bg);
+}
+
+/* ── Fields ───────────────────────────────────────────────────────────────*/
+
+.fi-fo-field {
+    gap: var(--tc-space-2);
+}
+
+.fi-fo-field-label-content {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+    line-height: var(--tc-leading-body);
+    font-weight: var(--tc-weight-medium);
+}
+
+.fi-fo-field-label-required-mark {
+    color: var(--tc-status-critical);
+}
+
+.fi-fo-field-wrp-error-message {
+    color: var(--tc-status-critical);
+    font-size: var(--tc-text-small);
+    line-height: var(--tc-leading-small);
+}
+
+/* A hint is guidance, not content — it steps back from the value it explains. */
+.fi-fo-field-wrp-hint,
+.fi-sc-text {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-small);
+    line-height: var(--tc-leading-small);
+}
+
+.fi-fieldset {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: transparent;
+    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────────*/
+
+.fi-sc-section-label {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-title);
+    line-height: var(--tc-leading-title);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tight);
+}
+
+.fi-section-content {
+    padding: var(--tc-space-5);
+}
+
+.fi-section-footer {
+    border-top: 1px solid var(--tc-border-subtle);
+    background: var(--tc-bg-sunken);
+    padding: var(--tc-space-4) var(--tc-space-5);
+}
+
+/* ── Infolist entries ─────────────────────────────────────────────────────
+   The View pages. A record is read far more often than it is edited, so the
+   label steps back and the VALUE is the thing with weight — the opposite of a
+   form, where the label leads because the value does not exist yet. */
+
+.fi-in-entry {
+    gap: var(--tc-space-1);
+}
+
+.fi-in-entry-label {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    line-height: var(--tc-leading-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.fi-in-text {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+    line-height: var(--tc-leading-body);
+}
+
+.fi-in-text-item-label {
+    font-size: var(--tc-text-body);
+}
+
+.fi-in-entry .fi-in-placeholder,
+.fi-in-text-placeholder {
+    color: var(--tc-text-disabled);
+}
+
+/* ── Modals ───────────────────────────────────────────────────────────────*/
+
+.fi-modal-window {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-lg);
+    background: var(--tc-bg-raised);
+    box-shadow: var(--tc-shadow-modal);
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-modal-header {
+    padding: var(--tc-space-5) var(--tc-space-5) var(--tc-space-4);
+}
+
+.fi-modal-heading {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-title);
+    line-height: var(--tc-leading-title);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tight);
+}
+
+.fi-modal-description {
+    margin-top: var(--tc-space-1);
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-body);
+    line-height: var(--tc-leading-body);
+}
+
+.fi-modal-content {
+    padding-inline: var(--tc-space-5);
+}
+
+.fi-modal-footer {
+    border-top: 1px solid var(--tc-border-subtle);
+    padding: var(--tc-space-4) var(--tc-space-5);
+}
+
+.fi-modal-close-overlay {
+    background: var(--tc-bg-overlay);
+    backdrop-filter: blur(2px);
+}
+
+/* ── Dropdowns ────────────────────────────────────────────────────────────*/
+
+.fi-dropdown-panel {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-raised);
+    box-shadow: var(--tc-shadow-popover);
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-dropdown-list {
+    padding: var(--tc-space-1);
+}
+
+.fi-dropdown-list-item {
+    min-height: 30px;
+    border-radius: var(--tc-radius-sm);
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-body);
+}
+
+.fi-dropdown-list-item:hover {
+    background: var(--tc-bg-sunken);
+    color: var(--tc-text-primary);
+}
+
+.fi-dropdown-header {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+/* ── Notifications ────────────────────────────────────────────────────────*/
+
+.fi-no-notification {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-raised);
+    box-shadow: var(--tc-shadow-popover);
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-no-notification-title {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-medium);
+}
+
+.fi-no-notification-body {
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+/* ── Callouts ─────────────────────────────────────────────────────────────*/
+
+.fi-callout {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-sm);
+    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-callout-heading {
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-medium);
+}
+
+.fi-callout-description {
+    font-size: var(--tc-text-small);
+}
+
+/* ── Date picker, select panels, file upload ──────────────────────────────
+   Not redesigned here, but they must not read as a different product. These
+   give the floating surfaces the same edge and elevation as everything else. */
+
+.fi-fo-date-time-picker-panel,
+.fi-fo-color-picker-panel,
+.fi-fo-rich-editor-panel {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-raised);
+    box-shadow: var(--tc-shadow-popover);
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-fo-date-time-picker-calendar-day {
+    border-radius: var(--tc-radius-sm);
+    font-size: var(--tc-text-body);
+}
+
+.fi-fo-repeater-item,
+.fi-fo-builder-item,
+.fi-fo-simple-repeater-item {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-fo-repeater-item-header,
+.fi-fo-builder-item-header {
+    border-bottom: 1px solid var(--tc-border-subtle);
+    padding: var(--tc-space-3) var(--tc-space-4);
+}
+
+/* ── Form actions ─────────────────────────────────────────────────────────*/
+
+.fi-form-actions,
+.fi-sc-actions {
+    gap: var(--tc-space-3);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────*/
+
+@media (max-width: 767px) {
+    .fi-section-content,
+    .fi-modal-header,
+    .fi-modal-footer {
+        padding-inline: var(--tc-space-4);
+    }
+
+    .fi-modal-content {
+        padding-inline: var(--tc-space-4);
+    }
+
+    /* A modal whose footer actions run off the edge is a modal you cannot
+       dismiss. */
+    .fi-modal-footer-actions {
+        flex-wrap: wrap;
+    }
+
+    .fi-modal-footer-actions .fi-btn {
+        flex: 1 1 auto;
+    }
+
+    .fi-form-actions .fi-btn,
+    .fi-sc-actions .fi-btn {
+        flex: 1 1 auto;
+    }
+}

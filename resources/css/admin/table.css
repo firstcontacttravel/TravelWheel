@@ -345,34 +345,6 @@
     color: var(--tc-text-tertiary);
 }
 
-/* ── Sections (the surfaces tables and forms sit in) ──────────────────────*/
-
-.fi-section {
-    border: 1px solid var(--tc-border-subtle);
-    border-radius: var(--tc-radius-md);
-    background: var(--tc-bg-surface);
-    box-shadow: none;
-    --tw-ring-shadow: 0 0 #0000;
-}
-
-.fi-section-header {
-    border-bottom: 1px solid var(--tc-border-subtle);
-    padding: var(--tc-space-4) var(--tc-space-5);
-}
-
-.fi-section-header-heading {
-    color: var(--tc-text-primary);
-    font-size: var(--tc-text-title);
-    line-height: var(--tc-leading-title);
-    font-weight: var(--tc-weight-semibold);
-    letter-spacing: var(--tc-tracking-tight);
-}
-
-.fi-section-header-description {
-    color: var(--tc-text-secondary);
-    font-size: var(--tc-text-small);
-}
-
 /* ── Responsive ───────────────────────────────────────────────────────────*/
 
 @media (max-width: 767px) {
