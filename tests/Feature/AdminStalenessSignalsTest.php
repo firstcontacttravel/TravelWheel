@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Console\Commands\FlightReleaseCheck;
-use App\Filament\Widgets\PaymentOperationsOverview;
+use App\Filament\Widgets\OperationsTriage;
 use App\Models\ReportingSyncRun;
 use App\Models\SystemHeartbeat;
 use App\Models\User;
@@ -11,7 +11,6 @@ use App\Services\Reporting\ReportingSynchronizer;
 use App\Services\SystemHealthService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
-use ReflectionMethod;
 use Tests\TestCase;
 
 /**
@@ -32,36 +31,34 @@ class AdminStalenessSignalsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_the_dashboard_calls_a_long_dead_scheduler_stale(): void
+    public function test_the_dashboard_raises_a_long_dead_scheduler(): void
     {
         SystemHeartbeat::query()->create([
             'name' => 'scheduler',
             'last_seen_at' => now()->subMonth(),
         ]);
 
-        $stat = $this->schedulerStat();
-
-        $this->assertSame('Stale', $stat->getValue(), 'A scheduler last seen a month ago was reported as healthy.');
-        $this->assertSame('danger', $stat->getColor());
+        $this->assertContains(
+            'Scheduler stale',
+            $this->schedulerSignals(),
+            'A scheduler last seen a month ago was not raised.',
+        );
     }
 
-    public function test_the_dashboard_calls_a_live_scheduler_healthy(): void
+    public function test_the_dashboard_stays_quiet_about_a_live_scheduler(): void
     {
         SystemHeartbeat::query()->create([
             'name' => 'scheduler',
             'last_seen_at' => now()->subMinute(),
         ]);
 
-        $stat = $this->schedulerStat();
-
-        $this->assertSame('Healthy', $stat->getValue());
-        $this->assertSame('success', $stat->getColor());
+        $this->assertNotContains('Scheduler stale', $this->schedulerSignals());
     }
 
     /** No heartbeat row at all has to read as stale too, not as an absent problem. */
-    public function test_a_scheduler_that_never_checked_in_is_stale(): void
+    public function test_a_scheduler_that_never_checked_in_is_raised(): void
     {
-        $this->assertSame('Stale', $this->schedulerStat()->getValue());
+        $this->assertContains('Scheduler stale', $this->schedulerSignals());
     }
 
     public function test_the_release_check_warns_about_a_stale_scheduler(): void
@@ -157,15 +154,18 @@ class AdminStalenessSignalsTest extends TestCase
         $this->assertStringContainsString('Email delivery', $failed, 'A three-hour-old unsent email did not trip the 30-minute failure.');
     }
 
-    private function schedulerStat(): \Filament\Widgets\StatsOverviewWidget\Stat
+    /**
+     * Phase 5 replaced the stats-overview tile with the triage widget's
+     * "needs attention" band. The behaviour under test is unchanged — a dead
+     * scheduler must be reported as dead — so the assertion moved with it
+     * rather than being dropped.
+     *
+     * @return list<string>
+     */
+    private function schedulerSignals(): array
     {
         $this->actingAs(User::factory()->create(['is_admin' => true]));
 
-        $method = new ReflectionMethod(PaymentOperationsOverview::class, 'getStats');
-        $method->setAccessible(true);
-
-        $stats = $method->invoke(app(PaymentOperationsOverview::class));
-
-        return collect($stats)->first(fn ($stat) => $stat->getLabel() === 'Scheduler heartbeat');
+        return array_column(app(OperationsTriage::class)->getBroken(), 'label');
     }
 }

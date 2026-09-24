@@ -1,0 +1,220 @@
+/*
+ * TravelWheel Console — operations dashboard
+ * ==========================================
+ *
+ * Three bands in the order that matters: BROKEN, WAITING, MONEY.
+ *
+ * The previous dashboard was seventeen tiles of identical weight. Every value
+ * was the same blue at the same size, so a failed payment and a month's revenue
+ * were distinguishable only by reading them. Here weight, colour and position
+ * all carry the same message, and money — which used to be the loudest thing on
+ * the screen — is last.
+ */
+
+.tc-triage {
+    display: grid;
+    gap: var(--tc-space-4);
+}
+
+.tc-triage-block {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+}
+
+.tc-triage-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--tc-space-4);
+    padding: var(--tc-space-3) var(--tc-space-5);
+    border-bottom: 1px solid var(--tc-border-subtle);
+}
+
+.tc-triage-head h2 {
+    margin: 0;
+}
+
+/* ── Broken ───────────────────────────────────────────────────────────────*/
+
+.tc-triage-alerts {
+    display: grid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tc-triage-alerts > li + li {
+    border-top: 1px solid var(--tc-border-subtle);
+}
+
+.tc-alert {
+    display: flex;
+    align-items: center;
+    gap: var(--tc-space-4);
+    padding: var(--tc-space-3) var(--tc-space-5);
+    color: inherit;
+    text-decoration: none;
+    /* A tinted wash rather than a solid block: the count and the label are
+       already doing the work, and a full red row on an ops screen that always
+       has one open item becomes wallpaper. */
+    background: linear-gradient(90deg, var(--tc-status-critical-bg), transparent 60%);
+    transition: background-color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+a.tc-alert:hover {
+    background: var(--tc-status-critical-bg);
+}
+
+.tc-alert-count {
+    flex: none;
+    min-width: 2.5ch;
+    color: var(--tc-status-critical);
+    font-size: var(--tc-text-display);
+    line-height: var(--tc-leading-display);
+    font-weight: var(--tc-weight-bold);
+    letter-spacing: var(--tc-tracking-tighter);
+    text-align: end;
+}
+
+/* Some signals are a state, not a quantity — a stale scheduler is not "3 of"
+   anything. They get a mark rather than a number. */
+.tc-alert-count-mark {
+    font-size: var(--tc-text-heading);
+}
+
+.tc-alert-body {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.tc-alert-label {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-semibold);
+}
+
+.tc-alert-detail {
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+    line-height: var(--tc-leading-small);
+}
+
+.tc-alert-go {
+    flex: none;
+    margin-inline-start: auto;
+    width: 16px;
+    height: 16px;
+    color: var(--tc-text-tertiary);
+}
+
+.tc-alert-go svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* The all-clear. One line, no colour beyond the dot, no card of its own. */
+.tc-triage-clear {
+    display: flex;
+    align-items: center;
+    gap: var(--tc-space-3);
+    margin: 0;
+    padding: var(--tc-space-4) var(--tc-space-5);
+    color: var(--tc-text-secondary);
+}
+
+.tc-triage-block.is-clear .tc-triage-head {
+    border-bottom-color: transparent;
+    padding-bottom: 0;
+}
+
+/* ── Waiting ──────────────────────────────────────────────────────────────*/
+
+.tc-queues {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tc-queue {
+    display: flex;
+    align-items: baseline;
+    gap: var(--tc-space-3);
+    height: 100%;
+    padding: var(--tc-space-4) var(--tc-space-5);
+    color: inherit;
+    text-decoration: none;
+    transition: background-color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+a.tc-queue:hover {
+    background: var(--tc-bg-hover);
+}
+
+.tc-queue-count {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-heading);
+    line-height: var(--tc-leading-heading);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tighter);
+}
+
+/* An empty queue is good news and should not compete for attention. */
+.tc-queue-count.is-zero {
+    color: var(--tc-text-disabled);
+    font-weight: var(--tc-weight-normal);
+}
+
+.tc-queue-label {
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+    line-height: var(--tc-leading-small);
+}
+
+/* ── Money ────────────────────────────────────────────────────────────────*/
+
+.tc-money-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--tc-space-5);
+    margin: 0;
+    padding: var(--tc-space-4) var(--tc-space-5);
+}
+
+.tc-money-row dt {
+    color: var(--tc-text-tertiary);
+}
+
+.tc-money-row dd {
+    margin: 0;
+    margin-top: 2px;
+    color: var(--tc-text-primary);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────*/
+
+@media (max-width: 767px) {
+    .tc-triage-head,
+    .tc-alert,
+    .tc-queue,
+    .tc-money-row,
+    .tc-triage-clear {
+        padding-inline: var(--tc-space-4);
+    }
+
+    .tc-queues {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tc-money-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--tc-space-4);
+    }
+
+    .tc-alert-count {
+        font-size: var(--tc-text-heading);
+    }
+}

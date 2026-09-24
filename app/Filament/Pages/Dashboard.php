@@ -4,8 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\BookingRevenueTrend;
 use App\Filament\Widgets\BookingsNeedingAttention;
-use App\Filament\Widgets\PaymentOperationsOverview;
-use App\Filament\Widgets\VisaOperationsOverview;
+use App\Filament\Widgets\OperationsTriage;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Support\Icons\Heroicon;
 
@@ -20,18 +19,19 @@ class Dashboard extends BaseDashboard
     public function getWidgets(): array
     {
         return [
-            PaymentOperationsOverview::class,
-            VisaOperationsOverview::class,
-            BookingRevenueTrend::class,
+            // Broken, then waiting, then money. Replaces the two
+            // stats-overview widgets whose seventeen identical tiles made a
+            // failed payment and a month's revenue look the same.
+            OperationsTriage::class,
             BookingsNeedingAttention::class,
+            BookingRevenueTrend::class,
         ];
     }
 
     public function getColumns(): int|array
     {
-        return [
-            'default' => 1,
-            'xl' => 2,
-        ];
+        // One column. The order is the design — putting what is broken beside
+        // what is merely waiting says they are equally urgent.
+        return 1;
     }
 }

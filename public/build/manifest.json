@@ -16,7 +16,7 @@
     "src": "node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2"
   },
   "resources/css/admin/system.css": {
-    "file": "assets/system-D7d062l3.css",
+    "file": "assets/system-D09j9_6y.css",
     "src": "resources/css/admin/system.css",
     "isEntry": true,
     "name": "system",
@@ -34,7 +34,7 @@
     ]
   },
   "resources/css/filament/admin/theme.css": {
-    "file": "assets/theme-BOeopbiS.css",
+    "file": "assets/theme-DtmiNbUS.css",
     "src": "resources/css/filament/admin/theme.css",
     "isEntry": true,
     "name": "theme",
