@@ -1,0 +1,548 @@
+/*
+ * TravelWheel Console — booking workspace
+ * =======================================
+ *
+ * The busiest detail screen in the panel. Replaces the tw-booking-*,
+ * tw-flight-*, tw-detail-*, tw-ticket-*, tw-passenger-* and tw-history-*
+ * one-offs — roughly 900 lines of CSS that existed because the markup was
+ * built by string concatenation in PHP and so could not be reached by anything
+ * shared.
+ *
+ * The markup now lives in Blade and reuses the console's own primitives: the
+ * same drawn route connector as the queue table, the same status dots, the
+ * same mono for anything read aloud or retyped.
+ */
+
+/* ── Hero ─────────────────────────────────────────────────────────────────*/
+
+.tc-bk {
+    display: grid;
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+    overflow: hidden;
+}
+
+.tc-bk-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tc-space-5);
+    flex-wrap: wrap;
+    padding: var(--tc-space-5);
+}
+
+.tc-bk-ref {
+    display: block;
+    color: var(--tc-text-primary);
+    font-family: var(--tc-font-mono);
+    font-size: var(--tc-text-heading);
+    line-height: var(--tc-leading-heading);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-normal);
+}
+
+.tc-bk-sub {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--tc-space-2);
+    margin-top: var(--tc-space-1);
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+.tc-bk-sub .tc-mono {
+    color: var(--tc-text-tertiary);
+}
+
+.tc-bk-states {
+    display: flex;
+    gap: var(--tc-space-5);
+    flex-wrap: wrap;
+}
+
+.tc-bk-state {
+    display: grid;
+    gap: 1px;
+}
+
+.tc-bk-state dt {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.tc-bk-state dd {
+    margin: 0;
+}
+
+/* ── Route board ──────────────────────────────────────────────────────────
+   The airport codes are the largest thing on the page, because at a desk or on
+   a call this is what someone is looking for first. */
+
+.tc-bk-route {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(64px, 2fr) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--tc-space-5);
+    padding: var(--tc-space-5);
+    border-block: 1px solid var(--tc-border-subtle);
+    background: var(--tc-bg-sunken);
+}
+
+.tc-bk-port {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.tc-bk-port.is-to {
+    text-align: end;
+}
+
+.tc-bk-port-kind {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.tc-bk-port-code {
+    color: var(--tc-text-primary);
+    font-family: var(--tc-font-mono);
+    font-size: var(--tc-text-hero);
+    line-height: 1;
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tight);
+}
+
+.tc-bk-port-city {
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+/* The connector is drawn, never typed: U+2192 is in none of Inter's subsets,
+   so an arrow character falls back to a system font mid-route. */
+.tc-bk-link {
+    display: grid;
+    justify-items: center;
+    gap: var(--tc-space-2);
+}
+
+.tc-bk-link-line {
+    position: relative;
+    width: 100%;
+    height: 1px;
+    background: var(--tc-border-strong);
+}
+
+.tc-bk-link-line::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: 0;
+    top: 50%;
+    width: 5px;
+    height: 5px;
+    border-top: 1px solid var(--tc-border-strong);
+    border-inline-end: 1px solid var(--tc-border-strong);
+    transform: translateY(-50%) rotate(45deg);
+}
+
+.tc-bk-link-note {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    white-space: nowrap;
+}
+
+/* ── Facts ────────────────────────────────────────────────────────────────*/
+
+.tc-bk-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.tc-bk-fact {
+    display: grid;
+    gap: 2px;
+    padding: var(--tc-space-4) var(--tc-space-5);
+    border-inline-start: 1px solid var(--tc-border-subtle);
+}
+
+.tc-bk-fact:first-child {
+    border-inline-start: 0;
+}
+
+.tc-bk-fact dt {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.tc-bk-fact dd {
+    margin: 0;
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-title);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tight);
+}
+
+/* ── Progress ─────────────────────────────────────────────────────────────
+   Created, payment, ticket, depart, arrive. The same dot language as the
+   queue table, so a filled dot means the same thing in both places. */
+
+.tc-bk-progress {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    border-top: 1px solid var(--tc-border-subtle);
+}
+
+.tc-bk-step {
+    display: grid;
+    gap: 2px;
+    padding: var(--tc-space-4) var(--tc-space-5);
+    border-inline-start: 1px solid var(--tc-border-subtle);
+}
+
+.tc-bk-step:first-child {
+    border-inline-start: 0;
+}
+
+.tc-bk-step-label {
+    display: flex;
+    align-items: center;
+    gap: var(--tc-space-2);
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.tc-bk-step-value {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+}
+
+.tc-bk-step.is-pending .tc-bk-step-value {
+    color: var(--tc-text-tertiary);
+}
+
+/* ── Legs ─────────────────────────────────────────────────────────────────*/
+
+.tc-bk-legs {
+    display: grid;
+    border-top: 1px solid var(--tc-border-subtle);
+}
+
+.tc-bk-leg {
+    display: flex;
+    align-items: baseline;
+    gap: var(--tc-space-4);
+    flex-wrap: wrap;
+    padding: var(--tc-space-3) var(--tc-space-5);
+}
+
+.tc-bk-leg + .tc-bk-leg {
+    border-top: 1px solid var(--tc-border-subtle);
+}
+
+.tc-bk-leg-kind {
+    flex: none;
+    min-width: 72px;
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.tc-bk-leg-meta {
+    display: flex;
+    gap: var(--tc-space-4);
+    flex-wrap: wrap;
+    margin-inline-start: auto;
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+/* ── Itinerary ────────────────────────────────────────────────────────────
+   A spine with a node at every airport, so a connection reads as one journey.
+   The previous layout drew each segment as a separate boxed card with nothing
+   between them, which made a two-hour connection invisible. */
+
+.tc-seg-group + .tc-seg-group {
+    margin-top: var(--tc-space-6);
+}
+
+.tc-seg-group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--tc-space-4);
+    margin-bottom: var(--tc-space-3);
+}
+
+.tc-seg {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    column-gap: var(--tc-space-4);
+}
+
+.tc-seg-rail {
+    position: relative;
+    display: grid;
+    justify-items: center;
+}
+
+.tc-seg-dot {
+    width: 7px;
+    height: 7px;
+    margin-top: 6px;
+    border-radius: var(--tc-radius-full);
+    border: 1.5px solid var(--tc-text-tertiary);
+    background: var(--tc-bg-surface);
+}
+
+.tc-seg-dot.is-end {
+    border-color: var(--tc-accent-500);
+    background: var(--tc-accent-500);
+}
+
+.tc-seg-line {
+    width: 1px;
+    flex: 1;
+    min-height: 18px;
+    height: 100%;
+    background: var(--tc-border-default);
+}
+
+.tc-seg-body {
+    padding-bottom: var(--tc-space-4);
+    min-width: 0;
+}
+
+.tc-seg-stop {
+    display: flex;
+    align-items: baseline;
+    gap: var(--tc-space-3);
+    flex-wrap: wrap;
+}
+
+.tc-seg-time {
+    flex: none;
+    min-width: 48px;
+    color: var(--tc-text-primary);
+    font-family: var(--tc-font-mono);
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-medium);
+}
+
+.tc-seg-code {
+    color: var(--tc-text-primary);
+    font-family: var(--tc-font-mono);
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-semibold);
+}
+
+.tc-seg-place {
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+.tc-seg-carrier {
+    display: flex;
+    gap: var(--tc-space-4);
+    flex-wrap: wrap;
+    margin: var(--tc-space-2) 0;
+    padding-inline-start: calc(48px + var(--tc-space-3));
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+.tc-seg-carrier strong {
+    color: var(--tc-text-primary);
+    font-weight: var(--tc-weight-medium);
+}
+
+/* The connection time is the number people actually worry about, and the old
+   layout could not express it at all. */
+.tc-seg-layover {
+    margin: var(--tc-space-2) 0 var(--tc-space-3);
+    margin-inline-start: calc(48px + var(--tc-space-3));
+    padding: var(--tc-space-2) var(--tc-space-3);
+    border: 1px solid var(--tc-status-warning-border);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-status-warning-bg);
+    color: var(--tc-status-warning);
+    font-size: var(--tc-text-small);
+    width: fit-content;
+}
+
+/* ── Passengers ───────────────────────────────────────────────────────────*/
+
+.tc-pax {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: var(--tc-space-4);
+}
+
+.tc-pax-card {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-bg-surface);
+}
+
+.tc-pax-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--tc-space-3);
+    padding: var(--tc-space-3) var(--tc-space-4);
+    border-bottom: 1px solid var(--tc-border-subtle);
+}
+
+.tc-pax-name {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-semibold);
+}
+
+.tc-pax-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--tc-space-3);
+    padding: var(--tc-space-4);
+}
+
+.tc-pax-body > div {
+    display: grid;
+    gap: 1px;
+    min-width: 0;
+}
+
+.tc-pax-body dt {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.tc-pax-body dd {
+    margin: 0;
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+    overflow-wrap: anywhere;
+}
+
+/* ── History feed ─────────────────────────────────────────────────────────
+   Ticketing, payment verification and post-ticketing were three separate
+   renderers producing three slightly different lists of the same shape. One
+   component now, so they cannot drift again. */
+
+.tc-feed {
+    display: grid;
+}
+
+.tc-feed-item {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr);
+    column-gap: var(--tc-space-4);
+    padding-block: var(--tc-space-3);
+}
+
+.tc-feed-item + .tc-feed-item {
+    border-top: 1px solid var(--tc-border-subtle);
+}
+
+.tc-feed-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--tc-space-4);
+    flex-wrap: wrap;
+}
+
+.tc-feed-title {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-medium);
+}
+
+.tc-feed-when {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-small);
+    white-space: nowrap;
+}
+
+.tc-feed-body {
+    margin-top: 2px;
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+    overflow-wrap: anywhere;
+}
+
+.tc-empty {
+    padding: var(--tc-space-5);
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-body);
+    text-align: center;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────*/
+
+@media (max-width: 767px) {
+    .tc-bk-head,
+    .tc-bk-route,
+    .tc-bk-fact,
+    .tc-bk-step,
+    .tc-bk-leg {
+        padding-inline: var(--tc-space-4);
+    }
+
+    /* Stacked, because three columns at 390px gives each airport code about
+       90px and the connector no room at all. */
+    .tc-bk-route {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--tc-space-3);
+    }
+
+    .tc-bk-port.is-to {
+        text-align: start;
+    }
+
+    .tc-bk-link {
+        justify-items: start;
+    }
+
+    .tc-bk-link-line {
+        width: 64px;
+    }
+
+    .tc-bk-facts,
+    .tc-bk-progress {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tc-bk-fact,
+    .tc-bk-step {
+        border-inline-start: 0;
+        border-top: 1px solid var(--tc-border-subtle);
+    }
+
+    .tc-seg-carrier,
+    .tc-seg-layover {
+        padding-inline-start: 0;
+        margin-inline-start: 0;
+    }
+
+    .tc-pax-body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
