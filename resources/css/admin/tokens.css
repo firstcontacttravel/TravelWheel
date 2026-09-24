@@ -78,6 +78,7 @@
     --tc-amber-500: oklch(0.750 0.170 62);
     --tc-amber-600: oklch(0.660 0.155 55);
     --tc-amber-700: oklch(0.540 0.125 50);
+    --tc-amber-800: oklch(0.460 0.110 50);
 
     --tc-green-100: oklch(0.945 0.045 153);
     --tc-green-300: oklch(0.830 0.110 153);
@@ -172,9 +173,25 @@
 
     /* Text */
     --tc-text-primary: var(--tc-n-900);
-    --tc-text-secondary: var(--tc-n-600);
-    --tc-text-tertiary: var(--tc-n-500);
+    /*
+     * Phase 8 moved secondary and tertiary one step darker. Tertiary was n-500
+     * (oklch L 0.587), which measures 3.69:1 on --tc-bg-sunken — below the
+     * 4.5:1 AA floor — and it carries every column header, breadcrumb and
+     * micro label in the panel. On this hue L 0.539 is where the ramp crosses
+     * 4.5 against sunken, so n-600 (L 0.483) is the first step that clears it:
+     * 5.72 on sunken, 6.46 on surface. Secondary moved with it so the step
+     * between the two survives.
+     *
+     * Disabled is deliberately left light: WCAG exempts disabled controls, and
+     * making it darker would stop it reading as unavailable.
+     */
+    --tc-text-secondary: var(--tc-n-700);
+    --tc-text-tertiary: var(--tc-n-600);
     --tc-text-disabled: var(--tc-n-400);
+    /* Placeholder is NOT disabled. An empty field's prompt, and a table or
+       infolist "no value" marker, are both content the user has to read, so
+       they take a passing role even though they read as secondary. */
+    --tc-text-placeholder: var(--tc-n-600);
     --tc-text-inverse: var(--tc-n-0);
     --tc-text-on-rail: oklch(1 0 0 / 0.72);
     --tc-text-on-rail-active: var(--tc-n-0);
@@ -254,6 +271,7 @@
     --tc-text-secondary: var(--tc-n-300);
     --tc-text-tertiary: var(--tc-n-400);
     --tc-text-disabled: var(--tc-n-600);
+    --tc-text-placeholder: var(--tc-n-400);
     --tc-text-inverse: var(--tc-n-950);
     --tc-text-brand: var(--tc-brand-300);
     --tc-text-link: var(--tc-brand-300);

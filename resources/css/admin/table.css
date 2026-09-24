@@ -196,7 +196,7 @@
 }
 
 .fi-ta-placeholder {
-    color: var(--tc-text-disabled);
+    color: var(--tc-text-placeholder);
 }
 
 /* ── Badges ───────────────────────────────────────────────────────────────

@@ -96,7 +96,10 @@
             </a>
         </div>
 
-        <nav class="fi-sidebar-nav tc-rail-nav" aria-label="{{ __('filament-panels::layout.actions.sidebar.expand.label') }}">
+        {{-- A landmark's label names the REGION, not an action. This carried
+             `actions.sidebar.expand.label`, so screen readers announced the
+             rail as "Expand sidebar navigation". --}}
+        <nav class="fi-sidebar-nav tc-rail-nav" aria-label="Main navigation">
             {{ FilamentView::renderHook(PanelsRenderHook::SIDEBAR_NAV_START) }}
 
             @if ($pinned !== [])

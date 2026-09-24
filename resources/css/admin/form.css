@@ -72,6 +72,22 @@
     box-shadow: var(--tc-focus-ring);
 }
 
+/* Filament's warning button pairs amber-600 with white in dark mode, which
+   measures 4.15:1 — under AA for a 13px label — while light mode flips to dark
+   ink on a pale amber, so the same control reads as two different buttons.
+   Neither ink passes on amber-600 in BOTH rest and hover, so the background
+   moves instead: the console's amber, dark enough to carry white throughout.
+   One treatment, no theme-scoped exception. */
+.fi-btn.fi-color-warning:not(.fi-link):not(.fi-outlined) {
+    background-color: var(--tc-amber-700);
+    color: var(--tc-n-0);
+}
+
+.fi-btn.fi-color-warning:not(.fi-link):not(.fi-outlined):hover {
+    background-color: var(--tc-amber-800);
+    color: var(--tc-n-0);
+}
+
 .fi-icon-btn {
     border-radius: var(--tc-radius-sm);
     color: var(--tc-text-secondary);
@@ -165,11 +181,15 @@
 
 .fi-input::placeholder,
 .fi-select-input::placeholder {
-    color: var(--tc-text-disabled);
+    color: var(--tc-text-placeholder);
 }
 
+/* The label shares the prefix/suffix treatment. Filament dresses it in its own
+   slate-500, which measures 4.22:1 against the sunken affix background — just
+   under AA — so it takes a console role like everything either side of it. */
 .fi-input-wrp-prefix,
-.fi-input-wrp-suffix {
+.fi-input-wrp-suffix,
+.fi-input-wrp-label {
     color: var(--tc-text-tertiary);
     font-size: var(--tc-text-body);
 }
@@ -293,7 +313,7 @@
 
 .fi-in-entry .fi-in-placeholder,
 .fi-in-text-placeholder {
-    color: var(--tc-text-disabled);
+    color: var(--tc-text-placeholder);
 }
 
 /* ── Modals ───────────────────────────────────────────────────────────────*/

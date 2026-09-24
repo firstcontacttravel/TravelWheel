@@ -5,6 +5,14 @@
  * The minimum the system assumes about the document. Deliberately small:
  * this is not a CSS reset, it is the handful of decisions every component
  * after it depends on.
+ *
+ * Every rule here is written against BOTH roots: `.tc-root`, which the design
+ * system specimen puts on its <body>, and `.fi-body`, which Filament puts on
+ * the panel's. The body tag lives in a Filament view this project does not
+ * fork, so bridging the selector is what reaches the real panel — the same
+ * thing tokens.css does with `.tc-dark, .dark`. Scoped to `.tc-root` alone,
+ * this entire layer — the focus ring, the selection colour, the scrollbars
+ * and the reduced-motion block — applied only to the specimen page.
  */
 
 *,
@@ -13,7 +21,8 @@
     box-sizing: border-box;
 }
 
-.tc-root {
+.tc-root,
+.fi-body {
     margin: 0;
     background: var(--tc-bg-canvas);
     color: var(--tc-text-primary);
@@ -34,17 +43,20 @@
    One treatment, everywhere, keyboard only. The double ring survives being
    drawn on a selected row or a filled button, which a single outline does
    not. */
-.tc-root :focus-visible {
+.tc-root :focus-visible,
+.fi-body :focus-visible {
     outline: none;
     box-shadow: var(--tc-focus-ring);
     border-radius: var(--tc-radius-sm);
 }
 
-.tc-root :focus:not(:focus-visible) {
+.tc-root :focus:not(:focus-visible),
+.fi-body :focus:not(:focus-visible) {
     outline: none;
 }
 
-.tc-root ::selection {
+.tc-root ::selection,
+.fi-body ::selection {
     background: var(--tc-bg-selected);
     color: var(--tc-text-primary);
 }
@@ -52,33 +64,39 @@
 /* ── Scrollbars ───────────────────────────────────────────────────────────
    A dense console shows a lot of scrollbars. They should read as part of the
    surface rather than as chrome bolted on top. */
-.tc-root {
+.tc-root,
+.fi-body {
     scrollbar-width: thin;
     scrollbar-color: var(--tc-border-strong) transparent;
 }
 
-.tc-root ::-webkit-scrollbar {
+.tc-root ::-webkit-scrollbar,
+.fi-body ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
 }
 
-.tc-root ::-webkit-scrollbar-track {
+.tc-root ::-webkit-scrollbar-track,
+.fi-body ::-webkit-scrollbar-track {
     background: transparent;
 }
 
-.tc-root ::-webkit-scrollbar-thumb {
+.tc-root ::-webkit-scrollbar-thumb,
+.fi-body ::-webkit-scrollbar-thumb {
     border: 3px solid transparent;
     border-radius: var(--tc-radius-full);
     background: var(--tc-border-strong);
     background-clip: content-box;
 }
 
-.tc-root ::-webkit-scrollbar-thumb:hover {
+.tc-root ::-webkit-scrollbar-thumb:hover,
+.fi-body ::-webkit-scrollbar-thumb:hover {
     background: var(--tc-text-tertiary);
     background-clip: content-box;
 }
 
-.tc-root ::-webkit-scrollbar-corner {
+.tc-root ::-webkit-scrollbar-corner,
+.fi-body ::-webkit-scrollbar-corner {
     background: transparent;
 }
 
@@ -94,8 +112,11 @@
     }
 
     .tc-root *,
+    .fi-body *,
     .tc-root *::before,
-    .tc-root *::after {
+    .fi-body *::before,
+    .tc-root *::after,
+    .fi-body *::after {
         animation-duration: 1ms !important;
         animation-iteration-count: 1 !important;
         scroll-behavior: auto !important;

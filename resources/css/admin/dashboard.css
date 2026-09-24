@@ -162,9 +162,11 @@ a.tc-queue:hover {
     letter-spacing: var(--tc-tracking-tighter);
 }
 
-/* An empty queue is good news and should not compete for attention. */
+/* An empty queue is good news and should not compete for attention. It still
+   has to be readable though: a zero is content, not an inactive control, so
+   the disabled role (2.51:1) does not apply to it. Tertiary recedes at 6.46. */
 .tc-queue-count.is-zero {
-    color: var(--tc-text-disabled);
+    color: var(--tc-text-tertiary);
     font-weight: var(--tc-weight-normal);
 }
 

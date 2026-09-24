@@ -236,7 +236,7 @@
 }
 
 .tc-input::placeholder {
-    color: var(--tc-text-disabled);
+    color: var(--tc-text-placeholder);
 }
 
 .tc-input:hover {

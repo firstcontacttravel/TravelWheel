@@ -159,14 +159,17 @@ class ConsoleDesignSystemTest extends TestCase
     public function test_dark_mode_is_a_remap_and_not_a_second_set_of_rules(): void
     {
         foreach (['components.css', 'base.css'] as $file) {
+            // Against the RULES, not the file: base.css explains in a comment
+            // why the dark block lives in tokens.css, and an absence assertion
+            // that reads prose fails on its own documentation.
             $this->assertStringNotContainsString(
                 '.tc-dark',
-                $this->css($file),
+                $this->rules($file),
                 "{$file} carries a dark-mode override; roles should have made that unnecessary.",
             );
         }
 
-        $this->assertStringContainsString('.tc-dark', $this->css('tokens.css'));
+        $this->assertStringContainsString('.tc-dark', $this->rules('tokens.css'));
     }
 
     /*
@@ -230,5 +233,11 @@ class ConsoleDesignSystemTest extends TestCase
     private function css(string $file): string
     {
         return (string) file_get_contents(base_path(self::CSS.$file));
+    }
+
+    /** The stylesheet with its comments removed. */
+    private function rules(string $file): string
+    {
+        return (string) preg_replace('#/\*.*?\*/#s', '', $this->css($file));
     }
 }
