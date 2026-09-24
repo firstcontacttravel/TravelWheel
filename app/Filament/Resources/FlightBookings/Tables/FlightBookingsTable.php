@@ -422,146 +422,6 @@ class FlightBookingsTable
         ])->filter()->implode(' | ');
     }
 
-    private static function journeyColumn(FlightBooking $record): HtmlString
-    {
-        $groups = self::journeyGroups($record);
-
-        if ($groups === []) {
-            return new HtmlString('<span class="text-gray-500">'.e($record->route ?: '-').'</span>');
-        }
-
-        $hasMultiLegs = collect($record->flight_snapshot['multiLegs'] ?? [])
-            ->contains(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== []);
-        $tripLabel = count($groups) > 1
-            ? ($hasMultiLegs ? 'Multi-city' : 'Round trip')
-            : self::label($record->trip_type ?: 'one_way');
-
-        $html = '<div class="tw-journey-cell">';
-        $html .= '<div class="tw-journey-kind">'.e($tripLabel).'</div>';
-
-        foreach ($groups as $group) {
-            $segments = $group['segments'];
-            $first = $segments[0] ?? [];
-            $last = $segments[array_key_last($segments)] ?? [];
-            $origin = (string) self::segmentValue($first, ['from', 'airportOriginCode'], '');
-            $destination = (string) self::segmentValue($last, ['to', 'airportDestinationCode'], '');
-            $date = self::journeySegmentDate($first);
-            $flightLines = collect($segments)
-                ->map(function (array $segment): string {
-                    $airline = trim((string) self::segmentValue($segment, ['airline', 'airlineCode', 'MarketingAirlineCode'], ''));
-                    $flight = trim((string) self::segmentValue($segment, ['flightNo', 'flightNumber', 'FlightNumber'], ''));
-                    $cabin = trim((string) self::segmentValue($segment, ['cabin', 'cabinCode', 'CabinClassCode'], ''));
-                    $cabin = strlen($cabin) === 1 ? self::cabinLabel($cabin) : $cabin;
-                    $flightLabel = $flight;
-
-                    if (filled($airline) && filled($flight) && ! str_starts_with(strtoupper($flight), strtoupper($airline))) {
-                        $flightLabel = trim($airline.' '.$flight);
-                    }
-
-                    $time = trim(collect([
-                        self::journeySegmentTime($segment, ['departTime', 'DepartureDateTime', 'departDT']),
-                        self::journeySegmentTime($segment, ['arriveTime', 'ArrivalDateTime', 'arriveDT']),
-                    ])->filter()->implode('-'));
-
-                    $html = '';
-
-                    if (filled($time)) {
-                        $html .= '<span class="tw-journey-time">'.e($time).'</span>';
-                    }
-
-                    if (filled($flightLabel)) {
-                        $html .= '<span>'.e($flightLabel).'</span>';
-                    }
-
-                    if (filled($cabin)) {
-                        $html .= '<span class="tw-journey-cabin">'.e($cabin).'</span>';
-                    }
-
-                    return $html;
-                })
-                ->filter()
-                ->map(fn (string $line): string => '<div class="tw-journey-flight">'.$line.'</div>')
-                ->implode('');
-
-            $html .= '<div class="tw-journey-leg">';
-            $html .= '<div class="tw-journey-dot"></div>';
-            $html .= '<div class="tw-journey-leg-main">';
-            $html .= '<div class="tw-journey-leg-top">';
-            $html .= '<div class="tw-journey-route">';
-            $html .= '<span>'.e($origin ?: '-').'</span>';
-            $html .= '<span class="tw-journey-arrow">-></span>';
-            $html .= '<span>'.e($destination ?: '-').'</span>';
-            $html .= '</div>';
-            $html .= '<span class="tw-journey-label">'.e($group['label']).'</span>';
-            $html .= '</div>';
-            $html .= '<div class="tw-journey-date">'.e($date ?: '-').'</div>';
-            $html .= '<div class="tw-journey-flights">'.($flightLines ?: '<div class="tw-journey-flight">-</div>').'</div>';
-            $html .= '</div>';
-            $html .= '</div>';
-        }
-
-        $html .= '</div>';
-
-        return new HtmlString($html);
-    }
-
-    private static function journeyGroups(FlightBooking $record): array
-    {
-        $snapshot = $record->flight_snapshot ?? [];
-        $multiLegs = collect($snapshot['multiLegs'] ?? [])
-            ->filter(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== [])
-            ->values();
-
-        if ($multiLegs->isNotEmpty()) {
-            return $multiLegs
-                ->map(fn (array $leg, int $index): array => [
-                    'label' => $leg['label'] ?? 'Leg '.($index + 1),
-                    'segments' => array_values($leg['segments'] ?? []),
-                ])
-                ->all();
-        }
-
-        $groups = [];
-        $outbound = is_array($snapshot['segments'] ?? null) ? array_values($snapshot['segments']) : [];
-        $return = is_array($snapshot['returnSegments'] ?? null) ? array_values($snapshot['returnSegments']) : [];
-
-        if ($outbound !== []) {
-            $groups[] = ['label' => $return !== [] ? 'Outbound' : 'Flight', 'segments' => $outbound];
-        }
-
-        if ($return !== []) {
-            $groups[] = ['label' => 'Return', 'segments' => $return];
-        }
-
-        return $groups;
-    }
-
-    private static function journeySegmentDate(array $segment): string
-    {
-        $value = self::segmentValue($segment, ['departDT', 'DepartureDateTime', 'departureDate', 'departDate'], null);
-
-        if (blank($value)) {
-            return '';
-        }
-
-        return preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $value)
-            ? self::watDateTime($value, 'D, d M Y')
-            : (string) $value;
-    }
-
-    private static function journeySegmentTime(array $segment, array $keys): string
-    {
-        $value = self::segmentValue($segment, $keys, null);
-
-        if (blank($value)) {
-            return '';
-        }
-
-        return preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $value)
-            ? self::watDateTime($value, 'H:i')
-            : (string) $value;
-    }
-
     private static function label(?string $value): string
     {
         return filled($value) ? str((string) $value)->replace('_', ' ')->headline()->toString() : '-';
@@ -569,26 +429,18 @@ class FlightBookingsTable
 
     private static function actionContext(FlightBooking $record, string $title): HtmlString
     {
-        $amount = self::money($record->total_price, $record->currency);
-        $serviceCharge = self::money($record->markup_amount, $record->currency);
-        $customer = $record->contact_email ?: ($record->contact_phone ?: '-');
-
-        return new HtmlString(
-            '<div class="tw-action-context">'.
-                '<div>'.
-                    '<div class="tw-action-context-kicker">'.e($title).'</div>'.
-                    '<div class="tw-action-context-title">'.e($record->booking_ref ?: 'Booking').'</div>'.
-                    '<div class="tw-action-context-sub">'.e(trim(($record->route ?: '-').' | '.($record->airline ?: '-'))).'</div>'.
-                '</div>'.
-                '<dl>'.
-                    '<div><dt>Customer</dt><dd>'.e($customer).'</dd></div>'.
-                    '<div><dt>Amount</dt><dd>'.e($amount).'</dd></div>'.
-                    '<div><dt>Service charge</dt><dd>'.e($serviceCharge).'</dd></div>'.
-                    '<div><dt>Payment</dt><dd>'.e(self::label($record->payment_status)).'</dd></div>'.
-                    '<div><dt>Booking</dt><dd>'.e(self::label($record->booking_status)).'</dd></div>'.
-                '</dl>'.
-            '</div>',
-        );
+        return new HtmlString(view('filament.booking.action-context', [
+            'kicker' => $title,
+            'title' => $record->booking_ref ?: 'Booking',
+            'subtitle' => trim(($record->route ?: '---').' · '.($record->airline ?: '---')),
+            'rows' => [
+                'Customer' => $record->contact_email ?: ($record->contact_phone ?: '---'),
+                'Amount' => self::money($record->total_price, $record->currency),
+                'Service charge' => self::money($record->markup_amount, $record->currency),
+                'Payment' => self::label($record->payment_status),
+                'Booking' => self::label($record->booking_status),
+            ],
+        ])->render());
     }
 
     private static function money(mixed $amount, ?string $currency): string
