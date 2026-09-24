@@ -46,8 +46,14 @@ class FlightBookingsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->heading('Flight Bookings')
-            ->description('Operational queue for payment verification, ticketing, and customer support.')
+            /*
+             * Neither ->heading() nor ->description(). The page title directly
+             * above already says "Flight Bookings", as does the breadcrumb
+             * above that — three copies of the resource name on one screen.
+             * The description moved to the page subheading, where page-level
+             * context belongs; as a table band it cost a whole 50px stripe
+             * above a queue people scroll all day.
+             */
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
             ->paginated([10, 25, 50, 100])
@@ -58,23 +64,21 @@ class FlightBookingsTable
             ->columns([
                 TextColumn::make('attention')
                     ->label('Queue')
-                    ->state(fn (FlightBooking $record): string => self::queueLabel($record))
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'Awaiting transfer' => 'warning',
-                        'Ready to ticket' => 'success',
-                        'Ticketing failed' => 'danger',
-                        'Ticketed' => 'success',
-                        'Pending payment' => 'gray',
-                        default => 'info',
-                    }),
+                    ->state(fn (FlightBooking $record): HtmlString => self::statusDot(self::queueLabel($record)))
+                    ->html()
+                    ->searchable(false),
+                /*
+                 * The reference alone. What used to be its description — the
+                 * UniqueID and the fare type — are columns in their own right
+                 * further down, so nothing is lost; it is one click away in the
+                 * column manager rather than on every row forever.
+                 */
                 TextColumn::make('booking_ref')
                     ->label('Booking')
                     ->searchable()
                     ->copyable()
                     ->sortable()
-                    ->weight('bold')
-                    ->description(fn (FlightBooking $record): string => trim(($record->unique_id ?: 'No UniqueID').' | '.($record->fare_type ?: 'No fare type'))),
+                    ->extraAttributes(['class' => 'tc-mono']),
                 TextColumn::make('unique_id')
                     ->label('UniqueID')
                     ->searchable()
@@ -82,7 +86,7 @@ class FlightBookingsTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('route')
                     ->label('Journey')
-                    ->state(fn (FlightBooking $record): HtmlString => self::journeyColumn($record))
+                    ->state(fn (FlightBooking $record): HtmlString => self::routeCell($record))
                     ->html()
                     ->searchable()
                     ->placeholder('-')
@@ -99,8 +103,16 @@ class FlightBookingsTable
                 TextColumn::make('total_price')
                     ->label('Total')
                     ->formatStateUsing(fn (FlightBooking $record): string => self::money($record->total_price, $record->currency))
-                    ->description(fn (FlightBooking $record): string => self::pricingSummary($record))
+                    ->alignEnd()
+                    ->extraAttributes(['class' => 'tc-money'])
                     ->sortable(),
+                // Was the Total column's description. Service charge and
+                // supplier fare already have their own columns below.
+                TextColumn::make('passengers')
+                    ->label('Pax')
+                    ->state(fn (FlightBooking $record): string => (string) max(1, $record->totalPassengers()))
+                    ->alignEnd()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('markup_amount')
                     ->label('Service charge')
                     ->formatStateUsing(fn (FlightBooking $record): string => self::money($record->markup_amount, $record->currency))
@@ -112,28 +124,22 @@ class FlightBookingsTable
                     ->formatStateUsing(fn (FlightBooking $record): string => self::money($record->supplier_price, $record->currency))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                /*
+                 * Booking status is hidden by default because the Queue column
+                 * is derived from it and from payment_status — three status
+                 * columns side by side is the same fact told three times.
+                 */
                 TextColumn::make('booking_status')
                     ->label('Booking')
-                    ->badge()
-                    ->color(fn (?string $state): string => match ($state) {
-                        'ticketed', 'confirmed' => 'success',
-                        'failed', 'cancelled', 'ticketing_failed' => 'danger',
-                        'on_hold' => 'warning',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (?string $state): string => self::label($state))
+                    ->state(fn (FlightBooking $record): HtmlString => self::statusDot(self::label($record->booking_status)))
+                    ->html()
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('payment_status')
                     ->label('Payment')
-                    ->badge()
-                    ->color(fn (?string $state): string => match ($state) {
-                        'paid', 'partially_paid' => 'success',
-                        'failed' => 'danger',
-                        'awaiting_bank_transfer', 'pending' => 'warning',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (?string $state): string => self::label($state))
+                    ->state(fn (FlightBooking $record): HtmlString => self::statusDot(self::label($record->payment_status)))
+                    ->html()
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('payment_method')
@@ -141,7 +147,7 @@ class FlightBookingsTable
                     ->placeholder('-')
                     ->searchable()
                     ->formatStateUsing(fn (?string $state): string => self::label($state))
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('payment_reference')
                     ->copyable()
                     ->searchable()
@@ -165,12 +171,21 @@ class FlightBookingsTable
                     ->label('Customer')
                     ->searchable()
                     ->copyable()
-                    ->description(fn (FlightBooking $record): string => $record->contact_phone ?: '-')
                     ->toggleable(),
+                // Was the Customer column's description.
+                TextColumn::make('contact_phone')
+                    ->label('Phone')
+                    ->searchable()
+                    ->copyable()
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                // The exact timestamp was this column's description; "3 days
+                // ago" is what triage reads, the timestamp is what an
+                // investigation reads, and they are different jobs.
                 TextColumn::make('created_at')
                     ->label('Created')
                     ->since()
-                    ->description(fn (FlightBooking $record): string => self::watDateTime($record->created_at))
+                    ->tooltip(fn (FlightBooking $record): string => self::watDateTime($record->created_at))
                     ->sortable(),
             ])
             ->filters([
@@ -296,6 +311,72 @@ class FlightBookingsTable
                     ->icon('heroicon-o-ellipsis-horizontal')
                     ->color('gray'),
             ]);
+    }
+
+    /**
+     * Status as a dot plus a word.
+     *
+     * Eleven coloured pills in a column is a fruit salad; eleven dots in a
+     * fixed position is a stripe the eye scans without reading, and the red one
+     * is found before any word is. Shape carries the meaning too — filled is
+     * settled, open is not started, half is in progress — so the language never
+     * depends on colour alone.
+     */
+    private static function statusDot(string $label): HtmlString
+    {
+        [$tone, $shape] = match ($label) {
+            'Ticketing failed', 'Failed', 'Cancelled' => ['critical', ''],
+            'Awaiting transfer', 'On hold', 'Awaiting deposit' => ['warning', 'tc-status-progress'],
+            'Ticketed', 'Paid', 'Confirmed' => ['positive', ''],
+            'Ready to ticket', 'Review', 'Partially paid' => ['info', 'tc-status-progress'],
+            'Pending payment', 'Pending' => ['idle', 'tc-status-pending'],
+            default => ['idle', ''],
+        };
+
+        return new HtmlString(sprintf(
+            '<span class="tc-status tc-status-%s %s">%s</span>',
+            $tone,
+            $shape,
+            e($label ?: '---'),
+        ));
+    }
+
+    /**
+     * The journey on one line, drawn rather than typed.
+     *
+     * Built from the stored `route` column via FlightBooking::routeLegs(). The
+     * previous cell derived its legs from flight_snapshot.segments, which is
+     * deliberately empty on a multi-city booking — those keep their legs in
+     * .multiLegs — so every multi-city trip rendered with no route at all.
+     *
+     * The connector is drawn because U+2192 is in none of Inter's subsets: a
+     * typed arrow falls back to a system font in the middle of the route.
+     * Intermediate stops step back so the endpoints stay dominant; a return
+     * trip stores as LOS-IST-DXB-IST-LOS and five codes of equal weight make a
+     * cell you have to read rather than glance at.
+     */
+    private static function routeCell(FlightBooking $record): HtmlString
+    {
+        $legs = $record->routeLegs();
+
+        if ($legs === []) {
+            return new HtmlString('<span class="fi-ta-placeholder">---</span>');
+        }
+
+        $last = count($legs) - 1;
+
+        $html = '<span class="tc-route tc-t-body">';
+
+        foreach ($legs as $index => $leg) {
+            if ($index > 0) {
+                $html .= '<span class="tc-route-line"></span>';
+            }
+
+            $via = ($index > 0 && $index < $last) ? ' tc-route-via' : '';
+            $html .= '<span class="tc-mono'.$via.'">'.e($leg).'</span>';
+        }
+
+        return new HtmlString($html.'</span>');
     }
 
     private static function queueLabel(FlightBooking $record): string

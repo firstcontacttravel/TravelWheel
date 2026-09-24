@@ -17,6 +17,16 @@ class ListFlightBookings extends ListRecords
         return [];
     }
 
+    /**
+     * Context belongs to the page, not to the table. Carried as a table
+     * description it rendered as its own 50px band above a queue that people
+     * scroll all day.
+     */
+    public function getSubheading(): ?string
+    {
+        return 'Operational queue for payment verification, ticketing, and customer support.';
+    }
+
     public function getTabs(): array
     {
         return [
