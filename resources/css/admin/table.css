@@ -1,0 +1,380 @@
+/*
+ * TravelWheel Console — data tables
+ * =================================
+ *
+ * The screen ops actually lives in. A booking row was 126px tall and a 1517px
+ * screen showed four of them; this brings the row to 40px, which is where the
+ * density this direction promised actually lands.
+ *
+ * Role tokens only, no `.tc-dark` block, unlayered so it beats Filament's own
+ * `@layer components` rules without !important.
+ */
+
+/* ── Container ────────────────────────────────────────────────────────────
+   A hairline border and a small radius, not a ring and a shadow. Tables are
+   the page's substance; they should read as part of it rather than as a card
+   floating on top of it. */
+
+.fi-ta-ctn {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+    box-shadow: none;
+    /* Filament draws the container edge with `ring-1`, which sits outside the
+       border box and doubles up with ours. */
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-ta-ctn .fi-ta-header {
+    gap: var(--tc-space-1);
+    border-bottom: 1px solid var(--tc-border-subtle);
+    padding: var(--tc-space-4) var(--tc-space-5);
+}
+
+.fi-ta-ctn .fi-ta-header-heading {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-title);
+    line-height: var(--tc-leading-title);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tight);
+}
+
+.fi-ta-ctn .fi-ta-header-description {
+    margin-top: 0;
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+    line-height: var(--tc-leading-small);
+}
+
+.fi-ta-ctn .fi-ta-header-toolbar {
+    gap: var(--tc-space-4);
+    border-bottom: 1px solid var(--tc-border-subtle);
+    padding: var(--tc-space-3) var(--tc-space-5);
+}
+
+/* ── Scroll affordance ────────────────────────────────────────────────────
+   An operational table is wider than any screen, and a table that is cut off
+   with no sign it continues is a table whose right-hand columns nobody knows
+   exist. These gradients are painted by the scroll container itself: the white
+   "covers" are background-attachment:local so they travel with the content,
+   and the shadows are attachment:scroll so they stay pinned at the edges —
+   the shadow only shows where there is more to see. */
+
+.fi-ta-content-ctn {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    background:
+        linear-gradient(to right, var(--tc-bg-surface) 30%, transparent) left center / 24px 100% no-repeat local,
+        linear-gradient(to left, var(--tc-bg-surface) 30%, transparent) right center / 24px 100% no-repeat local,
+        linear-gradient(to right, rgb(0 0 0 / 0.10), transparent) left center / 12px 100% no-repeat scroll,
+        linear-gradient(to left, rgb(0 0 0 / 0.10), transparent) right center / 12px 100% no-repeat scroll;
+}
+
+.fi-ta-content-ctn::-webkit-scrollbar {
+    height: 10px;
+}
+
+.fi-ta-content-ctn::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: var(--tc-radius-full);
+    background: var(--tc-border-strong);
+    background-clip: content-box;
+}
+
+/* ── Header cells ─────────────────────────────────────────────────────────
+   Labels, not content: 11px, tracked, uppercase, muted. Sticky, because
+   scrolling 100 bookings without column names is scrolling a spreadsheet with
+   the header row deleted. */
+
+.fi-ta-header-cell {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    border-bottom: 1px solid var(--tc-border-subtle);
+    background: var(--tc-bg-sunken);
+    padding: 0 var(--tc-space-4);
+    height: 32px;
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    line-height: var(--tc-leading-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.fi-ta-header-cell:first-of-type,
+.fi-ta-cell:first-of-type {
+    padding-inline-start: var(--tc-space-5);
+}
+
+.fi-ta-header-cell:last-of-type,
+.fi-ta-cell:last-of-type {
+    padding-inline-end: var(--tc-space-5);
+}
+
+.fi-ta-header-cell-sorted {
+    color: var(--tc-text-brand);
+}
+
+.fi-ta-header-cell .fi-icon {
+    width: 13px;
+    height: 13px;
+}
+
+/* ── Rows ─────────────────────────────────────────────────────────────────*/
+
+.fi-ta-row {
+    border-top: 1px solid var(--tc-border-subtle);
+    transition: background-color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+/* Zebra striping and a hover both encode "this row" — one of them is enough,
+   and the hover is the one that tracks the pointer. */
+.fi-ta-row.fi-striped {
+    background: transparent;
+}
+
+.fi-ta-row:hover,
+.fi-ta-row.fi-clickable:hover {
+    background: var(--tc-bg-hover);
+}
+
+.fi-ta-row.fi-selected:not(.fi-striped) {
+    background: var(--tc-bg-selected);
+}
+
+/* ── Cells ────────────────────────────────────────────────────────────────
+   The 40px row. Filament pads the text component, not the cell, so this is
+   where the height is actually decided. */
+
+.fi-ta-cell {
+    color: var(--tc-text-primary);
+    vertical-align: middle;
+}
+
+.fi-ta-text:not(.fi-inline) {
+    padding: 0.625rem var(--tc-space-4);
+}
+
+/* Filament pads the actions, checkbox and reorder cells with py-4 of their own,
+   which held the row at 53px however tight the text cells were — one cell
+   sets a table row's height for all of them. */
+.fi-ta-cell:has(.fi-ta-actions),
+.fi-ta-cell:has(.fi-ta-record-checkbox),
+.fi-ta-cell:has(.fi-ta-reorder-handle),
+.fi-ta-cell.fi-ta-selection-cell {
+    padding-block: 0;
+}
+
+.fi-ta-cell .fi-ta-actions {
+    gap: var(--tc-space-1);
+}
+
+.fi-ta-cell .fi-icon-btn {
+    width: 26px;
+    height: 26px;
+}
+
+.fi-ta-text,
+.fi-ta-text-item-label {
+    font-size: var(--tc-text-body);
+    line-height: var(--tc-leading-body);
+    letter-spacing: var(--tc-tracking-body);
+}
+
+.fi-ta-text-description {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-small);
+    line-height: var(--tc-leading-small);
+}
+
+/* Any figure in a column of figures gets tabular numerals so the decimals line
+   up instead of drifting row to row. */
+.fi-ta-cell .fi-ta-text {
+    font-variant-numeric: tabular-nums lining-nums;
+}
+
+.fi-ta-placeholder {
+    color: var(--tc-text-placeholder);
+}
+
+/* ── Badges ───────────────────────────────────────────────────────────────
+   Still available for categories. Status uses the dot language from
+   components.css instead — eleven coloured pills in a column is a fruit salad,
+   eleven dots in a fixed position is a stripe you can scan. */
+
+.fi-ta-cell .fi-badge {
+    height: 18px;
+    border-radius: var(--tc-radius-xs);
+    padding-inline: var(--tc-space-2);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-medium);
+    letter-spacing: 0;
+}
+
+/* ── Search, filters, column manager ──────────────────────────────────────*/
+
+.fi-ta-search-field .fi-input-wrp {
+    height: var(--tc-control-height);
+    border-color: var(--tc-border-subtle);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-bg-sunken);
+    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-ta-search-field .fi-input-wrp:focus-within {
+    border-color: var(--tc-border-focus);
+    background: var(--tc-bg-surface);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--tc-border-focus) 18%, transparent);
+}
+
+.fi-ta-search-field input {
+    font-size: var(--tc-text-body);
+}
+
+.fi-ta-filter-indicators {
+    border-bottom: 1px solid var(--tc-border-subtle);
+    background: var(--tc-bg-sunken);
+    padding: var(--tc-space-2) var(--tc-space-5);
+}
+
+.fi-ta-selection-indicator {
+    border-bottom: 1px solid var(--tc-border-subtle);
+    background: var(--tc-bg-selected);
+    padding: var(--tc-space-2) var(--tc-space-5);
+}
+
+/* ── Pagination ───────────────────────────────────────────────────────────*/
+
+.fi-ta-ctn .fi-pagination {
+    border-top: 1px solid var(--tc-border-subtle);
+    padding: var(--tc-space-3) var(--tc-space-5);
+}
+
+.fi-pagination-item-btn {
+    min-width: 26px;
+    height: 26px;
+    border-radius: var(--tc-radius-sm);
+    font-size: var(--tc-text-small);
+    font-variant-numeric: tabular-nums;
+}
+
+.fi-pagination-overview,
+.fi-pagination-records-per-page-select-ctn {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-small);
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────
+   Filament v5 marks the current tab with `fi-active`. The panel's previous
+   stylesheet was still targeting `.fi-tabs-item-active`, a v3 class name that
+   no longer ships, so the active tab had no treatment at all. */
+
+.fi-tabs {
+    display: flex;
+    gap: var(--tc-space-1);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+    padding: var(--tc-space-1);
+    box-shadow: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.fi-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.fi-tabs-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--tc-space-2);
+    height: 28px;
+    padding-inline: var(--tc-space-4);
+    border-radius: var(--tc-radius-sm);
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-medium);
+    white-space: nowrap;
+    transition:
+        background-color var(--tc-duration-fast) var(--tc-ease-standard),
+        color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.fi-tabs-item:hover {
+    background: var(--tc-bg-sunken);
+    color: var(--tc-text-primary);
+}
+
+.fi-tabs-item.fi-active {
+    background: var(--tc-bg-selected);
+    color: var(--tc-text-brand);
+    font-weight: var(--tc-weight-semibold);
+}
+
+.fi-tabs-item .fi-badge {
+    height: 17px;
+    border-radius: var(--tc-radius-xs);
+    padding-inline: 5px;
+    font-size: var(--tc-text-micro);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Empty & loading ──────────────────────────────────────────────────────*/
+
+.fi-ta-empty-state {
+    padding-block: var(--tc-space-10);
+}
+
+.fi-ta-empty-state-heading {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-title);
+    font-weight: var(--tc-weight-semibold);
+}
+
+.fi-ta-empty-state-description {
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-body);
+}
+
+.fi-ta-empty-state-icon-bg {
+    background: var(--tc-bg-sunken);
+    color: var(--tc-text-tertiary);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────*/
+
+@media (max-width: 767px) {
+    .fi-ta-ctn .fi-ta-header,
+    .fi-ta-ctn .fi-ta-header-toolbar,
+    .fi-ta-ctn .fi-pagination {
+        padding-inline: var(--tc-space-4);
+    }
+
+    .fi-ta-header-cell:first-of-type,
+    .fi-ta-cell:first-of-type {
+        padding-inline-start: var(--tc-space-4);
+    }
+
+    .fi-ta-header-cell:last-of-type,
+    .fi-ta-cell:last-of-type {
+        padding-inline-end: var(--tc-space-4);
+    }
+
+    .fi-ta-header-toolbar {
+        flex-wrap: wrap;
+    }
+
+    .fi-ta-search-field {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .fi-pagination {
+        flex-wrap: wrap;
+        gap: var(--tc-space-3);
+    }
+}

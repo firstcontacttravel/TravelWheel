@@ -20,9 +20,9 @@ class ProtocolBookingResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTicket;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Protocol';
+    protected static string|\UnitEnum|null $navigationGroup = 'Airport Services';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 20;
 
     protected static ?string $navigationLabel = 'Protocol Bookings';
 

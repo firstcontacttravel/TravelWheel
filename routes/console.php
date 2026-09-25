@@ -44,3 +44,10 @@ Schedule::command('reports:send-scheduled')
     ->hourly()
     ->timezone('Africa/Lagos')
     ->withoutOverlapping(120);
+
+// The SkyLink JWT caches for 13 minutes against a 15-minute lifetime; refresh
+// it just inside that window so a customer's search never pays for the login
+// round trip on top of SkyLink's own ~7s average.
+Schedule::command('skylink:warm-token')
+    ->everyTenMinutes()
+    ->withoutOverlapping(5);

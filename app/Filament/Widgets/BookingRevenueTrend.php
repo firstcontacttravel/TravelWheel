@@ -18,6 +18,10 @@ class BookingRevenueTrend extends ChartWidget
 
     protected string $color = 'primary';
 
+    // Filament's widget default is 5 seconds: a full panel boot and a
+    // grouped aggregate every five seconds, per open dashboard, forever.
+    protected ?string $pollingInterval = '60s';
+
     protected function getType(): string
     {
         return 'bar';

@@ -1,0 +1,381 @@
+/*
+ * TravelWheel Console — sign-in and the custom pages
+ * ==================================================
+ *
+ * The login screen, plus Reports and System Health — the two pages whose
+ * markup is our own Blade rather than Filament's. They previously carried
+ * tw-report-* and tw-bi-*: a third styling system alongside the panel's and
+ * Filament's, with its own greys, its own radii and its own idea of a heading.
+ *
+ * This is the file that lets resources/css/filament/admin/theme.css go away.
+ */
+
+/* ── Sign-in ──────────────────────────────────────────────────────────────*/
+
+.fi-simple-layout {
+    background:
+        radial-gradient(1100px 560px at 50% -20%, rgb(var(--tc-brand-rgb) / 0.22), transparent 70%),
+        radial-gradient(720px 400px at 88% 112%, rgb(var(--tc-accent-rgb) / 0.10), transparent 70%),
+        var(--tc-bg-canvas);
+    color: var(--tc-text-primary);
+    font-family: var(--tc-font-sans);
+}
+
+.fi-simple-main {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-lg);
+    background: var(--tc-bg-surface);
+    box-shadow: var(--tc-shadow-modal);
+    --tw-ring-shadow: 0 0 #0000;
+}
+
+.fi-simple-layout .fi-logo {
+    color: var(--tc-text-brand);
+    font-size: var(--tc-text-display);
+    letter-spacing: var(--tc-tracking-tighter);
+}
+
+.fi-simple-header-heading {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-title);
+    line-height: var(--tc-leading-title);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tight);
+}
+
+.fi-simple-header-subheading {
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-body);
+}
+
+/*
+ * The one place a button should fill its container. The panel's previous
+ * stylesheet reached for a GLOBAL `.fi-btn { width: 100% }` to achieve this,
+ * which stretched every button in the admin — table actions, header actions,
+ * and the pagination "Next" control across its whole row.
+ */
+.fi-simple-main .fi-form .fi-btn {
+    width: 100%;
+    justify-content: center;
+    min-height: var(--tc-control-height-lg);
+}
+
+/* ── Custom pages ─────────────────────────────────────────────────────────
+   Reports and System Health. Both are grids of panels over a table or a list,
+   so they share one set of parts rather than each inventing its own. */
+
+.tc-page {
+    display: grid;
+    gap: var(--tc-space-5);
+}
+
+.tc-panel {
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.tc-panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--tc-space-4);
+    flex-wrap: wrap;
+    padding: var(--tc-space-4) var(--tc-space-5);
+    border-bottom: 1px solid var(--tc-border-subtle);
+}
+
+.tc-panel-title {
+    margin: 0;
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-title);
+    line-height: var(--tc-leading-title);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tight);
+}
+
+.tc-panel-note {
+    margin: 2px 0 0;
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+    line-height: var(--tc-leading-small);
+}
+
+.tc-panel-body {
+    padding: var(--tc-space-5);
+}
+
+/* ── Metric row ───────────────────────────────────────────────────────────
+   The figures at the top of a report. A left rail carries the tone, the same
+   way the dashboard's alerts do, so "this one is bad" reads identically on
+   both screens. */
+
+.tc-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: var(--tc-space-4);
+}
+
+.tc-metric {
+    position: relative;
+    padding: var(--tc-space-4) var(--tc-space-5);
+    padding-inline-start: var(--tc-space-5);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+    overflow: hidden;
+}
+
+.tc-metric::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: 3px;
+    background: var(--tc-metric-tone, var(--tc-border-strong));
+}
+
+.tc-metric-good { --tc-metric-tone: var(--tc-status-positive-dot); }
+.tc-metric-warn { --tc-metric-tone: var(--tc-status-warning-dot); }
+.tc-metric-bad { --tc-metric-tone: var(--tc-status-critical-dot); }
+.tc-metric-info { --tc-metric-tone: var(--tc-status-info-dot); }
+.tc-metric-brand { --tc-metric-tone: var(--tc-brand); }
+
+.tc-metric dt {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.tc-metric dd {
+    margin: var(--tc-space-1) 0 0;
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-display);
+    line-height: var(--tc-leading-display);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tighter);
+}
+
+.tc-metric small {
+    display: block;
+    margin-top: var(--tc-space-1);
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+/* ── Data table inside a custom page ──────────────────────────────────────
+   Deliberately the same geometry as the resource tables in table.css: a
+   report that looks like a different product from the queue it summarises is
+   a report people distrust. */
+
+.tc-table-wrap {
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+
+.tc-table {
+    width: 100%;
+    min-width: 100%;
+    border-collapse: collapse;
+}
+
+.tc-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    height: 32px;
+    padding: 0 var(--tc-space-4);
+    border-bottom: 1px solid var(--tc-border-subtle);
+    background: var(--tc-bg-sunken);
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+    text-align: start;
+    white-space: nowrap;
+}
+
+.tc-table td {
+    padding: 0.625rem var(--tc-space-4);
+    border-top: 1px solid var(--tc-border-subtle);
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+    vertical-align: top;
+}
+
+.tc-table tbody tr:hover {
+    background: var(--tc-bg-hover);
+}
+
+.tc-table td strong {
+    display: block;
+    font-weight: var(--tc-weight-medium);
+}
+
+.tc-table td span:not(.tc-status):not(.tc-tag) {
+    display: block;
+    margin-top: 1px;
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+.tc-table .tc-num,
+.tc-table .tc-money {
+    text-align: end;
+    white-space: nowrap;
+}
+
+.tc-table-empty td {
+    padding: var(--tc-space-8);
+    color: var(--tc-text-tertiary);
+    text-align: center;
+}
+
+/* ── Filters / export bar ─────────────────────────────────────────────────*/
+
+.tc-filters {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--tc-space-4);
+    flex-wrap: wrap;
+}
+
+.tc-filters label {
+    display: grid;
+    gap: var(--tc-space-2);
+    min-width: 150px;
+}
+
+.tc-filters label span {
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+    font-weight: var(--tc-weight-medium);
+}
+
+.tc-filters input,
+.tc-filters select {
+    height: var(--tc-control-height);
+    padding-inline: var(--tc-space-3);
+    border: 1px solid var(--tc-border-default);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-bg-input);
+    color: var(--tc-text-primary);
+    font-family: inherit;
+    font-size: var(--tc-text-body);
+}
+
+.tc-filters input:focus,
+.tc-filters select:focus {
+    outline: none;
+    border-color: var(--tc-border-focus);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--tc-border-focus) 18%, transparent);
+}
+
+.tc-actions {
+    display: flex;
+    gap: var(--tc-space-3);
+    flex-wrap: wrap;
+}
+
+/* ── Health checks ────────────────────────────────────────────────────────*/
+
+.tc-checks {
+    display: grid;
+}
+
+.tc-check {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: var(--tc-space-4);
+    padding: var(--tc-space-3) var(--tc-space-5);
+}
+
+.tc-check + .tc-check {
+    border-top: 1px solid var(--tc-border-subtle);
+}
+
+.tc-check-name {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-medium);
+}
+
+.tc-check-summary {
+    margin: 2px 0 0;
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+    line-height: var(--tc-leading-small);
+}
+
+.tc-check-action {
+    margin: var(--tc-space-2) 0 0;
+    padding: var(--tc-space-2) var(--tc-space-3);
+    border: 1px solid var(--tc-status-warning-border);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-status-warning-bg);
+    color: var(--tc-status-warning);
+    font-size: var(--tc-text-small);
+}
+
+.tc-check-detail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--tc-space-1) var(--tc-space-5);
+    margin: var(--tc-space-3) 0 0;
+}
+
+.tc-check-detail div {
+    display: flex;
+    gap: var(--tc-space-2);
+    min-width: 0;
+    font-size: var(--tc-text-small);
+}
+
+.tc-check-detail dt {
+    flex: none;
+    color: var(--tc-text-tertiary);
+}
+
+.tc-check-detail dd {
+    margin: 0;
+    color: var(--tc-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────*/
+
+@media (max-width: 767px) {
+    .tc-panel-head,
+    .tc-panel-body,
+    .tc-check {
+        padding-inline: var(--tc-space-4);
+    }
+
+    .tc-metrics {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tc-filters label {
+        flex: 1 1 100%;
+    }
+
+    .tc-actions .fi-btn,
+    .tc-actions a {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .tc-check {
+        grid-template-columns: 14px minmax(0, 1fr);
+    }
+
+    .tc-check > :last-child {
+        grid-column: 2;
+    }
+}

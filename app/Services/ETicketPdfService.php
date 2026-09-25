@@ -119,6 +119,13 @@ class ETicketPdfService
             ?? data_get($tripDetails, 'AirlinePNR')
             ?? '';
 
+        // SkyLink has no trip details to read one from. Its reserve() PNR is
+        // the booking's airline reference, which the confirmation page
+        // already shows. Without this the documents print a blank.
+        if ($ticketPNR === '' && $booking->isSkylink()) {
+            $ticketPNR = (string) $booking->unique_id;
+        }
+
         return [
             'bookingRef' => $booking->booking_ref,
             'uniqueId' => $booking->unique_id ?? '',
@@ -126,6 +133,9 @@ class ETicketPdfService
             'airline' => $flight['airline'] ?? $booking->airline ?? '',
             'cabin' => \App\Support\FlightDisplay::cabin($flight, $booking),
             'isTicketed' => $isTicketed,
+            // Paid, seat reserved, ticket not issued yet, and no timing we can
+            // promise: SkyLink issues tickets outside its API.
+            'awaitingSupplierTicket' => ! $isTicketed && $booking->isSkylink() && $booking->payment_status === 'paid',
             'bookingStatus' => $bookingStatus,
             'ticketStatus' => $ticketStatus,
             'ticketPNR' => $ticketPNR,

@@ -20,7 +20,12 @@ class ReportingSynchronizer
 
         $last = ReportingSyncRun::query()->where('status', 'completed')->latest('completed_at')->value('completed_at');
 
-        if (! $last || now()->diffInMinutes($last) >= (int) config('reporting.fresh_for_minutes', 5)) {
+        // Signed diff again: once one sync had completed, `>= 5` compared a
+        // negative number and was never true, so the facts behind the admin
+        // Reports page were computed once and never refreshed.
+        $freshFor = (int) config('reporting.fresh_for_minutes', 5);
+
+        if (! $last || $last->lt(now()->subMinutes($freshFor))) {
             Cache::lock('reporting-fact-sync', 300)->get(fn () => $this->sync());
         }
     }

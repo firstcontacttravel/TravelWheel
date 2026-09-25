@@ -12,6 +12,15 @@ class AdminTicketingService
 {
     public function ticketOrder(FlightBooking $booking): array
     {
+        if (! $booking->usesTravelNextApi()) {
+            return [
+                'ok' => false,
+                'message' => 'SkyLink bookings have no ticket-order step. Record the ticket numbers once SkyLink issues them.',
+                'request' => [],
+                'response' => [],
+            ];
+        }
+
         $lock = Cache::lock('flight-ticketing:'.$booking->id, 300);
 
         if (! $lock->get()) {
@@ -121,6 +130,15 @@ class AdminTicketingService
 
     public function tripDetails(FlightBooking $booking): array
     {
+        if (! $booking->usesTravelNextApi()) {
+            return [
+                'ok' => false,
+                'message' => 'Trip details come from TravelNext and are not available for SkyLink bookings.',
+                'request' => [],
+                'response' => [],
+            ];
+        }
+
         $payload = $this->travelNextPayload($booking->unique_id);
 
         try {
@@ -171,14 +189,20 @@ class AdminTicketingService
         ];
     }
 
-    public function sendETicket(FlightBooking $booking, array $tripDetails): void
+    /**
+     * $uniqueKey defaults to the key the booking-confirmed email used. The
+     * outbox treats an already-sent key as delivered and returns true without
+     * sending, so a genuinely new email — the ticket once it is issued — needs
+     * a key of its own, or it is silently dropped.
+     */
+    public function sendETicket(FlightBooking $booking, array $tripDetails, ?string $uniqueKey = null): void
     {
         $sent = app(DurableMailService::class)->sendNowOrStore(
             DurableMailService::FLIGHT_ETICKET,
             (string) $booking->contact_email,
             $booking,
             ['trip_details' => $tripDetails],
-            'flight-eticket:'.$booking->id,
+            $uniqueKey ?? 'flight-eticket:'.$booking->id,
         );
 
         if (! $sent) {

@@ -29,9 +29,9 @@ class CountryGroupResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleGroup;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Visa Catalogue';
+    protected static string|\UnitEnum|null $navigationGroup = 'Visas';
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 75;
 
     protected static ?string $recordTitleAttribute = 'name';
 

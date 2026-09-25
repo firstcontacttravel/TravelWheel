@@ -2,32 +2,134 @@
 
 namespace App\Livewire\Pages;
 
+use App\Services\SkylinkFlightService;
+use Livewire\Attributes\Renderless;
+use App\Support\FlightMarkup;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
+use Throwable;
 
 class FlightPage extends Component
 {
-    public array  $flightResults   = [];
-    public array  $searchParams    = [];
-    public string $searchSessionId = '';
-
-    public function mount(): void
+    /**
+     * Nothing on this component is public state.
+     *
+     * Livewire serialises every public property into the wire:snapshot it
+     * embeds in the page AND ships it back and forth on every subsequent
+     * request. The search results are the biggest object on this page and are
+     * needed exactly once — at first paint, to seed the Alpine component in
+     * flight-result.blade.php. Holding them publicly meant the wire:init call
+     * that fetches SkyLink first uploaded the entire TravelNext result set and
+     * then had it echoed back: measured against a representative mapped flight
+     * (2 segments plus fare breakdown, ~2.9 KB), a 40-flight result set is
+     * ~117 KB each way, on top of ~199 KB of duplicate snapshot in the initial
+     * HTML — pure overhead on a mobile uplink before SkyLink is even called.
+     *
+     * FlightController::search() writes these durable session keys before
+     * redirecting here, so reading them per-render costs nothing and survives
+     * refreshes, back-button navigation and Livewire re-renders just as well.
+     * Reading the criteria from the session inside the action is also strictly
+     * safer than trusting anything that made a round trip through the client.
+     */
+    protected function flightResults(): array
     {
-        // ── Read exclusively from the durable session keys ────────────────────
-        // FlightController::search() writes these before redirecting here.
-        // Because they are durable (not flash), they survive page refreshes,
-        // back-button navigation, and Livewire re-renders.
-        $this->flightResults   = session('flightResultsStore', []);
-        $this->searchParams    = session('searchParamsStore',  []);
-        $this->searchSessionId = session('searchSessionId',    '');
+        return session('flightResultsStore', []);
     }
 
-     public function render()
+    protected function searchParams(): array
     {
-       //dd($this->searchParams);
+        return session('searchParamsStore', []);
+    }
+
+    /**
+     * Fired via wire:init right after the initial render — TravelNext's
+     * results are already on screen by the time this runs, so a slow or
+     * failing SkyLink call never delays or breaks the page. The mapped
+     * flights are pushed to the browser as an event; the Alpine component in
+     * flight-result.blade.php merges/dedupes/re-sorts them into the visible
+     * list.
+     *
+     * Kept in its own skylinkResultsStore key (REPLACED, not appended, on
+     * every call) rather than flightResultsStore — a page reload re-fires
+     * wire:init, and each call is a fresh, authoritative SkyLink search for
+     * the same criteria, so the previous batch is simply stale, not a
+     * duplicate to preserve. Appending onto flightResultsStore instead grew
+     * it unbounded across reloads AND leaked straight into the next page
+     * load's initial (undeduped) paint, since that's exactly what seeds
+     * Alpine's allFlights at mount — confirmed via live browser testing.
+     * FlightBookingController::select() reads this key for SkyLink fares.
+     */
+    /**
+     * Renderless: this call exists only to hand the browser an event. Alpine
+     * does the merging, so nothing Blade renders changes as a result of it —
+     * but Livewire re-renders the component after every call by default, and
+     * that re-render was the single largest thing in the response. Measured on
+     * staging, a round trip came back with 1.24 MB of re-rendered HTML (a 69 KB
+     * inline <style> block, plus a second full copy of the flight list inlined
+     * by @js) on top of the 834 KB of flights actually asked for.
+     *
+     * Skipping it also removes a hazard rather than just weight: that HTML gets
+     * morphed over the live DOM, re-running the @js seed underneath an Alpine
+     * component that has already merged SkyLink's results into its own state.
+     */
+    #[Renderless]
+    public function loadSkylinkResults(): void
+    {
+        $this->dispatch('skylink-results-ready', flights: $this->skylinkFlights());
+    }
+
+    /**
+     * Every failure mode returns an empty list rather than propagating.
+     *
+     * The whole point of loading SkyLink as a supplement is that it can never
+     * degrade the page, so the guarantee has to cover the mapping and session
+     * write too — not just the HTTP call. Those two used to sit outside the
+     * try, which meant something as ordinary as an ExchangeRate lookup failing
+     * inside FlightMarkup::apply() returned a 500 for the wire:init request.
+     */
+    private function skylinkFlights(): array
+    {
+        // Kill switch — see config/services.php's skylink.enabled. Off by
+        // default: deploying this code changes nothing for real customers
+        // until this is explicitly turned on, and flipping it back off is
+        // instant (no redeploy) if anything looks wrong during live testing.
+        $searchParams = $this->searchParams();
+
+        if (! config('services.skylink.enabled') || $searchParams === []) {
+            return [];
+        }
+
+        try {
+            $result = app(SkylinkFlightService::class)->search($searchParams);
+
+            if ($result['error'] ?? true) {
+                return [];
+            }
+
+            $flights = array_values(array_map(
+                fn (array $flight): array => FlightMarkup::apply($flight),
+                (array) data_get($result, 'data.flights', [])
+            ));
+
+            session(['skylinkResultsStore' => $flights]);
+
+            return $flights;
+        } catch (Throwable $exception) {
+            Log::warning('SkyLink supplemental search failed', [
+                'error' => $exception->getMessage(),
+                'exception' => $exception::class,
+            ]);
+
+            return [];
+        }
+    }
+
+    public function render()
+    {
         return view('livewire.pages.flight.flight-page-result', [
-            'flightResults'   => $this->flightResults,
-            'searchParams'    => $this->searchParams,
-            'searchSessionId' => $this->searchSessionId,
+            'flightResults' => $this->flightResults(),
+            'searchParams' => $this->searchParams(),
+            'searchSessionId' => session('searchSessionId', ''),
         ]);
     }
 }

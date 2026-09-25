@@ -25,7 +25,7 @@ class ReportingTargetResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFlag;
     protected static string|\UnitEnum|null $navigationGroup = 'Insights';
     protected static ?string $navigationLabel = 'Report Targets';
-    protected static ?int $navigationSort = 41;
+    protected static ?int $navigationSort = 50;
 
     public static function form(Schema $schema): Schema
     {

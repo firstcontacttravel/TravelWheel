@@ -23,7 +23,7 @@ class SupportProductPriceResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Support Requests';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 50;
 
     protected static ?string $navigationLabel = 'Product Prices';
 

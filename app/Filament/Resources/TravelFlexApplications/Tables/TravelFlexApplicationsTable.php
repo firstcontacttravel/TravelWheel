@@ -190,21 +190,17 @@ class TravelFlexApplicationsTable
 
     private static function actionContext(TravelFlexApplication $record, string $title): HtmlString
     {
-        return new HtmlString(
-            '<div class="tw-action-context">' .
-                '<div>' .
-                    '<div class="tw-action-context-kicker">' . e($title) . '</div>' .
-                    '<div class="tw-action-context-title">' . e($record->booking_ref ?: 'TravelFlex') . '</div>' .
-                    '<div class="tw-action-context-sub">' . e(data_get($record->applicant_details, 'full_name') ?: 'Applicant') . '</div>' .
-                '</div>' .
-                '<dl>' .
-                    '<div><dt>Email</dt><dd>' . e(data_get($record->applicant_details, 'email') ?: '-') . '</dd></div>' .
-                    '<div><dt>Down payment</dt><dd>NGN ' . e(number_format((float) $record->down_payment, 2)) . '</dd></div>' .
-                    '<div><dt>Application</dt><dd>' . e(self::label($record->application_status)) . '</dd></div>' .
-                    '<div><dt>Provider</dt><dd>' . e(self::label($record->provider_status)) . '</dd></div>' .
-                '</dl>' .
-            '</div>',
-        );
+        return new HtmlString(view('filament.booking.action-context', [
+            'kicker' => $title,
+            'title' => $record->booking_ref ?: 'TravelFlex',
+            'subtitle' => data_get($record->applicant_details, 'full_name') ?: 'Applicant',
+            'rows' => [
+                'Email' => data_get($record->applicant_details, 'email') ?: '---',
+                'Down payment' => 'NGN '.number_format((float) $record->down_payment, 2),
+                'Application' => self::label($record->application_status),
+                'Provider' => self::label($record->provider_status),
+            ],
+        ])->render());
     }
 
     public static function markReviewedAction(): Action

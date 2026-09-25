@@ -1,292 +1,308 @@
 {{-- resources/views/livewire/pages/flight/flight-payment-gateway.blade.php --}}
 @component('layouts.app', ['title' => 'Secure Payment'])
 
-
 @php
     $currency = $flight['currency'] ?? 'NGN';
     $sym      = match($currency) { 'NGN' => '₦', 'USD' => '$', 'GBP' => '£', 'EUR' => '€', default => $currency.' ' };
     $fmt      = fn($v) => $sym . number_format((float)$v, 2);
-    $total    = ($flight['price'] ?? 0) + ($extrasTotal ?? 0);
+
+    $fare       = (float) ($flight['price'] ?? 0);
+    $extras     = (float) ($extrasTotal ?? 0);
+    $total      = $fare + $extras;
+    $base       = (float) ($flight['baseFare'] ?? 0);
+    // Whatever sits between the base fare and the fare charged is taxes,
+    // carrier fees and our service charge. Stating it keeps the summary
+    // adding up, the same way the booking page's does.
+    $fees       = max(0, $fare - $base);
+
     $cabinLabel = \App\Support\FlightDisplay::cabin($flight ?? []);
-    $segments = $flight['segments'] ?? [];
-    $multiLegs = $flight['multiLegs'] ?? [];
-    $isMulti = count($multiLegs) > 0;
-    $firstSeg = $segments[0] ?? [];
-    $lastSeg  = !empty($segments) ? $segments[count($segments)-1] : [];
-    $routeLines = [];
+    $segments   = $flight['segments'] ?? [];
+    $multiLegs  = $flight['multiLegs'] ?? [];
+    $retSegs    = $flight['returnSegments'] ?? [];
+    $isMulti    = count($multiLegs) > 0;
+    $firstSeg   = $segments[0] ?? [];
+    $lastSeg    = !empty($segments) ? $segments[count($segments) - 1] : [];
+
+    // SkyLink reports 12-hour clock times ("07:15 pm"); TravelNext reports
+    // 24-hour. Every other page in this funnel normalises, so a departure does
+    // not change format between reviewing the booking and paying for it.
+    $pgTime = function ($value): string {
+        $raw = trim((string) $value);
+        if (! preg_match('/^(\d{1,2}):(\d{2})\s*([ap])\.?m\.?$/i', $raw, $m)) { return $raw; }
+        $hour = ((int) $m[1] % 12) + (strtolower($m[3]) === 'p' ? 12 : 0);
+        return str_pad((string) $hour, 2, '0', STR_PAD_LEFT).':'.$m[2];
+    };
+
+    $legs = [];
     if ($isMulti) {
         foreach ($multiLegs as $li => $leg) {
-            $routeLines[] = [
-                'label' => 'Leg ' . ($li + 1),
-                'route' => ($leg['from'] ?? ($leg['segments'][0]['from'] ?? '')) . ' → ' . ($leg['to'] ?? ''),
+            $ls = $leg['segments'] ?? [];
+            $legs[] = [
+                'label' => 'Leg '.($li + 1),
+                'from'  => $ls[0]['fromCity'] ?? $ls[0]['from'] ?? ($leg['from'] ?? ''),
+                'to'    => count($ls) ? ($ls[count($ls)-1]['toCity'] ?? $ls[count($ls)-1]['to'] ?? '') : ($leg['to'] ?? ''),
                 'date'  => $leg['departDateLabel'] ?? '',
+                'depart' => $pgTime($ls[0]['departTime'] ?? ''),
+                'arrive' => count($ls) ? $pgTime($ls[count($ls)-1]['arriveTime'] ?? '') : '',
+                'dur'   => $leg['totalTimeLabel'] ?? '',
             ];
         }
     } else {
-        $routeLines[] = [
-            'label' => 'Flight',
-            'route' => ($firstSeg['from'] ?? '') . ' → ' . ($lastSeg['to'] ?? ''),
+        $legs[] = [
+            'label' => count($retSegs) ? 'Outbound' : '',
+            'from'  => $firstSeg['fromCity'] ?? $firstSeg['from'] ?? '',
+            'to'    => $lastSeg['toCity'] ?? $lastSeg['to'] ?? '',
             'date'  => $flight['departDateLabel'] ?? '',
+            'depart' => $pgTime($firstSeg['departTime'] ?? ''),
+            'arrive' => $pgTime($lastSeg['arriveTime'] ?? ''),
+            'dur'   => $flight['totalTimeLabel'] ?? '',
         ];
+        if (count($retSegs)) {
+            $rl = $retSegs[count($retSegs) - 1];
+            $legs[] = [
+                'label' => 'Return',
+                'from'  => $retSegs[0]['fromCity'] ?? $retSegs[0]['from'] ?? '',
+                'to'    => $rl['toCity'] ?? $rl['to'] ?? '',
+                'date'  => $flight['returnDateLabel'] ?? '',
+                'depart' => $pgTime($retSegs[0]['departTime'] ?? ''),
+                'arrive' => $pgTime($rl['arriveTime'] ?? ''),
+                'dur'   => $flight['returnTotalTimeLabel'] ?? '',
+            ];
+        }
     }
+
+    $pax      = collect($passengers ?? [])->filter(fn ($p) => ! empty($p['last_name']))->values();
+    $paxCount = $pax->count();
+    $leadName = $paxCount ? trim(($pax[0]['title'] ?? '').' '.strtoupper($pax[0]['first_name'] ?? '').' '.strtoupper($pax[0]['last_name'] ?? '')) : '';
+
+    // This page is reached two ways: TravelNext WebFare fares (pay first, then
+    // book — the only fare type routed here) and every SkyLink fare (SkyLink
+    // has no hold concept, so it always pays first regardless of fare type).
+    // "Low Cost Carrier (LCC)" is TravelNext's own fare-type jargon — accurate
+    // for the first case, meaningless for the second — so the copy describes
+    // the actual mechanic instead of a fare-type label that fits only one.
+    $isSkylink = ($flight['source'] ?? null) === 'skylink';
 @endphp
 
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ asset('css/travelwheel-ui.css') }}">
 <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    :root{--navy:#0a1940;--blue:#1d4ed8;--blue-lt:#eff6ff;--blue-md:#bfdbfe;--green:#059669;--green-lt:#f0fdf4;--red:#dc2626;--red-lt:#fef2f2;--gray-50:#f8fafc;--gray-100:#f1f5f9;--gray-200:#e2e8f0;--gray-300:#cbd5e1;--gray-400:#94a3b8;--gray-500:#64748b;--gray-700:#334155;--gray-900:#0f172a;--font:'Plus Jakarta Sans',sans-serif;--mono:'DM Mono',monospace}
-    body{font-family:var(--font);background:var(--gray-50);color:var(--gray-900);font-size:14px;margin-top:110px}
-    .gw-wrap{max-width:960px;margin:0 auto;padding:28px 16px 80px;display:grid;grid-template-columns:1fr 340px;gap:22px;align-items:start}
-    .gw-card{background:#fff;border:1px solid var(--gray-200);border-radius:14px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden}
-    .gw-head{padding:18px 24px;background:linear-gradient(135deg,var(--navy) 0%,#1e3a6e 100%);color:#fff;display:flex;align-items:center;gap:12px}
-    .gw-head-icon{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px}
-    .gw-head-title{font-size:16px;font-weight:800}
-    .gw-head-sub{font-size:12px;opacity:.75;margin-top:2px}
-    .gw-lock{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:12px;opacity:.8;background:rgba(255,255,255,.12);padding:6px 12px;border-radius:999px;flex-shrink:0}
-    .gw-body{padding:28px 24px}
-    /* Notice */
-    .gw-notice{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:10px;font-size:12.5px;margin-bottom:22px}
-    .gw-notice.blue{background:var(--blue-lt);color:var(--blue);border:1px solid var(--blue-md)}
-    /* Flight summary strip */
-    .gw-flight-strip{background:var(--gray-50);border:1px solid var(--gray-200);border-radius:10px;padding:14px 16px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .gw-route{font-size:17px;font-weight:800;color:var(--navy);display:flex;align-items:center;gap:8px}
-    .gw-route-sub{font-size:11.5px;color:var(--gray-500);margin-top:3px}
-    .gw-amount-tag{background:var(--navy);color:#fff;padding:8px 18px;border-radius:8px;font-size:15px;font-weight:800;font-family:var(--mono);flex-shrink:0}
-    /* Payment simulation box */
-    .gw-sim-box{border:2px dashed var(--blue-md);border-radius:12px;padding:32px 24px;text-align:center;margin-bottom:28px;background:var(--blue-lt)}
-    .gw-sim-icon{font-size:48px;margin-bottom:12px}
-    .gw-sim-title{font-size:16px;font-weight:800;color:var(--navy);margin-bottom:6px}
-    .gw-sim-sub{font-size:13px;color:var(--gray-500);max-width:340px;margin:0 auto 20px}
-    /* Pay button */
-    .gw-pay-btn{width:100%;height:56px;background:linear-gradient(135deg,#059669 0%,#10b981 100%);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;font-family:var(--font);box-shadow:0 4px 20px rgba(5,150,105,.35);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px}
-    .gw-pay-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(5,150,105,.45)}
-    .gw-pay-btn:active{transform:translateY(0)}
-    .gw-pay-btn-sub{font-size:11px;opacity:.8;font-weight:500;margin-top:2px}
-    .gw-security{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11.5px;color:var(--gray-400);margin-top:14px}
-    /* Back */
-    .gw-back{display:inline-flex;align-items:center;gap:6px;color:var(--blue);font-size:12.5px;font-weight:600;text-decoration:none;margin-bottom:20px}
-    .gw-back:hover{text-decoration:underline}
-    /* Right rail */
-    .gw-rail-title{font-size:13px;font-weight:800;color:var(--gray-900);margin-bottom:14px}
-    .gw-rail-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);font-size:13px}
-    .gw-rail-row:last-child{border-bottom:none}
-    .gw-rail-lbl{color:var(--gray-500)}
-    .gw-rail-val{font-weight:700;font-family:var(--mono);font-size:12.5px}
-    .gw-rail-total{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-top:2px solid var(--gray-200);margin-top:4px}
-    .gw-rail-total-lbl{font-size:14px;font-weight:800;color:var(--navy)}
-    .gw-rail-total-val{font-size:22px;font-weight:800;color:var(--navy);font-family:var(--mono)}
-    .gw-badges{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 18px;border-top:1px solid var(--gray-100);flex-wrap:wrap}
-    .gw-badge{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray-400);font-weight:600}
-    /* Error */
-    .gw-error{background:var(--red-lt);border:1px solid #fca5a5;border-radius:9px;padding:12px 16px;font-size:13px;color:var(--red);margin-bottom:20px;display:flex;align-items:flex-start;gap:8px}
-    @media(max-width:860px){.gw-wrap{grid-template-columns:1fr}}
-    @media(max-width:580px){.gw-wrap{padding:12px 10px 60px}.gw-body{padding:20px 16px}.gw-route{font-size:14px}}
+    /* The site chrome is two stacked fixed bars (topbar 0-51px, nav 48-128px),
+       so the page needs 128px of clearance plus breathing room. Without any
+       of this the shell header slid under the nav and the page title was
+       unreadable; the 90px other pages use is still short of it. */
+    main.navbarmain.upper-space { padding-top: 142px; }
+    .tw-ui-page { padding-top: 20px; }
+    @media (max-width: 650px) { main.navbarmain.upper-space { padding-top: 96px; } }
+
+    .fpg-back{display:inline-flex;align-items:center;gap:6px;margin-bottom:14px;color:var(--tw-ui-muted);font-size:13px;font-weight:600;text-decoration:none}
+    .fpg-back:hover{color:var(--tw-ui-ink)}
+
+    /* One leg of the trip, read as a line rather than boxed like a card. */
+    .fpg-leg{display:flex;align-items:flex-start;gap:12px;padding:13px 0}
+    .fpg-leg + .fpg-leg{border-top:1px solid var(--tw-ui-line)}
+    .fpg-leg-ic{flex-shrink:0;width:30px;height:30px;border-radius:8px;background:#eef0ff;color:var(--tw-ui-brand);display:flex;align-items:center;justify-content:center}
+    .fpg-leg-txt{min-width:0;flex:1}
+    .fpg-leg-route{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--tw-ui-ink);font-size:14.5px;font-weight:700;line-height:1.4}
+    .fpg-leg-tag{flex-shrink:0;padding:2px 8px;border-radius:6px;background:var(--tw-ui-surface-soft);border:1px solid var(--tw-ui-line);color:var(--tw-ui-muted);font-size:11px;font-weight:600;line-height:1.45}
+    .fpg-leg-meta{margin-top:2px;color:var(--tw-ui-muted);font-size:12px;line-height:1.5}
+    .fpg-leg-times{display:flex;align-items:baseline;gap:8px;margin-top:6px;font-family:'DM Mono',monospace;font-size:13px;color:var(--tw-ui-ink)}
+    .fpg-leg-times .sep{color:var(--tw-ui-subtle)}
+    .fpg-leg-dur{font-family:var(--tw-font-sans,'Open Sans',sans-serif);font-size:11.5px;color:var(--tw-ui-muted)}
+
+    .fpg-row{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:11px 0;font-size:13px}
+    .fpg-row + .fpg-row{border-top:1px solid var(--tw-ui-line)}
+    .fpg-row-lbl{flex-shrink:0;color:var(--tw-ui-muted)}
+    .fpg-row-val{color:var(--tw-ui-ink);font-weight:600;text-align:right;min-width:0}
+    .fpg-divider{height:1px;background:var(--tw-ui-line);margin:2px 0}
+
+    /* The single action on the page. */
+    .fpg-pay{padding:4px 0 2px}
+    .fpg-pay-copy{margin:0 0 18px;color:var(--tw-ui-muted);font-size:13px;line-height:1.6}
+    .fpg-pay-btn{width:100%;flex-direction:column;gap:2px;height:auto;padding:15px}
+    .fpg-pay-btn small{display:block;font-size:11px;font-weight:600;opacity:.85}
+    .fpg-assure{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+    .fpg-assure-item{display:flex;align-items:flex-start;gap:9px;color:var(--tw-ui-muted);font-size:11.5px;line-height:1.5}
+    .fpg-assure-item svg{flex-shrink:0;margin-top:1px;color:var(--tw-ui-subtle)}
+
+    .fpg-summary-note{margin-top:12px;color:var(--tw-ui-subtle);font-size:11px;line-height:1.55}
+    @media(max-width:800px){.fpg-leg-route{font-size:13.5px}}
 </style>
 
-<div class="gw-wrap">
+<x-ui.page-shell
+    eyebrow="Secure checkout"
+    title="Pay for your booking"
+    copy="Your ticket is issued automatically the moment payment is confirmed.">
 
-    {{-- ── Main Payment Column ── --}}
-    <div>
-        <a href="{{ route('flights.booking') }}" class="gw-back">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
-            Back to Booking
-        </a>
+    <a href="{{ route('flights.booking') }}" class="fpg-back">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        Back to booking
+    </a>
 
-        @if(session('error') || $errors->has('error'))
-        <div class="gw-error">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span>{{ session('error') ?? $errors->first('error') ?? 'Payment error occurred' }}</span>
-        </div>
-        @endif
+    @if(session('error') || $errors->has('error'))
+        <x-ui.alert variant="error" role="alert">
+            {{ session('error') ?? $errors->first('error') ?? 'Payment error occurred' }}
+        </x-ui.alert>
+    @endif
 
-        <div class="gw-card">
-            <div class="gw-head">
-                <div class="gw-head-icon">💳</div>
-                <div>
-                    <div class="gw-head-title text-white">Payment</div>
-                    <!-- <div class="gw-head-sub">Your payment is protected by 256-bit SSL encryption</div> -->
-                </div>
-                <div class="gw-lock text-white">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    Secured
-                </div>
-            </div>
-
-            <div class="gw-body">
-                {{-- Flight strip --}}
-                <div class="gw-flight-strip">
-                    <div>
-                        @if($isMulti)
-                            <div style="display:flex;flex-direction:column;gap:6px;">
-                                @foreach($routeLines as $line)
-                                    <div class="gw-route" style="font-size:15px;">
-                                        <span>{{ $line['route'] }}</span>
-                                        <span style="font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-lt);padding:2px 8px;border-radius:999px;">{{ $line['label'] }}</span>
-                                    </div>
-                                @endforeach
-                            </div>
-                            <div class="gw-route-sub">
-                                {{ $flight['airline'] ?? '' }} · {{ count($routeLines) }} legs · {{ $cabinLabel }}
-                            </div>
-                        @else
-                        <div class="gw-route">
-                            {{ $firstSeg['from'] ?? '' }}
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                            {{ $lastSeg['to'] ?? '' }}
-                        </div>
-                        <div class="gw-route-sub">
-                            {{ $flight['airline'] ?? '' }}
-                            @if(!empty($flight['departDateLabel'])) · {{ $flight['departDateLabel'] }} @endif
-                            · {{ $cabinLabel }}
-                        </div>
-                        @endif
-                    </div>
-                    <div class="gw-amount-tag">{{ $fmt($total) }}</div>
-                </div>
-
-                {{-- Info notice --}}
-                <div class="gw-notice blue">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="flex-shrink:0;margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    <span>This is a <strong>Low Cost Carrier (LCC)</strong> ticket. Payment is processed first and your ticket is issued instantly on success.</span>
-                </div>
-
-                {{-- Simulation box --}}
-                <div class="gw-sim-box">
-                    <div class="gw-sim-icon">🔐</div>
-                    <div class="gw-sim-title">Payment Gateway</div>
-                    <div class="gw-sim-sub">Click the button below to simulate a successful payment and confirm your booking instantly.</div>
-
-                    <form method="POST" action="{{ route('flights.payment.gateway.process') }}" id="gw-form">
-                        @csrf
-                        <button type="submit" class="gw-pay-btn" id="gw-btn">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                            <div>
-                                <div>Pay {{ $fmt($total) }} Now</div>
-                                <div class="gw-pay-btn-sub">Instant ticket issuance</div>
-                            </div>
-                        </button>
-                    </form>
-                </div>
-
-                <div class="gw-security">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    SSL Secured · PCI DSS Compliant · 256-bit Encryption
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- ── Right Rail: Order Summary ── --}}
-    <aside>
-        <div class="gw-card">
-            <div style="padding:16px 18px;background:var(--navy);">
-                <div style="font-size:15px;font-weight:800;color:#fff;">Order Summary</div>
-            </div>
-            <div style="padding:14px 18px;">
-                <div class="gw-rail-row">
-                    <span class="gw-rail-lbl">Route</span>
-                    @if($isMulti)
-                    <span class="gw-rail-val" style="font-family:var(--font);font-weight:800;">
-                        @foreach($routeLines as $line)
-                            <div>{{ $line['route'] }}</div>
-                            @if(!empty($line['date']))
-                                <div style="font-size:11px;color:var(--gray-400);font-weight:600;">{{ $line['label'] }} · {{ $line['date'] }}</div>
-                            @endif
-                        @endforeach
+    <x-ui.card title="What you are paying for">
+        @foreach($legs as $leg)
+            <div class="fpg-leg">
+                <span class="fpg-leg-ic">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+                </span>
+                <span class="fpg-leg-txt">
+                    <span class="fpg-leg-route">
+                        {{ $leg['from'] }}
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--tw-ui-subtle);flex-shrink:0;"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+                        {{ $leg['to'] }}
+                        @if($leg['label'])<span class="fpg-leg-tag">{{ $leg['label'] }}</span>@endif
                     </span>
-                    @else
-                    <span class="gw-rail-val" style="font-family:var(--font);font-weight:800;">{{ ($firstSeg['from'] ?? '') }} → {{ ($lastSeg['to'] ?? '') }}</span>
+                    <span class="fpg-leg-meta">
+                        {{ $flight['airline'] ?? '' }}@if(!empty($firstSeg['flightNo'])) {{ $firstSeg['flightNo'] }}@endif
+                        @if($leg['date']) &middot; {{ $leg['date'] }} @endif
+                        &middot; {{ $cabinLabel }}
+                    </span>
+                    @if($leg['depart'] || $leg['arrive'])
+                        <span class="fpg-leg-times">
+                            <span>{{ $leg['depart'] }}</span>
+                            <span class="sep">&ndash;</span>
+                            <span>{{ $leg['arrive'] }}</span>
+                            @if($leg['dur'])<span class="fpg-leg-dur">{{ $leg['dur'] }}</span>@endif
+                        </span>
                     @endif
-                </div>
-                <div class="gw-rail-row">
-                    <span class="gw-rail-lbl">Fare Type</span>
-                    <span class="gw-rail-val" style="font-family:var(--font);">{{ $flight['fareType'] ?? 'WebFare' }} (LCC)</span>
-                </div>
-                <div class="gw-rail-row">
-                    <span class="gw-rail-lbl">Cabin</span>
-                    <span class="gw-rail-val" style="font-family:var(--font);">{{ $cabinLabel }}</span>
-                </div>
-                @if(!empty($contact['email']))
-                <div class="gw-rail-row">
-                    <span class="gw-rail-lbl">Contact</span>
-                    <span class="gw-rail-val" style="font-family:var(--font);font-size:11.5px;">{{ $contact['email'] }}</span>
-                </div>
-                @endif
-            </div>
-
-            {{-- Fare breakdown --}}
-            @php $breakdown = $flight['fareBreakdown'] ?? []; @endphp
-            @if(!empty($breakdown))
-            <div style="padding:0 18px 12px;border-top:1px solid var(--gray-100);padding-top:12px;">
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:10px;">Fare Breakdown</div>
-                @foreach($breakdown as $fb)
-                    @php
-                        $ptype = match($fb['passengerType']??'ADT'){'ADT'=>'Adult','CHD'=>'Child','INF'=>'Infant',default=>'Pax'};
-                        $qty   = $fb['qty'] ?? 1;
-                    @endphp
-                    <div class="gw-rail-row">
-                        <span class="gw-rail-lbl">{{ $ptype }} × {{ $qty }}</span>
-                        <span class="gw-rail-val">{{ $sym }}{{ number_format(($fb['totalFare']??0) * $qty, 2) }}</span>
-                    </div>
-                @endforeach
-            </div>
-            @endif
-
-            {{-- Extras section --}}
-            @if(($extrasTotal ?? 0) > 0)
-            <div style="padding:0 18px 12px;border-top:1px solid var(--gray-100);padding-top:12px;">
-                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-400);margin-bottom:10px;">Extras Added</div>
-                
-                {{-- Baggage items --}}
-                @forelse($selectedExtras['baggage'] ?? [] as $baggage)
-                    <div class="gw-rail-row">
-                        <span class="gw-rail-lbl">{{ $baggage['description'] ?? 'Baggage' }} × {{ $baggage['quantity'] ?? 1 }}</span>
-                        <span class="gw-rail-val">{{ $fmt($baggage['line_total'] ?? 0) }}</span>
-                    </div>
-                @empty
-                @endforelse
-                
-                {{-- Meal items --}}
-                @forelse($selectedExtras['meal'] ?? [] as $meal)
-                    <div class="gw-rail-row">
-                        <span class="gw-rail-lbl">{{ $meal['description'] ?? 'Meal' }}</span>
-                        <span class="gw-rail-val">{{ $fmt($meal['unit_price'] ?? 0) }}</span>
-                    </div>
-                @empty
-                @endforelse
-                
-                <div class="gw-rail-row" style="padding-top:8px;border-top:1px dashed var(--gray-200);margin-top:8px;padding-bottom:0;">
-                    <span class="gw-rail-lbl" style="font-weight:700;">Extras Subtotal</span>
-                    <span class="gw-rail-val" style="font-weight:700;">{{ $fmt($extrasTotal) }}</span>
-                </div>
-            </div>
-            @endif
-
-            <div class="gw-rail-total">
-                <span class="gw-rail-total-lbl">Total</span>
-                <span class="gw-rail-total-val">{{ $fmt($total) }}</span>
-            </div>
-
-            <div class="gw-badges">
-                <span class="gw-badge">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    Secure Payment
                 </span>
-                <span class="gw-badge">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    SSL Encrypted
+            </div>
+        @endforeach
+
+        <div class="fpg-divider"></div>
+
+        @if($paxCount)
+            <div class="fpg-row">
+                <span class="fpg-row-lbl">Travelling</span>
+                <span class="fpg-row-val">
+                    {{ $leadName }}@if($paxCount > 1) and {{ $paxCount - 1 }} {{ $paxCount === 2 ? 'other' : 'others' }}@endif
+                </span>
+            </div>
+        @endif
+        @if(!empty($contact['email']))
+            <div class="fpg-row">
+                <span class="fpg-row-lbl">Confirmation to</span>
+                <span class="fpg-row-val">{{ $contact['email'] }}</span>
+            </div>
+        @endif
+    </x-ui.card>
+
+    <x-ui.card title="Pay">
+        <div class="fpg-pay">
+            <p class="fpg-pay-copy">
+                You will be taken to our payment partner to complete this payment, then brought straight back.
+                Your ticket is issued automatically once the payment is confirmed &mdash; there is no separate
+                confirmation step to wait for.
+            </p>
+
+            <form method="POST" action="{{ route('flights.payment.gateway.process') }}" id="gw-form">
+                @csrf
+                <x-ui.button type="submit" size="lg" class="fpg-pay-btn" id="gw-btn">
+                    <span style="display:flex;align-items:center;gap:8px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                        Pay {{ $fmt($total) }}
+                    </span>
+                    <small>Ticket issued as soon as payment clears</small>
+                </x-ui.button>
+            </form>
+
+            <div class="fpg-assure">
+                <span class="fpg-assure-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    Encrypted and processed by a PCI DSS compliant payment provider.
+                </span>
+                <span class="fpg-assure-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+                    Your card details are never seen or stored by TravelWheel.
                 </span>
             </div>
         </div>
-    </aside>
+    </x-ui.card>
 
-</div>
+    <x-slot:summary>
+        <x-ui.card title="Amount to pay">
+            <div class="tw-ui-price">
+                @php $breakdown = $flight['fareBreakdown'] ?? []; @endphp
+                {{-- TravelNext supplies a real per-passenger-type total, which says
+                     more than a base/tax split for a multi-traveller booking.
+                     SkyLink carries only a supplier base fare with no per-type tax
+                     data, so the same rows there would read far too low against the
+                     total below — it gets the base-and-charges split instead, which
+                     always reconciles because the charges line is the remainder. --}}
+                @if(!empty($breakdown) && !$isSkylink)
+                    <p class="tw-ui-price__group-title">Fare breakdown</p>
+                    @foreach($breakdown as $fb)
+                        @php
+                            $ptype = match($fb['passengerType'] ?? 'ADT') { 'ADT' => 'Adult', 'CHD' => 'Child', 'INF' => 'Infant', default => 'Traveller' };
+                            $qty   = $fb['qty'] ?? 1;
+                        @endphp
+                        <div class="tw-ui-price__row">
+                            <span class="tw-ui-price__label">{{ $ptype }} × {{ $qty }}</span>
+                            <span class="tw-ui-price__amount">{{ $fmt(($fb['totalFare'] ?? 0) * $qty) }}</span>
+                        </div>
+                    @endforeach
+                @elseif($base > 0)
+                    <div class="tw-ui-price__row">
+                        <span class="tw-ui-price__label">Base fare</span>
+                        <span class="tw-ui-price__amount">{{ $fmt($base) }}</span>
+                    </div>
+                    @if($fees > 0)
+                        <div class="tw-ui-price__row">
+                            <span class="tw-ui-price__label">Taxes, fees and charges</span>
+                            <span class="tw-ui-price__amount">{{ $fmt($fees) }}</span>
+                        </div>
+                    @endif
+                @else
+                    <div class="tw-ui-price__row">
+                        <span class="tw-ui-price__label">Flight</span>
+                        <span class="tw-ui-price__amount">{{ $fmt($fare) }}</span>
+                    </div>
+                @endif
+
+                @if($extras > 0)
+                    <p class="tw-ui-price__group-title">Extras</p>
+                    @foreach($selectedExtras['baggage'] ?? [] as $baggage)
+                        <div class="tw-ui-price__row">
+                            <span class="tw-ui-price__label">{{ $baggage['description'] ?? 'Extra baggage' }} &times; {{ $baggage['quantity'] ?? 1 }}</span>
+                            <span class="tw-ui-price__amount">{{ $fmt($baggage['line_total'] ?? 0) }}</span>
+                        </div>
+                    @endforeach
+                    @foreach($selectedExtras['meal'] ?? [] as $meal)
+                        <div class="tw-ui-price__row">
+                            <span class="tw-ui-price__label">{{ $meal['description'] ?? 'Meal' }}</span>
+                            <span class="tw-ui-price__amount">{{ $fmt($meal['unit_price'] ?? 0) }}</span>
+                        </div>
+                    @endforeach
+                @endif
+
+                <div class="tw-ui-price__total">
+                    <span>Total</span>
+                    <span class="tw-ui-price__total-amount">{{ $fmt($total) }}</span>
+                </div>
+            </div>
+
+            <p class="fpg-summary-note">
+                @if($paxCount > 1)
+                    {{ $fmt($total / $paxCount) }} per traveller. This is the final amount &mdash; nothing further is added at the payment step.
+                @else
+                    This is the final amount &mdash; nothing further is added at the payment step.
+                @endif
+            </p>
+        </x-ui.card>
+    </x-slot:summary>
+
+</x-ui.page-shell>
 
 <script>
-    document.getElementById('gw-form').addEventListener('submit', function() {
+    document.getElementById('gw-form').addEventListener('submit', function () {
         const btn = document.getElementById('gw-btn');
         btn.disabled = true;
-        btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg><div><div>Processing Payment…</div><div style="font-size:11px;opacity:.8">Please wait</div></div>';
+        btn.innerHTML = '<span style="display:flex;align-items:center;gap:8px;">Taking you to payment…</span>';
     });
 </script>
 @endcomponent
