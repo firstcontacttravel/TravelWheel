@@ -201,7 +201,10 @@ class FlightPaymentReadinessTest extends TestCase
                 'trip' => 'oneway',
                 'from' => 'Lagos (LOS)',
                 'to' => 'Abuja (ABV)',
-                'depart' => '20/08/2026',
+                // Relative, not a fixed date: once a fixed date passed, the
+                // search failed validation before the supplier was ever
+                // called, and this test stopped testing anything.
+                'depart' => now()->addMonth()->format('d/m/Y'),
                 'adults' => 1,
                 'childs' => 0,
                 'kids' => 0,

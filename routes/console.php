@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\FlightSearch;
+use App\Models\FlightSearchResult;
 use App\Services\TravelFlexApplicationService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -31,6 +33,16 @@ Schedule::command('notifications:process-outbox --limit=5')
 Schedule::command('queue:work --stop-when-empty --sleep=1 --tries=3 --timeout=180 --max-time=50')
     ->everyMinute()
     ->withoutOverlapping(5);
+
+Schedule::command('flights:re-enable-suppliers')
+    ->everyMinute()
+    ->withoutOverlapping(2);
+
+// Parallel searches and each API's results are kept for a couple of hours at
+// most (config/flights.php); clear the expired ones so the tables stay small.
+Schedule::command('model:prune', ['--model' => [FlightSearch::class, FlightSearchResult::class]])
+    ->hourly()
+    ->withoutOverlapping(30);
 
 Schedule::command('flights:reconcile --limit=200')
     ->everyFiveMinutes()

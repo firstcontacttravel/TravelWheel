@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Services\Flights\FlightSupplierControl;
 use App\Services\SkylinkAuthService;
+use App\Services\SkylinkFlightService;
 use Illuminate\Console\Command;
 use Throwable;
 
@@ -21,10 +23,10 @@ class WarmSkylinkToken extends Command
 
     protected $description = 'Refresh the cached SkyLink access token so customer searches never pay for a login';
 
-    public function handle(SkylinkAuthService $auth): int
+    public function handle(SkylinkAuthService $auth, FlightSupplierControl $control): int
     {
-        if (! config('services.skylink.enabled')) {
-            $this->comment('SkyLink is disabled; nothing to warm.');
+        if (! $control->isEnabled(SkylinkFlightService::KEY)) {
+            $this->comment('SkyLink is switched off in Flight APIs; nothing to warm.');
 
             return self::SUCCESS;
         }

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Livewire\Pages\FlightPage;
 use App\Models\ExchangeRate;
+use App\Services\Flights\FlightSupplierControl;
 use App\Services\SkylinkFlightService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
@@ -133,7 +134,8 @@ class SkylinkSearchResilienceTest extends TestCase
 
     public function test_a_broken_exchange_rate_does_not_turn_the_supplement_into_a_500(): void
     {
-        $this->configureSkylink(['services.skylink.enabled' => true]);
+        $this->configureSkylink();
+        app(FlightSupplierControl::class)->enable(SkylinkFlightService::KEY, null);
         session(['searchParamsStore' => $this->searchCriteria()]);
 
         Http::fake([
@@ -148,9 +150,9 @@ class SkylinkSearchResilienceTest extends TestCase
         Schema::drop('exchange_rates');
 
         Livewire::test(FlightPage::class)
-            ->call('loadSkylinkResults')
+            ->call('loadSupplementalResults')
             ->assertOk()
-            ->assertDispatched('skylink-results-ready', fn (string $name, array $params): bool => $params['flights'] === []);
+            ->assertDispatched('supplier-results-ready', fn (string $name, array $params): bool => $params['flights'] === []);
     }
 
     public function test_the_results_page_does_not_ship_the_flight_list_through_livewire_state(): void
@@ -221,7 +223,7 @@ class SkylinkSearchResilienceTest extends TestCase
     /**
      * The other half of the payload problem, measured on the same staging run.
      *
-     * loadSkylinkResults() exists only to hand the browser an event — Alpine
+     * loadSupplementalResults() exists only to hand the browser an event — Alpine
      * does the merging, and nothing Blade renders changes as a result. But
      * Livewire re-renders after every call by default, and that re-render was
      * the largest single thing in the response: a round trip came back with
@@ -235,7 +237,8 @@ class SkylinkSearchResilienceTest extends TestCase
      */
     public function test_loading_skylink_does_not_re_render_the_whole_results_page(): void
     {
-        $this->configureSkylink(['services.skylink.enabled' => true]);
+        $this->configureSkylink();
+        app(FlightSupplierControl::class)->enable(SkylinkFlightService::KEY, null);
         session([
             'searchParamsStore' => $this->searchCriteria(),
             'flightResultsStore' => [['fareSourceCode' => 'tn-1', 'source' => 'travelnext']],
@@ -248,17 +251,17 @@ class SkylinkSearchResilienceTest extends TestCase
 
         // The event still has to reach the browser — that is the whole job.
         Livewire::test(FlightPage::class)
-            ->call('loadSkylinkResults')
+            ->call('loadSupplementalResults')
             ->assertOk()
-            ->assertDispatched('skylink-results-ready');
+            ->assertDispatched('supplier-results-ready');
 
         $renderless = collect(
-            (new \ReflectionMethod(FlightPage::class, 'loadSkylinkResults'))->getAttributes()
+            (new \ReflectionMethod(FlightPage::class, 'loadSupplementalResults'))->getAttributes()
         )->contains(fn (\ReflectionAttribute $a): bool => is_a($a->getName(), \Livewire\Attributes\Renderless::class, true));
 
         $this->assertTrue(
             $renderless,
-            'loadSkylinkResults must be #[Renderless] — without it Livewire ships a full page re-render '
+            'loadSupplementalResults must be #[Renderless] — without it Livewire ships a full page re-render '
                 .'(1.24 MB on a staging round trip) to deliver an event Alpine already handles.',
         );
     }

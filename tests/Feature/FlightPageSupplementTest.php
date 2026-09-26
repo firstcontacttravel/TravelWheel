@@ -4,30 +4,33 @@ namespace Tests\Feature;
 
 use App\Livewire\Pages\FlightPage;
 use App\Models\ExchangeRate;
+use App\Services\Flights\FlightSupplierControl;
+use App\Services\SkylinkFlightService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * Phase 2 — SkyLink loads as a live supplement to TravelNext's results,
- * fired via wire:init after the page has already painted. These tests cover
- * the server side of that (FlightPage::loadSkylinkResults()); the client-side
+ * The APIs the loading page didn't reach load as live supplements, fired via
+ * wire:init after the page has already painted. These tests cover the server
+ * side of that (FlightPage::loadSupplementalResults()); the client-side
  * merge/dedupe/scoring lives in flight-result.blade.php's Alpine component.
  */
-class FlightPageSkylinkSupplementTest extends TestCase
+class FlightPageSupplementTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_dispatches_mapped_and_marked_up_skylink_flights(): void
+    public function test_it_dispatches_mapped_and_marked_up_supplement_flights(): void
     {
         $this->configureSkylink();
         session([
             'searchParamsStore' => $this->searchParams(),
+            'searchSupplementSuppliers' => ['skylink'],
             'flightResultsStore' => [['fareSourceCode' => 'tn-existing', 'source' => 'travelnext']],
             // A stale batch from a previous page load — must be replaced, not
             // appended to, otherwise repeated reloads accumulate duplicates.
-            'skylinkResultsStore' => [['fareSourceCode' => 'btk_stale', 'source' => 'skylink']],
+            'supplementResultsStore' => ['skylink' => [['fareSourceCode' => 'btk_stale', 'source' => 'skylink']]],
         ]);
 
         Http::fake([
@@ -36,8 +39,8 @@ class FlightPageSkylinkSupplementTest extends TestCase
         ]);
 
         Livewire::test(FlightPage::class)
-            ->call('loadSkylinkResults')
-            ->assertDispatched('skylink-results-ready', function (string $name, array $params): bool {
+            ->call('loadSupplementalResults')
+            ->assertDispatched('supplier-results-ready', function (string $name, array $params): bool {
                 $flights = $params['flights'];
 
                 return count($flights) === 1
@@ -47,38 +50,103 @@ class FlightPageSkylinkSupplementTest extends TestCase
             });
 
         // flightResultsStore (what seeds the next page load's initial paint)
-        // must never be touched by SkyLink — TravelNext's entries stay exactly
-        // as they were.
+        // must never be touched by a supplement.
         $this->assertSame([['fareSourceCode' => 'tn-existing', 'source' => 'travelnext']], session('flightResultsStore'));
 
-        // select() resolves SkyLink fares from this separate, replaced-not-
+        // select() resolves supplement fares from this separate, replaced-not-
         // appended key.
-        $stored = session('skylinkResultsStore');
+        $stored = session('supplementResultsStore.skylink');
         $this->assertCount(1, $stored);
         $this->assertSame('btk_test123', $stored[0]['fareSourceCode']);
     }
 
-    public function test_the_kill_switch_prevents_any_skylink_call_when_disabled(): void
+    public function test_an_api_switched_off_after_the_search_began_is_skipped(): void
     {
         $this->configureSkylink();
-        config(['services.skylink.enabled' => false]);
-        session(['searchParamsStore' => $this->searchParams()]);
+        app(FlightSupplierControl::class)->disable(SkylinkFlightService::KEY, 'Supplier outage', null);
+        session([
+            'searchParamsStore' => $this->searchParams(),
+            'searchSupplementSuppliers' => ['skylink'],
+        ]);
 
         Http::fake();
 
         Livewire::test(FlightPage::class)
-            ->call('loadSkylinkResults')
-            ->assertDispatched('skylink-results-ready', function (string $name, array $params): bool {
-                return $params['flights'] === [];
-            });
+            ->call('loadSupplementalResults')
+            ->assertDispatched('supplier-results-ready', fn (string $name, array $params): bool => $params['flights'] === []);
 
         Http::assertNothingSent();
     }
 
-    public function test_it_dispatches_an_empty_list_when_skylink_errors(): void
+    public function test_an_api_the_loading_page_already_tried_is_not_searched_again(): void
     {
         $this->configureSkylink();
-        session(['searchParamsStore' => $this->searchParams()]);
+        session([
+            'searchParamsStore' => $this->searchParams(),
+            // The loading page reached every switched-on API.
+            'searchSupplementSuppliers' => [],
+        ]);
+
+        Http::fake();
+
+        Livewire::test(FlightPage::class)
+            ->call('loadSupplementalResults')
+            ->assertDispatched('supplier-results-ready', fn (string $name, array $params): bool => $params['flights'] === []);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_a_search_from_before_supplements_were_listed_still_gets_them(): void
+    {
+        $this->configureSkylink();
+        // No searchSupplementSuppliers: a results page opened before the
+        // deploy. Every switched-on API not already on the page is searched.
+        session([
+            'searchParamsStore' => $this->searchParams(),
+            'flightResultsStore' => [['fareSourceCode' => 'tn-existing', 'source' => 'travelnext']],
+        ]);
+
+        Http::fake([
+            '*/api/login' => Http::response($this->loginResponse()),
+            '*/api/flights/search' => Http::response($this->searchResponse()),
+        ]);
+
+        Livewire::test(FlightPage::class)
+            ->call('loadSupplementalResults')
+            ->assertDispatched('supplier-results-ready', fn (string $name, array $params): bool => count($params['flights']) === 1);
+    }
+
+    public function test_travelnext_as_a_supplement_keeps_its_own_search_session(): void
+    {
+        session([
+            'searchParamsStore' => $this->searchParams(),
+            'searchSupplementSuppliers' => ['travelnext'],
+            'searchSessionId' => '',
+        ]);
+
+        Http::fake([
+            'travelnext.works/*' => Http::response([
+                'AirSearchResponse' => [
+                    'session_id' => 'tn-supplement-session',
+                    'AirSearchResult' => ['FareItineraries' => []],
+                ],
+            ]),
+        ]);
+
+        Livewire::test(FlightPage::class)->call('loadSupplementalResults');
+
+        // select() needs TravelNext's own session for a TravelNext fare, even
+        // though another API filled the page.
+        $this->assertSame('tn-supplement-session', session('supplierSearchMeta.travelnext.session_id'));
+    }
+
+    public function test_it_dispatches_an_empty_list_when_the_supplement_errors(): void
+    {
+        $this->configureSkylink();
+        session([
+            'searchParamsStore' => $this->searchParams(),
+            'searchSupplementSuppliers' => ['skylink'],
+        ]);
 
         Http::fake([
             '*/api/login' => Http::response($this->loginResponse()),
@@ -86,10 +154,8 @@ class FlightPageSkylinkSupplementTest extends TestCase
         ]);
 
         Livewire::test(FlightPage::class)
-            ->call('loadSkylinkResults')
-            ->assertDispatched('skylink-results-ready', function (string $name, array $params): bool {
-                return $params['flights'] === [];
-            });
+            ->call('loadSupplementalResults')
+            ->assertDispatched('supplier-results-ready', fn (string $name, array $params): bool => $params['flights'] === []);
     }
 
     public function test_it_dispatches_an_empty_list_when_there_is_no_pending_search(): void
@@ -97,10 +163,8 @@ class FlightPageSkylinkSupplementTest extends TestCase
         $this->configureSkylink();
 
         Livewire::test(FlightPage::class)
-            ->call('loadSkylinkResults')
-            ->assertDispatched('skylink-results-ready', function (string $name, array $params): bool {
-                return $params['flights'] === [];
-            });
+            ->call('loadSupplementalResults')
+            ->assertDispatched('supplier-results-ready', fn (string $name, array $params): bool => $params['flights'] === []);
     }
 
     private function configureSkylink(): void
@@ -109,15 +173,14 @@ class FlightPageSkylinkSupplementTest extends TestCase
             'services.skylink.base_url' => 'https://247travels.test/api/',
             'services.skylink.email' => 'partner@example.test',
             'services.skylink.password' => 'secret',
-            // Explicit rather than relying on the real .env's value — this is
-            // the production kill switch (default off), so tests that
-            // exercise the enabled behavior must not depend on what happens
-            // to be in the developer's own .env.
-            'services.skylink.enabled' => true,
             // See SkylinkFlightServiceTest::configureSkylink() — off so these
             // assert against a real call rather than a cache hit.
             'services.skylink.search_cache_ttl' => 0,
         ]);
+
+        // Switched on explicitly: phpunit.xml seeds it off, as the production
+        // default was, so nothing depends on the developer's own .env.
+        app(FlightSupplierControl::class)->enable(SkylinkFlightService::KEY, null);
 
         ExchangeRate::query()->updateOrCreate(['currency' => 'USD'], ['rate' => 1500]);
     }

@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\FlightBooking;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -89,8 +88,7 @@ class AdminTicketingService
         $payload = $this->travelNextPayload($booking->unique_id);
 
         try {
-            $response = Http::connectTimeout(10)->timeout(60)
-                ->post(config('services.travelnext.base_url').'ticket_order', $payload);
+            $response = $this->travelnext()->post('ticket_order', ['UniqueID' => $booking->unique_id], 60);
         } catch (\Throwable $exception) {
             Log::error('Admin ticket order request failed', [
                 'booking_id' => $booking->id,
@@ -142,8 +140,7 @@ class AdminTicketingService
         $payload = $this->travelNextPayload($booking->unique_id);
 
         try {
-            $response = Http::connectTimeout(10)->timeout(30)
-                ->post(config('services.travelnext.base_url').'trip_details', $payload);
+            $response = $this->travelnext()->post('trip_details', ['UniqueID' => $booking->unique_id], 30);
         } catch (\Throwable $exception) {
             Log::error('Admin trip details request failed', [
                 'booking_id' => $booking->id,
@@ -267,26 +264,23 @@ class AdminTicketingService
         return null;
     }
 
+    /**
+     * The request exactly as sent, for the admin's ticketing record —
+     * credentials included so the record shows they were, then redacted.
+     */
     private function travelNextPayload(?string $uniqueId): array
     {
-        return [
-            'user_id' => config('services.travelnext.user_id'),
-            'user_password' => config('services.travelnext.password'),
-            'access' => config('services.travelnext.access'),
-            'ip_address' => config('services.travelnext.ip'),
-            'UniqueID' => $uniqueId,
-        ];
+        return array_merge($this->travelnext()->credentials(), ['UniqueID' => $uniqueId]);
     }
 
     private function redactPayload(array $payload): array
     {
-        foreach (['user_id', 'user_password', 'access', 'ip_address'] as $key) {
-            if (array_key_exists($key, $payload)) {
-                $payload[$key] = '[redacted]';
-            }
-        }
+        return $this->travelnext()->redact($payload);
+    }
 
-        return $payload;
+    private function travelnext(): TravelnextFlightService
+    {
+        return app(TravelnextFlightService::class);
     }
 
     private function extractApiErrorMessage(array $payload, string $fallback): string

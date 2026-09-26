@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Contracts\FlightSupplier;
 use App\Models\ExchangeRate;
 use App\Models\FlightSupplierCall;
+use App\Support\FlightDisplay;
 use Carbon\Carbon;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
@@ -18,9 +20,9 @@ use Illuminate\Support\Str;
  * payment before calling reserve(). See the Phase 4 plan for how that's
  * wired into the checkout flow.
  */
-class SkylinkFlightService
+class SkylinkFlightService implements FlightSupplier
 {
-    private const SUPPLIER = 'skylink';
+    public const KEY = 'skylink';
 
     private ?Collection $airports = null;
 
@@ -28,10 +30,28 @@ class SkylinkFlightService
 
     public function __construct(private readonly SkylinkAuthService $auth) {}
 
+    public function key(): string
+    {
+        return self::KEY;
+    }
+
+    public function label(): string
+    {
+        return 'SkyLink';
+    }
+
+    /**
+     * /reserve issues a live, billable PNR at once — there is nothing to hold.
+     */
+    public function supportsHold(): bool
+    {
+        return false;
+    }
+
     // =========================================================================
     //  search() — POST /api/flights/search
     // =========================================================================
-    public function search(array $criteria): array
+    public function search(array $criteria, array $context = []): array
     {
         $payload = $this->buildSearchPayload($criteria);
         $cacheKey = $this->searchCacheKey($payload);
@@ -140,6 +160,65 @@ class SkylinkFlightService
         }
 
         return $result;
+    }
+
+    // =========================================================================
+    //  select() — re-verify one searched fare through price()
+    // =========================================================================
+    /**
+     * SkyLink has no extra_services / fare_rules endpoints, so those come back
+     * empty — every consumer already defaults them with `?? []`.
+     *
+     * The mapped flight (segments, cabin, baggage, ...) can only come from
+     * where it was originally found, so without $searchedFlight there is
+     * nothing to book.
+     */
+    public function select(string $fareSourceCode, ?array $searchedFlight, array $criteria, array $context = []): array
+    {
+        if (! $searchedFlight) {
+            return $this->errorResult('This fare is no longer available. Please select another flight.') + ['surface' => 'flash'];
+        }
+
+        $passengers = [
+            'adults' => (int) ($criteria['adults'] ?? 1),
+            'children' => (int) ($criteria['childs'] ?? 0),
+            'infants' => (int) ($criteria['kids'] ?? 0),
+        ];
+
+        $priceResult = $this->price($fareSourceCode, $passengers, [
+            'context' => [
+                'route' => FlightDisplay::route($searchedFlight),
+                'cabin' => FlightDisplay::cabin($searchedFlight),
+                'trip_type' => $criteria['trip'] ?? null,
+            ],
+        ]);
+
+        if ($priceResult['error']) {
+            return $this->errorResult($priceResult['message'] ?: 'This fare could not be confirmed. Please select another flight.') + ['surface' => 'flash'];
+        }
+
+        $refreshedToken = $priceResult['data']['bookingToken'] ?? $fareSourceCode;
+
+        // Back to supplier price, the way TravelNext's select returns it: the
+        // searched flight was already marked up, so its markup fields are
+        // dropped for the caller's FlightMarkup::apply() to recompute from the
+        // freshly verified USD price rather than stack on the old one.
+        $flight = $searchedFlight;
+        unset($flight['supplierPrice'], $flight['markupAmount'], $flight['markupRatePerPassenger'], $flight['markupPassengerCount'], $flight['markupCategory'], $flight['markupCabin']);
+        $flight['price'] = (float) $priceResult['data']['verifiedPrice'];
+        $flight['baseFare'] = (float) $priceResult['data']['verifiedPrice'];
+        $flight['fareSourceCode'] = $refreshedToken;
+        $flight['skylinkBookingToken'] = $refreshedToken;
+
+        return [
+            'error' => false,
+            'message' => null,
+            'data' => [
+                'flight' => $flight,
+                'extraServices' => [],
+                'fareRules' => [],
+            ],
+        ];
     }
 
     // =========================================================================
@@ -374,7 +453,7 @@ class SkylinkFlightService
             'fareSourceCode' => (string) ($raw['booking_token'] ?? ''),
             'skylinkBookingToken' => (string) ($raw['booking_token'] ?? ''),
             'skylinkPriceNgn' => $priceNgn,
-            'source' => self::SUPPLIER,
+            'source' => self::KEY,
             'detailLevel' => 'summary',
             'airline' => $firstLeg['airline'] ?? '',
             'airlineCode' => $firstLeg['airlineCode'] ?? '',
@@ -856,6 +935,6 @@ class SkylinkFlightService
 
     private function logCall(array $attributes): void
     {
-        FlightSupplierCall::record(array_merge(['supplier' => self::SUPPLIER], $attributes));
+        FlightSupplierCall::record(array_merge(['supplier' => self::KEY], $attributes));
     }
 }

@@ -2,9 +2,13 @@
 
 namespace App\Livewire\Pages;
 
-use App\Services\SkylinkFlightService;
+use App\Services\Flights\FlightSearchStore;
+use App\Services\Flights\FlightSupplierControl;
+use App\Services\Flights\FlightSupplierRegistry;
+use App\Services\TravelnextFlightService;
 use Livewire\Attributes\Renderless;
 use App\Support\FlightMarkup;
+use App\Support\FlightMatch;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Throwable;
@@ -31,9 +35,19 @@ class FlightPage extends Component
      * Reading the criteria from the session inside the action is also strictly
      * safer than trusting anything that made a round trip through the client.
      */
+    /**
+     * Only fares from APIs that are still switched on: one switched off since
+     * the search can no longer be booked, so its fares leave the page on the
+     * next load. matchKey is added for searches stored before it existed.
+     */
     protected function flightResults(): array
     {
-        return session('flightResultsStore', []);
+        $enabled = app(FlightSupplierControl::class)->enabledKeys();
+
+        return array_values(array_filter(
+            FlightMatch::tag(array_values(array_filter(session('flightResultsStore', []), 'is_array'))),
+            fn (array $flight): bool => in_array($flight['source'] ?? TravelnextFlightService::KEY, $enabled, true),
+        ));
     }
 
     protected function searchParams(): array
@@ -42,24 +56,13 @@ class FlightPage extends Component
     }
 
     /**
-     * Fired via wire:init right after the initial render — TravelNext's
-     * results are already on screen by the time this runs, so a slow or
-     * failing SkyLink call never delays or breaks the page. The mapped
-     * flights are pushed to the browser as an event; the Alpine component in
+     * Fired via wire:init right after the initial render — the first page of
+     * results is already on screen by the time this runs, so a slow or failing
+     * supplement never delays or breaks the page. The mapped flights are
+     * pushed to the browser as an event; the Alpine component in
      * flight-result.blade.php merges/dedupes/re-sorts them into the visible
      * list.
      *
-     * Kept in its own skylinkResultsStore key (REPLACED, not appended, on
-     * every call) rather than flightResultsStore — a page reload re-fires
-     * wire:init, and each call is a fresh, authoritative SkyLink search for
-     * the same criteria, so the previous batch is simply stale, not a
-     * duplicate to preserve. Appending onto flightResultsStore instead grew
-     * it unbounded across reloads AND leaked straight into the next page
-     * load's initial (undeduped) paint, since that's exactly what seeds
-     * Alpine's allFlights at mount — confirmed via live browser testing.
-     * FlightBookingController::select() reads this key for SkyLink fares.
-     */
-    /**
      * Renderless: this call exists only to hand the browser an event. Alpine
      * does the merging, so nothing Blade renders changes as a result of it —
      * but Livewire re-renders the component after every call by default, and
@@ -70,66 +73,170 @@ class FlightPage extends Component
      *
      * Skipping it also removes a hazard rather than just weight: that HTML gets
      * morphed over the live DOM, re-running the @js seed underneath an Alpine
-     * component that has already merged SkyLink's results into its own state.
+     * component that has already merged the supplements into its own state.
      */
     #[Renderless]
-    public function loadSkylinkResults(): void
+    public function loadSupplementalResults(): void
     {
-        $this->dispatch('skylink-results-ready', flights: $this->skylinkFlights());
+        $this->dispatch('supplier-results-ready', flights: $this->supplementalFlights());
     }
 
     /**
-     * Every failure mode returns an empty list rather than propagating.
+     * Searches every switched-on API that the loading page didn't reach —
+     * FlightController::performSearch() stops at the first one with flights
+     * and lists the rest in searchSupplementSuppliers.
      *
-     * The whole point of loading SkyLink as a supplement is that it can never
-     * degrade the page, so the guarantee has to cover the mapping and session
-     * write too — not just the HTTP call. Those two used to sit outside the
-     * try, which meant something as ordinary as an ExchangeRate lookup failing
-     * inside FlightMarkup::apply() returned a 500 for the wire:init request.
+     * Each supplier's results are kept in supplementResultsStore[key],
+     * REPLACED rather than appended on every call: a page reload re-fires
+     * wire:init, and each call is a fresh, authoritative search for the same
+     * criteria, so the previous batch is simply stale. They are kept out of
+     * flightResultsStore, which seeds the next page load's initial (undeduped)
+     * paint. FlightBookingController::select() finds fares in both.
+     *
+     * Every failure mode yields no flights rather than propagating. A
+     * supplement can never degrade the page, so the guarantee covers the
+     * mapping and session write too — not just the HTTP call.
      */
-    private function skylinkFlights(): array
+    private function supplementalFlights(): array
     {
-        // Kill switch — see config/services.php's skylink.enabled. Off by
-        // default: deploying this code changes nothing for real customers
-        // until this is explicitly turned on, and flipping it back off is
-        // instant (no redeploy) if anything looks wrong during live testing.
         $searchParams = $this->searchParams();
 
-        if (! config('services.skylink.enabled') || $searchParams === []) {
+        // A parallel search's page fetches every API itself.
+        if ($searchParams === [] || app(FlightSearchStore::class)->currentId() !== null) {
             return [];
+        }
+
+        $control = app(FlightSupplierControl::class);
+        $registry = app(FlightSupplierRegistry::class);
+        $flights = [];
+        $stores = [];
+        $meta = session('supplierSearchMeta', []);
+
+        foreach ($this->supplementKeys($control) as $key) {
+            // Checked again here: an admin may have switched it off since the
+            // search began.
+            if (! $control->isEnabled($key)) {
+                continue;
+            }
+
+            try {
+                $result = $registry->get($key)->search($searchParams);
+
+                if ($result['error'] ?? true) {
+                    continue;
+                }
+
+                $mapped = FlightMatch::tag(array_values(array_map(
+                    fn (array $flight): array => FlightMarkup::apply($flight),
+                    (array) data_get($result, 'data.flights', [])
+                )));
+
+                $stores[$key] = $mapped;
+                $meta[$key] = (array) data_get($result, 'data.meta', []);
+                array_push($flights, ...$mapped);
+            } catch (Throwable $exception) {
+                Log::warning('Supplemental flight search failed', [
+                    'supplier' => $key,
+                    'error' => $exception->getMessage(),
+                    'exception' => $exception::class,
+                ]);
+            }
         }
 
         try {
-            $result = app(SkylinkFlightService::class)->search($searchParams);
-
-            if ($result['error'] ?? true) {
-                return [];
-            }
-
-            $flights = array_values(array_map(
-                fn (array $flight): array => FlightMarkup::apply($flight),
-                (array) data_get($result, 'data.flights', [])
-            ));
-
-            session(['skylinkResultsStore' => $flights]);
-
-            return $flights;
+            session(['supplementResultsStore' => $stores, 'supplierSearchMeta' => $meta]);
         } catch (Throwable $exception) {
-            Log::warning('SkyLink supplemental search failed', [
-                'error' => $exception->getMessage(),
-                'exception' => $exception::class,
-            ]);
+            Log::warning('Supplemental flight results could not be stored', ['error' => $exception->getMessage()]);
 
             return [];
         }
+
+        return $flights;
+    }
+
+    /**
+     * The APIs to search as supplements: normally the list the loading page
+     * left in searchSupplementSuppliers.
+     *
+     * Two cases widen it to every switched-on API not already on the page:
+     *   - the first page lost flights because their API has since been
+     *     switched off — the customer would otherwise be left with less, or
+     *     nothing, when another API could fill the gap;
+     *   - a search made before the list existed — which is exactly what the
+     *     list would have held. An empty first page there was TravelNext's.
+     */
+    private function supplementKeys(FlightSupplierControl $control): array
+    {
+        $listed = session('searchSupplementSuppliers');
+        $stored = array_filter(session('flightResultsStore', []), 'is_array');
+        $visible = $this->flightResults();
+
+        if (is_array($listed) && count($visible) === count($stored)) {
+            return $listed;
+        }
+
+        $onPage = collect($visible)
+            ->map(fn (array $flight): string => (string) ($flight['source'] ?? TravelnextFlightService::KEY))
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($onPage === [] && $stored === [] && ! is_array($listed)) {
+            $onPage = [TravelnextFlightService::KEY];
+        }
+
+        return array_values(array_unique(array_merge(
+            is_array($listed) ? $listed : [],
+            array_diff($control->enabledKeys(), $onPage),
+        )));
+    }
+
+    /**
+     * For a parallel search: the id, and one URL per switched-on API for the
+     * page to fetch side by side (FlightSupplierSearchController). Null for a
+     * search that ran through the loading page.
+     *
+     * The APIs are those switched on NOW, not when the search began: one
+     * switched off since contributes nothing, one switched on since is
+     * searched too.
+     */
+    private function parallelSearch(): ?array
+    {
+        $searchId = app(FlightSearchStore::class)->currentId();
+
+        if ($searchId === null) {
+            return null;
+        }
+
+        return [
+            'searchId' => $searchId,
+            'endpoints' => collect(app(FlightSupplierControl::class)->enabledKeys())
+                ->mapWithKeys(fn (string $key): array => [$key => route('flights.search.supplier', [
+                    'search' => $searchId,
+                    'supplier' => $key,
+                ])])
+                ->all(),
+        ];
     }
 
     public function render()
     {
+        $parallel = $this->parallelSearch();
+
         return view('livewire.pages.flight.flight-page-result', [
-            'flightResults' => $this->flightResults(),
+            // A parallel search starts empty; flights arrive per API.
+            'flightResults' => $parallel === null ? $this->flightResults() : [],
             'searchParams' => $this->searchParams(),
             'searchSessionId' => session('searchSessionId', ''),
+            'parallel' => $parallel,
+            // Priority order: breaks exact price ties between two APIs'
+            // copies of the same flight in the page's dedupe.
+            'supplierOrder' => app(FlightSupplierControl::class)->enabledKeys(),
+            // Whether "Searching more airlines…" should show at all: when the
+            // loading page already tried every API there is nothing to wait for.
+            'expectsSupplements' => $parallel !== null
+                ? $parallel['endpoints'] !== []
+                : $this->searchParams() !== [] && $this->supplementKeys(app(FlightSupplierControl::class)) !== [],
         ]);
     }
 }
