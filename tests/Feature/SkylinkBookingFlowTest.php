@@ -147,15 +147,73 @@ class SkylinkBookingFlowTest extends TestCase
         $this->assertDatabaseCount('flight_bookings', 0);
     }
 
-    public function test_book_rejects_travelflex_intent_for_skylink_fares_with_a_clear_reason(): void
+    public function test_an_eligible_skylink_fare_is_held_on_our_side_for_travelflex(): void
     {
+        // SkyLink can't hold seats, so TravelFlex holds the booking here while
+        // Fast Credit reviews — nothing is sent to SkyLink and no PNR exists.
+        //
+        // SkyLink doesn't send refund penalties today (see the next test), so
+        // this fare carries them as it would once SkyLink — or another API
+        // that can't hold seats — supplies them.
         $session = $this->skylinkBookingSession();
         $session['bookingFlight']['isRefundable'] = true;
+        $session['bookingFlight']['departDT'] = now()->addDays(40)->toIso8601String();
+        $session['bookingFlight']['fareBreakdown'] = [[
+            'passengerType' => 'ADT', 'qty' => 1, 'refundAllowed' => true, 'refundPenalty' => 75000,
+            'baseFare' => 750000, 'totalFare' => 750000,
+        ]];
+        Mail::fake();
+
+        $this->withSession($session)
+            ->post(route('flights.book'), array_merge($this->bookPayload(), ['intent' => 'travelflex']))
+            ->assertRedirect(route('flights.travelflex.fastcredit'));
+
+        Http::assertNothingSent();
+
+        $booking = FlightBooking::query()->sole();
+        $this->assertSame('skylink', $booking->supplier);
+        $this->assertSame('on_hold', $booking->booking_status);
+        $this->assertEmpty($booking->unique_id);
+        $this->assertTrue($booking->tkt_time_limit->between(now()->addHours(71), now()->addHours(73)));
+        $this->assertSame($booking->id, session('flightBookingDbId'));
+        $this->assertNull(session('bookingUniqueId'));
+
+        // "Your seat is reserved with the airline" would be untrue.
+        Mail::assertNothingSent();
+    }
+
+    public function test_a_refundable_skylink_fare_without_penalty_details_is_refused(): void
+    {
+        // The shape SkyLink really sends (checked against a live search on
+        // 2026-09-27): refundAllowed per passenger type, no refundPenalty.
+        // TravelFlex sizes the down payment to cover the refund penalty, so
+        // without one it refuses — deliberately, not because of the supplier.
+        $session = $this->skylinkBookingSession();
+        $session['bookingFlight']['isRefundable'] = true;
+        $session['bookingFlight']['fareBreakdown'] = [[
+            'passengerType' => 'ADT', 'qty' => 1, 'refundAllowed' => true,
+            'changeAllowed' => null, 'changePenalty' => null, 'baseFare' => 750000, 'totalFare' => 750000,
+        ]];
 
         $this->withSession($session)
             ->post(route('flights.book'), array_merge($this->bookPayload(), ['intent' => 'travelflex']))
             ->assertRedirect(route('flights.payment.gateway'))
-            ->assertSessionHasErrors(['error' => 'TravelFlex is not available for this fare. Please choose another flight or pay by card/bank transfer.']);
+            ->assertSessionHasErrors(['error' => 'TravelFlex is unavailable because complete refundable-fare penalties were not supplied for every passenger type.']);
+
+        $this->assertDatabaseCount('flight_bookings', 0);
+    }
+
+    public function test_an_ineligible_skylink_fare_gets_the_real_reason_not_its_supplier(): void
+    {
+        $session = $this->skylinkBookingSession();
+        $session['bookingFlight']['isRefundable'] = false;
+
+        $this->withSession($session)
+            ->post(route('flights.book'), array_merge($this->bookPayload(), ['intent' => 'travelflex']))
+            ->assertRedirect(route('flights.payment.gateway'))
+            ->assertSessionHasErrors(['error' => 'TravelFlex is only available for refundable fares.']);
+
+        $this->assertDatabaseCount('flight_bookings', 0);
     }
 
     public function test_booking_page_shows_a_blended_total_not_a_zero_tax_per_type_breakdown(): void

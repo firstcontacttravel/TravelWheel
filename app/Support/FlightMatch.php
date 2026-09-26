@@ -78,7 +78,8 @@ class FlightMatch
         return $segments;
     }
 
-    private static function cabin(array $flight): string
+    /** economy, premium_economy, business or first. */
+    public static function cabin(array $flight): string
     {
         $name = strtolower(trim((string) (
             ($flight['cabin'] ?? null)

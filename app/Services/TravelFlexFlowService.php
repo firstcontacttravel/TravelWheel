@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\FlightBooking;
 use App\Models\TravelFlexApplication;
+use App\Services\Flights\FlightPlatformHold;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 
@@ -39,7 +40,7 @@ class TravelFlexFlowService
 
         if (! $booking->tkt_time_limit || $booking->tkt_time_limit->lte(now()->addHours(self::MINIMUM_PAYMENT_WINDOW_HOURS))) {
             throw ValidationException::withMessages([
-                'travelflex' => 'The airline hold no longer leaves enough time to complete payment. Please contact TravelWheel so the fare can be rebooked.',
+                'travelflex' => 'The hold on this booking no longer leaves enough time to complete payment. Please contact TravelWheel so the fare can be rebooked.',
             ]);
         }
 
@@ -67,9 +68,31 @@ class TravelFlexFlowService
         return URL::temporarySignedRoute('flights.travelflex.approved', $deadline, ['application' => $application->id]);
     }
 
+    /**
+     * Confirms, right before a deposit is taken, that the held fare still
+     * stands. An airline hold is checked with the airline; a hold kept on
+     * our side (an API that can't hold seats) is re-found and re-priced, and
+     * refused if the fare has gone or risen — see FlightPlatformHold.
+     */
     public function revalidateHold(TravelFlexApplication $application): FlightBooking
     {
         $booking = $this->assertApprovedForDeposit($application->load('booking'));
+
+        $platformHold = app(FlightPlatformHold::class);
+
+        if ($platformHold->applies($booking)) {
+            $result = $platformHold->reconfirm($booking);
+
+            if (! $result['ok']) {
+                throw ValidationException::withMessages(['travelflex' => $result['message']]);
+            }
+
+            $platformHold->adopt($booking, $result['flight']);
+            $application->update(['pricing_revalidated_at' => now()]);
+
+            return $booking->fresh();
+        }
+
         $result = app(AdminTicketingService::class)->tripDetails($booking);
         $status = strtoupper((string) ($result['booking_status'] ?? ''));
 

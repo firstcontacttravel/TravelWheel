@@ -60,6 +60,26 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Holding a booking on our side
+    |--------------------------------------------------------------------------
+    |
+    | For an API that can't hold seats (supportsHold() false — SkyLink), a
+    | TravelFlex booking is held here instead: no PNR exists until the
+    | customer pays. `hold_hours` is how long Fast Credit and the customer
+    | have. At payment the same flight is found again and re-priced; if it now
+    | costs more than was approved, nothing is charged and the customer
+    | chooses again. `price_tolerance` (NGN) only absorbs currency-conversion
+    | rounding — it is not a margin for real fare rises.
+    |
+    */
+
+    'platform_hold' => [
+        'hold_hours' => (int) env('FLIGHTS_PLATFORM_HOLD_HOURS', 72),
+        'price_tolerance' => 50,
+    ],
+
     'cutoff' => [
         'min_calls' => 10,
         'failure_percent' => 50,
