@@ -1,0 +1,313 @@
+{
+    "requests": [
+        {
+            "url": "https://travelnext.works/api/aeroVE5/availability",
+            "body": {
+                "user_id": "[credential]",
+                "user_password": "[credential]",
+                "access": "[credential]",
+                "ip_address": "[credential]",
+                "requiredCurrency": "USD",
+                "journeyType": "Circle",
+                "OriginDestinationInfo": [
+                    {
+                        "departureDate": "2026-10-20",
+                        "airportOriginCode": "LOS",
+                        "airportDestinationCode": "LHR"
+                    },
+                    {
+                        "departureDate": "2026-10-27",
+                        "airportOriginCode": "LHR",
+                        "airportDestinationCode": "ABV"
+                    }
+                ],
+                "class": "Economy",
+                "adults": 2,
+                "childs": 1,
+                "infants": 0
+            }
+        }
+    ],
+    "flightResultsStore": [
+        {
+            "id": 0,
+            "fareSourceCode": "FSC-MULTI-1",
+            "source": "travelnext",
+            "airline": "British Airways",
+            "airlineCode": "BA",
+            "airlineLogo": "https://travelnext.works/api/airlines/BA.gif",
+            "validatingCode": "TK",
+            "validatingAirline": "Turkish Airlines",
+            "validatingLogo": "https://travelnext.works/api/airlines/TK.gif",
+            "cabin": "Economy",
+            "cabinCode": "Y",
+            "stops": 1,
+            "price": 2055191.26,
+            "baseFare": 1700049.0,
+            "totalTax": 265142.26,
+            "currency": "NGN",
+            "isRefundable": true,
+            "fareType": "Public",
+            "ticketType": "eTicket",
+            "isPassportMandatory": true,
+            "directionInd": "OneWay",
+            "ticketAdvisory": "Ticket within 24 hours.",
+            "segments": [],
+            "departTime": "10:30",
+            "arriveTime": "20:50",
+            "departDT": "2026-10-20T10:30:00",
+            "arriveDT": "2026-10-27T20:50:00",
+            "totalDuration": 1000,
+            "durationLabel": "16h 40m",
+            "layoverDurations": [],
+            "departDateLabel": "Tue, 20 Oct",
+            "totalTimeMins": 1155,
+            "totalTimeLabel": "19h 15m",
+            "returnSegments": [],
+            "returnStops": 0,
+            "returnDurationLabel": "",
+            "returnDateLabel": "",
+            "returnLayoverDurations": [],
+            "returnTotalTimeMins": 0,
+            "returnTotalTimeLabel": "",
+            "multiLegs": [
+                {
+                    "segments": [
+                        {
+                            "from": "LOS",
+                            "to": "LHR",
+                            "fromCity": "Lagos (LOS)",
+                            "toCity": "London (LHR)",
+                            "fromAirport": "Murtala Muhammed Airport",
+                            "toAirport": "Heathrow Airport",
+                            "fromCountry": "Nigeria",
+                            "toCountry": "United Kingdom",
+                            "fromLat": "6.58181858062744",
+                            "fromLon": "3.32113480567932",
+                            "toLat": "51.4700241088867",
+                            "toLon": "-0.454295486211777",
+                            "departTime": "10:30",
+                            "arriveTime": "16:55",
+                            "departDate": "Tue, 20 Oct 2026",
+                            "arriveDate": "Tue, 20 Oct 2026",
+                            "departDT": "2026-10-20T10:30:00",
+                            "arriveDT": "2026-10-20T16:55:00",
+                            "duration": 385,
+                            "flightNo": "BA75",
+                            "airline": "British Airways",
+                            "airlineCode": "BA",
+                            "airlineLogo": "https://travelnext.works/api/airlines/BA.gif",
+                            "equipment": "359",
+                            "cabin": "Economy",
+                            "cabinCode": "Y",
+                            "resBookCode": "Q",
+                            "mealCode": "M",
+                            "seatsLeft": 9,
+                            "belowMinimum": false,
+                            "isCodeshare": false,
+                            "operatingCode": "BA",
+                            "operatingAirline": "",
+                            "operatingFlightNo": "BA75",
+                            "operatingLogo": "https://travelnext.works/api/airlines/BA.gif",
+                            "eticket": true
+                        }
+                    ],
+                    "stops": 0,
+                    "durationLabel": "6h 25m",
+                    "layoverDurations": [],
+                    "totalTimeMins": 385,
+                    "totalTimeLabel": "6h 25m",
+                    "departDateLabel": "Tue, 20 Oct",
+                    "from": "LOS",
+                    "to": "LHR",
+                    "fromCity": "Lagos (LOS)",
+                    "toCity": "London (LHR)",
+                    "departTime": "10:30",
+                    "arriveTime": "16:55",
+                    "departDT": "2026-10-20T10:30:00",
+                    "arriveDT": "2026-10-20T16:55:00"
+                },
+                {
+                    "segments": [
+                        {
+                            "from": "LHR",
+                            "to": "IST",
+                            "fromCity": "London (LHR)",
+                            "toCity": "Istanbul (IST)",
+                            "fromAirport": "Heathrow Airport",
+                            "toAirport": "Istanbul Airport",
+                            "fromCountry": "United Kingdom",
+                            "toCountry": "Turkey",
+                            "fromLat": "51.4700241088867",
+                            "fromLon": "-0.454295486211777",
+                            "toLat": "40.9829902648926",
+                            "toLon": "28.8104419708252",
+                            "departTime": "07:00",
+                            "arriveTime": "13:05",
+                            "departDate": "Tue, 27 Oct 2026",
+                            "arriveDate": "Tue, 27 Oct 2026",
+                            "departDT": "2026-10-27T07:00:00",
+                            "arriveDT": "2026-10-27T13:05:00",
+                            "duration": 245,
+                            "flightNo": "TK1980",
+                            "airline": "Turkish Airlines",
+                            "airlineCode": "TK",
+                            "airlineLogo": "https://travelnext.works/api/airlines/TK.gif",
+                            "equipment": "359",
+                            "cabin": "",
+                            "cabinCode": "Y",
+                            "resBookCode": "Q",
+                            "mealCode": "M",
+                            "seatsLeft": 9,
+                            "belowMinimum": false,
+                            "isCodeshare": false,
+                            "operatingCode": "TK",
+                            "operatingAirline": "",
+                            "operatingFlightNo": "TK1980",
+                            "operatingLogo": "https://travelnext.works/api/airlines/TK.gif",
+                            "eticket": true
+                        },
+                        {
+                            "from": "IST",
+                            "to": "ABV",
+                            "fromCity": "Istanbul (IST)",
+                            "toCity": "Abuja (ABV)",
+                            "fromAirport": "Istanbul Airport",
+                            "toAirport": "International Airport",
+                            "fromCountry": "Turkey",
+                            "toCountry": "Nigeria",
+                            "fromLat": "40.9829902648926",
+                            "fromLon": "28.8104419708252",
+                            "toLat": "9.00400000",
+                            "toLon": "7.27000000",
+                            "departTime": "15:40",
+                            "arriveTime": "20:50",
+                            "departDate": "Tue, 27 Oct 2026",
+                            "arriveDate": "Tue, 27 Oct 2026",
+                            "departDT": "2026-10-27T15:40:00",
+                            "arriveDT": "2026-10-27T20:50:00",
+                            "duration": 370,
+                            "flightNo": "TK623",
+                            "airline": "Turkish Airlines",
+                            "airlineCode": "TK",
+                            "airlineLogo": "https://travelnext.works/api/airlines/TK.gif",
+                            "equipment": "359",
+                            "cabin": "",
+                            "cabinCode": "Y",
+                            "resBookCode": "Q",
+                            "mealCode": "M",
+                            "seatsLeft": 9,
+                            "belowMinimum": false,
+                            "isCodeshare": false,
+                            "operatingCode": "TK",
+                            "operatingAirline": "",
+                            "operatingFlightNo": "TK623",
+                            "operatingLogo": "https://travelnext.works/api/airlines/TK.gif",
+                            "eticket": true
+                        }
+                    ],
+                    "stops": 1,
+                    "durationLabel": "10h 15m",
+                    "layoverDurations": [
+                        "2h 35m"
+                    ],
+                    "totalTimeMins": 770,
+                    "totalTimeLabel": "12h 50m",
+                    "departDateLabel": "Tue, 27 Oct",
+                    "from": "LHR",
+                    "to": "ABV",
+                    "fromCity": "London (LHR)",
+                    "toCity": "Abuja (ABV)",
+                    "departTime": "07:00",
+                    "arriveTime": "20:50",
+                    "departDT": "2026-10-27T07:00:00",
+                    "arriveDT": "2026-10-27T20:50:00"
+                }
+            ],
+            "departSlot": "morning",
+            "arrivalSlot": "evening",
+            "fareBreakdown": [
+                {
+                    "passengerType": "ADT",
+                    "qty": 2,
+                    "baseFare": 680019.6,
+                    "totalFare": 786076.5,
+                    "currency": "NGN",
+                    "baggage": [
+                        "2PC",
+                        "1PC"
+                    ],
+                    "cabinBaggage": [
+                        "7KG",
+                        "7KG"
+                    ],
+                    "taxes": [
+                        {
+                            "TaxCode": "YQ",
+                            "Amount": "42.00"
+                        }
+                    ],
+                    "serviceTax": 4577.06,
+                    "surcharges": 1634.66,
+                    "changeAllowed": true,
+                    "changePenalty": 196159.5,
+                    "refundAllowed": true,
+                    "refundPenalty": 392319.0
+                },
+                {
+                    "passengerType": "CHD",
+                    "qty": 1,
+                    "baseFare": 340009.8,
+                    "totalFare": 393038.25,
+                    "currency": "NGN",
+                    "baggage": [
+                        "2PC",
+                        "1PC"
+                    ],
+                    "cabinBaggage": [
+                        "7KG",
+                        "7KG"
+                    ],
+                    "taxes": [
+                        {
+                            "TaxCode": "YQ",
+                            "Amount": "42.00"
+                        }
+                    ],
+                    "serviceTax": 4577.06,
+                    "surcharges": 1634.66,
+                    "changeAllowed": false,
+                    "changePenalty": 98079.75,
+                    "refundAllowed": true,
+                    "refundPenalty": 196159.5
+                }
+            ],
+            "supplierPrice": 1965191.26,
+            "markupAmount": 90000.0,
+            "markupRatePerPassenger": 30000.0,
+            "markupPassengerCount": 3,
+            "markupCategory": "from_nigeria",
+            "markupCabin": "economy"
+        }
+    ],
+    "searchParamsStore": {
+        "trip": "multi",
+        "adults": 2,
+        "childs": 1,
+        "kids": 0,
+        "flight_type": "Y",
+        "multi_legs": [
+            {
+                "from": "Lagos (LOS)",
+                "to": "London (LHR)",
+                "depart": "20/10/2026"
+            },
+            {
+                "from": "London (LHR)",
+                "to": "Abuja (ABV)",
+                "depart": "27/10/2026"
+            }
+        ]
+    },
+    "searchSessionId": "tn-session-1"
+}

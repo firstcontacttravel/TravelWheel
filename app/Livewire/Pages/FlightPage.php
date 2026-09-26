@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages;
 
+use App\Services\Flights\FlightSupplierRegistry;
 use App\Services\SkylinkFlightService;
 use Livewire\Attributes\Renderless;
 use App\Support\FlightMarkup;
@@ -100,7 +101,7 @@ class FlightPage extends Component
         }
 
         try {
-            $result = app(SkylinkFlightService::class)->search($searchParams);
+            $result = app(FlightSupplierRegistry::class)->get(SkylinkFlightService::KEY)->search($searchParams);
 
             if ($result['error'] ?? true) {
                 return [];

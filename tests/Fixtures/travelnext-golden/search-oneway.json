@@ -1,0 +1,371 @@
+{
+    "requests": [
+        {
+            "url": "https://travelnext.works/api/aeroVE5/availability",
+            "body": {
+                "user_id": "[credential]",
+                "user_password": "[credential]",
+                "access": "[credential]",
+                "ip_address": "[credential]",
+                "requiredCurrency": "USD",
+                "journeyType": "OneWay",
+                "OriginDestinationInfo": [
+                    {
+                        "departureDate": "2026-10-20",
+                        "airportOriginCode": "LOS",
+                        "airportDestinationCode": "LHR"
+                    }
+                ],
+                "class": "Economy",
+                "adults": 2,
+                "childs": 1,
+                "infants": 0
+            }
+        }
+    ],
+    "flightResultsStore": [
+        {
+            "id": 0,
+            "fareSourceCode": "FSC-ONEWAY-1",
+            "source": "travelnext",
+            "airline": "Air France",
+            "airlineCode": "AF",
+            "airlineLogo": "https://travelnext.works/api/airlines/AF.gif",
+            "validatingCode": "AF",
+            "validatingAirline": "Air France",
+            "validatingLogo": "https://travelnext.works/api/airlines/AF.gif",
+            "cabin": "Economy",
+            "cabinCode": "Y",
+            "stops": 1,
+            "price": 1152399.85,
+            "baseFare": 915411.0,
+            "totalTax": 146988.85,
+            "currency": "NGN",
+            "isRefundable": true,
+            "fareType": "Public",
+            "ticketType": "eTicket",
+            "isPassportMandatory": true,
+            "directionInd": "OneWay",
+            "ticketAdvisory": "Ticket within 24 hours.",
+            "segments": [
+                {
+                    "from": "LOS",
+                    "to": "CDG",
+                    "fromCity": "Lagos (LOS)",
+                    "toCity": "Paris (CDG)",
+                    "fromAirport": "Murtala Muhammed Airport",
+                    "toAirport": "Charles De Gaulle Airport",
+                    "fromCountry": "Nigeria",
+                    "toCountry": "France",
+                    "fromLat": "6.58181858062744",
+                    "fromLon": "3.32113480567932",
+                    "toLat": "49.0096893310547",
+                    "toLon": "2.54792451858521",
+                    "departTime": "23:05",
+                    "arriveTime": "05:40",
+                    "departDate": "Tue, 20 Oct 2026",
+                    "arriveDate": "Wed, 21 Oct 2026",
+                    "departDT": "2026-10-20T23:05:00",
+                    "arriveDT": "2026-10-21T05:40:00",
+                    "duration": 395,
+                    "flightNo": "AF149",
+                    "airline": "Air France",
+                    "airlineCode": "AF",
+                    "airlineLogo": "https://travelnext.works/api/airlines/AF.gif",
+                    "equipment": "359",
+                    "cabin": "Economy",
+                    "cabinCode": "Y",
+                    "resBookCode": "Q",
+                    "mealCode": "M",
+                    "seatsLeft": 9,
+                    "belowMinimum": false,
+                    "isCodeshare": false,
+                    "operatingCode": "AF",
+                    "operatingAirline": "",
+                    "operatingFlightNo": "AF149",
+                    "operatingLogo": "https://travelnext.works/api/airlines/AF.gif",
+                    "eticket": true
+                },
+                {
+                    "from": "CDG",
+                    "to": "LHR",
+                    "fromCity": "Paris (CDG)",
+                    "toCity": "London (LHR)",
+                    "fromAirport": "Charles De Gaulle Airport",
+                    "toAirport": "Heathrow Airport",
+                    "fromCountry": "France",
+                    "toCountry": "United Kingdom",
+                    "fromLat": "49.0096893310547",
+                    "fromLon": "2.54792451858521",
+                    "toLat": "51.4700241088867",
+                    "toLon": "-0.454295486211777",
+                    "departTime": "08:15",
+                    "arriveTime": "08:35",
+                    "departDate": "Wed, 21 Oct 2026",
+                    "arriveDate": "Wed, 21 Oct 2026",
+                    "departDT": "2026-10-21T08:15:00",
+                    "arriveDT": "2026-10-21T08:35:00",
+                    "duration": 80,
+                    "flightNo": "AF1080",
+                    "airline": "Air France",
+                    "airlineCode": "AF",
+                    "airlineLogo": "https://travelnext.works/api/airlines/AF.gif",
+                    "equipment": "359",
+                    "cabin": "Economy",
+                    "cabinCode": "Y",
+                    "resBookCode": "Q",
+                    "mealCode": "M",
+                    "seatsLeft": 3,
+                    "belowMinimum": true,
+                    "isCodeshare": true,
+                    "operatingCode": "KL",
+                    "operatingAirline": "Operated by KL",
+                    "operatingFlightNo": "KL2001",
+                    "operatingLogo": "https://travelnext.works/api/airlines/KL.gif",
+                    "eticket": true
+                }
+            ],
+            "departTime": "23:05",
+            "arriveTime": "08:35",
+            "departDT": "2026-10-20T23:05:00",
+            "arriveDT": "2026-10-21T08:35:00",
+            "totalDuration": 475,
+            "durationLabel": "7h 55m",
+            "layoverDurations": [
+                "2h 35m"
+            ],
+            "departDateLabel": "Tue, 20 Oct",
+            "totalTimeMins": 630,
+            "totalTimeLabel": "10h 30m",
+            "returnSegments": [],
+            "returnStops": 0,
+            "returnDurationLabel": "",
+            "returnDateLabel": "",
+            "returnLayoverDurations": [],
+            "returnTotalTimeMins": 0,
+            "returnTotalTimeLabel": "",
+            "multiLegs": [],
+            "departSlot": "evening",
+            "arrivalSlot": "morning",
+            "fareBreakdown": [
+                {
+                    "passengerType": "ADT",
+                    "qty": 2,
+                    "baseFare": 366164.4,
+                    "totalFare": 424959.94,
+                    "currency": "NGN",
+                    "baggage": [
+                        "2PC",
+                        "1PC"
+                    ],
+                    "cabinBaggage": [
+                        "7KG",
+                        "7KG"
+                    ],
+                    "taxes": [
+                        {
+                            "TaxCode": "YQ",
+                            "Amount": "42.00"
+                        }
+                    ],
+                    "serviceTax": 4577.06,
+                    "surcharges": 1634.66,
+                    "changeAllowed": true,
+                    "changePenalty": 196159.5,
+                    "refundAllowed": true,
+                    "refundPenalty": 392319.0
+                },
+                {
+                    "passengerType": "CHD",
+                    "qty": 1,
+                    "baseFare": 183082.2,
+                    "totalFare": 212479.97,
+                    "currency": "NGN",
+                    "baggage": [
+                        "2PC",
+                        "1PC"
+                    ],
+                    "cabinBaggage": [
+                        "7KG",
+                        "7KG"
+                    ],
+                    "taxes": [
+                        {
+                            "TaxCode": "YQ",
+                            "Amount": "42.00"
+                        }
+                    ],
+                    "serviceTax": 4577.06,
+                    "surcharges": 1634.66,
+                    "changeAllowed": false,
+                    "changePenalty": 98079.75,
+                    "refundAllowed": true,
+                    "refundPenalty": 196159.5
+                }
+            ],
+            "supplierPrice": 1062399.85,
+            "markupAmount": 90000.0,
+            "markupRatePerPassenger": 30000.0,
+            "markupPassengerCount": 3,
+            "markupCategory": "from_nigeria",
+            "markupCabin": "economy"
+        },
+        {
+            "id": 1,
+            "fareSourceCode": "FSC-ONEWAY-2",
+            "source": "travelnext",
+            "airline": "British Airways",
+            "airlineCode": "BA",
+            "airlineLogo": "https://travelnext.works/api/airlines/BA.gif",
+            "validatingCode": "BA",
+            "validatingAirline": "British Airways",
+            "validatingLogo": "https://travelnext.works/api/airlines/BA.gif",
+            "cabin": "Economy",
+            "cabinCode": "Y",
+            "stops": 0,
+            "price": 946693.92,
+            "baseFare": 771560.7,
+            "totalTax": 85133.22,
+            "currency": "NGN",
+            "isRefundable": false,
+            "fareType": "WebFare",
+            "ticketType": "eTicket",
+            "isPassportMandatory": true,
+            "directionInd": "OneWay",
+            "ticketAdvisory": "Ticket within 24 hours.",
+            "segments": [
+                {
+                    "from": "LOS",
+                    "to": "LHR",
+                    "fromCity": "Lagos (LOS)",
+                    "toCity": "London (LHR)",
+                    "fromAirport": "Murtala Muhammed Airport",
+                    "toAirport": "Heathrow Airport",
+                    "fromCountry": "Nigeria",
+                    "toCountry": "United Kingdom",
+                    "fromLat": "6.58181858062744",
+                    "fromLon": "3.32113480567932",
+                    "toLat": "51.4700241088867",
+                    "toLon": "-0.454295486211777",
+                    "departTime": "10:30",
+                    "arriveTime": "16:55",
+                    "departDate": "Tue, 20 Oct 2026",
+                    "arriveDate": "Tue, 20 Oct 2026",
+                    "departDT": "2026-10-20T10:30:00",
+                    "arriveDT": "2026-10-20T16:55:00",
+                    "duration": 385,
+                    "flightNo": "BA75",
+                    "airline": "British Airways",
+                    "airlineCode": "BA",
+                    "airlineLogo": "https://travelnext.works/api/airlines/BA.gif",
+                    "equipment": "359",
+                    "cabin": "Economy",
+                    "cabinCode": "Y",
+                    "resBookCode": "Q",
+                    "mealCode": "M",
+                    "seatsLeft": 9,
+                    "belowMinimum": false,
+                    "isCodeshare": false,
+                    "operatingCode": "BA",
+                    "operatingAirline": "",
+                    "operatingFlightNo": "BA75",
+                    "operatingLogo": "https://travelnext.works/api/airlines/BA.gif",
+                    "eticket": true
+                }
+            ],
+            "departTime": "10:30",
+            "arriveTime": "16:55",
+            "departDT": "2026-10-20T10:30:00",
+            "arriveDT": "2026-10-20T16:55:00",
+            "totalDuration": 385,
+            "durationLabel": "6h 25m",
+            "layoverDurations": [],
+            "departDateLabel": "Tue, 20 Oct",
+            "totalTimeMins": 385,
+            "totalTimeLabel": "6h 25m",
+            "returnSegments": [],
+            "returnStops": 0,
+            "returnDurationLabel": "",
+            "returnDateLabel": "",
+            "returnLayoverDurations": [],
+            "returnTotalTimeMins": 0,
+            "returnTotalTimeLabel": "",
+            "multiLegs": [],
+            "departSlot": "morning",
+            "arrivalSlot": "afternoon",
+            "fareBreakdown": [
+                {
+                    "passengerType": "ADT",
+                    "qty": 2,
+                    "baseFare": 308624.28,
+                    "totalFare": 342677.57,
+                    "currency": "NGN",
+                    "baggage": [
+                        "2PC",
+                        "1PC"
+                    ],
+                    "cabinBaggage": [
+                        "7KG",
+                        "7KG"
+                    ],
+                    "taxes": [
+                        {
+                            "TaxCode": "YQ",
+                            "Amount": "42.00"
+                        }
+                    ],
+                    "serviceTax": 4577.06,
+                    "surcharges": 1634.66,
+                    "changeAllowed": true,
+                    "changePenalty": 196159.5,
+                    "refundAllowed": true,
+                    "refundPenalty": 392319.0
+                },
+                {
+                    "passengerType": "CHD",
+                    "qty": 1,
+                    "baseFare": 154312.14,
+                    "totalFare": 171338.78,
+                    "currency": "NGN",
+                    "baggage": [
+                        "2PC",
+                        "1PC"
+                    ],
+                    "cabinBaggage": [
+                        "7KG",
+                        "7KG"
+                    ],
+                    "taxes": [
+                        {
+                            "TaxCode": "YQ",
+                            "Amount": "42.00"
+                        }
+                    ],
+                    "serviceTax": 4577.06,
+                    "surcharges": 1634.66,
+                    "changeAllowed": false,
+                    "changePenalty": 98079.75,
+                    "refundAllowed": true,
+                    "refundPenalty": 196159.5
+                }
+            ],
+            "supplierPrice": 856693.92,
+            "markupAmount": 90000.0,
+            "markupRatePerPassenger": 30000.0,
+            "markupPassengerCount": 3,
+            "markupCategory": "from_nigeria",
+            "markupCabin": "economy"
+        }
+    ],
+    "searchParamsStore": {
+        "trip": "oneway",
+        "adults": 2,
+        "childs": 1,
+        "kids": 0,
+        "flight_type": "Y",
+        "from": "Lagos (LOS)",
+        "to": "London (LHR)",
+        "depart": "20/10/2026"
+    },
+    "searchSessionId": "tn-session-1"
+}
