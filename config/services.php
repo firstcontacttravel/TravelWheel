@@ -46,12 +46,11 @@ return [
         'base_url' => env('SKYLINK_BASE_URL', 'https://247travels.com/api/'),
         'email' => env('SKYLINK_EMAIL'),
         'password' => env('SKYLINK_PASSWORD'),
-        // Kill switch for the live search-results merge (see FlightPage::
-        // loadSkylinkResults()) — same convention as VISA_PRODUCT_ENABLED
-        // (config/visa.php). Defaults OFF so deploying this code changes
-        // nothing for real customers until explicitly turned on, and turning
-        // it back off is instant — no redeploy, just an env change (plus
-        // `php artisan config:clear` if the target env caches config).
+        // Retired. SkyLink is switched on and off in the admin now (Flight
+        // APIs, flight_supplier_settings). This is read exactly once, by the
+        // migration that created those settings, so SkyLink starts in the
+        // same state it was in; nothing else reads it. Safe to delete, with
+        // SKYLINK_ENABLED, once that migration has run everywhere.
         'enabled' => env('SKYLINK_ENABLED', false),
 
         // SkyLink's timestamps (ticket_deadline, the invoice_id stamp) carry

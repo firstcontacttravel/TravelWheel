@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\Flights\FlightSupplierRegistry;
-use App\Services\TravelnextFlightService;
+use App\Services\Flights\FlightSupplierControl;
 use App\Support\FlightMarkup;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -14,6 +13,9 @@ use Illuminate\Validation\ValidationException;
 
 class FlightController extends Controller
 {
+    /** Shown when no switched-on flight API can take a search. */
+    private const UNAVAILABLE = 'Flight search is temporarily unavailable. Please try again later.';
+
     /**
      * Correlation id that ties every log line of a single search together,
      * across the search → loading → runPendingSearch redirect chain.
@@ -67,6 +69,14 @@ class FlightController extends Controller
         // Step: validation (failures are logged inside validateSearchRequest)
         $validated = $this->validateSearchRequest($request);
         $this->logStep('search input validated');
+
+        // Every flight API switched off in the admin: say so now, rather than
+        // after the loading page has spun for nothing.
+        if (app(FlightSupplierControl::class)->enabledKeys() === []) {
+            $this->logStep('search refused — every flight API is switched off', [], 'warning');
+
+            return redirect()->route('air')->withErrors(['error' => self::UNAVAILABLE]);
+        }
 
         // Step: queue the search and hand off to the loading page
         session([
@@ -205,39 +215,89 @@ class FlightController extends Controller
             'cabin' => $validated['flight_type'],
         ]);
 
-        // ── Supplier search ───────────────────────────────────────────────────
-        // TravelNext is still the supplier that fills the first page; the
-        // request, mapping and step logging live in TravelnextFlightService.
-        $result = app(FlightSupplierRegistry::class)
-            ->get(TravelnextFlightService::KEY)
-            ->search($validated, [
+        // ── Supplier search, in the admin's priority order ────────────────────
+        // The first switched-on API that answers with flights fills the page.
+        // One that errors or finds nothing hands over to the next, so a broken
+        // or empty API never leaves the customer with nothing while another
+        // could have answered. Every API not reached here is searched as a
+        // supplement once the results page is up (FlightPage).
+        $enabled = app(FlightSupplierControl::class)->enabled();
+        $attempted = [];
+        $primary = null;
+        $meta = [];
+        $firstError = null;
+
+        foreach ($enabled as $supplier) {
+            $attempted[] = $supplier->key();
+            $this->logStep('searching supplier', ['supplier' => $supplier->key()]);
+
+            $result = $supplier->search($validated, [
                 'search_id' => $this->searchLogId,
                 'started_at' => $this->searchStartedAt,
             ]);
 
-        if ($result['error']) {
-            return redirect()->route('air')->withErrors(['error' => $result['message']]);
+            if ($result['error']) {
+                $firstError ??= $result['message'];
+                $this->logStep('supplier failed — trying the next one', [
+                    'supplier' => $supplier->key(),
+                    'message' => $result['message'],
+                ], 'warning');
+
+                continue;
+            }
+
+            $meta[$supplier->key()] = $result['data']['meta'] ?? [];
+            $flights = $result['data']['flights'] ?? [];
+
+            // An empty answer is kept in case nobody does better, but the
+            // next API still gets its chance.
+            if ($primary === null || $flights !== []) {
+                $primary = ['key' => $supplier->key(), 'flights' => $flights];
+            }
+
+            if ($flights !== []) {
+                break;
+            }
+
+            $this->logStep('supplier found no flights — trying the next one', ['supplier' => $supplier->key()]);
+        }
+
+        if ($primary === null) {
+            $this->logStep('no supplier could answer', ['attempted' => $attempted], 'warning');
+
+            return redirect()->route('air')->withErrors(['error' => $firstError ?? self::UNAVAILABLE]);
         }
 
         $flights = array_map(
             fn (array $flight): array => FlightMarkup::apply($flight),
-            $result['data']['flights'],
+            $primary['flights'],
         );
 
         // ── Write ONLY to durable session — no flash data needed ─────────────
         // The Livewire FlightPage component reads directly from these session
         // keys in mount(), so data persists across refreshes and back-navigation.
-        session()->forget(['pendingFlightSearch', 'pendingFlightSearchStartedAt', 'pendingFlightSearchLogId']);
+        session()->forget(['pendingFlightSearch', 'pendingFlightSearchStartedAt', 'pendingFlightSearchLogId', 'supplementResultsStore', 'skylinkResultsStore']);
 
         session([
             'flightResultsStore' => $flights,
             'searchParamsStore' => $validated,
-            'searchSessionId' => $result['data']['meta']['session_id'] ?? '',
+            // The results page posts this back on select. Only TravelNext has
+            // a search session; supplierSearchMeta below keeps each supplier's
+            // own, so a TravelNext supplement still has its id when TravelNext
+            // wasn't the one that filled the page.
+            'searchSessionId' => $meta[$primary['key']]['session_id'] ?? '',
+            'supplierSearchMeta' => $meta,
+            'searchSupplementSuppliers' => array_values(array_diff(
+                array_map(fn ($supplier): string => $supplier->key(), $enabled),
+                $attempted,
+            )),
         ]);
 
         // Step: done — results stored, redirecting to results page
         $this->logStep('results stored in session — redirecting to results page', [
             'flights' => count($flights),
+            'supplier' => $primary['key'],
+            'attempted' => $attempted,
         ]);
 
         // Plain redirect — no ->with([...]) flash needed

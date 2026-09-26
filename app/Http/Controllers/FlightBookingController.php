@@ -58,6 +58,11 @@ class FlightBookingController extends Controller
         $supplier = $suppliers->get($validated['source'] ?? TravelnextFlightService::KEY);
         $searchParams = session('searchParamsStore', []);
 
+        // The page posts back the session id of whichever API filled it. When
+        // this fare came from a different API, that API's own search session
+        // is the one it needs.
+        $validated['session_id'] = (string) (session("supplierSearchMeta.{$supplier->key()}.session_id") ?: $validated['session_id']);
+
         $result = $supplier->select(
             $validated['fare_source_code'],
             $this->_searchedFlight($supplier->key(), $validated['fare_source_code']),
@@ -92,15 +97,19 @@ class FlightBookingController extends Controller
      * The flight exactly as the customer saw it on the results page — marked
      * up — or null when it is no longer in the session.
      *
-     * TravelNext's results sit in flightResultsStore and SkyLink's in
-     * skylinkResultsStore (see FlightPage::skylinkFlights()). Both are searched
-     * and matched on supplier as well as fare code, so a fare code that
-     * happened to exist at both suppliers could never resolve to the wrong
-     * one. A flight with no `source` predates the tag and is TravelNext's.
+     * The first page's flights sit in flightResultsStore and each supplement's
+     * in supplementResultsStore[key] (see FlightPage::supplementalFlights()).
+     * All are searched and matched on supplier as well as fare code, so a fare
+     * code that happened to exist at two suppliers could never resolve to the
+     * wrong one. A flight with no `source` predates the tag and is TravelNext's.
+     *
+     * skylinkResultsStore is where SkyLink supplements lived before; read so a
+     * results page opened just before the deploy can still book.
      */
     private function _searchedFlight(string $supplierKey, string $fareSourceCode): ?array
     {
         return collect(session('flightResultsStore', []))
+            ->merge(collect(session('supplementResultsStore', []))->flatten(1))
             ->merge(session('skylinkResultsStore', []))
             ->first(fn ($flight): bool => is_array($flight)
                 && ($flight['fareSourceCode'] ?? null) === $fareSourceCode

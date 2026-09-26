@@ -32,6 +32,10 @@ Schedule::command('queue:work --stop-when-empty --sleep=1 --tries=3 --timeout=18
     ->everyMinute()
     ->withoutOverlapping(5);
 
+Schedule::command('flights:re-enable-suppliers')
+    ->everyMinute()
+    ->withoutOverlapping(2);
+
 Schedule::command('flights:reconcile --limit=200')
     ->everyFiveMinutes()
     ->withoutOverlapping(10);

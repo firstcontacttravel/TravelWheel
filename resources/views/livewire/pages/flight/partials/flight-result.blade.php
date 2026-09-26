@@ -1221,7 +1221,7 @@
 
 
 {{-- ══ SINGLE ALPINE SCOPE wraps EVERYTHING ══ --}}
-<div x-data="flightResults()" x-init="init()" x-effect="document.body.classList.toggle('sr-filter-open', filterSheetOpen)" x-on:skylink-results-ready.window="onSkylinkResults($event.detail.flights)" class="sr-results-shell">
+<div x-data="flightResults()" x-init="init()" x-effect="document.body.classList.toggle('sr-filter-open', filterSheetOpen)" x-on:supplier-results-ready.window="onSupplierResults($event.detail.flights)" class="sr-results-shell">
 
     {{-- ══ TOPBAR ══ --}}
     <div class="sr-topbar">
@@ -2144,10 +2144,11 @@
             activeFare: 'recommended',
             pageSize: 5,
 
-            // ── SkyLink live supplement (Phase 2) ──────────────────────────
-            // True until the loadSkylinkResults() event fires (success or
-            // failure) — see FlightPage::loadSkylinkResults().
-            searchingMore: true,
+            // ── Live supplements ───────────────────────────────────────────
+            // True until the loadSupplementalResults() event fires (success or
+            // failure) — see FlightPage::loadSupplementalResults(). Starts false
+            // when the loading page already searched every switched-on API.
+            searchingMore: @js($expectsSupplements ?? true),
             // Ids of flights merged in from the supplement, for the brief
             // highlight animation and the "+N more offers found" message.
             newlyAddedIds: [],
@@ -2322,12 +2323,13 @@
                 this._buildDerivedData();
             },
 
-            // ── SkyLink live supplement ─────────────────────────────────────
-            // Called from the x-on:skylink-results-ready.window listener once
-            // FlightPage::loadSkylinkResults() (fired via wire:init) resolves
-            // — with a real list on success, or an empty one on any error/
-            // timeout, so this always runs exactly once per page load.
-            onSkylinkResults(flights) {
+            // ── Live supplements ────────────────────────────────────────────
+            // Called from the x-on:supplier-results-ready.window listener once
+            // FlightPage::loadSupplementalResults() (fired via wire:init)
+            // resolves — with every supplement's flights on success, or an
+            // empty list on any error/timeout, so this always runs exactly once
+            // per page load.
+            onSupplierResults(flights) {
                 this.searchingMore = false;
 
                 if (!Array.isArray(flights) || flights.length === 0) return;
@@ -2351,7 +2353,7 @@
                 return `${chain}|${String(flight.cabinCode || '').toUpperCase()}`;
             },
 
-            // Merges incoming (SkyLink) flights into the existing list.
+            // Merges incoming (supplement) flights into the existing list.
             // Duplicates of an existing flight are resolved by price — the
             // cheaper supplier wins, since both are bookable (skylinkBookable
             // gates this: while false, a duplicate would keep its bookable
@@ -2364,7 +2366,7 @@
                 const addedIds = [];
 
                 incoming.forEach((flight, index) => {
-                    flight.id = 'sky-' + index;
+                    flight.id = 'sup-' + index;
                     const signature = this._flightSignature(flight);
                     const duplicate = bySignature.get(signature);
 
