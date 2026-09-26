@@ -1014,6 +1014,46 @@
         background: rgba(17,24,39,.44);
         backdrop-filter: blur(3px);
     }
+
+    /* ── Fare no longer available ── */
+    .sr-notice-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 930;
+        background: rgba(17,24,39,.44);
+        backdrop-filter: blur(3px);
+    }
+    .sr-notice {
+        position: fixed;
+        z-index: 940;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(420px, calc(100% - 32px));
+        padding: 22px 20px 18px;
+        border-radius: 18px;
+        background: #fff;
+        box-shadow: 0 24px 54px rgba(17,24,39,.22);
+        font-family: var(--font);
+    }
+    .sr-notice-title { margin: 0 0 6px; color: #111827; font-size: 17px; font-weight: 900; line-height: 1.25; }
+    .sr-notice-body { margin: 0; color: #667085; font-size: 13px; line-height: 1.5; }
+    .sr-notice-offer {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 14px;
+        padding: 12px 14px;
+        border: 1px solid #e8ebf2;
+        border-radius: 12px;
+        background: #fbfcfe;
+    }
+    .sr-notice-offer-airline { color: #30364a; font-size: 13px; font-weight: 800; }
+    .sr-notice-offer-price { color: #303191; font-size: 17px; font-weight: 900; white-space: nowrap; }
+    .sr-notice-actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 16px; }
+    .sr-notice-actions.has-offer { grid-template-columns: 1fr 1.35fr; }
+    .sr-notice-actions button { width: 100%; cursor: pointer; font-family: var(--font); }
     .translate-y-full { transform: translateY(100%); }
     .translate-y-0 { transform: translateY(0); }
     .transition { transition-property: transform, opacity; }
@@ -1222,6 +1262,37 @@
 
 {{-- ══ SINGLE ALPINE SCOPE wraps EVERYTHING ══ --}}
 <div x-data="flightResults()" x-init="init()" x-effect="document.body.classList.toggle('sr-filter-open', filterSheetOpen)" x-on:supplier-results-ready.window="onSupplierResults($event.detail.flights)" class="sr-results-shell">
+    {{-- The chosen fare's API was switched off after the search. Offers the
+         same flight from another API when this search found one; otherwise
+         the customer carries on with the fares still on the page. Never says
+         why, or which supplier — just that this fare can't be booked. --}}
+    <template x-if="fareNotice">
+        <div>
+            <div class="sr-notice-backdrop" @click="fareNotice = null" aria-hidden="true"></div>
+            <section class="sr-notice" role="alertdialog" aria-modal="true" aria-labelledby="sr-notice-title" aria-describedby="sr-notice-body"
+                     @keydown.escape.window="fareNotice = null" x-init="$nextTick(() => $el.querySelector('button:last-child')?.focus())">
+                <h2 class="sr-notice-title" id="sr-notice-title" x-text="fareNotice.message"></h2>
+                <p class="sr-notice-body" id="sr-notice-body"
+                   x-text="fareNotice.alternate
+                       ? 'The same flight is still available at this price.'
+                       : 'Please choose another flight from the options below.'"></p>
+                <template x-if="fareNotice.alternate">
+                    <div class="sr-notice-offer">
+                        <span class="sr-notice-offer-airline" x-text="fareNotice.alternate.airline || 'Same flight'"></span>
+                        <span class="sr-notice-offer-price" x-text="_fmtPrice(fareNotice.alternate.price, fareNotice.alternate.currency)"></span>
+                    </div>
+                </template>
+                <div class="sr-notice-actions" :class="{ 'has-offer': fareNotice.alternate }">
+                    <template x-if="fareNotice.alternate">
+                        <button type="button" class="sr-filter-sheet-clear" @click="fareNotice = null">See other flights</button>
+                    </template>
+                    <button type="button" class="sr-filter-sheet-apply"
+                            @click="fareNotice.alternate ? bookAlternate() : (fareNotice = null)"
+                            x-text="fareNotice.alternate ? 'Book this flight' : 'See other flights'"></button>
+                </div>
+            </section>
+        </div>
+    </template>
 
     {{-- ══ TOPBAR ══ --}}
     <div class="sr-topbar">
@@ -2149,6 +2220,10 @@
             // failure) — see FlightPage::loadSupplementalResults(). Starts false
             // when the loading page already searched every switched-on API.
             searchingMore: @js($expectsSupplements ?? true),
+            // Set when select() refused a fare because its API was switched off
+            // — see FlightBookingGuard. Drives the notice at the top of this file.
+            fareNotice: @js(session('fareUnavailable')),
+
             // Ids of flights merged in from the supplement, for the brief
             // highlight animation and the "+N more offers found" message.
             newlyAddedIds: [],
@@ -2346,7 +2421,13 @@
             // a false "not a duplicate" just shows two cards instead of one
             // (harmless), whereas a fuzzy match risks wrongly hiding a
             // genuinely different, cheaper flight.
+            // flight.matchKey is built server-side by App\Support\FlightMatch,
+            // which normalises the ways suppliers describe the same flight
+            // (time format, flight-number padding, cabin vs booking class). The
+            // fallback below is only for flights stored before it existed.
             _flightSignature(flight) {
+                if (flight.matchKey) return flight.matchKey;
+
                 const legs = [...(flight.segments || []), ...(flight.returnSegments || [])];
                 const chain = legs.map(s => `${s.airlineCode}${s.flightNo}@${s.departDT}`).join('|');
 
@@ -2634,6 +2715,12 @@
                 form.submit();
             },
 
+            bookAlternate() {
+                const alternate = this.fareNotice?.alternate;
+                this.fareNotice = null;
+                if (alternate) this.selectFlight(alternate);
+            },
+
             toggleMore(id) {
                 console.log('Load more for flight group:', id);
             }
@@ -2651,7 +2738,9 @@
             icon: 'sr-ic-alert',
 
             init() {
-                let error = @json(session('error'));
+                // Failures reach this page two ways — a flashed 'error', or the
+                // validation error bag under 'error' — and both must be seen.
+                let error = @json(session('error') ?: (session('errors')?->first('error') ?: null));
                 let success = @json(session('success'));
 
                 if (error) this.showToast(error, 'error');

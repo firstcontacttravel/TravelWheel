@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Mail\UnTicketedConfirmationAlert;
 use App\Models\ExchangeRate;
 use App\Models\FlightBooking;
+use App\Services\Flights\FlightSupplierControl;
+use App\Services\SkylinkFlightService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -20,6 +22,14 @@ use Tests\TestCase;
 class SkylinkBookingFlowTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Seeded off (phpunit.xml); a switched-off API can't be booked.
+        app(FlightSupplierControl::class)->enable(SkylinkFlightService::KEY, null);
+    }
 
     public function test_select_works_when_travelnext_left_session_id_empty(): void
     {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\Flights\FlightSupplierControl;
 use App\Support\FlightMarkup;
+use App\Support\FlightMatch;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -268,10 +269,10 @@ class FlightController extends Controller
             return redirect()->route('air')->withErrors(['error' => $firstError ?? self::UNAVAILABLE]);
         }
 
-        $flights = array_map(
+        $flights = FlightMatch::tag(array_map(
             fn (array $flight): array => FlightMarkup::apply($flight),
             $primary['flights'],
-        );
+        ));
 
         // ── Write ONLY to durable session — no flash data needed ─────────────
         // The Livewire FlightPage component reads directly from these session

@@ -208,7 +208,8 @@
             "markupRatePerPassenger": 30000.0,
             "markupPassengerCount": 3,
             "markupCategory": "from_nigeria",
-            "markupCabin": "economy"
+            "markupCabin": "economy",
+            "matchKey": "AF149@2026-10-20T23:05|AF1080@2026-10-21T08:15#economy"
         },
         {
             "id": 1,
@@ -354,7 +355,8 @@
             "markupRatePerPassenger": 30000.0,
             "markupPassengerCount": 3,
             "markupCategory": "from_nigeria",
-            "markupCabin": "economy"
+            "markupCabin": "economy",
+            "matchKey": "BA75@2026-10-20T10:30#economy"
         }
     ],
     "searchParamsStore": {

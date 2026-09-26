@@ -248,7 +248,8 @@
             "markupRatePerPassenger": 30000.0,
             "markupPassengerCount": 3,
             "markupCategory": "from_nigeria",
-            "markupCabin": "economy"
+            "markupCabin": "economy",
+            "matchKey": "EK784@2026-10-20T14:10|ET601@2026-11-03T04:20|ET901@2026-11-03T10:15#economy"
         }
     ],
     "searchParamsStore": {

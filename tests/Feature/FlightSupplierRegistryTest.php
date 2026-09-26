@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Contracts\FlightSupplier;
 use App\Models\FlightSupplierCall;
+use App\Services\Flights\FlightSupplierControl;
 use App\Services\Flights\FlightSupplierRegistry;
 use App\Services\SkylinkFlightService;
 use App\Services\TravelnextFlightService;
@@ -65,6 +66,8 @@ class FlightSupplierRegistryTest extends TestCase
         // SkyLink's select.
         $travelnextFlight = ['fareSourceCode' => 'SHARED', 'source' => 'travelnext', 'airline' => 'TravelNext copy'];
         $skylinkFlight = ['fareSourceCode' => 'SHARED', 'source' => 'skylink', 'airline' => 'SkyLink copy'];
+
+        app(FlightSupplierControl::class)->enable(SkylinkFlightService::KEY, null);
 
         $skylink = Mockery::mock(SkylinkFlightService::class)->makePartial();
         $skylink->shouldReceive('select')

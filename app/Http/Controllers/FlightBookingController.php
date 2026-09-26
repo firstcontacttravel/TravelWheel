@@ -6,6 +6,7 @@ use App\Models\FlightBooking;
 use App\Models\TravelFlexApplication;
 use App\Services\AdminTicketingService;
 use App\Services\DurableMailService;
+use App\Services\Flights\FlightBookingGuard;
 use App\Services\Flights\FlightSupplierRegistry;
 use App\Services\SeerbitPaymentService;
 use App\Services\SkylinkFlightService;
@@ -26,6 +27,12 @@ use Illuminate\Validation\ValidationException;
 
 class FlightBookingController extends Controller
 {
+    /**
+     * Payment flows that begin a purchase with nothing yet at the supplier —
+     * pay first, book after. A switched-off API is refused before these start.
+     */
+    private const PURCHASE_STARTING_FLOWS = ['webfare_full', 'skylink_reserve_full', 'travelflex_down_payment'];
+
     // =========================================================================
     //  select() — re-confirm the fare with its supplier → store in session
     // =========================================================================
@@ -63,9 +70,19 @@ class FlightBookingController extends Controller
         // is the one it needs.
         $validated['session_id'] = (string) (session("supplierSearchMeta.{$supplier->key()}.session_id") ?: $validated['session_id']);
 
+        $searchedFlight = $this->_searchedFlight($supplier->key(), $validated['fare_source_code']);
+
+        // Switched off since the customer searched: nothing is sent to it.
+        if ($refused = $this->_refuseIfSupplierOff($searchedFlight ?? [
+            'source' => $supplier->key(),
+            'fareSourceCode' => $validated['fare_source_code'],
+        ])) {
+            return $refused;
+        }
+
         $result = $supplier->select(
             $validated['fare_source_code'],
-            $this->_searchedFlight($supplier->key(), $validated['fare_source_code']),
+            $searchedFlight,
             $searchParams,
             ['session_id' => $validated['session_id']],
         );
@@ -91,6 +108,25 @@ class FlightBookingController extends Controller
         ]);
 
         return redirect()->route('flights.booking');
+    }
+
+    private function _sessionBooking(): ?FlightBooking
+    {
+        return session('flightBookingDbId') ? FlightBooking::find(session('flightBookingDbId')) : null;
+    }
+
+    /**
+     * Back to the results page with the "no longer available" notice when the
+     * flight's API has been switched off and nothing exists at the supplier
+     * yet — see FlightBookingGuard. Null when the booking may go ahead.
+     */
+    private function _refuseIfSupplierOff(array $flight, ?FlightBooking $booking = null): ?\Illuminate\Http\RedirectResponse
+    {
+        $refusal = app(FlightBookingGuard::class)->refusal($flight, $booking);
+
+        return $refusal === null
+            ? null
+            : redirect()->route('air.flight-s')->with('fareUnavailable', $refusal);
     }
 
     /**
@@ -196,6 +232,12 @@ class FlightBookingController extends Controller
                 'error' => 'Your selected flight has expired. Please search again.',
             ]);
         }
+
+        // Checked before a hold is placed or a pay-first checkout continues.
+        if ($refused = $this->_refuseIfSupplierOff($mappedFlight, $dbBooking)) {
+            return $refused;
+        }
+
         $fareType = strtolower($mappedFlight['fareType'] ?? 'public');
         $checkoutIntent = $validated['intent'] ?? session('bookingIntent', 'booking');
         $travelFlexIneligibleReason = null;
@@ -305,6 +347,12 @@ class FlightBookingController extends Controller
 
         $bookingFlight = session('bookingFlight', []);
         $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
+
+        // Don't show a pay page for an API that can no longer take the booking.
+        if ($refused = $this->_refuseIfSupplierOff($mappedFlight, $this->_sessionBooking())) {
+            return $refused;
+        }
+
         $extraServices = session('extraServices', []);
         $selectedExtras = session('selectedExtras', []);
 
@@ -1007,6 +1055,17 @@ class FlightBookingController extends Controller
         }
 
         try {
+            // The last check before money moves, for the flows that start a
+            // purchase. Never for a fees payment or a held ticket: by then a
+            // deposit has been paid or a hold exists, and those always go on.
+            if (in_array($flow, self::PURCHASE_STARTING_FLOWS, true)) {
+                $bookingFlight = session('bookingFlight', []);
+
+                if ($refused = $this->_refuseIfSupplierOff($bookingFlight['flight'] ?? $bookingFlight, $this->_sessionBooking())) {
+                    return $refused;
+                }
+            }
+
             $booking = $this->_prepareSeerbitBooking($flow);
             $amount = $this->_paymentAmountForFlow($flow, $booking);
             $currency = $booking->currency ?: 'NGN';

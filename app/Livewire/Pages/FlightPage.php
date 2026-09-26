@@ -7,6 +7,7 @@ use App\Services\Flights\FlightSupplierRegistry;
 use App\Services\TravelnextFlightService;
 use Livewire\Attributes\Renderless;
 use App\Support\FlightMarkup;
+use App\Support\FlightMatch;
 use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Throwable;
@@ -33,9 +34,19 @@ class FlightPage extends Component
      * Reading the criteria from the session inside the action is also strictly
      * safer than trusting anything that made a round trip through the client.
      */
+    /**
+     * Only fares from APIs that are still switched on: one switched off since
+     * the search can no longer be booked, so its fares leave the page on the
+     * next load. matchKey is added for searches stored before it existed.
+     */
     protected function flightResults(): array
     {
-        return session('flightResultsStore', []);
+        $enabled = app(FlightSupplierControl::class)->enabledKeys();
+
+        return array_values(array_filter(
+            FlightMatch::tag(array_values(array_filter(session('flightResultsStore', []), 'is_array'))),
+            fn (array $flight): bool => in_array($flight['source'] ?? TravelnextFlightService::KEY, $enabled, true),
+        ));
     }
 
     protected function searchParams(): array
@@ -113,10 +124,10 @@ class FlightPage extends Component
                     continue;
                 }
 
-                $mapped = array_values(array_map(
+                $mapped = FlightMatch::tag(array_values(array_map(
                     fn (array $flight): array => FlightMarkup::apply($flight),
                     (array) data_get($result, 'data.flights', [])
-                ));
+                )));
 
                 $stores[$key] = $mapped;
                 $meta[$key] = (array) data_get($result, 'data.meta', []);
@@ -142,24 +153,40 @@ class FlightPage extends Component
     }
 
     /**
-     * A search made before searchSupplementSuppliers existed has no list; for
-     * those, every switched-on API whose flights aren't already on the page
-     * is a supplement — which is exactly what that list would have held.
+     * The APIs to search as supplements: normally the list the loading page
+     * left in searchSupplementSuppliers.
+     *
+     * Two cases widen it to every switched-on API not already on the page:
+     *   - the first page lost flights because their API has since been
+     *     switched off — the customer would otherwise be left with less, or
+     *     nothing, when another API could fill the gap;
+     *   - a search made before the list existed — which is exactly what the
+     *     list would have held. An empty first page there was TravelNext's.
      */
     private function supplementKeys(FlightSupplierControl $control): array
     {
         $listed = session('searchSupplementSuppliers');
+        $stored = array_filter(session('flightResultsStore', []), 'is_array');
+        $visible = $this->flightResults();
 
-        if (is_array($listed)) {
+        if (is_array($listed) && count($visible) === count($stored)) {
             return $listed;
         }
 
-        $onPage = collect($this->flightResults())
-            ->map(fn ($flight): string => (string) (is_array($flight) ? ($flight['source'] ?? TravelnextFlightService::KEY) : ''))
+        $onPage = collect($visible)
+            ->map(fn (array $flight): string => (string) ($flight['source'] ?? TravelnextFlightService::KEY))
             ->unique()
+            ->values()
             ->all();
 
-        return array_values(array_diff($control->enabledKeys(), $onPage === [] ? [TravelnextFlightService::KEY] : $onPage));
+        if ($onPage === [] && $stored === [] && ! is_array($listed)) {
+            $onPage = [TravelnextFlightService::KEY];
+        }
+
+        return array_values(array_unique(array_merge(
+            is_array($listed) ? $listed : [],
+            array_diff($control->enabledKeys(), $onPage),
+        )));
     }
 
     public function render()
