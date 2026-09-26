@@ -6,7 +6,10 @@
     $segments = $flight['segments'] ?? [];
     $first = $segments[0] ?? [];
     $last = $segments ? $segments[array_key_last($segments)] : [];
-    $bankTransferAvailable = config('travelwheel.travelflex_bank_accounts', []) !== [];
+    $platformHeld = $platformHeld ?? false;
+    // A fare held on our side is card-only: it is booked with the airline
+    // the moment payment clears, so it can't wait for a transfer to be verified.
+    $bankTransferAvailable = ! $platformHeld && config('travelwheel.travelflex_bank_accounts', []) !== [];
     $upfrontPaymentTotal = (float) ($plan['upfront_payment_total'] ?? (($plan['down_payment'] ?? $application->down_payment) + ($plan['administration_fee'] ?? 0) + ($plan['insurance_fee'] ?? 0)));
 @endphp
 <style>
@@ -17,7 +20,11 @@
         <div class="tfa-kicker">Fast Credit decision</div>
         <div class="tfa-title">Your TravelFlex application is approved</div>
         <p class="tfa-copy">Review the held itinerary and complete payment in two steps: your down payment first, then the administration &amp; insurance fees. Your ticket is issued only after both payments are verified.</p>
-        <div class="tfa-alert">Complete payment by <strong>{{ $paymentDeadline?->timezone('Africa/Lagos')->format('D, d M Y H:i') }} WAT</strong>. We reserve two hours before the airline deadline for payment verification and ticketing.</div>
+        @if($platformHeld)
+            <div class="tfa-alert">Complete payment by <strong>{{ $paymentDeadline?->timezone('Africa/Lagos')->format('D, d M Y H:i') }} WAT</strong>. We check the fare with the airline again just before you pay, and book your seat as soon as both payments clear. If the fare has changed, nothing is charged.</div>
+        @else
+            <div class="tfa-alert">Complete payment by <strong>{{ $paymentDeadline?->timezone('Africa/Lagos')->format('D, d M Y H:i') }} WAT</strong>. We reserve two hours before the airline deadline for payment verification and ticketing.</div>
+        @endif
     </section>
     @if($errors->any())<div class="tfa-alert">{{ $errors->first() }}</div>@endif
     <div class="tfa-grid">
@@ -33,7 +40,18 @@
             <div class="tfa-row"><span>Financed amount</span><strong>{{ $money($plan['loan_amount'] ?? $plan['remaining_balance'] ?? 0) }}</strong></div>
             <div class="tfa-row"><span>Repayment plan</span><strong>{{ $plan['repayment_plan'] ?? '-' }}</strong></div>
         </section>
-        @if($bankTransferAvailable)
+        @if($platformHeld)
+            <form class="tfa-card" method="POST" action="{{ route('flights.travelflex.approved.payment') }}">
+                @csrf
+                <input type="hidden" name="pay_method" value="gateway">
+                <h2 style="font-size:18px;margin:0;">Payment method</h2>
+                <p style="font-size:12px;color:#667085;margin:6px 0 0;">Pay by card. This starts with Payment 1 (down payment). You'll be taken straight to Payment 2 (administration &amp; insurance fees) right after.</p>
+                <div class="tfa-options">
+                    <label class="tfa-option"><input type="radio" checked disabled><span><strong>Card</strong><small>Paid securely through our payment partner. Your seat is booked as soon as both payments clear.</small></span></label>
+                </div>
+                <button class="tfa-submit" type="submit">Continue to Payment 1 &middot; down payment</button>
+            </form>
+        @elseif($bankTransferAvailable)
             <form class="tfa-card" method="POST" action="{{ route('flights.travelflex.approved.payment') }}">
                 @csrf
                 <input type="hidden" name="pay_method" value="bank_transfer">

@@ -7,6 +7,7 @@ use App\Models\TravelFlexApplication;
 use App\Services\AdminTicketingService;
 use App\Services\DurableMailService;
 use App\Services\Flights\FlightBookingGuard;
+use App\Services\Flights\FlightPlatformHold;
 use App\Services\Flights\FlightSearchStore;
 use App\Services\Flights\FlightSupplierRegistry;
 use App\Services\SeerbitPaymentService;
@@ -109,6 +110,46 @@ class FlightBookingController extends Controller
         ]);
 
         return redirect()->route('flights.booking');
+    }
+
+    /**
+     * TravelFlex with an API that can't hold seats: the booking is held here,
+     * for config('flights.platform_hold.hold_hours'), with no reference at
+     * the supplier — nothing is reserved until the customer pays. From here
+     * the customer goes on to Fast Credit exactly as after an airline hold.
+     *
+     * No "your booking is on hold" email: it promises a seat reserved with
+     * the airline and links to a resume page that needs an airline
+     * reference. The TravelFlex application sends its own emails.
+     */
+    private function _placePlatformHold(array $mappedFlight, array $validated)
+    {
+        $hold = app(FlightPlatformHold::class);
+
+        $dbBooking = $this->_persistBooking($mappedFlight, $validated, [], [
+            'unique_id' => '',
+            'booking_status' => 'on_hold',
+            'payment_status' => 'pending',
+            'tkt_time_limit' => $hold->holdUntil()->toIso8601String(),
+            'extra_services_snapshot' => session('selectedExtras', []),
+        ]);
+
+        session([
+            'bookingRef' => $dbBooking->booking_ref,
+            'bookingTktTimeLimit' => optional($dbBooking->tkt_time_limit)->toIso8601String(),
+            'bookingStatus' => 'ON_HOLD',
+            'flightBookingDbId' => $dbBooking->id,
+            'travelFlexRedirectTarget' => 'plan',
+        ]);
+
+        return redirect()->route('flights.travelflex.fastcredit');
+    }
+
+    private const CARD_ONLY = 'This booking can only be paid by card. Please choose card payment to continue.';
+
+    private function _isPlatformHeld(?FlightBooking $booking): bool
+    {
+        return $booking !== null && app(FlightPlatformHold::class)->applies($booking);
     }
 
     private function _sessionBooking(): ?FlightBooking
@@ -223,23 +264,22 @@ class FlightBookingController extends Controller
         if ($checkoutIntent === 'travelflex') {
             session(['bookingIntent' => 'travelflex']);
 
+            // (A WebFare is never eligible — _travelFlexEligibility() says so —
+            // which is why there is no WebFare branch here.)
             $travelFlexEligibility = $this->_travelFlexEligibility($mappedFlight);
             if (! $travelFlexEligibility['eligible']) {
                 $travelFlexIneligibleReason = $travelFlexEligibility['reason'];
                 session()->forget('bookingIntent');
-            } elseif ($fareType === 'webfare') {
-                session(['travelFlexRedirectTarget' => 'plan']);
-
-                return redirect()->route('flights.travelflex.fastcredit');
+            } elseif (app(FlightPlatformHold::class)->applies($mappedFlight)) {
+                return $this->_placePlatformHold($mappedFlight, $validated);
             }
         }
 
         // ── SkyLink: always gateway-only, pay first — /reserve creates an
         // instant, unconditional, billable PNR with no hold concept, unlike
-        // TravelNext's Public/Private "hold now, pay later" flow below.
-        // TravelFlex is never eligible for these fares (_travelFlexEligibility()
-        // rejects them outright); surface that plainly here rather than
-        // silently falling through the way WebFare's intent is dropped above.
+        // TravelNext's Public/Private "hold now, pay later" flow below. A
+        // TravelFlex booking was held on our side above; anything reaching
+        // here is a straight card purchase.
         if (($mappedFlight['source'] ?? null) === 'skylink') {
             if ($travelFlexIneligibleReason) {
                 return redirect()->route('flights.payment.gateway')
@@ -739,6 +779,10 @@ class FlightBookingController extends Controller
         if (empty($currentPlan)) {
             return redirect()->route('flights.travelflex')
                 ->withErrors(['error' => 'TravelFlex plan missing. Please choose your repayment plan again.']);
+        }
+
+        if ($this->_isPlatformHeld($this->_sessionBooking())) {
+            return redirect()->route('flights.travelflex')->withErrors(['error' => self::CARD_ONLY]);
         }
 
         $application = TravelFlexApplication::with('booking')->findOrFail((int) session('travelFlexApplicationId'));
@@ -1257,7 +1301,14 @@ class FlightBookingController extends Controller
     //  failure is a "money taken, nothing issued" situation — same category
     //  as a TravelNext ticketing failure — and gets the same ops alert.
     // =========================================================================
-    private function _completeSkylinkReservation(FlightBooking $booking)
+    /**
+     * Reserves a paid booking with SkyLink and records the outcome on it:
+     * confirmed with its PNR, or failed with support alerted. Payment has
+     * already been taken either way.
+     *
+     * @return array{ok: bool, message: string, pnr: string, data: array}
+     */
+    private function _reserveSkylink(FlightBooking $booking, string $paymentMethod = 'gateway'): array
     {
         $result = app(SkylinkFlightService::class)->reserve(
             $booking->fare_source_code,
@@ -1292,14 +1343,14 @@ class FlightBookingController extends Controller
             ]);
             $this->_sendTicketingFailureAlert($booking->fresh(), $message, $result['data'] ?? []);
 
-            return redirect()->route('flights.payment.gateway')->withErrors(['error' => $message]);
+            return ['ok' => false, 'message' => $message, 'pnr' => '', 'data' => $result['data'] ?? []];
         }
 
         $booking->update([
             'unique_id' => $pnr,
             'booking_status' => 'confirmed',
             'payment_status' => 'paid',
-            'payment_method' => 'gateway',
+            'payment_method' => $paymentMethod,
             // SkyLink's reserve holds the seat until this deadline unless a
             // ticket is issued first. Stored where TravelNext's hold deadline
             // lives, so the admin deadline column, the expired-hold filter and
@@ -1311,6 +1362,19 @@ class FlightBookingController extends Controller
         ]);
 
         $this->_sendConfirmedEmail($booking->fresh());
+
+        return ['ok' => true, 'message' => '', 'pnr' => (string) $pnr, 'data' => $result['data']];
+    }
+
+    private function _completeSkylinkReservation(FlightBooking $booking)
+    {
+        $reserved = $this->_reserveSkylink($booking);
+        $result = ['data' => $reserved['data']];
+        $pnr = $reserved['pnr'];
+
+        if (! $reserved['ok']) {
+            return redirect()->route('flights.payment.gateway')->withErrors(['error' => $reserved['message']]);
+        }
 
         session([
             'bookingConfirmation' => $result['data'],
@@ -1569,6 +1633,10 @@ class FlightBookingController extends Controller
                 'payment_status' => 'paid',
                 'booking_status' => 'awaiting_ticketing',
             ]);
+        } elseif ($this->_isPlatformHeld($booking)) {
+            if ($message = $this->_reservePlatformHeldBooking($booking)) {
+                return redirect()->route('flights.travelflex.pending')->withErrors(['error' => $message]);
+            }
         } else {
             if ($message = $this->_completeTravelFlexWebfareBooking($booking, $request)) {
                 return redirect()->route('flights.travelflex')->withErrors(['error' => $message]);
@@ -1592,6 +1660,59 @@ class FlightBookingController extends Controller
         ]);
 
         return redirect()->route('flights.travelflex.confirmation');
+    }
+
+    /**
+     * Both TravelFlex payments are in for a fare held on our side: make the
+     * booking with the supplier now. Null on success, else the customer
+     * message.
+     *
+     * The fare was re-priced just before the deposit, but the supplier's
+     * quote lasts minutes and two payments can take longer, so it is found
+     * and re-priced once more. Money has been taken by now, so a fare that
+     * is gone or dearer here can't simply be declined — it goes to support
+     * for manual review (rebook or refund), like any reservation that fails
+     * after payment.
+     */
+    private function _reservePlatformHeldBooking(FlightBooking $booking): ?string
+    {
+        $hold = app(FlightPlatformHold::class);
+        $reconfirmed = $hold->reconfirm($booking);
+
+        if (! $reconfirmed['ok']) {
+            $booking->update(['payment_status' => 'paid', 'booking_status' => 'failed']);
+            $this->_sendTicketingFailureAlert(
+                $booking->fresh(),
+                'TravelFlex payments received, but the held fare could not be reconfirmed ('.$reconfirmed['reason'].'). Rebook or refund.',
+            );
+
+            return 'Both payments were received, but we could not confirm your seat automatically. TravelWheel has been alerted and will contact you shortly.';
+        }
+
+        $hold->adopt($booking, $reconfirmed['flight']);
+
+        $reserved = match ($booking->supplier) {
+            SkylinkFlightService::KEY => $this->_reserveSkylink($booking->fresh(), 'flex_gateway'),
+            default => ['ok' => false, 'message' => "No post-payment reservation is set up for [{$booking->supplier}]."],
+        };
+
+        if (! $reserved['ok']) {
+            if ($booking->supplier !== SkylinkFlightService::KEY) {
+                $booking->update(['payment_status' => 'paid', 'booking_status' => 'failed']);
+                $this->_sendTicketingFailureAlert($booking->fresh(), $reserved['message']);
+            }
+
+            return 'Both payments were received, but we could not confirm your seat automatically. TravelWheel has been alerted and will contact you shortly.';
+        }
+
+        session([
+            'bookingUniqueId' => $reserved['pnr'],
+            'bookingRef' => $booking->booking_ref,
+            'bookingStatus' => $reserved['data']['status'] ?? 'CONFIRMED',
+            'flightBookingDbId' => $booking->id,
+        ]);
+
+        return null;
     }
 
     private function _completeTravelFlexWebfareBooking(FlightBooking $booking, Request $request): ?string
@@ -2674,15 +2795,17 @@ class FlightBookingController extends Controller
     // =========================================================================
     //  TravelFlex eligibility helpers
     // =========================================================================
+    /**
+     * The same conditions whichever API the fare came from. An API that can
+     * hold seats holds it with the airline while Fast Credit reviews; one that
+     * can't (SkyLink) is held on our side instead — see FlightPlatformHold.
+     *
+     * TravelNext's WebFares stay out: they are pay-first fares from an API
+     * that does hold, and re-pricing one days later would need a TravelNext
+     * search session that has long expired.
+     */
     private function _travelFlexEligibility(array $flight): array
     {
-        if (($flight['source'] ?? null) === 'skylink') {
-            return [
-                'eligible' => false,
-                'reason' => 'TravelFlex is not available for this fare. Please choose another flight or pay by card/bank transfer.',
-            ];
-        }
-
         if (strtolower((string) ($flight['fareType'] ?? $flight['fare_type'] ?? '')) === 'webfare') {
             return [
                 'eligible' => false,
@@ -3061,6 +3184,9 @@ class FlightBookingController extends Controller
             'application' => $application,
             'booking' => $booking,
             'paymentDeadline' => $flow->approvalDeadline($application),
+            // Held on our side: card payment, and the fare is booked with
+            // the supplier the moment it clears.
+            'platformHeld' => $this->_isPlatformHeld($booking),
         ]);
     }
 
@@ -3068,6 +3194,14 @@ class FlightBookingController extends Controller
     {
         $validated = $request->validate(['pay_method' => 'required|in:gateway,bank_transfer']);
         $application = TravelFlexApplication::with('booking')->findOrFail((int) session('travelFlexApplicationId'));
+
+        // A fare held on our side is only booked with the supplier once
+        // payment is confirmed; a transfer that takes hours to verify would
+        // leave the fare exposed for that long. Card only.
+        if ($validated['pay_method'] === 'bank_transfer' && $this->_isPlatformHeld($application->booking)) {
+            return back()->withErrors(['travelflex' => self::CARD_ONLY]);
+        }
+
         $booking = ! $application->pricing_revalidated_at || $application->pricing_revalidated_at->lt(now()->subMinutes(10))
             ? $flow->revalidateHold($application)
             : $flow->assertApprovedForDeposit($application);
@@ -3107,6 +3241,11 @@ class FlightBookingController extends Controller
 
         $application = TravelFlexApplication::with('booking')->findOrFail((int) session('travelFlexApplicationId'));
         app(TravelFlexFlowService::class)->assertApprovedForDeposit($application);
+
+        if ($this->_isPlatformHeld($application->booking)) {
+            return redirect()->route('flights.travelflex.approved', ['application' => $application->id])
+                ->withErrors(['travelflex' => self::CARD_ONLY]);
+        }
 
         $tfPlan = $this->_normalizeTravelFlexPlan(
             (int) data_get($tfPlan, 'down_percent', 30),

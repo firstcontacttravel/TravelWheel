@@ -55,7 +55,11 @@ class FlightSupplierControl
 
         return collect($this->state())
             ->filter(fn (array $row, string $key): bool => $this->registry->has($key)
-                && ($row['enabled'] || ($row['re_enable_at'] !== null && Carbon::parse($row['re_enable_at'])->lte($now))))
+                && ($row['enabled'] || ($row['re_enable_at'] !== null && Carbon::parse($row['re_enable_at'])->lte($now)))
+                // Paused by the automatic cut-off, and the pause hasn't run out.
+                && ! (($row['breaker_state'] ?? 'closed') === FlightSupplierSetting::BREAKER_OPEN
+                    && $row['breaker_retry_at'] !== null
+                    && Carbon::parse($row['breaker_retry_at'])->gt($now)))
             ->sortBy('priority')
             ->keys()
             ->values()
@@ -73,6 +77,12 @@ class FlightSupplierControl
         return in_array($key, $this->enabledKeys(), true);
     }
 
+    /** Paused or on trial — the cut-off has something to watch. Cached. */
+    public function breakerOpen(string $key): bool
+    {
+        return ($this->state()[$key]['breaker_state'] ?? FlightSupplierSetting::BREAKER_CLOSED) === FlightSupplierSetting::BREAKER_OPEN;
+    }
+
     /**
      * key => [enabled, priority, re_enable_at], cached.
      *
@@ -86,11 +96,13 @@ class FlightSupplierControl
     {
         try {
             return Cache::remember(self::CACHE_KEY, self::CACHE_SECONDS, fn (): array => FlightSupplierSetting::query()
-                ->get(['key', 'enabled', 'priority', 're_enable_at'])
+                ->get(['key', 'enabled', 'priority', 're_enable_at', 'breaker_state', 'breaker_retry_at'])
                 ->mapWithKeys(fn (FlightSupplierSetting $setting): array => [$setting->key => [
                     'enabled' => $setting->enabled,
                     'priority' => $setting->priority,
                     're_enable_at' => $setting->re_enable_at?->toIso8601String(),
+                    'breaker_state' => $setting->breaker_state ?? FlightSupplierSetting::BREAKER_CLOSED,
+                    'breaker_retry_at' => $setting->breaker_retry_at?->toIso8601String(),
                 ]])
                 ->all());
         } catch (Throwable $exception) {
@@ -100,7 +112,13 @@ class FlightSupplierControl
 
             $first = $this->registry->keys()[0] ?? null;
 
-            return $first === null ? [] : [$first => ['enabled' => true, 'priority' => 1, 're_enable_at' => null]];
+            return $first === null ? [] : [$first => [
+                'enabled' => true,
+                'priority' => 1,
+                're_enable_at' => null,
+                'breaker_state' => FlightSupplierSetting::BREAKER_CLOSED,
+                'breaker_retry_at' => null,
+            ]];
         }
     }
 
@@ -229,6 +247,65 @@ class FlightSupplierControl
     }
 
     /**
+     * Ends an automatic pause now rather than waiting it out — for an admin
+     * who knows the supplier has recovered.
+     */
+    public function resumeNow(string $key, ?User $by): void
+    {
+        DB::transaction(function () use ($key, $by): void {
+            $setting = $this->setting($key);
+
+            if ($setting->breaker_state !== FlightSupplierSetting::BREAKER_OPEN) {
+                return;
+            }
+
+            $wasPausedFor = $setting->breaker_reason;
+            $setting->update(self::BREAKER_CLEARED);
+
+            $this->record($key, 'cutoff_cleared', null, $by, ['was_paused_for' => $wasPausedFor]);
+        });
+    }
+
+    /**
+     * $settings: auto_cutoff, and min_calls / failure_percent /
+     * window_minutes / pause_minutes where null means "use the default".
+     */
+    public function updateCutoff(string $key, array $settings, ?User $by): void
+    {
+        $values = [
+            'auto_cutoff' => (bool) ($settings['auto_cutoff'] ?? true),
+            'cutoff_min_calls' => self::positiveOrNull($settings['min_calls'] ?? null),
+            'cutoff_failure_percent' => self::positiveOrNull($settings['failure_percent'] ?? null, 100),
+            'cutoff_window_minutes' => self::positiveOrNull($settings['window_minutes'] ?? null),
+            'cutoff_pause_minutes' => self::positiveOrNull($settings['pause_minutes'] ?? null),
+        ];
+
+        DB::transaction(function () use ($key, $values, $by): void {
+            $setting = $this->setting($key);
+            $before = $setting->only(array_keys($values));
+
+            // Turning the cut-off off also ends any pause it had in force.
+            $setting->update($values + ($values['auto_cutoff'] ? [] : self::BREAKER_CLEARED));
+
+            $this->record($key, 'cutoff_settings_changed', null, $by, [
+                'before' => $before,
+                'after' => $values,
+            ]);
+        });
+    }
+
+    private static function positiveOrNull(mixed $value, ?int $max = null): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $number = max(1, (int) $value);
+
+        return $max === null ? $number : min($max, $number);
+    }
+
+    /**
      * Persists every scheduled switch-on that has come due. Customers already
      * saw those APIs as on from the due time (see enabledKeys()); this makes
      * the setting and its history say so too.
@@ -272,6 +349,10 @@ class FlightSupplierControl
         return FlightSupplierSetting::query()->where('key', $key)->firstOrFail();
     }
 
+    /**
+     * Switching on by hand also clears any automatic pause: the admin has
+     * decided it should run, and the cut-off starts watching it afresh.
+     */
     private function switchOn(FlightSupplierSetting $setting): void
     {
         $setting->update([
@@ -280,8 +361,16 @@ class FlightSupplierControl
             'disabled_by' => null,
             'disabled_at' => null,
             're_enable_at' => null,
-        ]);
+        ] + self::BREAKER_CLEARED);
     }
+
+    private const BREAKER_CLEARED = [
+        'breaker_state' => FlightSupplierSetting::BREAKER_CLOSED,
+        'breaker_opened_at' => null,
+        'breaker_retry_at' => null,
+        'breaker_reason' => null,
+        'breaker_trial_successes' => 0,
+    ];
 
     private function record(string $key, string $action, ?string $reason, ?User $by, array $details = []): void
     {

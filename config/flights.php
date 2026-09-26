@@ -42,4 +42,49 @@ return [
     // reload asks that API afresh. Fares go stale well within the latter.
     'search_minutes' => (int) env('FLIGHTS_SEARCH_MINUTES', 120),
     'result_minutes' => (int) env('FLIGHTS_RESULT_MINUTES', 20),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Automatic cut-off
+    |--------------------------------------------------------------------------
+    |
+    | Defaults for pausing a failing API on its own. Each API can override
+    | the first four on the Flight APIs screen.
+    |
+    | An API is paused for `pause_minutes` once, within the last
+    | `window_minutes`, it has had at least `min_calls` searches or price
+    | checks and `failure_percent` or more of them failed. Errors and
+    | timeouts are failures; finding no flights is not. After the pause,
+    | traffic is let back through: `trial_successes` successes in a row
+    | resume it, and a single failure pauses it again.
+    |
+    */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Holding a booking on our side
+    |--------------------------------------------------------------------------
+    |
+    | For an API that can't hold seats (supportsHold() false — SkyLink), a
+    | TravelFlex booking is held here instead: no PNR exists until the
+    | customer pays. `hold_hours` is how long Fast Credit and the customer
+    | have. At payment the same flight is found again and re-priced; if it now
+    | costs more than was approved, nothing is charged and the customer
+    | chooses again. `price_tolerance` (NGN) only absorbs currency-conversion
+    | rounding — it is not a margin for real fare rises.
+    |
+    */
+
+    'platform_hold' => [
+        'hold_hours' => (int) env('FLIGHTS_PLATFORM_HOLD_HOURS', 72),
+        'price_tolerance' => 50,
+    ],
+
+    'cutoff' => [
+        'min_calls' => 10,
+        'failure_percent' => 50,
+        'window_minutes' => 5,
+        'pause_minutes' => 10,
+        'trial_successes' => 3,
+    ],
 ];
