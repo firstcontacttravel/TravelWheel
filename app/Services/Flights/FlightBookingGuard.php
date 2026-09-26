@@ -21,7 +21,10 @@ class FlightBookingGuard
 {
     public const MESSAGE = 'This fare is no longer available.';
 
-    public function __construct(private readonly FlightSupplierControl $control) {}
+    public function __construct(
+        private readonly FlightSupplierControl $control,
+        private readonly FlightSearchStore $searches,
+    ) {}
 
     /**
      * Null when the booking may go ahead. Otherwise what the results page
@@ -68,10 +71,8 @@ class FlightBookingGuard
         $key = FlightMatch::key($flight);
         $enabled = $this->control->enabledKeys();
 
-        return collect(session('flightResultsStore', []))
-            ->merge(collect(session('supplementResultsStore', []))->flatten(1))
-            ->filter(fn ($candidate): bool => is_array($candidate)
-                && ($source = self::supplierOf($candidate)) !== $excludingKey
+        return $this->searches->flights()
+            ->filter(fn (array $candidate): bool => ($source = self::supplierOf($candidate)) !== $excludingKey
                 && in_array($source, $enabled, true)
                 && filled($candidate['fareSourceCode'] ?? null)
                 && FlightMatch::key($candidate) === $key)

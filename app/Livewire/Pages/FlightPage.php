@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages;
 
+use App\Services\Flights\FlightSearchStore;
 use App\Services\Flights\FlightSupplierControl;
 use App\Services\Flights\FlightSupplierRegistry;
 use App\Services\TravelnextFlightService;
@@ -100,7 +101,8 @@ class FlightPage extends Component
     {
         $searchParams = $this->searchParams();
 
-        if ($searchParams === []) {
+        // A parallel search's page fetches every API itself.
+        if ($searchParams === [] || app(FlightSearchStore::class)->currentId() !== null) {
             return [];
         }
 
@@ -189,16 +191,52 @@ class FlightPage extends Component
         )));
     }
 
+    /**
+     * For a parallel search: the id, and one URL per switched-on API for the
+     * page to fetch side by side (FlightSupplierSearchController). Null for a
+     * search that ran through the loading page.
+     *
+     * The APIs are those switched on NOW, not when the search began: one
+     * switched off since contributes nothing, one switched on since is
+     * searched too.
+     */
+    private function parallelSearch(): ?array
+    {
+        $searchId = app(FlightSearchStore::class)->currentId();
+
+        if ($searchId === null) {
+            return null;
+        }
+
+        return [
+            'searchId' => $searchId,
+            'endpoints' => collect(app(FlightSupplierControl::class)->enabledKeys())
+                ->mapWithKeys(fn (string $key): array => [$key => route('flights.search.supplier', [
+                    'search' => $searchId,
+                    'supplier' => $key,
+                ])])
+                ->all(),
+        ];
+    }
+
     public function render()
     {
+        $parallel = $this->parallelSearch();
+
         return view('livewire.pages.flight.flight-page-result', [
-            'flightResults' => $this->flightResults(),
+            // A parallel search starts empty; flights arrive per API.
+            'flightResults' => $parallel === null ? $this->flightResults() : [],
             'searchParams' => $this->searchParams(),
             'searchSessionId' => session('searchSessionId', ''),
+            'parallel' => $parallel,
+            // Priority order: breaks exact price ties between two APIs'
+            // copies of the same flight in the page's dedupe.
+            'supplierOrder' => app(FlightSupplierControl::class)->enabledKeys(),
             // Whether "Searching more airlines…" should show at all: when the
             // loading page already tried every API there is nothing to wait for.
-            'expectsSupplements' => $this->searchParams() !== []
-                && $this->supplementKeys(app(FlightSupplierControl::class)) !== [],
+            'expectsSupplements' => $parallel !== null
+                ? $parallel['endpoints'] !== []
+                : $this->searchParams() !== [] && $this->supplementKeys(app(FlightSupplierControl::class)) !== [],
         ]);
     }
 }

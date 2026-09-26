@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Flights\FlightSearchStore;
 use App\Services\Flights\FlightSupplierControl;
 use App\Support\FlightMarkup;
 use App\Support\FlightMatch;
@@ -79,6 +80,12 @@ class FlightController extends Controller
             return redirect()->route('air')->withErrors(['error' => self::UNAVAILABLE]);
         }
 
+        // Parallel search: no loading page. The results page opens at once
+        // and searches every switched-on API side by side.
+        if (config('flights.parallel_search')) {
+            return $this->startParallelSearch($validated);
+        }
+
         // Step: queue the search and hand off to the loading page
         session([
             'pendingFlightSearch' => $validated,
@@ -89,6 +96,38 @@ class FlightController extends Controller
         $this->logStep('pending search stored — redirecting to loading page');
 
         return redirect()->route('flights.search.loading');
+    }
+
+    /**
+     * Records the search (flight_searches) and sends the customer straight to
+     * the results page, whose per-API requests find it by id. Nothing about
+     * any earlier search is left in the session to be mixed in with it.
+     */
+    private function startParallelSearch(array $validated)
+    {
+        $searchId = app(FlightSearchStore::class)->start($validated);
+
+        session()->forget([
+            'pendingFlightSearch',
+            'pendingFlightSearchStartedAt',
+            'pendingFlightSearchLogId',
+            'flightResultsStore',
+            'supplementResultsStore',
+            'skylinkResultsStore',
+            'supplierSearchMeta',
+            'searchSupplementSuppliers',
+            'searchSessionId',
+        ]);
+
+        session([
+            'searchParamsStore' => $validated,
+            FlightSearchStore::SESSION_ID => $searchId,
+            FlightSearchStore::SESSION_MODE => 'parallel',
+        ]);
+
+        $this->logStep('parallel search started — redirecting to results page', ['flight_search_id' => $searchId]);
+
+        return redirect()->route('air.flight-s');
     }
 
     public function loading()
@@ -277,7 +316,11 @@ class FlightController extends Controller
         // ── Write ONLY to durable session — no flash data needed ─────────────
         // The Livewire FlightPage component reads directly from these session
         // keys in mount(), so data persists across refreshes and back-navigation.
-        session()->forget(['pendingFlightSearch', 'pendingFlightSearchStartedAt', 'pendingFlightSearchLogId', 'supplementResultsStore', 'skylinkResultsStore']);
+        session()->forget([
+            'pendingFlightSearch', 'pendingFlightSearchStartedAt', 'pendingFlightSearchLogId',
+            'supplementResultsStore', 'skylinkResultsStore',
+            FlightSearchStore::SESSION_ID, FlightSearchStore::SESSION_MODE,
+        ]);
 
         session([
             'flightResultsStore' => $flights,

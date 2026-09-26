@@ -1016,16 +1016,17 @@
     }
 
     /* ── Fare no longer available ── */
+    /* Above the site's fixed header (--z-fixed), on the site's own modal layers. */
     .sr-notice-backdrop {
         position: fixed;
         inset: 0;
-        z-index: 930;
+        z-index: var(--z-overlay, 1040);
         background: rgba(17,24,39,.44);
         backdrop-filter: blur(3px);
     }
     .sr-notice {
         position: fixed;
-        z-index: 940;
+        z-index: var(--z-modal, 1050);
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
@@ -1054,7 +1055,33 @@
     .sr-notice-actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 16px; }
     .sr-notice-actions.has-offer { grid-template-columns: 1fr 1.35fr; }
     .sr-notice-actions button { width: 100%; cursor: pointer; font-family: var(--font); }
-    .translate-y-full { transform: translateY(100%); }
+
+    /* ── First results still on their way ── */
+    .sr-skeleton-note { margin: 0 0 10px; color: var(--gray-500); font-size: 13px; font-weight: 600; }
+    .sr-skeleton-card {
+        display: grid;
+        grid-template-columns: 40px 1fr auto;
+        align-items: center;
+        gap: 14px;
+        padding: 18px;
+        margin-bottom: 12px;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius);
+        background: #fff;
+    }
+    .sr-skeleton-bar {
+        display: block;
+        height: 12px;
+        border-radius: 6px;
+        background: linear-gradient(90deg, #f0f2f6 0%, #e6e9f0 50%, #f0f2f6 100%);
+        background-size: 200% 100%;
+        animation: sr-skeleton-shimmer 1.4s ease-in-out infinite;
+    }
+    .sr-skeleton-logo { width: 40px; height: 40px; border-radius: 10px; }
+    .sr-skeleton-lines { display: grid; gap: 8px; }
+    .sr-skeleton-price { width: 84px; height: 20px; }
+    @keyframes sr-skeleton-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+    @media (prefers-reduced-motion: reduce) { .sr-skeleton-bar { animation: none; } }    .translate-y-full { transform: translateY(100%); }
     .translate-y-0 { transform: translateY(0); }
     .transition { transition-property: transform, opacity; }
     .ease-out { transition-timing-function: cubic-bezier(.16,1,.3,1); }
@@ -1261,7 +1288,7 @@
 
 
 {{-- ══ SINGLE ALPINE SCOPE wraps EVERYTHING ══ --}}
-<div x-data="flightResults()" x-init="init()" x-effect="document.body.classList.toggle('sr-filter-open', filterSheetOpen)" x-on:supplier-results-ready.window="onSupplierResults($event.detail.flights)" class="sr-results-shell">
+<div x-data="flightResults()" x-effect="document.body.classList.toggle('sr-filter-open', filterSheetOpen)" x-on:supplier-results-ready.window="onSupplierResults($event.detail.flights)" class="sr-results-shell">
     {{-- The chosen fare's API was switched off after the search. Offers the
          same flight from another API when this search found one; otherwise
          the customer carries on with the fares still on the page. Never says
@@ -1724,7 +1751,7 @@
             </div>
 
             {{-- Sort Bar --}}
-            <div class="sr-sort-bar">
+            <div class="sr-sort-bar" x-show="allFlights.length > 0 || !searchingMore">
                 <span class="sr-result-pill">
                     <span class="sr-ic sr-ic-sm sr-ic-list" aria-hidden="true"></span>
                     <span x-text="filteredFlights.length + ' flight' + (filteredFlights.length !== 1 ? 's' : '') + ' found'"></span>
@@ -1740,12 +1767,27 @@
                 </label>
             </div>
 
-            <div class="sr-supplement-status" x-show="searchingMore" x-cloak>
+            <div class="sr-supplement-status" x-show="searchingMore && allFlights.length > 0" x-cloak>
                 <span class="sr-supplement-spinner" aria-hidden="true"></span>
                 <span>Searching more airlines…</span>
             </div>
             <div class="sr-supplement-status sr-supplement-status--done" x-show="!searchingMore && newlyAddedIds.length > 0" x-transition x-cloak
                  x-text="'+' + newlyAddedIds.length + ' more offer' + (newlyAddedIds.length !== 1 ? 's' : '') + ' found'"></div>
+
+            {{-- Nothing has answered yet: placeholder cards, not an empty list. --}}
+            <div x-show="searchingMore && allFlights.length === 0" x-cloak role="status" aria-live="polite">
+                <p class="sr-skeleton-note">Searching airlines for the best fares…</p>
+                <template x-for="n in 3" :key="'skeleton-' + n">
+                    <div class="sr-skeleton-card" aria-hidden="true">
+                        <span class="sr-skeleton-bar sr-skeleton-logo"></span>
+                        <span class="sr-skeleton-lines">
+                            <span class="sr-skeleton-bar" style="width:62%"></span>
+                            <span class="sr-skeleton-bar" style="width:38%"></span>
+                        </span>
+                        <span class="sr-skeleton-bar sr-skeleton-price"></span>
+                    </div>
+                </template>
+            </div>
 
             {{-- ══ Flight Cards ══ --}}
             <template x-for="(flight, fi) in paginatedFlights" :key="flight.id">
@@ -2134,8 +2176,20 @@
                 </div>
             </template>
 
-            {{-- No results --}}
-            <template x-if="filteredFlights.length === 0">
+            {{-- Every API has answered and none had a flight. --}}
+            <template x-if="allFlights.length === 0 && !searchingMore">
+                <div class="sr-empty-results" style="text-align:center;padding:48px 24px;background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:12px;background:var(--blue-lt);color:var(--blue);margin-bottom:14px;">
+                        <span class="sr-ic sr-ic-search" style="width:22px;height:22px;flex-basis:22px;" aria-hidden="true"></span>
+                    </span>
+                    <div style="font-size:16px;font-weight:700;color:var(--gray-900);margin-bottom:6px;">No flights found for this search</div>
+                    <div style="font-size:13px;color:var(--gray-500);">Try different dates, or a nearby airport.</div>
+                    <a class="sr-book-btn" style="display:inline-flex;align-items:center;width:auto;margin-top:18px;text-decoration:none;" href="{{ route('air') }}">Search again</a>
+                </div>
+            </template>
+
+            {{-- Flights exist, but the filters hide them all. --}}
+            <template x-if="allFlights.length > 0 && filteredFlights.length === 0">
                 <div class="sr-empty-results" style="text-align:center;padding:48px 24px;background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);">
                     <span style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:12px;background:var(--blue-lt);color:var(--blue);margin-bottom:14px;">
                         <span class="sr-ic sr-ic-search" style="width:22px;height:22px;flex-basis:22px;" aria-hidden="true"></span>
@@ -2223,6 +2277,12 @@
             // Set when select() refused a fare because its API was switched off
             // — see FlightBookingGuard. Drives the notice at the top of this file.
             fareNotice: @js(session('fareUnavailable')),
+
+            // Parallel search: { searchId, endpoints: { key: url } }, or null for
+            // a search that ran through the loading page. See FlightPage.
+            parallel: @js($parallel ?? null),
+            supplierOrder: @js($supplierOrder ?? []),
+            pendingSuppliers: 0,
 
             // Ids of flights merged in from the supplement, for the brief
             // highlight animation and the "+N more offers found" message.
@@ -2394,10 +2454,63 @@
                 return this.filteredFlights.slice(0, this.pageSize);
             },
 
+            // Alpine calls init() on its own. It used to be called a second time
+            // from an x-init on the root element — harmless while it only built
+            // derived data, but it would search every API twice.
             init() {
+                this._buildDerivedData();
+
+                if (this.parallel) this._searchSuppliers();
+            },
+
+            // ── Parallel search ─────────────────────────────────────────────
+            // Every switched-on API is asked at once, each through its own
+            // session-free request (FlightSupplierSearchController), and its
+            // flights are merged in the moment it answers. An API that fails,
+            // times out or has been switched off simply contributes nothing.
+            // 45s is the most any API is waited for, so the page can never
+            // spin for good on one that hangs.
+            _searchSuppliers() {
+                const endpoints = Object.values(this.parallel.endpoints || {});
+                this.pendingSuppliers = endpoints.length;
+                this.searchingMore = endpoints.length > 0;
+
+                endpoints.forEach(url => {
+                    const controller = new AbortController();
+                    const timer = setTimeout(() => controller.abort(), 45000);
+
+                    fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: controller.signal })
+                        .then(response => response.ok ? response.json() : null)
+                        .then(body => {
+                            if (body && Array.isArray(body.flights) && body.flights.length > 0) {
+                                // The first answer fills the page; later ones
+                                // are highlighted as new arrivals.
+                                this._mergeBatch(body.flights, this.allFlights.length > 0);
+                            }
+                        })
+                        .catch(() => {})
+                        .finally(() => {
+                            clearTimeout(timer);
+                            this.pendingSuppliers--;
+                            if (this.pendingSuppliers <= 0) this.searchingMore = false;
+                        });
+                });
+            },
+
+            _mergeBatch(flights, highlight) {
+                const { merged, addedIds } = this._dedupeMerge(this.allFlights, flights);
+                this.allFlights = merged;
+                if (highlight) this.newlyAddedIds = [...this.newlyAddedIds, ...addedIds];
                 this._buildDerivedData();
             },
 
+            // Lower is tried first in the admin's Flight APIs order; an API
+            // not in the list ranks last.
+            _supplierRank(flight) {
+                const rank = this.supplierOrder.indexOf(flight.source || 'travelnext');
+
+                return rank === -1 ? this.supplierOrder.length : rank;
+            },
             // ── Live supplements ────────────────────────────────────────────
             // Called from the x-on:supplier-results-ready.window listener once
             // FlightPage::loadSupplementalResults() (fired via wire:init)
@@ -2409,10 +2522,7 @@
 
                 if (!Array.isArray(flights) || flights.length === 0) return;
 
-                const { merged, addedIds } = this._dedupeMerge(this.allFlights, flights);
-                this.allFlights = merged;
-                this.newlyAddedIds = addedIds;
-                this._buildDerivedData();
+                this._mergeBatch(flights, true);
             },
 
             // Matches the same physical flight across suppliers: identical
@@ -2434,9 +2544,10 @@
                 return `${chain}|${String(flight.cabinCode || '').toUpperCase()}`;
             },
 
-            // Merges incoming (supplement) flights into the existing list.
-            // Duplicates of an existing flight are resolved by price — the
-            // cheaper supplier wins, since both are bookable (skylinkBookable
+            // Merges incoming flights into the existing list. Duplicates of an
+            // existing flight are resolved by price — the cheaper supplier
+            // wins, and on an exact tie the one higher in the admin's Flight
+            // APIs order — since both are bookable (skylinkBookable
             // gates this: while false, a duplicate would keep its bookable
             // TravelNext copy instead, so a customer is never shown a lower
             // price they can't actually select). Non-duplicate SkyLink
@@ -2447,7 +2558,8 @@
                 const addedIds = [];
 
                 incoming.forEach((flight, index) => {
-                    flight.id = 'sup-' + index;
+                    // Unique across batches: each API numbers its own flights.
+                    flight.id = (flight.source || 'sup') + '-' + index;
                     const signature = this._flightSignature(flight);
                     const duplicate = bySignature.get(signature);
 
@@ -2459,7 +2571,10 @@
                         return;
                     }
 
-                    if (this.skylinkBookable && flight.price < duplicate.price) {
+                    const cheaper = flight.price < duplicate.price;
+                    const tieButPreferred = flight.price === duplicate.price && this._supplierRank(flight) < this._supplierRank(duplicate);
+
+                    if (this.skylinkBookable && (cheaper || tieButPreferred)) {
                         const idx = merged.indexOf(duplicate);
                         if (idx !== -1) merged[idx] = flight;
                         bySignature.set(signature, flight);
