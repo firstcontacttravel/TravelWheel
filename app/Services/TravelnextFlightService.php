@@ -146,7 +146,7 @@ class TravelnextFlightService implements FlightSupplier
                     'infants' => $payload['infants'],
                 ],
                 'search_id' => $context['search_id'] ?? null,
-            ]);
+            ], judge: fn (Response $response): ?string => $this->searchFailure((array) $response->json()));
         } catch (\Throwable $exception) {
             $this->logStep($context, 'availability request threw an exception', [
                 'error' => $exception->getMessage(),
@@ -189,6 +189,18 @@ class TravelnextFlightService implements FlightSupplier
             'api_errors' => $apiErr,
             'session_id_present' => filled(data_get($jsonData, 'AirSearchResponse.session_id')),
         ]);
+
+        // An error in place of flights (a rejected login, say) is a failed
+        // search, not an empty one — the next API gets its chance, and a
+        // parallel search doesn't keep "no flights" for this API.
+        if ($failure = $this->searchFailure((array) $jsonData)) {
+            $this->logStep($context, 'availability answered with an error', [
+                'trip' => $tripType,
+                'error' => $failure,
+            ], 'warning');
+
+            return $this->errorResult('Flight search failed. Please try again.');
+        }
 
         $this->logStep($context, 'reference data loaded', [
             'airlines' => $this->airlines()->count(),
@@ -1072,8 +1084,13 @@ class TravelnextFlightService implements FlightSupplier
      *
      * $log adds route / cabin / trip_type / passenger_counts / search_id to
      * the recorded row.
+     *
+     * $judge looks inside a successful HTTP response for a failure the
+     * status code hides — TravelNext reports a rejected login, for one,
+     * inside a 200 — and returns what went wrong, or null. The call is then
+     * recorded as failed, which is what the automatic cut-off counts.
      */
-    public function post(string $endpoint, array $payload = [], int $timeout = 60, bool $withCredentials = true, array $log = []): Response
+    public function post(string $endpoint, array $payload = [], int $timeout = 60, bool $withCredentials = true, array $log = [], ?\Closure $judge = null): Response
     {
         $body = $withCredentials ? array_merge($this->credentials(), $payload) : $payload;
         $startedAt = microtime(true);
@@ -1090,14 +1107,55 @@ class TravelnextFlightService implements FlightSupplier
             throw $exception;
         }
 
+        $hidden = $response->successful() && $judge !== null ? $judge($response) : null;
+
         $this->logCall($endpoint, array_merge($log, [
             'response_time_ms' => (int) round((microtime(true) - $startedAt) * 1000),
-            'success' => $response->successful(),
+            'success' => $response->successful() && $hidden === null,
             'http_status' => $response->status(),
-            'error_message' => $response->successful() ? null : $this->scrub(Str::limit((string) $response->body(), 500)),
+            'error_message' => match (true) {
+                ! $response->successful() => $this->scrub(Str::limit((string) $response->body(), 500)),
+                $hidden !== null => $this->scrub(Str::limit($hidden, 500)),
+                default => null,
+            },
         ]));
 
         return $response;
+    }
+
+    /**
+     * A search answered with an error and no flights, as opposed to one that
+     * simply found none: what went wrong, or null.
+     *
+     * TravelNext puts both in AirSearchResult.Errors inside an HTTP 200. The
+     * only code seen so far is FLSEARCHVAL ("Invalid user_id/user_password").
+     * Its full list isn't documented here, so the rule is cautious: an error
+     * with no flights is a failure unless its message says there were no
+     * flights, results, fares or availability. Getting it wrong costs a
+     * spurious pause only if MOST searches in the window hit it.
+     */
+    public function searchFailure(array $response): ?string
+    {
+        if (! empty(data_get($response, 'AirSearchResponse.AirSearchResult.FareItineraries'))) {
+            return null;
+        }
+
+        $errors = data_get($response, 'AirSearchResponse.AirSearchResult.Errors') ?? data_get($response, 'Errors');
+
+        if (empty($errors) || ! is_array($errors)) {
+            return null;
+        }
+
+        $first = array_is_list($errors) ? ($errors[0] ?? []) : $errors;
+        $first = (array) ($first['Error'] ?? $first['Errors'] ?? $first);
+        $code = trim((string) ($first['ErrorCode'] ?? ''));
+        $message = trim((string) ($first['ErrorMessage'] ?? ''));
+
+        if (preg_match('/\bno\b.{0,40}\b(flights?|results?|fares?|availab\w*|itinerar\w*)\b/i', $message) === 1) {
+            return null;
+        }
+
+        return trim($code.' '.$message) ?: 'TravelNext returned an error.';
     }
 
     /**

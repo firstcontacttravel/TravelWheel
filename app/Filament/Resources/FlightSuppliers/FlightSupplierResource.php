@@ -5,6 +5,7 @@ namespace App\Filament\Resources\FlightSuppliers;
 use App\Filament\Resources\FlightSuppliers\Pages\ListFlightSuppliers;
 use App\Models\FlightSupplierEvent;
 use App\Models\FlightSupplierSetting;
+use App\Services\Flights\FlightSupplierBreaker;
 use App\Services\Flights\FlightSupplierControl;
 use App\Services\Flights\FlightSupplierRegistry;
 use BackedEnum;
@@ -12,6 +13,8 @@ use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
@@ -70,9 +73,29 @@ class FlightSupplierResource extends Resource
                     ->label('Status')
                     ->state(fn (FlightSupplierSetting $record): string => self::status($record))
                     ->badge()
-                    ->color(fn (FlightSupplierSetting $record): string => $record->isAvailable()
-                        ? 'success'
-                        : ($record->re_enable_at ? 'warning' : 'danger')),
+                    ->color(fn (FlightSupplierSetting $record): string => match (true) {
+                        ! $record->isAvailable() => $record->re_enable_at ? 'warning' : 'danger',
+                        $record->isAutoPaused() => 'danger',
+                        $record->isOnTrial() => 'warning',
+                        default => 'success',
+                    })
+                    ->description(fn (FlightSupplierSetting $record): ?string => $record->isAvailable() && $record->breaker_state === FlightSupplierSetting::BREAKER_OPEN
+                        ? $record->breaker_reason
+                        : null)
+                    ->wrap(),
+                TextColumn::make('recent')
+                    ->label('Recent searches')
+                    ->state(function (FlightSupplierSetting $record): string {
+                        $stats = app(FlightSupplierBreaker::class)->recentStats($record);
+                        $window = $record->cutoffThresholds()['window_minutes'];
+
+                        return $stats['calls'] === 0
+                            ? "None in {$window} min"
+                            : "{$stats['failed']} of {$stats['calls']} failed · {$window} min";
+                    })
+                    ->description(fn (FlightSupplierSetting $record): string => $record->auto_cutoff
+                        ? 'Automatic cut-off on'
+                        : 'Automatic cut-off off'),
                 TextColumn::make('disabled_reason')
                     ->label('Reason')
                     ->wrap()
@@ -88,6 +111,8 @@ class FlightSupplierResource extends Resource
             ->recordActions([
                 self::switchOffAction(),
                 self::switchOnAction(),
+                self::resumeNowAction(),
+                self::cutoffSettingsAction(),
                 self::moveAction('moveUp', -1),
                 self::moveAction('moveDown', 1),
                 self::historyAction(),
@@ -156,6 +181,80 @@ class FlightSupplierResource extends Resource
             });
     }
 
+    private static function resumeNowAction(): Action
+    {
+        return Action::make('resumeNow')
+            ->label('Resume now')
+            ->icon(Heroicon::OutlinedPlay)
+            ->color('warning')
+            ->visible(fn (FlightSupplierSetting $record): bool => $record->isAvailable()
+                && $record->breaker_state === FlightSupplierSetting::BREAKER_OPEN)
+            ->requiresConfirmation()
+            ->modalHeading(fn (FlightSupplierSetting $record): string => 'Resume '.self::label($record->key).' now?')
+            ->modalDescription('Ends the automatic pause straight away. If searches keep failing it will be paused again.')
+            ->modalSubmitActionLabel('Resume now')
+            ->action(function (FlightSupplierSetting $record): void {
+                app(FlightSupplierControl::class)->resumeNow($record->key, auth()->user());
+
+                Notification::make()->title(self::label($record->key).' resumed')->success()->send();
+            });
+    }
+
+    private static function cutoffSettingsAction(): Action
+    {
+        $defaults = (array) config('flights.cutoff', []);
+
+        return Action::make('cutoffSettings')
+            ->label('Automatic cut-off')
+            ->icon(Heroicon::OutlinedAdjustmentsHorizontal)
+            ->color('gray')
+            ->modalHeading(fn (FlightSupplierSetting $record): string => self::label($record->key).' — automatic cut-off')
+            ->modalDescription('Pauses this API on its own when too many of its searches and price checks fail, and brings it back once they succeed. Errors and timeouts count as failures; finding no flights does not. Leave a number empty to use the default shown.')
+            ->modalSubmitActionLabel('Save')
+            ->fillForm(fn (FlightSupplierSetting $record): array => [
+                'auto_cutoff' => $record->auto_cutoff,
+                'min_calls' => $record->cutoff_min_calls,
+                'failure_percent' => $record->cutoff_failure_percent,
+                'window_minutes' => $record->cutoff_window_minutes,
+                'pause_minutes' => $record->cutoff_pause_minutes,
+            ])
+            ->form([
+                Toggle::make('auto_cutoff')
+                    ->label('Pause automatically when failing')
+                    ->helperText('Off: only an admin can take this API out of searches.')
+                    ->live(),
+                TextInput::make('failure_percent')
+                    ->label('Pause when this share fail')
+                    ->numeric()->integer()->minValue(1)->maxValue(100)
+                    ->suffix('%')
+                    ->placeholder((string) ($defaults['failure_percent'] ?? 50))
+                    ->visible(fn ($get): bool => (bool) $get('auto_cutoff')),
+                TextInput::make('min_calls')
+                    ->label('…of at least this many calls')
+                    ->numeric()->integer()->minValue(1)->maxValue(1000)
+                    ->placeholder((string) ($defaults['min_calls'] ?? 10))
+                    ->visible(fn ($get): bool => (bool) $get('auto_cutoff')),
+                TextInput::make('window_minutes')
+                    ->label('…within')
+                    ->numeric()->integer()->minValue(1)->maxValue(240)
+                    ->suffix('minutes')
+                    ->placeholder((string) ($defaults['window_minutes'] ?? 5))
+                    ->visible(fn ($get): bool => (bool) $get('auto_cutoff')),
+                TextInput::make('pause_minutes')
+                    ->label('Pause for')
+                    ->numeric()->integer()->minValue(1)->maxValue(1440)
+                    ->suffix('minutes')
+                    ->helperText('Then it is tried again; '.($defaults['trial_successes'] ?? 3).' successes in a row resume it.')
+                    ->placeholder((string) ($defaults['pause_minutes'] ?? 10))
+                    ->visible(fn ($get): bool => (bool) $get('auto_cutoff')),
+            ])
+            ->action(function (FlightSupplierSetting $record, array $data): void {
+                app(FlightSupplierControl::class)->updateCutoff($record->key, $data, auth()->user());
+
+                Notification::make()->title('Automatic cut-off saved')->success()->send();
+            });
+    }
+
     private static function moveAction(string $name, int $direction): Action
     {
         return Action::make($name)
@@ -215,6 +314,11 @@ class FlightSupplierResource extends Resource
             're_enabled_on_schedule' => ['Switched back on as scheduled', 'positive', filled($details['was_off_for'] ?? null) ? 'Had been off for: '.$details['was_off_for'] : null],
             'moved' => ["Moved from #{$details['from']} to #{$details['to']} by {$who}", 'info', null],
             'registered' => ['Added', 'idle', $event->reason],
+            'auto_paused' => ['Paused automatically', 'critical', $event->reason],
+            'auto_paused_again' => ['Paused again — still failing', 'critical', $event->reason],
+            'auto_resumed' => ['Resumed automatically — searches working', 'positive', null],
+            'cutoff_cleared' => ["Pause ended by {$who}", 'positive', null],
+            'cutoff_settings_changed' => ["Automatic cut-off changed by {$who}", 'info', self::cutoffSummary($details['after'] ?? [])],
             default => [str($event->action)->headline()->toString(), 'idle', $event->reason],
         };
 
@@ -226,8 +330,34 @@ class FlightSupplierResource extends Resource
         ];
     }
 
+    private static function cutoffSummary(array $after): string
+    {
+        if (! ($after['auto_cutoff'] ?? true)) {
+            return 'Turned off.';
+        }
+
+        $limits = (new FlightSupplierSetting([
+            'cutoff_min_calls' => $after['cutoff_min_calls'] ?? null,
+            'cutoff_failure_percent' => $after['cutoff_failure_percent'] ?? null,
+            'cutoff_window_minutes' => $after['cutoff_window_minutes'] ?? null,
+            'cutoff_pause_minutes' => $after['cutoff_pause_minutes'] ?? null,
+        ]))->cutoffThresholds();
+
+        return "Pause when {$limits['failure_percent']}% of at least {$limits['min_calls']} calls fail within {$limits['window_minutes']} min; pause for {$limits['pause_minutes']} min.";
+    }
+
     private static function status(FlightSupplierSetting $record): string
     {
+        // The manual switch comes first: an API switched off by hand is off,
+        // whatever the automatic cut-off thinks.
+        if ($record->isAvailable() && $record->isAutoPaused()) {
+            return 'Paused automatically · retrying '.$record->breaker_retry_at->timezone(self::TIMEZONE)->format('H:i');
+        }
+
+        if ($record->isAvailable() && $record->isOnTrial()) {
+            return 'On trial after a pause';
+        }
+
         if ($record->enabled) {
             return 'On';
         }

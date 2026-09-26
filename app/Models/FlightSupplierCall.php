@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Flights\FlightSupplierBreaker;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -33,6 +34,15 @@ class FlightSupplierCall extends Model
         'price' => 'decimal:2',
         'created_at' => 'datetime',
     ];
+
+    /**
+     * Every recorded call is shown to the automatic cut-off, which pauses an
+     * API that keeps failing. It swallows its own errors.
+     */
+    protected static function booted(): void
+    {
+        static::created(fn (self $call) => app(FlightSupplierBreaker::class)->observe($call));
+    }
 
     /**
      * Fire-and-forget instrumentation write — a logging failure must never
