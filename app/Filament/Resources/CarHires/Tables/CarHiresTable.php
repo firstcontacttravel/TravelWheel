@@ -30,7 +30,7 @@ class CarHiresTable
                 TextColumn::make('payment_reference')->label('Reference')->searchable()->copyable()->weight('bold'),
                 TextColumn::make('full_name')->label('Customer')->searchable()->description(fn (CarHire $record): string => $record->email),
                 TextColumn::make('phone_number')->copyable(),
-                TextColumn::make('car_type')->badge()->description(fn (CarHire $record): string => $record->category . ' · ' . $record->car_model),
+                TextColumn::make('car_type')->badge()->description(fn (CarHire $record): string => $record->category . ' · ' . ($record->car_model ?: 'Any available')),
                 TextColumn::make('pickup_location')->label('Pick-up')->description(fn (CarHire $record): string => filled($record->dropoff_location) ? '-> ' . $record->dropoff_location : (($record->duration_mins ?? $record->rental_hours * 60) ? round(($record->duration_mins ?? $record->rental_hours * 60) / 60, 1) . 'h rental' : ''))->wrap(),
                 TextColumn::make('pickup_date')->label('Pickup')->description(fn (CarHire $record): string => (string) $record->pickup_time)->sortable(),
                 TextColumn::make('amount')->money('NGN')->sortable(),
@@ -119,7 +119,7 @@ class CarHiresTable
                     'assigned_at' => now(),
                 ]);
 
-                $record->update(['driver_assigned' => true, 'payment_status' => 'confirmed']);
+                $record->update(['driver_assigned' => true, 'payment_status' => 'confirmed', 'car_model' => $data['car_model']]);
 
                 if ($data['send_email'] ?? false) {
                     try {

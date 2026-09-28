@@ -68,7 +68,7 @@
             </div>
             <div class="detail-row">
                 <span class="detail-label">Vehicle Model</span>
-                <span class="detail-value">{{ $car_model }}</span>
+                <span class="detail-value">{{ $car_model ?: 'Any available ' . strtolower($category) . ' ' . strtolower($car_type) }}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Category</span>

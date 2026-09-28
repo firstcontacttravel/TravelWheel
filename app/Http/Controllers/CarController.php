@@ -98,7 +98,6 @@ class CarController extends Controller
         $data = $request->validate([
             'car_type' => 'required|string',
             'category' => 'required|in:Regular,Standard,Executive',
-            'car_model' => 'required|string|max:100',
             'rental_hours' => 'required|numeric|min:1',
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|max:255',
@@ -124,7 +123,9 @@ class CarController extends Controller
         CarHire::create([
             'car_type' => $data['car_type'],
             'category' => $data['category'],
-            'car_model' => $data['car_model'],
+            // Customers book a category; the actual car is chosen from what's
+            // available on ground and recorded when a driver is assigned.
+            'car_model' => null,
             'full_name' => $data['full_name'],
             'email' => $data['email'],
             'phone_number' => $data['phone_number'],
@@ -151,7 +152,7 @@ class CarController extends Controller
             phone: $data['phone_number'],
             customerName: $data['full_name'],
             reference: $reference,
-            product_title: 'Car Hire — ' . ucfirst($data['car_type']) . ' · ' . $data['category'] . ' · ' . $data['car_model'],
+            product_title: 'Car Hire — ' . ucfirst($data['car_type']) . ' · ' . $data['category'],
             callback_route: 'air.carhire.budpay.callback',
             cancel_route: 'air.carhire',
             seerbit_route: 'air.carhire.seerbit.callback',

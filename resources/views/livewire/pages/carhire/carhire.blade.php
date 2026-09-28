@@ -146,6 +146,9 @@
     .feat-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
     .feat-list li { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: #444; line-height: 1.4; }
     .feat-list li svg { width: 12px; height: 12px; fill: #0d1883; flex-shrink: 0; margin-top: 1px; opacity: .85; }
+    .expected-models { display: flex; flex-wrap: wrap; gap: 6px; }
+    .expected-models span { background: #f4f5fb; border: 1px solid #e4e6f0; color: #333; font-size: 11.5px; padding: 4px 10px; border-radius: 20px; }
+    .expected-note { font-size: 11px; color: #888; margin-top: 7px; line-height: 1.4; }
     .di-actions { display: flex; gap: 9px; margin-top: 4px; }
     .btn-change { padding: 9px 13px; background: #f0f3ff; color: #0d1883; border: 1.5px solid #c5cef8; border-radius: 9px; font-size: 11.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
     .btn-change:hover { background: #e0e8ff; }
@@ -398,13 +401,6 @@
                                             </div>
                                         </div>
 
-                                        {{-- Step 2.5: Model picker — shown after category selected, before detail panel --}}
-                                        <div id="ch_modelCard" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid #e4e6f0;">
-                                            <div class="section-label" style="margin-bottom:10px;">2.5 · Choose a model</div>
-                                            <p id="ch_modelIntro" style="font-size:12px;color:#888;margin-bottom:12px;"></p>
-                                            <div id="ch_modelArea" class="cat-row"></div>
-                                        </div>
-
                                         <div id="ch_detailPanel" class="cat-detail-panel"></div>
                                     </div>
 
@@ -635,7 +631,6 @@
                 @csrf
                 <input type="hidden" name="car_type"         id="h_ch_type">
                 <input type="hidden" name="category"          id="h_ch_cat">
-                <input type="hidden" name="car_model"         id="h_ch_model">
                 <input type="hidden" name="rental_hours"      id="h_ch_hours">
                 <input type="hidden" name="full_name"         id="h_ch_name">
                 <input type="hidden" name="email"             id="h_ch_email">
@@ -685,7 +680,7 @@ const PAX_LIMITS = { saloon:3, suv:3, van:5, bus:12, luxury:4 };
 const SVG_FB = `<svg viewBox="0 0 60 38" fill="none"><rect x="3" y="10" width="50" height="22" rx="3" fill="#0d1883" opacity="0.3"/><circle cx="14" cy="34" r="5" fill="#0d1883" opacity="0.6"/><circle cx="42" cy="34" r="5" fill="#0d1883" opacity="0.6"/></svg>`;
 
 /* ── state ── */
-let chSelType=null, chSelCat=null, chSelModel=null, chFinalPrice=0, chPayment='budpay';
+let chSelType=null, chSelCat=null, chFinalPrice=0, chPayment='budpay';
 let trSelType=null, trSelCat=null, trSelModel=null, trDistKm=0, trDurationMins=0, trFinalPrice=0, trPayment='budpay';
 let activeModal=null;
 
@@ -844,11 +839,10 @@ function buildDots(count, trackId) {
 function ch_setType(type, el) {
     document.querySelectorAll('#panel-ch .type-card').forEach(c=>c.classList.remove('active'));
     el.classList.add('active');
-    chSelType=type; chSelCat=null; chSelModel=null; chFinalPrice=0;
+    chSelType=type; chSelCat=null; chFinalPrice=0;
     const lbl=document.getElementById('ch_typeLbl');
     lbl.textContent=(type==='van'?'Mini Van':type.charAt(0).toUpperCase()+type.slice(1))+' — choose a category';
     lbl.style.display='block';
-    document.getElementById('ch_modelCard').style.display='none';
     document.getElementById('ch_pricingCard').style.display='none';
     document.getElementById('ch_formCard').style.display='none';
     document.getElementById('ch_detailPanel').classList.remove('visible');
@@ -882,8 +876,7 @@ function ch_selectCat(type, name) {
     if (!cat) return;
     if (chSelCat?.name===name) {
         // deselect
-        chSelCat=null; chSelModel=null;
-        document.getElementById('ch_modelCard').style.display='none';
+        chSelCat=null;
         document.getElementById('ch_detailPanel').classList.remove('visible');
         document.getElementById('ch_detailPanel').innerHTML='';
         document.getElementById('ch_pricingCard').style.display='none';
@@ -891,100 +884,59 @@ function ch_selectCat(type, name) {
         ch_renderThumbs(type,null);
         return;
     }
-    chSelCat=cat; chSelModel=null;
+    chSelCat=cat;
     ch_renderThumbs(type, name);
-    // Hide detail panel until model is picked
-    document.getElementById('ch_detailPanel').classList.remove('visible');
-    document.getElementById('ch_detailPanel').innerHTML='';
     ch_setCtaReady(false);
     document.getElementById('ch_pricingCard').style.display='none';
     document.getElementById('ch_formCard').style.display='none';
-    // Show the model picker
-    ch_renderModels(cat, null);
+    ch_buildDetail(type, cat);
 }
 
-function ch_renderModels(cat, activeName) {
-    const models = cat.models || [];
-    const area = document.getElementById('ch_modelArea');
-    const intro = document.getElementById('ch_modelIntro');
-    intro.textContent = cat.name + ' — select the specific car model you prefer';
-    if (!models.length) {
-        area.innerHTML = `<div class="cat-empty"><p>No models listed for this category.</p></div>`;
-        document.getElementById('ch_modelCard').style.display = 'block';
-        return;
-    }
-    area.innerHTML = models.map(m => {
-        const isActive = activeName === m.name;
-        const isDimmed = activeName && activeName !== m.name;
-        const cls = `cat-thumb-card${isActive?' active':''}${isDimmed?' dimmed':''}`;
-        const thumb = m.image
-            ? `<img src="${m.image}" alt="${esc(m.name)}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none'">`
-            : SVG_FB;
-        return `<div class="${cls}" onclick="ch_selectModel('${escQ(m.name)}')">
-            <div class="ctc-check"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5l3 3 7-7" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-            <div class="ctc-img">${thumb}</div>
-            <div class="ctc-name" style="font-size:12px;">${esc(m.name)}</div>
-        </div>`;
-    }).join('');
-    document.getElementById('ch_modelCard').style.display = 'block';
-    document.getElementById('ch_modelCard').scrollIntoView({behavior:'smooth', block:'nearest'});
-}
-
-function ch_selectModel(name) {
-    if (!chSelCat) return;
-    const models = chSelCat.models || [];
-    const model = models.find(m => m.name === name);
-    if (!model) return;
-    if (chSelModel === name) {
-        // deselect
-        chSelModel = null;
-        ch_renderModels(chSelCat, null);
-        document.getElementById('ch_detailPanel').classList.remove('visible');
-        document.getElementById('ch_detailPanel').innerHTML = '';
-        document.getElementById('ch_pricingCard').style.display = 'none';
-        return;
-    }
-    chSelModel = name;
-    ch_renderModels(chSelCat, name);
-    ch_buildDetail(chSelType, chSelCat, model);  // pass model as third arg
-}
-
-function ch_buildDetail(type, cat, model) {
+/* The customer books a category, not a specific model — the exact car is
+   whatever is available on ground at pick-up, so the fleet models in this
+   category are only listed as what to expect. */
+function ch_buildDetail(type, cat) {
     const typeName = type === 'van' ? 'Mini Van' : type.charAt(0).toUpperCase() + type.slice(1);
+    const models = cat.models || [];
 
-    // Images: use model's own image (repeated 3x for carousel), fallback to cat images
-    const modelImg = model?.image || null;
-    const images = model?.images ||
-        (modelImg ? [modelImg, modelImg, modelImg] : (cat.images || []));
+    // Images: first photo of each expected model, fallback to cat images
+    const modelImgs = [...new Set(models.map(m => m.image).filter(Boolean))];
+    const images = modelImgs.length ? modelImgs : (cat.images || []);
 
-    const slides = buildSlides(images, model?.name || cat.name);
+    const slides = buildSlides(images, cat.name + ' ' + typeName);
     const dots   = buildDots(images.length || 1, 'chCar');
 
-    // Features: model's own features, fallback to category features
-    const feats = (model?.features || cat.features || [])
+    // Features: union of the expected models' features, fallback to category features
+    const modelFeats = [...new Set(models.flatMap(m => m.features || []))];
+    const feats = (modelFeats.length ? modelFeats : (cat.features || []))
         .map(f => `<li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>${esc(f)}</li>`)
         .join('');
 
-    // Title = model name; tag = category (Regular / Standard / Executive)
-    const displayName = model?.name || cat.name;
-    const catTag      = model ? cat.name + ' · ' + typeName : typeName;
+    const expected = models.length
+        ? `<div>
+                <div class="feat-label">Expected models</div>
+                <div class="expected-models">${models.map(m => `<span>${esc(m.name)}</span>`).join('')}</div>
+                <div class="expected-note">You'll get one of these or a similar ${esc(cat.name.toLowerCase())} ${esc(typeName.toLowerCase())}, depending on availability at pick-up.</div>
+           </div>`
+        : '';
 
     const panel = document.getElementById('ch_detailPanel');
     panel.innerHTML = `<div class="detail-inner">
         ${buildCarousel(slides, dots, 'chCar')}
         <div class="detail-info">
             <div>
-                <div class="di-cat-name">${esc(displayName)}</div>
-                <div class="di-type-tag">${esc(catTag)}</div>
+                <div class="di-cat-name">${esc(cat.name)} ${esc(typeName)}</div>
+                <div class="di-type-tag">${esc(typeName)}</div>
             </div>
             <div>
                 <div class="di-price">&#8358;${Number(cat.price).toLocaleString()} <span>base price / trip</span></div>
                 <div class="di-pax"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>${esc(cat.passengers || '—')} passengers</div>
             </div>
-            <div><div class="feat-label">What's included</div><ul class="feat-list">${feats}</ul></div>
+            ${expected}
+            ${feats ? `<div><div class="feat-label">What's included</div><ul class="feat-list">${feats}</ul></div>` : ''}
             <div class="di-actions">
                 <button class="btn-change" onclick="ch_resetCat()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Change</button>
-                <button class="btn-proceed-cat" onclick="ch_openPricing()"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Book This Vehicle</button>
+                <button class="btn-proceed-cat" onclick="ch_openPricing()"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Book This Category</button>
             </div>
         </div>
     </div>`;
@@ -994,8 +946,7 @@ function ch_buildDetail(type, cat, model) {
 }
 
 function ch_resetCat() {
-    chSelCat=null; chSelModel=null;
-    document.getElementById('ch_modelCard').style.display='none';
+    chSelCat=null;
     document.getElementById('ch_detailPanel').classList.remove('visible');
     document.getElementById('ch_pricingCard').style.display='none';
     document.getElementById('ch_formCard').style.display='none';
@@ -1071,7 +1022,7 @@ function ch_ctaAction() {
 
 function ch_goToForm() {
     const typeName=chSelType==='van'?'Mini Van':chSelType.charAt(0).toUpperCase()+chSelType.slice(1);
-    document.getElementById('ch_chipTxt').textContent=typeName+' · '+chSelCat.name+' · '+chSelModel+' · ₦'+chFinalPrice.toLocaleString();
+    document.getElementById('ch_chipTxt').textContent=typeName+' · '+chSelCat.name+' · ₦'+chFinalPrice.toLocaleString();
     const paxInput=document.getElementById('ch_pax');
     const maxPax=PAX_LIMITS[chSelType]??20;
     paxInput.max=maxPax; paxInput.placeholder='e.g. 2 (max '+maxPax+')';
@@ -1351,7 +1302,6 @@ function openModal(tab) {
 
     if (tab === 'ch') {
         if (!chSelType || !chSelCat)  { showErr('ch_alertB', 'Please select a vehicle type and category.'); return; }
-        if (!chSelModel)              { showErr('ch_alertB', 'Please select a car model.'); return; }
         if (!document.getElementById('ch_pickup').value.trim()) { showErr('ch_alertA', 'Please enter your pick-up location.'); return; }
         const hrs = parseFloat(document.getElementById('ch_hours').value) || 0;
         if (!hrs)                     { showErr('ch_alertA', 'Please select or enter the rental duration first.'); return; }
@@ -1385,7 +1335,7 @@ function openModal(tab) {
             rsec('🚘', 'Vehicle',
                 ri('Type', typeName) +
                 ri('Category', esc(chSelCat.name)) +
-                ri('Model', esc(chSelModel)) +
+                ri('Model', 'Any available ' + esc(chSelCat.name.toLowerCase()) + ' ' + esc(typeName.toLowerCase())) +
                 ri('Duration', hrs + ' hour' + (hrs !== 1 ? 's' : '')) +
                 ri('Total Price', '₦' + chFinalPrice.toLocaleString(), true, true)
             ) +
@@ -1534,7 +1484,6 @@ function submitBooking() {
     if (activeModal==='ch') {
         document.getElementById('h_ch_type').value    = chSelType;
         document.getElementById('h_ch_cat').value     = chSelCat.name;
-        document.getElementById('h_ch_model').value   = chSelModel;
         document.getElementById('h_ch_hours').value   = document.getElementById('ch_hours').value;
         document.getElementById('h_ch_name').value    = document.getElementById('ch_name').value;
         document.getElementById('h_ch_email').value   = document.getElementById('ch_email').value;
