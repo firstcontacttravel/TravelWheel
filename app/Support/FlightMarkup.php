@@ -143,10 +143,12 @@ class FlightMarkup
             return 'domestic';
         }
 
-        $originNigeria = self::isNigeria($first['fromCountry'] ?? null);
-        $firstDestinationNigeria = self::isNigeria($first['toCountry'] ?? null);
-
-        if ($originNigeria && ! $firstDestinationNigeria) {
+        // Starts in Nigeria and isn't wholly domestic (that was ruled out
+        // above), so it leaves the country at some point: "Starts in Nigeria",
+        // whatever the first flight is. Checking only the first flight's
+        // destination charged a Lagos -> Abuja -> Cairo -> Dubai trip the
+        // "touches Nigeria" rate (NGN 70,000 instead of 30,000 in economy).
+        if (self::isNigeria($first['fromCountry'] ?? null)) {
             return 'from_nigeria';
         }
 
@@ -170,8 +172,37 @@ class FlightMarkup
         return true;
     }
 
+    /**
+     * economy, premium_economy, business or first — which markup column a
+     * flight is charged from.
+     *
+     * The cabin NAME comes first. SkyLink's cabinCode is the fare's
+     * booking-class letter, not its cabin, and airlines sell economy in
+     * classes like W, S and P: read as a cabin code, those charged economy
+     * fares the premium or first-class markup (seen live on 2026-09-29: an
+     * Economy fare in class W charged NGN 60,000 instead of 30,000, a Premium
+     * Economy fare in class P charged NGN 150,000 instead of 60,000). The code
+     * is only a fallback for a flight with no cabin name — TravelNext's, where
+     * it genuinely is a cabin code.
+     */
     public static function cabinCategory(array $flight): string
     {
+        $name = strtolower(trim(str_replace(['_', '-'], ' ', (string) (
+            ($flight['cabin'] ?? null)
+            ?: data_get($flight, 'segments.0.cabin')
+            ?: data_get($flight, 'multiLegs.0.segments.0.cabin')
+            ?: ''
+        ))));
+
+        if ($name !== '') {
+            return match (true) {
+                str_contains($name, 'premium') => 'premium_economy',
+                str_contains($name, 'business') => 'business',
+                str_contains($name, 'first') => 'first',
+                default => 'economy',
+            };
+        }
+
         $value = strtolower(trim((string) (
             $flight['cabinCode']
             ?? data_get($flight, 'segments.0.cabinCode')
