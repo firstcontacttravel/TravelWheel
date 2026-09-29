@@ -100,6 +100,7 @@ class TransferPricingService
                     'Executive' => (int) $rate->carhire_base_executive,
                 ],
                 'fuel_rate_per_minute' => (int) $rate->transfer_fuel_rate_per_minute,
+                'fuel_pump_price' => (int) $rate->fuel_pump_price,
                 'admin_fee_percent' => (float) $rate->transfer_admin_fee_percent,
                 'wear_items' => $this->wearItemsFor($vehicleType),
                 'wear_percent' => TransferWearItem::totalPercentageFor($vehicleType),

@@ -426,7 +426,7 @@
                                             <div class="pb-title">Price Breakdown</div>
                                             <div class="pb-row"><span>Base Fare</span><strong id="pb_base">₦0</strong></div>
                                             <div class="pb-row"><span>Tear &amp; Wear (<span id="pb_wearpct">0</span>%)</span><strong id="pb_wear">₦0</strong></div>
-                                            <div class="pb-row"><span>Fuel (<span id="pb_mins">0</span> mins × ₦<span id="pb_frate">0</span>/min)</span><strong id="pb_fuel">₦0</strong></div>
+                                            <div class="pb-row"><span>Fuel (₦<span id="pb_pump">0</span>)</span><strong id="pb_fuel">₦0</strong></div>
                                             <div class="pb-row"><span>Admin Fee (<span id="pb_adminpct">0</span>%)</span><strong id="pb_admin">₦0</strong></div>
                                             <div class="pb-total"><span>Total Estimate</span><strong id="pb_total">₦0</strong></div>
                                         </div>
@@ -985,12 +985,13 @@ function ch_computePricing() {
     const durationMins=Math.round(hrs*60);
     const fuelRate=td.fuel_rate_per_minute||0;
     const fuel=durationMins*fuelRate;
+    const pumpPrice=td.fuel_pump_price||0;
     const subtotal=base+wear+fuel;
     const adminPct=td.admin_fee_percent||0;
     const admin=subtotal*adminPct/100;
     const total=Math.round(subtotal+admin);
     chFinalPrice=total;
-    return {base, wearPct, wear, durationMins, fuelRate, fuel, adminPct, admin, total};
+    return {base, wearPct, wear, durationMins, fuelRate, fuel, pumpPrice, adminPct, admin, total};
 }
 
 function ch_calcPrice() {
@@ -999,8 +1000,7 @@ function ch_calcPrice() {
     document.getElementById('pb_base').textContent='₦'+p.base.toLocaleString();
     document.getElementById('pb_wearpct').textContent=p.wearPct;
     document.getElementById('pb_wear').textContent='₦'+Math.round(p.wear).toLocaleString();
-    document.getElementById('pb_mins').textContent=p.durationMins;
-    document.getElementById('pb_frate').textContent=p.fuelRate.toLocaleString();
+    document.getElementById('pb_pump').textContent=p.pumpPrice.toLocaleString();
     document.getElementById('pb_fuel').textContent='₦'+Math.round(p.fuel).toLocaleString();
     document.getElementById('pb_adminpct').textContent=p.adminPct;
     document.getElementById('pb_admin').textContent='₦'+Math.round(p.admin).toLocaleString();

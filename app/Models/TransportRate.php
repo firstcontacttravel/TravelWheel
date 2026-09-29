@@ -18,6 +18,7 @@ class TransportRate extends Model
         'transfer_base_standard',
         'transfer_base_executive',
         'transfer_fuel_rate_per_minute',
+        'fuel_pump_price',
         'transfer_admin_fee_percent',
         'carhire_base_regular',
         'carhire_base_standard',

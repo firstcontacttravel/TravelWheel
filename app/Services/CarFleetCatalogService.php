@@ -62,6 +62,7 @@ class CarFleetCatalogService
 
             $categories[$vtype] = [
                 'fuel_rate_per_minute' => (int) ($rateInfo['fuel_rate_per_minute'] ?? 0),
+                'fuel_pump_price' => (int) ($rateInfo['fuel_pump_price'] ?? 0),
                 'admin_fee_percent' => (float) ($rateInfo['admin_fee_percent'] ?? 0),
                 'wear_items' => $rateInfo['wear_items'] ?? [],
                 'wear_percent' => (float) ($rateInfo['wear_percent'] ?? 0),
