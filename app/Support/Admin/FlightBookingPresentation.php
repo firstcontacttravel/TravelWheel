@@ -2,11 +2,21 @@
 
 namespace App\Support\Admin;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
 
 class FlightBookingPresentation
 {
+    /**
+     * The booking workspace hero.
+     *
+     * The data below is unchanged; only the markup moved. It used to be built
+     * by string concatenation in this file, which meant the console's own
+     * primitives — the drawn route connector, the status dots, the mono face
+     * for anything read aloud — could not reach it, and ~900 lines of tw-*
+     * CSS existed to compensate.
+     */
     public static function workspaceSummary(object $record): HtmlString
     {
         $flight = self::normalize($record->flight_snapshot ?? []);
@@ -15,85 +25,97 @@ class FlightBookingPresentation
         $flatSegments = collect($groups)->flatMap(fn (array $group): array => $group['segments'])->values()->all();
         $firstSegment = $flatSegments[0] ?? [];
         $lastSegment = $flatSegments !== [] ? $flatSegments[array_key_last($flatSegments)] : [];
-        $route = $record->route ?: self::routeFromSegments($flatSegments);
         $departure = self::segmentDateTime($firstSegment, 'depart');
         $arrival = self::segmentDateTime($lastSegment, 'arrive');
         $passengers = (int) ($record->adult_count + $record->child_count + $record->infant_count);
-        $queue = self::queueLabel($record);
-        $tripLabel = self::tripLabel($flight, $record->trip_type ?? null);
-        $origin = self::value($firstSegment, 'from', self::value($firstSegment, 'airportOriginCode', '-'));
-        $destination = self::value($lastSegment, 'to', self::value($lastSegment, 'airportDestinationCode', '-'));
         $legsCount = max(1, count($groups));
+        $stops = max(0, count($flatSegments) - $legsCount);
 
-        $html = '<div class="tw-booking-hero">';
-        $html .= '<div class="tw-booking-hero-main">';
-        $html .= '<div class="tw-booking-identity">';
-        $html .= '<div>';
-        $html .= '<div class="tw-booking-title">'.e($record->booking_ref ?: 'Booking').'</div>';
-        $html .= '<div class="tw-booking-subtitle">'.e(collect([$queue, $tripLabel, $record->unique_id ?: 'No UniqueID', $record->fare_type ?: 'No fare type'])->implode(' / ')).'</div>';
-        $html .= '</div>';
-        $html .= '<div class="tw-booking-pill-row">';
-        $html .= self::statusPill('Booking', $record->booking_status);
-        $html .= self::statusPill('Payment', $record->payment_status);
-        $html .= '</div>';
-        $html .= '</div>';
+        $facts = ['Total' => self::money($record->total_price, $record->currency)];
 
-        $html .= '<div class="tw-booking-route-board">';
-        $html .= '<div class="tw-booking-airport"><span>From</span><strong>'.e($origin ?: '-').'</strong><small>'.e(self::value($firstSegment, 'fromCity', '')).'</small></div>';
-        $html .= '<div class="tw-booking-route-line"><span></span></div>';
-        $html .= '<div class="tw-booking-airport is-destination"><span>To</span><strong>'.e($destination ?: '-').'</strong><small>'.e(self::value($lastSegment, 'toCity', '')).'</small></div>';
-        $html .= '<div class="tw-booking-route-full">'.e($route ?: '-').'</div>';
-        $html .= '</div>';
-
-        $html .= '<div class="tw-booking-hero-facts">';
-        $html .= self::heroFact('Total', self::money($record->total_price, $record->currency));
         if ((float) ($record->markup_amount ?? 0) > 0) {
-            $html .= self::heroFact('Service charge', self::money($record->markup_amount, $record->currency));
-        }
-        $html .= self::heroFact('Airline', $record->airline ?: 'Unknown airline');
-        $html .= self::heroFact('Passengers', $passengers.' passenger'.($passengers === 1 ? '' : 's'));
-        $html .= self::heroFact('Legs', $legsCount.' leg'.($legsCount === 1 ? '' : 's'));
-        $html .= '</div>';
-        $html .= '</div>';
-
-        $html .= '<div class="tw-booking-timeline">';
-        $html .= self::timelineItem('Created', self::watDateTime($record->created_at), true);
-        $html .= self::timelineItem('Payment', $record->payment_verified_at ? self::watDateTime($record->payment_verified_at) : self::label($record->payment_status), $record->payment_status === 'paid');
-        $html .= self::timelineItem('Ticket', $record->ticket_ordered_at ? self::watDateTime($record->ticket_ordered_at) : self::label($record->booking_status), (bool) $record->ticket_ordered);
-        $html .= self::timelineItem('Depart', $departure ?: '-', filled($departure));
-        $html .= self::timelineItem('Arrive', $arrival ?: '-', filled($arrival));
-        $html .= '</div>';
-
-        if ($groups !== []) {
-            $html .= '<div class="tw-booking-leg-preview">';
-
-            foreach ($groups as $group) {
-                $html .= self::heroLegPreview($group);
-            }
-
-            $html .= '</div>';
+            $facts['Service charge'] = self::money($record->markup_amount, $record->currency);
         }
 
-        $html .= '</div>';
+        $facts['Airline'] = $record->airline ?: 'Unknown airline';
+        $facts['Passengers'] = $passengers.' passenger'.($passengers === 1 ? '' : 's');
+        $facts['Legs'] = $legsCount.' leg'.($legsCount === 1 ? '' : 's');
 
-        return new HtmlString($html);
+        return new HtmlString(view('filament.booking.hero', [
+            'ref' => $record->booking_ref ?: 'Booking',
+            'meta' => array_values(array_filter([
+                self::tripLabel($flight, $record->trip_type ?? null),
+                $record->unique_id ?: null,
+                $record->fare_type ?: null,
+            ])),
+            'states' => [
+                'Booking' => self::stateDot($record->booking_status),
+                'Payment' => self::stateDot($record->payment_status),
+                'Queue' => self::stateDot(self::queueLabel($record)),
+            ],
+            'from' => [
+                'code' => (string) (self::value($firstSegment, 'from', self::value($firstSegment, 'airportOriginCode', '')) ?: '---'),
+                'city' => (string) self::value($firstSegment, 'fromCity', ''),
+            ],
+            'to' => [
+                'code' => (string) (self::value($lastSegment, 'to', self::value($lastSegment, 'airportDestinationCode', '')) ?: '---'),
+                'city' => (string) self::value($lastSegment, 'toCity', ''),
+            ],
+            'note' => $stops === 0 ? 'Non-stop' : $stops.' stop'.($stops === 1 ? '' : 's'),
+            'facts' => $facts,
+            'steps' => [
+                ['label' => 'Created', 'value' => self::watDateTime($record->created_at), 'done' => true],
+                ['label' => 'Payment', 'value' => $record->payment_verified_at ? self::watDateTime($record->payment_verified_at) : self::label($record->payment_status), 'done' => $record->payment_status === 'paid'],
+                ['label' => 'Ticket', 'value' => $record->ticket_ordered_at ? self::watDateTime($record->ticket_ordered_at) : self::label($record->booking_status), 'done' => (bool) $record->ticket_ordered],
+                ['label' => 'Depart', 'value' => $departure ?: '---', 'done' => filled($departure)],
+                ['label' => 'Arrive', 'value' => $arrival ?: '---', 'done' => filled($arrival)],
+            ],
+            'legs' => collect($groups)
+                ->map(fn (array $group): array => self::heroLeg($group))
+                ->filter()
+                ->values()
+                ->all(),
+        ])->render());
     }
+
+    /**
+     * A status word mapped onto the console's dot language, so a filled dot
+     * means the same thing here as it does in the queue table.
+     *
+     * @return array{text: string, tone: string, shape: string}
+     */
+    private static function stateDot(?string $state): array
+    {
+        $text = self::label($state) ?: '---';
+
+        [$tone, $shape] = match ($text) {
+            'Ticketing Failed', 'Ticketing failed', 'Failed', 'Cancelled' => ['critical', ''],
+            'Awaiting Bank Transfer', 'Awaiting transfer', 'On Hold', 'Awaiting Deposit' => ['warning', 'tc-status-progress'],
+            'Ticketed', 'Paid', 'Confirmed' => ['positive', ''],
+            'Ready to ticket', 'Review', 'Partially Paid' => ['info', 'tc-status-progress'],
+            'Pending', 'Pending payment' => ['idle', 'tc-status-pending'],
+            default => ['idle', ''],
+        };
+
+        return ['text' => $text, 'tone' => $tone, 'shape' => $shape];
+    }
+
 
     public static function passengers(mixed $payload): HtmlString
     {
         $passengers = self::normalize($payload);
 
         if (! is_array($passengers) || $passengers === []) {
-            return self::empty('No passenger snapshot stored.');
+            return new HtmlString(view('filament.booking.passengers', ['passengers' => []])->render());
         }
 
         if (self::isAssoc($passengers)) {
             $passengers = [$passengers];
         }
 
-        $html = '<div class="tw-passenger-grid">';
+        $cards = [];
 
-        foreach ($passengers as $index => $passenger) {
+        foreach (array_values($passengers) as $index => $passenger) {
             if (! is_array($passenger)) {
                 continue;
             }
@@ -104,37 +126,23 @@ class FlightBookingPresentation
                 self::value($passenger, 'last_name'),
             ])));
 
-            $html .= '<div class="tw-passenger-card">';
-            $html .= '<div class="tw-passenger-head">';
-            $html .= '<div>';
-            $html .= '<div class="tw-passenger-name">'.e($name ?: 'Passenger '.($index + 1)).'</div>';
-            $html .= '<div class="tw-passenger-type">'.e(self::value($passenger, 'type', 'Passenger')).'</div>';
-            $html .= '</div>';
-            $html .= self::badge(self::value($passenger, 'gender', '-'));
-            $html .= '</div>';
-
-            $identity = [
-                'Date of birth' => self::value($passenger, 'dob'),
-                'Nationality' => self::value($passenger, 'nationality'),
-                'Frequent flyer' => self::value($passenger, 'frequent_flyer_number'),
+            $cards[] = [
+                'name' => $name ?: 'Passenger '.($index + 1),
+                'type' => (string) self::value($passenger, 'type', 'Passenger'),
+                'rows' => array_filter([
+                    'Date of birth' => self::value($passenger, 'dob'),
+                    'Nationality' => self::value($passenger, 'nationality'),
+                    'Gender' => self::value($passenger, 'gender'),
+                    'Frequent flyer' => self::value($passenger, 'frequent_flyer_number'),
+                    'Passport' => self::value($passenger, 'passport_no'),
+                    'Issued by' => self::value($passenger, 'passport_issue_country'),
+                    'Issued' => self::value($passenger, 'passport_issue_date'),
+                    'Expires' => self::value($passenger, 'passport_exp'),
+                ], fn ($value): bool => filled($value)),
             ];
-            $document = [
-                'Passport no' => self::value($passenger, 'passport_no'),
-                'Passport country' => self::value($passenger, 'passport_issue_country'),
-                'Passport issued' => self::value($passenger, 'passport_issue_date'),
-                'Passport expires' => self::value($passenger, 'passport_exp'),
-            ];
-
-            $html .= '<dl class="tw-passenger-details">';
-            $html .= self::detailList($identity);
-            $html .= '</dl>';
-            $html .= '<dl class="tw-passenger-doc-grid">';
-            $html .= self::detailList($document);
-            $html .= '</dl>';
-            $html .= '</div>';
         }
 
-        return new HtmlString($html.'</div>');
+        return new HtmlString(view('filament.booking.passengers', ['passengers' => $cards])->render());
     }
 
     public static function flight(mixed $payload): HtmlString
@@ -145,89 +153,145 @@ class FlightBookingPresentation
             return self::empty('No flight snapshot stored.');
         }
 
-        $groups = self::itineraryGroups($flight);
+        $facts = [
+            'Fare' => (string) self::value($flight, 'fareType', '---'),
+            'Cabin' => self::cabinText($flight),
+            'Total' => self::money(self::value($flight, 'price'), self::value($flight, 'currency')),
+        ];
 
-        $html = '<div class="tw-flight-detail">';
-        $html .= '<div class="tw-flight-overview">';
-        $html .= '<div class="tw-flight-brand">';
-
-        if ($logo = self::value($flight, 'airlineLogo')) {
-            $html .= '<img class="tw-flight-logo" src="'.e($logo).'" alt="">';
-        }
-
-        $html .= '<div class="tw-flight-brand-copy">';
-        $html .= '<div class="tw-flight-name">'.e(self::value($flight, 'airline', 'Unknown airline')).'</div>';
-        $html .= '<div class="tw-flight-sub">'.e(collect([self::value($flight, 'airlineCode'), self::value($flight, 'validatingCode')])->filter()->implode(' / ') ?: '-').'</div>';
-        $html .= '</div></div>';
-        $html .= '<div class="tw-flight-facts">';
-        $html .= self::miniFact('Fare', self::value($flight, 'fareType', '-'));
-        $html .= self::miniFact('Cabin', self::cabinText($flight));
-        $html .= self::miniFact('Total', self::money(self::value($flight, 'price'), self::value($flight, 'currency')));
         if ((float) self::value($flight, 'markupAmount', 0) > 0) {
-            $html .= self::miniFact('Supplier fare', self::money(self::value($flight, 'supplierPrice'), self::value($flight, 'currency')));
-            $html .= self::miniFact('Service charge', self::money(self::value($flight, 'markupAmount'), self::value($flight, 'currency')));
+            $facts['Supplier fare'] = self::money(self::value($flight, 'supplierPrice'), self::value($flight, 'currency'));
+            $facts['Service charge'] = self::money(self::value($flight, 'markupAmount'), self::value($flight, 'currency'));
         }
-        $html .= self::miniFact('Refund', self::yesNo(self::value($flight, 'isRefundable')));
-        $html .= '</div></div>';
 
-        if ($groups !== []) {
-            $html .= '<div class="tw-detail-itinerary">';
+        $facts['Refundable'] = self::yesNo(self::value($flight, 'isRefundable'));
 
-            foreach ($groups as $groupIndex => $group) {
-                $segments = $group['segments'];
-                $first = $segments[0] ?? [];
-                $last = $segments !== [] ? $segments[array_key_last($segments)] : [];
-                $route = self::routeFromSegments($segments);
-                $stops = max(0, count($segments) - 1);
-                $duration = self::groupDurationLabel($segments);
+        $groups = [];
 
-                $html .= '<section class="tw-detail-leg">';
-                $html .= '<header class="tw-detail-leg-head">';
-                $html .= '<div>';
-                $html .= '<div class="tw-detail-leg-label">'.e($group['label'] ?? 'Leg '.($groupIndex + 1)).'</div>';
-                $html .= '<div class="tw-detail-leg-route">'.e($route ?: '-').'</div>';
-                $html .= '</div>';
-                $html .= '<div class="tw-detail-leg-meta">';
-                $html .= '<span>'.e($stops === 0 ? 'Non stop' : $stops.' stop'.($stops === 1 ? '' : 's')).'</span>';
-                if (filled($duration)) {
-                    $html .= '<span>'.e($duration).'</span>';
-                }
-                $html .= '</div>';
-                $html .= '</header>';
-                $html .= '<div class="tw-detail-leg-path">';
-                $html .= self::detailAirportNode('Depart', $first, 'from', 'depart');
-                $html .= '<div class="tw-detail-path-line"><span></span></div>';
-                $html .= self::detailAirportNode('Arrive', $last, 'to', 'arrive');
-                $html .= '</div>';
-                $html .= '<div class="tw-detail-segments">';
+        foreach (self::itineraryGroups($flight) as $index => $group) {
+            $segments = array_values(array_filter($group['segments'] ?? [], 'is_array'));
 
-                foreach ($segments as $index => $segment) {
-                    if (! is_array($segment)) {
-                        continue;
-                    }
-
-                    $html .= '<div class="tw-detail-segment">';
-                    $html .= '<span class="tw-detail-segment-index">'.e((string) ($index + 1)).'</span>';
-                    $html .= '<div class="tw-detail-segment-main">';
-                    $html .= '<div class="tw-detail-segment-title">'.e(self::segmentFlightLabel($segment, $flight)).'</div>';
-                    $html .= '<div class="tw-detail-segment-sub">'.e(collect([
-                        self::segmentDateTime($segment, 'depart').' -> '.self::segmentDateTime($segment, 'arrive'),
-                        self::segmentDurationLabel($segment),
-                        self::cabinText($segment, $flight),
-                    ])->filter(fn ($value): bool => filled(trim((string) $value, ' ->')))->implode(' | ')).'</div>';
-                    $html .= '</div>';
-                    $html .= '<div class="tw-detail-segment-route">'.e(self::routeFromSegments([$segment])).'</div>';
-                    $html .= '</div>';
-                }
-
-                $html .= '</div>';
-                $html .= '</section>';
+            if ($segments === []) {
+                continue;
             }
 
-            $html .= '</div>';
+            $stops = max(0, count($segments) - 1);
+            $duration = self::groupDurationLabel($segments);
+
+            $groups[] = [
+                'label' => (string) ($group['label'] ?? 'Leg '.($index + 1)),
+                'meta' => array_values(array_filter([
+                    $stops === 0 ? 'Non-stop' : $stops.' stop'.($stops === 1 ? '' : 's'),
+                    filled($duration) ? $duration : null,
+                ])),
+                'segments' => collect($segments)
+                    ->map(fn (array $segment, int $i): array => self::segmentRow(
+                        $segment,
+                        $flight,
+                        $i > 0 ? $segments[$i - 1] : null,
+                    ))
+                    ->all(),
+            ];
         }
 
-        return new HtmlString($html.'</div>');
+        return new HtmlString(view('filament.booking.itinerary', [
+            'carrier' => [
+                'name' => (string) self::value($flight, 'airline', 'Unknown airline'),
+                'codes' => collect([self::value($flight, 'airlineCode'), self::value($flight, 'validatingCode')])
+                    ->filter()->unique()->implode(' / '),
+            ],
+            'facts' => $facts,
+            'groups' => $groups,
+        ])->render());
+    }
+
+    /**
+     * One segment, plus the connection time before it.
+     *
+     * The layover is the number people actually worry about and the previous
+     * layout had nowhere to put it — each segment was a separate bordered card
+     * with nothing between them, so "arrive DEL 06:10" and "depart DEL 08:25"
+     * read as two unrelated flights.
+     *
+     * @return array<string, mixed>
+     */
+    private static function segmentRow(array $segment, array $flight, ?array $previous): array
+    {
+        return [
+            'depart' => [
+                'time' => self::segmentClock($segment, 'depart'),
+                'code' => (string) (self::value($segment, 'from', self::value($segment, 'airportOriginCode', '')) ?: '---'),
+                'place' => (string) self::value($segment, 'fromCity', self::value($segment, 'fromAirport', '')),
+            ],
+            'arrive' => [
+                'time' => self::segmentClock($segment, 'arrive'),
+                'code' => (string) (self::value($segment, 'to', self::value($segment, 'airportDestinationCode', '')) ?: '---'),
+                'place' => (string) self::value($segment, 'toCity', self::value($segment, 'toAirport', '')),
+            ],
+            'flight' => self::segmentFlightLabel($segment, $flight),
+            'meta' => array_values(array_filter([
+                self::segmentDurationLabel($segment),
+                self::cabinText($segment, $flight),
+                self::value($segment, 'baggage') ?: null,
+            ])),
+            'layover' => $previous ? self::layoverLabel($previous, $segment) : null,
+        ];
+    }
+
+    /** The clock time alone; the date is carried by the leg header. */
+    private static function segmentClock(array $segment, string $which): string
+    {
+        $stamp = self::segmentMoment($segment, $which);
+
+        return $stamp?->format('H:i') ?? '--:--';
+    }
+
+    private static function segmentMoment(array $segment, string $which): ?CarbonImmutable
+    {
+        $keys = $which === 'depart'
+            ? ['departDT', 'DepartureDateTime', 'departureDateTime', 'depart_at']
+            : ['arriveDT', 'ArrivalDateTime', 'arrivalDateTime', 'arrive_at'];
+
+        foreach ($keys as $key) {
+            $value = self::value($segment, $key);
+
+            if (blank($value)) {
+                continue;
+            }
+
+            try {
+                return CarbonImmutable::parse((string) $value);
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return null;
+    }
+
+    private static function layoverLabel(array $previous, array $segment): ?string
+    {
+        $arrive = self::segmentMoment($previous, 'arrive');
+        $depart = self::segmentMoment($segment, 'depart');
+
+        if (! $arrive || ! $depart) {
+            return null;
+        }
+
+        $minutes = (int) $arrive->diffInMinutes($depart, false);
+
+        if ($minutes <= 0) {
+            return null;
+        }
+
+        $airport = (string) (self::value($segment, 'fromCity') ?: self::value($segment, 'from', ''));
+
+        return trim(sprintf(
+            '%dh %02dm connection%s',
+            intdiv($minutes, 60),
+            $minutes % 60,
+            filled($airport) ? ' in '.$airport : '',
+        ));
     }
 
     public static function extras(mixed $payload): HtmlString
@@ -359,7 +423,7 @@ class FlightBookingPresentation
         return self::historyFeed(
             $records,
             'ticketing',
-            fn ($record): string => self::historyItem(
+            fn ($record): array => self::historyItem(
                 str((string) $record->action)->headline()->toString(),
                 self::watDateTime($record->created_at),
                 $record->ticket_status ?: $record->new_booking_status ?: '-',
@@ -385,7 +449,7 @@ class FlightBookingPresentation
         return self::historyFeed(
             $records,
             'post-ticketing',
-            function ($record): string {
+            function ($record): array {
                 $requestPayload = self::normalize($record->request_payload ?? []);
                 $responsePayload = self::normalize($record->response_payload ?? []);
 
@@ -991,101 +1055,102 @@ class FlightBookingPresentation
 
     public static function ticketStatusCard(object $record): HtmlString
     {
-        $ticketed = (bool) ($record->ticket_ordered ?? false) || in_array($record->booking_status ?? null, ['ticketed', 'confirmed'], true);
+        $ticketed = (bool) ($record->ticket_ordered ?? false)
+            || in_array($record->booking_status ?? null, ['ticketed', 'confirmed'], true);
         $sent = (bool) ($record->confirmation_email_sent ?? false);
         $pendingSent = (bool) ($record->pending_email_sent ?? false);
 
-        $html = '<div class="tw-ticket-card">';
-        $html .= '<div class="tw-ticket-card-head">';
-        $html .= '<div>';
-        $html .= '<div class="tw-ticket-kicker">Ticket status</div>';
-        $html .= '<div class="tw-ticket-title">'.e($ticketed ? 'Ticketed' : self::label($record->booking_status ?? null)).'</div>';
-        $html .= '</div>';
-        $html .= self::statusPill('Booking', $record->booking_status ?? null);
-        $html .= '</div>';
-
-        $html .= '<div class="tw-ticket-progress">';
-        $html .= self::ticketStep('Payment', ($record->payment_status ?? null) === 'paid', self::label($record->payment_status ?? null));
-        $html .= self::ticketStep('Ticket', $ticketed, $record->ticket_ordered_at ? self::watDateTime($record->ticket_ordered_at) : self::label($record->booking_status ?? null));
-        $html .= self::ticketStep('Email', $sent, $sent ? 'Sent' : ($pendingSent ? 'Pending sent' : 'Not sent'));
-        $html .= '</div>';
-
-        $html .= '<div class="tw-ticket-metrics">';
-        $html .= self::ticketMetric('Deadline', $record->tkt_time_limit ? self::watDateTime($record->tkt_time_limit) : '-');
-        $html .= self::ticketMetric('Ordered at', $record->ticket_ordered_at ? self::watDateTime($record->ticket_ordered_at) : '-');
-        $html .= self::ticketMetric('Confirmation', $sent ? 'Sent' : 'Not sent');
-        $html .= self::ticketMetric('Pending email', $pendingSent ? 'Sent' : 'Not sent');
-        $html .= '</div>';
-        $html .= '</div>';
-
-        return new HtmlString($html);
+        return new HtmlString(view('filament.booking.ticket-status', [
+            'headline' => $ticketed ? 'Ticketed' : (self::label($record->booking_status ?? null) ?: '---'),
+            'state' => self::stateDot($record->booking_status ?? null),
+            'steps' => [
+                [
+                    'label' => 'Payment',
+                    'value' => self::label($record->payment_status ?? null) ?: '---',
+                    'done' => ($record->payment_status ?? null) === 'paid',
+                ],
+                [
+                    'label' => 'Ticket',
+                    'value' => $record->ticket_ordered_at
+                        ? self::watDateTime($record->ticket_ordered_at)
+                        : (self::label($record->booking_status ?? null) ?: '---'),
+                    'done' => $ticketed,
+                ],
+                [
+                    'label' => 'Email',
+                    'value' => $sent ? 'Sent' : ($pendingSent ? 'Pending sent' : 'Not sent'),
+                    'done' => $sent,
+                ],
+            ],
+            'metrics' => [
+                'Deadline' => $record->tkt_time_limit ? self::watDateTime($record->tkt_time_limit) : '---',
+                'Ordered at' => $record->ticket_ordered_at ? self::watDateTime($record->ticket_ordered_at) : '---',
+                'Confirmation' => $sent ? 'Sent' : 'Not sent',
+                'Pending email' => $pendingSent ? 'Sent' : 'Not sent',
+            ],
+        ])->render());
     }
 
+    /**
+     * One feed for all three audit trails.
+     *
+     * Ticketing, payment verification and post-ticketing each rendered their
+     * own slightly different list of the same shape, which is how they had
+     * drifted apart. The renderer callback now returns data rather than
+     * markup.
+     */
     private static function historyFeed(Collection $records, string $type, callable $renderer): HtmlString
     {
-        $records = $records->values();
-        $latest = $records->first();
-        $older = $records->slice(1)->values();
-
-        $html = '<div class="tw-history-feed">';
-        $html .= '<div class="tw-history-latest">';
-        $html .= '<div class="tw-history-section-label">Latest '.e($type).'</div>';
-        $html .= $renderer($latest);
-        $html .= '</div>';
-
-        if ($older->isNotEmpty()) {
-            $html .= '<details class="tw-history-more">';
-            $html .= '<summary><span>Show previous '.e((string) $older->count()).'</span><small>History</small></summary>';
-            $html .= '<div class="tw-history-stack">';
-
-            foreach ($older as $record) {
-                $html .= $renderer($record);
-            }
-
-            $html .= '</div></details>';
-        }
-
-        $html .= '</div>';
-
-        return new HtmlString($html);
+        return new HtmlString(view('filament.booking.feed', [
+            'items' => $records->values()->map($renderer)->all(),
+            'empty' => 'No '.$type.' history yet.',
+        ])->render());
     }
 
-    private static function historyItem(string $title, string $date, string $badge, array $details = [], ?string $body = null): string
+    /**
+     * A single feed entry, as data. The badge word picks the dot tone, so a
+     * failed action reads as failed in the same language the queue table uses.
+     *
+     * @return array{title: string, when: string, body: string|null, tone: string}
+     */
+    private static function historyItem(string $title, string $date, string $badge, array $details = [], ?string $body = null): array
     {
-        $html = '<article class="tw-history-item">';
-        $html .= '<header class="tw-history-item-head">';
-        $html .= '<div>';
-        $html .= '<div class="tw-history-title">'.e($title).'</div>';
-        $html .= '<div class="tw-history-date">'.e($date).'</div>';
-        $html .= '</div>';
-        $html .= self::badge($badge);
-        $html .= '</header>';
+        $summary = $body !== null
+            ? trim(strip_tags($body))
+            : collect($details)
+                ->filter(fn ($value): bool => filled($value))
+                ->map(fn ($value, string $label): string => $label.': '.$value)
+                ->implode(' · ');
 
-        if ($body !== null) {
-            $html .= '<div class="tw-history-body">'.$body.'</div>';
-        } elseif ($details !== []) {
-            $html .= '<div class="tw-history-body">'.self::definitionGrid($details).'</div>';
-        }
+        $word = strtolower(trim($badge));
 
-        $html .= '</article>';
+        $tone = match (true) {
+            str_contains($word, 'fail'), str_contains($word, 'error'), str_contains($word, 'cancel') => 'critical',
+            str_contains($word, 'pending'), str_contains($word, 'await'), str_contains($word, 'hold') => 'warning',
+            str_contains($word, 'ticketed'), str_contains($word, 'paid'), str_contains($word, 'success'), str_contains($word, 'confirmed') => 'positive',
+            default => 'info',
+        };
 
-        return $html;
+        return [
+            'title' => $title,
+            'when' => $date,
+            'body' => $summary !== '' ? $summary : null,
+            'tone' => $tone,
+        ];
     }
 
-    private static function ticketStep(string $label, bool $complete, string $value): string
-    {
-        return '<div class="tw-ticket-step '.($complete ? 'is-complete' : '').'">'.
-            '<span></span>'.
-            '<div><strong>'.e($label).'</strong><small>'.e($value ?: '-').'</small></div>'.
-            '</div>';
-    }
 
-    private static function ticketMetric(string $label, string $value): string
-    {
-        return '<div class="tw-ticket-metric"><span>'.e($label).'</span><strong>'.e($value ?: '-').'</strong></div>';
-    }
 
-    private static function heroLegPreview(array $group): string
+    /**
+     * One leg of the journey for the hero strip.
+     *
+     * Returns the airport codes rather than a joined string, because the
+     * connector between them is drawn: U+2192 is in none of Inter's subsets,
+     * so a typed arrow falls back to a system font mid-route.
+     *
+     * @return array{kind: string, legs: list<string>, meta: list<string>}|null
+     */
+    private static function heroLeg(array $group): ?array
     {
         $segments = collect($group['segments'] ?? [])
             ->filter(fn ($segment): bool => is_array($segment))
@@ -1093,42 +1158,38 @@ class FlightBookingPresentation
             ->all();
 
         if ($segments === []) {
-            return '';
+            return null;
         }
 
-        $first = $segments[0];
-        $route = self::routeFromSegments($segments);
-        $date = self::segmentDateTime($first, 'depart');
+        $codes = [];
+
+        foreach ($segments as $index => $segment) {
+            if ($index === 0) {
+                $codes[] = (string) (self::value($segment, 'from', self::value($segment, 'airportOriginCode', '')) ?: '---');
+            }
+
+            $codes[] = (string) (self::value($segment, 'to', self::value($segment, 'airportDestinationCode', '')) ?: '---');
+        }
+
         $stops = max(0, count($segments) - 1);
+
         $flights = collect($segments)
             ->map(fn (array $segment): string => trim((string) (self::value($segment, 'flightNo') ?: trim((string) self::value($segment, 'airlineCode').' '.(string) self::value($segment, 'flightNumber')))))
             ->filter()
             ->unique()
             ->implode(', ');
 
-        $html = '<div class="tw-booking-leg">';
-        $html .= '<div class="tw-booking-leg-head">';
-        $html .= '<span>'.e($group['label'] ?? 'Leg').'</span>';
-        $html .= '<strong>'.e($route ?: '-').'</strong>';
-        $html .= '</div>';
-        $html .= '<div class="tw-booking-leg-meta">';
-        $html .= '<span>'.e($date ?: '-').'</span>';
-        $html .= '<span>'.e($stops === 0 ? 'Non stop' : $stops.' stop'.($stops === 1 ? '' : 's')).'</span>';
-
-        if (filled($flights)) {
-            $html .= '<span>'.e($flights).'</span>';
-        }
-
-        $html .= '</div>';
-        $html .= '</div>';
-
-        return $html;
+        return [
+            'kind' => (string) ($group['label'] ?? 'Leg'),
+            'legs' => $codes,
+            'meta' => array_values(array_filter([
+                self::segmentDateTime($segments[0], 'depart') ?: null,
+                $stops === 0 ? 'Non-stop' : $stops.' stop'.($stops === 1 ? '' : 's'),
+                $flights ?: null,
+            ])),
+        ];
     }
 
-    private static function heroFact(string $label, string $value): string
-    {
-        return '<div class="tw-booking-fact"><span>'.e($label).'</span><strong>'.e($value ?: '-').'</strong></div>';
-    }
 
     private static function itineraryGroups(array $flight): array
     {
@@ -1193,20 +1254,6 @@ class FlightBookingPresentation
         return trim((self::value($first, 'from', self::value($first, 'airportOriginCode', '')) ?: '-').' -> '.(self::value($last, 'to', self::value($last, 'airportDestinationCode', '')) ?: '-'));
     }
 
-    private static function detailAirportNode(string $label, array $segment, string $prefix, string $timePrefix): string
-    {
-        $code = self::value($segment, $prefix, self::value($segment, $prefix === 'from' ? 'airportOriginCode' : 'airportDestinationCode'));
-        $city = self::value($segment, $prefix.'City');
-        $airport = self::value($segment, $prefix.'Airport');
-        $time = self::segmentDateTime($segment, $timePrefix);
-
-        return '<div class="tw-detail-airport">'.
-            '<div class="tw-detail-airport-kicker">'.e($label).'</div>'.
-            '<div class="tw-detail-airport-code">'.e($code ?: '-').'</div>'.
-            '<div class="tw-detail-airport-time">'.e($time ?: '-').'</div>'.
-            '<div class="tw-detail-airport-name">'.e(trim(($city ?: '').' '.($airport ? '('.$airport.')' : ''))).'</div>'.
-            '</div>';
-    }
 
     private static function segmentDateTime(array $segment, string $prefix): string
     {
@@ -1279,10 +1326,6 @@ class FlightBookingPresentation
         return trim(floor($minutes / 60).'h '.($minutes % 60).'m');
     }
 
-    private static function miniFact(string $label, mixed $value): string
-    {
-        return '<div class="tw-flight-fact"><span>'.e($label).'</span><strong>'.e(self::scalar($value ?: '-')).'</strong></div>';
-    }
 
     private static function normalize(mixed $payload): mixed
     {
@@ -1398,23 +1441,6 @@ class FlightBookingPresentation
         return $html.'</dl>';
     }
 
-    private static function detailList(array $items): string
-    {
-        $html = '';
-
-        foreach ($items as $label => $value) {
-            if (blank($value)) {
-                $value = '-';
-            }
-
-            $html .= '<div class="tw-passenger-detail">';
-            $html .= '<dt>'.e((string) $label).'</dt>';
-            $html .= '<dd>'.e(self::scalar($value)).'</dd>';
-            $html .= '</div>';
-        }
-
-        return $html;
-    }
 
     private static function tableFromItems(array $items): string
     {
@@ -1466,26 +1492,7 @@ class FlightBookingPresentation
         return '<span class="inline-flex rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 dark:bg-white/10 dark:text-gray-200">'.e($value ?: '-').'</span>';
     }
 
-    private static function statusPill(string $label, ?string $status): string
-    {
-        $tone = match ($status) {
-            'paid', 'ticketed', 'confirmed' => 'good',
-            'awaiting_bank_transfer', 'pending', 'on_hold' => 'warn',
-            'failed', 'ticketing_failed', 'cancelled' => 'bad',
-            default => 'neutral',
-        };
 
-        return '<span class="tw-status-pill tw-status-'.e($tone).'"><span>'.e($label).'</span><strong>'.e(self::label($status)).'</strong></span>';
-    }
-
-    private static function timelineItem(string $label, ?string $value, bool $isComplete): string
-    {
-        return '<div class="tw-timeline-item '.($isComplete ? 'is-complete' : '').'">'.
-            '<span class="tw-timeline-dot"></span>'.
-            '<div><div class="tw-timeline-label">'.e($label).'</div>'.
-            '<div class="tw-timeline-value">'.e($value ?: '-').'</div></div>'.
-            '</div>';
-    }
 
     private static function queueLabel(object $record): string
     {

@@ -23,11 +23,13 @@ class ProtocolResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMapPin;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Protocol';
+    protected static string|\UnitEnum|null $navigationGroup = 'Airport Services';
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 55;
 
-    protected static ?string $navigationLabel = 'Pricing & Locations';
+    // Shares the Airport Services group with Lounges, so the label has to
+    // say whose pricing it is.
+    protected static ?string $navigationLabel = 'Protocol Pricing & Locations';
 
     protected static ?string $recordTitleAttribute = 'location';
 

@@ -1,0 +1,649 @@
+/*
+ * TravelWheel Console — Reports
+ * =============================
+ *
+ * The reporting page's markup is unchanged; what moved is where its styling
+ * comes from. It previously carried ~19 lines of minified inline <style>
+ * declaring its own palette (--ink:#10233e, --brand:#1261a6, --teal:#0f8a83),
+ * its own radii and its own badge colours — a fifth design system, in a Blade
+ * file, that no token could reach. Rebasing it here means "paid" is the same
+ * green on this page as on the dashboard and in the queue table.
+ *
+ * The tw-bi-* / tw-stat / tw-panel class NAMES are kept on purpose: renaming
+ * 115 elements would be churn without changing what anyone sees, and a full
+ * rebuild of this page's markup is its own piece of work.
+ */
+
+.tw-bi {
+    display: grid;
+    gap: var(--tc-space-5);
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+}
+
+.tw-bi * {
+    box-sizing: border-box;
+}
+
+/* ── Hero ─────────────────────────────────────────────────────────────────
+   Was a teal-to-navy gradient with a decorative ring, which belonged to no
+   other screen in the panel. */
+
+.tw-bi-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--tc-space-5);
+    flex-wrap: wrap;
+    padding: var(--tc-space-5);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+}
+
+.tw-bi-eyebrow {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.tw-bi-hero h2 {
+    margin: var(--tc-space-1) 0 2px;
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-heading);
+    line-height: var(--tc-leading-heading);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tight);
+}
+
+.tw-bi-hero p {
+    margin: 0;
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+.tw-bi-hero-actions {
+    display: flex;
+    gap: var(--tc-space-3);
+    flex-wrap: wrap;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────*/
+
+.tw-bi button,
+.tw-bi .tw-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--tc-space-2);
+    min-height: var(--tc-control-height);
+    padding-inline: var(--tc-space-4);
+    border: 1px solid var(--tc-border-default);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-bg-surface);
+    color: var(--tc-text-primary);
+    font-family: inherit;
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-medium);
+    text-decoration: none;
+    cursor: pointer;
+    transition: background-color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.tw-bi button:hover,
+.tw-bi .tw-btn:hover {
+    background: var(--tc-bg-sunken);
+}
+
+.tw-btn-primary {
+    border-color: transparent;
+    background: var(--tc-action-bg);
+    color: var(--tc-action-text);
+}
+
+.tw-btn-primary:hover {
+    background: var(--tc-action-bg-hover);
+}
+
+.tw-btn-light,
+.tw-btn-soft {
+    background: var(--tc-bg-sunken);
+}
+
+.tw-btn-ghost {
+    border-color: var(--tc-border-default);
+    background: transparent;
+    color: var(--tc-text-secondary);
+}
+
+/* ── Filters ──────────────────────────────────────────────────────────────*/
+
+.tw-bi-filter {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--tc-space-4);
+    align-items: end;
+    padding: var(--tc-space-5);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+}
+
+.tw-field {
+    display: grid;
+    gap: var(--tc-space-2);
+    min-width: 0;
+}
+
+.tw-field span {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.tw-field input,
+.tw-field select {
+    width: 100%;
+    height: var(--tc-control-height);
+    padding-inline: var(--tc-space-3);
+    border: 1px solid var(--tc-border-default);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-bg-input);
+    color: var(--tc-text-primary);
+    font-family: inherit;
+    font-size: var(--tc-text-body);
+}
+
+.tw-field select[multiple] {
+    height: 74px;
+    padding-block: var(--tc-space-2);
+}
+
+.tw-field input:focus,
+.tw-field select:focus {
+    outline: none;
+    border-color: var(--tc-border-focus);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--tc-border-focus) 18%, transparent);
+}
+
+.tw-bi-saved {
+    display: flex;
+    align-items: center;
+    gap: var(--tc-space-3);
+    flex-wrap: wrap;
+}
+
+.tw-bi-saved input {
+    height: var(--tc-control-height);
+    padding-inline: var(--tc-space-3);
+    border: 1px solid var(--tc-border-default);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-bg-input);
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+}
+
+.tw-saved-pill {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-full);
+    background: var(--tc-bg-sunken);
+    overflow: hidden;
+}
+
+.tw-saved-pill button {
+    min-height: 24px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+.tw-saved-pill button:last-child {
+    color: var(--tc-status-critical);
+}
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────*/
+
+.tw-bi-tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: var(--tc-space-1);
+    padding: var(--tc-space-1);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+}
+
+.tw-bi-tab {
+    justify-content: center;
+    border-color: transparent !important;
+    background: transparent !important;
+    color: var(--tc-text-secondary) !important;
+    font-weight: var(--tc-weight-medium);
+}
+
+.tw-bi-tab:hover {
+    background: var(--tc-bg-sunken) !important;
+    color: var(--tc-text-primary) !important;
+}
+
+.tw-bi-tab.active {
+    background: var(--tc-bg-selected) !important;
+    color: var(--tc-text-brand) !important;
+    font-weight: var(--tc-weight-semibold);
+}
+
+.tw-bi-tab small {
+    display: none;
+}
+
+/* ── Grid, stats and panels ───────────────────────────────────────────────*/
+
+.tw-bi-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--tc-space-4);
+}
+
+.tw-stat {
+    position: relative;
+    grid-column: span 3;
+    min-width: 0;
+    padding: var(--tc-space-4) var(--tc-space-5);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+    overflow: hidden;
+}
+
+.tw-stat::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: 3px;
+    background: var(--tone, var(--tc-border-strong));
+}
+
+.tw-stat label {
+    display: block;
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.tw-stat strong {
+    display: block;
+    margin: var(--tc-space-1) 0 2px;
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-display);
+    line-height: var(--tc-leading-display);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tighter);
+    font-variant-numeric: tabular-nums;
+}
+
+.tw-stat small,
+.tw-num small,
+.tw-mini span,
+.tw-aging span {
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+.tw-change {
+    margin-inline-start: var(--tc-space-2);
+    font-size: var(--tc-text-small);
+    font-weight: var(--tc-weight-semibold);
+}
+
+.tw-change.up { color: var(--tc-status-positive); }
+.tw-change.down { color: var(--tc-status-critical); }
+
+.tw-panel {
+    grid-column: span 6;
+    min-width: 0;
+    padding: var(--tc-space-5);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-surface);
+}
+
+.tw-panel.wide { grid-column: span 8; }
+.tw-panel.narrow { grid-column: span 4; }
+.tw-panel.full { grid-column: 1 / -1; }
+
+.tw-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tc-space-4);
+    margin-bottom: var(--tc-space-4);
+}
+
+.tw-panel h3 {
+    margin: 0;
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-title);
+    line-height: var(--tc-leading-title);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tight);
+}
+
+.tw-panel-head p {
+    margin: 2px 0 0;
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+.tw-panel-head a {
+    color: var(--tc-text-link);
+    font-size: var(--tc-text-small);
+    font-weight: var(--tc-weight-medium);
+    text-decoration: none;
+}
+
+/* ── Chart ────────────────────────────────────────────────────────────────*/
+
+.tw-chart {
+    display: flex;
+    align-items: end;
+    gap: 3px;
+    height: 200px;
+    padding-top: var(--tc-space-4);
+    border-bottom: 1px solid var(--tc-border-subtle);
+    overflow: hidden;
+}
+
+.tw-bar-col {
+    position: relative;
+    display: flex;
+    align-items: end;
+    flex: 1;
+    min-width: 3px;
+    height: 100%;
+}
+
+.tw-bar {
+    width: 100%;
+    min-height: 2px;
+    border-radius: var(--tc-radius-xs) var(--tc-radius-xs) 0 0;
+    background: var(--tc-brand);
+    opacity: 0.85;
+}
+
+.tw-bar-col:hover .tw-bar {
+    opacity: 1;
+}
+
+.tw-chart-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--tc-space-2);
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+}
+
+/* ── Rows, tables, badges ─────────────────────────────────────────────────*/
+
+.tw-product-row,
+.tw-breakdown-row,
+.tw-target-row {
+    display: grid;
+    grid-template-columns: minmax(125px, 1.3fr) 2fr repeat(2, minmax(85px, 1fr));
+    align-items: center;
+    gap: var(--tc-space-4);
+    padding-block: var(--tc-space-3);
+    border-bottom: 1px solid var(--tc-border-subtle);
+    font-size: var(--tc-text-body);
+}
+
+.tw-product-row:last-child,
+.tw-breakdown-row:last-child,
+.tw-target-row:last-child {
+    border-bottom: 0;
+}
+
+.tw-product-name {
+    display: flex;
+    align-items: center;
+    gap: var(--tc-space-3);
+    font-weight: var(--tc-weight-medium);
+}
+
+.tw-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--tc-radius-full);
+}
+
+.tw-progress {
+    height: 6px;
+    border-radius: var(--tc-radius-full);
+    background: var(--tc-bg-sunken);
+    overflow: hidden;
+}
+
+.tw-progress i {
+    display: block;
+    height: 100%;
+    border-radius: var(--tc-radius-full);
+    background: var(--bar, var(--tc-brand));
+}
+
+.tw-num {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+}
+
+.tw-num strong {
+    display: block;
+    font-weight: var(--tc-weight-medium);
+}
+
+.tw-table-wrap {
+    overflow-x: auto;
+}
+
+.tw-table {
+    width: 100%;
+    min-width: 680px;
+    border-collapse: collapse;
+}
+
+.tw-table th {
+    padding: var(--tc-space-3) var(--tc-space-4);
+    border-bottom: 1px solid var(--tc-border-subtle);
+    background: var(--tc-bg-sunken);
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+    text-align: start;
+    white-space: nowrap;
+}
+
+.tw-table td {
+    padding: 0.625rem var(--tc-space-4);
+    border-bottom: 1px solid var(--tc-border-subtle);
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+    vertical-align: top;
+}
+
+.tw-table td strong {
+    display: block;
+    font-weight: var(--tc-weight-medium);
+}
+
+.tw-table td small {
+    color: var(--tc-text-secondary);
+}
+
+/* Badges carry the console's status roles, so "paid" is the same green here
+   as on the dashboard and in the queue table. */
+.tw-badge {
+    display: inline-block;
+    padding: 2px var(--tc-space-2);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-xs);
+    background: var(--tc-bg-sunken);
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-medium);
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.tw-badge.good {
+    border-color: var(--tc-status-positive-border);
+    background: var(--tc-status-positive-bg);
+    color: var(--tc-status-positive);
+}
+
+.tw-badge.warn {
+    border-color: var(--tc-status-warning-border);
+    background: var(--tc-status-warning-bg);
+    color: var(--tc-status-warning);
+}
+
+.tw-badge.bad {
+    border-color: var(--tc-status-critical-border);
+    background: var(--tc-status-critical-bg);
+    color: var(--tc-status-critical);
+}
+
+.tw-badge.neutral {
+    border-color: var(--tc-status-idle-border);
+    background: var(--tc-status-idle-bg);
+    color: var(--tc-status-idle);
+}
+
+/* ── Small blocks ─────────────────────────────────────────────────────────*/
+
+.tw-aging,
+.tw-mini-stats {
+    display: grid;
+    gap: var(--tc-space-3);
+}
+
+.tw-aging { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+.tw-mini-stats { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+
+.tw-aging div,
+.tw-mini,
+.tw-definition {
+    padding: var(--tc-space-4);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-bg-sunken);
+}
+
+.tw-aging strong,
+.tw-mini strong {
+    display: block;
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-display);
+    line-height: var(--tc-leading-display);
+    font-weight: var(--tc-weight-semibold);
+    font-variant-numeric: tabular-nums;
+}
+
+.tw-definition {
+    margin-bottom: var(--tc-space-3);
+}
+
+.tw-definition strong {
+    display: block;
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-body);
+    font-weight: var(--tc-weight-medium);
+}
+
+.tw-definition p {
+    margin: 2px 0 0;
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-small);
+}
+
+.tw-funnel {
+    display: grid;
+    grid-template-columns: 140px repeat(5, minmax(0, 1fr));
+    align-items: center;
+    gap: var(--tc-space-2);
+    padding-block: var(--tc-space-2);
+    border-bottom: 1px solid var(--tc-border-subtle);
+    font-size: var(--tc-text-small);
+}
+
+.tw-funnel span {
+    padding: var(--tc-space-2) var(--tc-space-1);
+    border-radius: var(--tc-radius-xs);
+    background: var(--tc-bg-sunken);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+.tw-funnel-head span {
+    background: transparent;
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-wide);
+    text-transform: uppercase;
+}
+
+.tw-issue {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--tc-space-3);
+    padding-block: var(--tc-space-3);
+    border-bottom: 1px solid var(--tc-border-subtle);
+    font-size: var(--tc-text-small);
+}
+
+.tw-empty {
+    padding: var(--tc-space-8) !important;
+    color: var(--tc-text-tertiary);
+    text-align: center;
+}
+
+.tw-fresh {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-micro);
+    text-align: end;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────*/
+
+@media (max-width: 1200px) {
+    .tw-stat { grid-column: span 4; }
+}
+
+@media (max-width: 800px) {
+    .tw-bi-hero { flex-direction: column; align-items: flex-start; }
+    .tw-stat { grid-column: span 6; }
+    .tw-panel,
+    .tw-panel.wide,
+    .tw-panel.narrow { grid-column: 1 / -1; }
+    .tw-product-row { grid-template-columns: 1fr 1fr; }
+    .tw-product-row .tw-progress { display: none; }
+}
+
+@media (max-width: 520px) {
+    .tw-stat { grid-column: 1 / -1; }
+    .tw-funnel { grid-template-columns: 110px repeat(5, 55px); overflow-x: auto; }
+    .tw-bi-hero-actions,
+    .tw-bi-hero-actions .tw-btn { width: 100%; }
+}

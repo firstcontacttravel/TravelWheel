@@ -10,38 +10,54 @@ class TravelFlexPresentation
 {
     public static function workspaceSummary(TravelFlexApplication $application): HtmlString
     {
-        $applicant = data_get($application->applicant_details, 'full_name') ?: 'Applicant';
-        $email = data_get($application->applicant_details, 'email') ?: '-';
         $status = self::label($application->application_status);
         $provider = self::label($application->provider_status);
         $payment = self::label($application->payment_status);
+        $decidedAt = $application->approved_at ?: $application->rejected_at;
 
-        $html = '<div class="tw-booking-hero">';
-        $html .= '<div class="tw-booking-hero-main">';
-        $html .= '<div class="tw-booking-eyebrow">TravelFlex application</div>';
-        $html .= '<div class="tw-booking-title">'.e($application->booking_ref ?: 'TravelFlex').'</div>';
-        $html .= '<div class="tw-booking-route">'.e($applicant).'</div>';
-        $html .= '<div class="tw-booking-meta">';
-        $html .= '<span>'.e($email).'</span>';
-        $html .= '<span>'.e(self::label($application->payment_method)).'</span>';
-        $html .= '<span>'.e(($application->down_percent ?: '-').'% down').'</span>';
-        $html .= '</div></div>';
-        $html .= '<div class="tw-booking-hero-side">';
-        $html .= '<div class="tw-booking-price">'.e(self::money($application->grand_total)).'</div>';
-        $html .= '<div class="tw-booking-pill-row">';
-        $html .= self::statusPill('Application', $application->application_status);
-        $html .= self::statusPill('Provider', $application->provider_status);
-        $html .= self::statusPill('Payment', $application->payment_status);
-        $html .= '</div></div>';
-        $html .= '<div class="tw-booking-timeline">';
-        $html .= self::timelineItem('Submitted', self::watDateTime($application->created_at), true);
-        $html .= self::timelineItem('Reviewed', filled($application->reviewed_at) ? self::watDateTime($application->reviewed_at) : $status, filled($application->reviewed_at));
-        $html .= self::timelineItem('Decision', filled($application->approved_at ?: $application->rejected_at) ? self::watDateTime($application->approved_at ?: $application->rejected_at) : $status, in_array($application->application_status, ['approved', 'rejected'], true));
-        $html .= self::timelineItem('Provider', filled($application->provider_email_sent_at) ? self::watDateTime($application->provider_email_sent_at) : $provider, $application->provider_status === 'sent');
-        $html .= self::timelineItem('Payment', $payment, $application->payment_status === 'paid');
-        $html .= '</div></div>';
+        return new HtmlString(view('filament.booking.travelflex-hero', [
+            'ref' => $application->booking_ref ?: 'TravelFlex',
+            'applicant' => data_get($application->applicant_details, 'full_name') ?: 'Applicant',
+            'meta' => array_values(array_filter([
+                data_get($application->applicant_details, 'email') ?: null,
+                self::label($application->payment_method) ?: null,
+                ($application->down_percent ? $application->down_percent.'% down' : null),
+            ])),
+            'amount' => self::money($application->grand_total),
+            'states' => [
+                'Application' => self::stateDot($application->application_status),
+                'Provider' => self::stateDot($application->provider_status),
+                'Payment' => self::stateDot($application->payment_status),
+            ],
+            'steps' => [
+                ['label' => 'Submitted', 'value' => self::watDateTime($application->created_at), 'done' => true],
+                ['label' => 'Reviewed', 'value' => filled($application->reviewed_at) ? self::watDateTime($application->reviewed_at) : $status, 'done' => filled($application->reviewed_at)],
+                ['label' => 'Decision', 'value' => filled($decidedAt) ? self::watDateTime($decidedAt) : $status, 'done' => in_array($application->application_status, ['approved', 'rejected'], true)],
+                ['label' => 'Provider', 'value' => filled($application->provider_email_sent_at) ? self::watDateTime($application->provider_email_sent_at) : $provider, 'done' => $application->provider_status === 'sent'],
+                ['label' => 'Payment', 'value' => $payment, 'done' => $application->payment_status === 'paid'],
+            ],
+        ])->render());
+    }
 
-        return new HtmlString($html);
+    /**
+     * A status word mapped onto the console's dot language, so a filled dot
+     * means the same thing on a TravelFlex application as on a flight booking.
+     *
+     * @return array{text: string, tone: string, shape: string}
+     */
+    private static function stateDot(?string $state): array
+    {
+        $text = self::label($state) ?: '---';
+
+        [$tone, $shape] = match (strtolower($text)) {
+            'rejected', 'failed', 'cancelled', 'declined' => ['critical', ''],
+            'pending', 'submitted', 'awaiting deposit' => ['warning', 'tc-status-progress'],
+            'approved', 'paid', 'sent', 'completed' => ['positive', ''],
+            'in review', 'reviewed', 'processing' => ['info', 'tc-status-progress'],
+            default => ['idle', 'tc-status-pending'],
+        };
+
+        return ['text' => $text, 'tone' => $tone, 'shape' => $shape];
     }
 
     public static function applicant(TravelFlexApplication $application): HtmlString
@@ -263,27 +279,6 @@ class TravelFlexPresentation
     private static function money(mixed $amount): string
     {
         return $amount === null || $amount === '' ? '-' : 'NGN '.number_format((float) $amount, 2);
-    }
-
-    private static function statusPill(string $label, ?string $status): string
-    {
-        $tone = match ($status) {
-            'approved', 'reviewed', 'sent', 'paid' => 'good',
-            'submitted', 'pending', 'awaiting_bank_transfer', 'not_sent' => 'warn',
-            'rejected', 'failed' => 'bad',
-            default => 'neutral',
-        };
-
-        return '<span class="tw-status-pill tw-status-'.e($tone).'"><span>'.e($label).'</span><strong>'.e(self::label($status)).'</strong></span>';
-    }
-
-    private static function timelineItem(string $label, ?string $value, bool $isComplete): string
-    {
-        return '<div class="tw-timeline-item '.($isComplete ? 'is-complete' : '').'">'.
-            '<span class="tw-timeline-dot"></span>'.
-            '<div><div class="tw-timeline-label">'.e($label).'</div>'.
-            '<div class="tw-timeline-value">'.e($value ?: '-').'</div></div>'.
-            '</div>';
     }
 
     private static function handoffFact(string $label, string $value, string $description): string

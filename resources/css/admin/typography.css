@@ -1,0 +1,231 @@
+/*
+ * TravelWheel Console — typography
+ * ================================
+ *
+ * Inter for the interface, JetBrains Mono for anything a human reads aloud
+ * down a phone line or types into another system: booking refs, PNRs,
+ * e-ticket numbers, and money.
+ *
+ * Both are self-hosted from @fontsource-variable, declared face by face
+ * rather than by importing the packages' index.css — that would pull
+ * Cyrillic, Greek and Vietnamese subsets nobody here needs, roughly
+ * quadrupling the payload.
+ *
+ * latin-ext is NOT optional. The naira sign ₦ is U+20A6, which falls in
+ * latin-ext's U+20A0–20AB range, not in latin. Ship latin alone and every
+ * price in the panel silently falls back to a system font mid-string.
+ *
+ * Worth knowing for later phases: the rightwards arrow → (U+2192) is in no
+ * Inter subset at all. Route indicators must be DRAWN (a rule plus a mark),
+ * not typed — which is the right call for a design system regardless, since
+ * a journey connector is a component, not a character.
+ */
+
+@font-face {
+    font-family: "Inter Variable";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("../../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2")
+        format("woff2-variations");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+        U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+        U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "Inter Variable";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("../../../node_modules/@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2")
+        format("woff2-variations");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+        U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+        U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+        U+A720-A7FF;
+}
+
+@font-face {
+    font-family: "JetBrains Mono Variable";
+    font-style: normal;
+    font-weight: 100 800;
+    font-display: swap;
+    src: url("../../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2")
+        format("woff2-variations");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+        U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+        U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: "JetBrains Mono Variable";
+    font-style: normal;
+    font-weight: 100 800;
+    font-display: swap;
+    src: url("../../../node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-ext-wght-normal.woff2")
+        format("woff2-variations");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+        U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F,
+        U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+        U+A720-A7FF;
+}
+
+:root {
+    --tc-font-sans: "Inter Variable", "Segoe UI", ui-sans-serif, system-ui,
+        -apple-system, sans-serif;
+    --tc-font-mono: "JetBrains Mono Variable", ui-monospace, "Cascadia Mono",
+        Consolas, monospace;
+
+    /* ── Type scale ───────────────────────────────────────────────────────
+       Seven steps, and 13px is the body. A console earns its density here:
+       every step below 15px is paired with a line height that keeps rows on
+       a 4px rhythm, so a 40px row can hold a value and a caption without
+       feeling stacked.
+
+       Tracking tightens as size grows — Inter is drawn for this, and untracked
+       large text is the single most common giveaway of an undesigned panel. */
+    --tc-text-micro: 0.6875rem; /* 11 — column heads, meta, tags */
+    --tc-text-small: 0.75rem; /*  12 — captions, secondary cell text */
+    --tc-text-body: 0.8125rem; /* 13 — DEFAULT: cells, labels, controls */
+    --tc-text-base: 0.875rem; /* 14 — prose, descriptions */
+    --tc-text-title: 0.9375rem; /* 15 — section and card headings */
+    --tc-text-heading: 1.125rem; /* 18 — page titles */
+    --tc-text-display: 1.5rem; /* 24 — dashboard figures */
+    --tc-text-hero: 2rem; /*    32 — the single largest number on a screen */
+
+    --tc-leading-micro: 1rem; /*    16 */
+    --tc-leading-small: 1rem; /*    16 */
+    --tc-leading-body: 1.25rem; /*  20 */
+    --tc-leading-base: 1.375rem; /* 22 */
+    --tc-leading-title: 1.25rem; /* 20 */
+    --tc-leading-heading: 1.5rem; /*24 */
+    --tc-leading-display: 1.75rem; /*28 */
+    --tc-leading-hero: 2.25rem; /*  36 */
+
+    --tc-tracking-wide: 0.06em; /* uppercase micro labels only */
+    --tc-tracking-normal: 0;
+    --tc-tracking-body: -0.006em;
+    --tc-tracking-tight: -0.014em;
+    --tc-tracking-tighter: -0.022em;
+
+    --tc-weight-normal: 400;
+    --tc-weight-medium: 500;
+    --tc-weight-semibold: 560;
+    --tc-weight-bold: 640;
+}
+
+/* ── Type primitives ──────────────────────────────────────────────────────
+   Named for the role the text plays, not its size, for the same reason the
+   colour roles are: a "column head" can change size without every template
+   that uses one needing to know. */
+
+.tc-t-hero,
+.tc-t-display,
+.tc-t-heading,
+.tc-t-title,
+.tc-t-base,
+.tc-t-body,
+.tc-t-small,
+.tc-t-micro,
+.tc-t-label {
+    margin: 0;
+}
+
+.tc-t-hero {
+    font-size: var(--tc-text-hero);
+    line-height: var(--tc-leading-hero);
+    letter-spacing: var(--tc-tracking-tighter);
+    font-weight: var(--tc-weight-bold);
+    color: var(--tc-text-primary);
+}
+
+.tc-t-display {
+    font-size: var(--tc-text-display);
+    line-height: var(--tc-leading-display);
+    letter-spacing: var(--tc-tracking-tighter);
+    font-weight: var(--tc-weight-semibold);
+    color: var(--tc-text-primary);
+}
+
+.tc-t-heading {
+    font-size: var(--tc-text-heading);
+    line-height: var(--tc-leading-heading);
+    letter-spacing: var(--tc-tracking-tight);
+    font-weight: var(--tc-weight-semibold);
+    color: var(--tc-text-primary);
+}
+
+.tc-t-title {
+    font-size: var(--tc-text-title);
+    line-height: var(--tc-leading-title);
+    letter-spacing: var(--tc-tracking-tight);
+    font-weight: var(--tc-weight-semibold);
+    color: var(--tc-text-primary);
+}
+
+.tc-t-base {
+    font-size: var(--tc-text-base);
+    line-height: var(--tc-leading-base);
+    letter-spacing: var(--tc-tracking-body);
+    color: var(--tc-text-secondary);
+}
+
+.tc-t-body {
+    font-size: var(--tc-text-body);
+    line-height: var(--tc-leading-body);
+    letter-spacing: var(--tc-tracking-body);
+    color: var(--tc-text-primary);
+}
+
+.tc-t-small {
+    font-size: var(--tc-text-small);
+    line-height: var(--tc-leading-small);
+    letter-spacing: var(--tc-tracking-normal);
+    color: var(--tc-text-secondary);
+}
+
+.tc-t-micro {
+    font-size: var(--tc-text-micro);
+    line-height: var(--tc-leading-micro);
+    letter-spacing: var(--tc-tracking-normal);
+    color: var(--tc-text-tertiary);
+}
+
+/* The one place uppercase is allowed: column heads and group labels. It is
+   tracked out because Inter's caps are tight, and it is never used for
+   anything a person has to read as a sentence. */
+.tc-t-label {
+    font-size: var(--tc-text-micro);
+    line-height: var(--tc-leading-micro);
+    letter-spacing: var(--tc-tracking-wide);
+    font-weight: var(--tc-weight-semibold);
+    text-transform: uppercase;
+    color: var(--tc-text-tertiary);
+}
+
+/* ── Numerics ─────────────────────────────────────────────────────────────
+   Any figure that appears in a column with other figures gets tabular
+   lining numerals, so ₦925,023.49 and ₦74,845.91 align on the decimal
+   instead of drifting. */
+.tc-num {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Refs, PNRs, e-ticket numbers: things read aloud or retyped. Mono removes
+   the 0/O and 1/l/I ambiguity that costs a support call. */
+.tc-mono {
+    font-family: var(--tc-font-mono);
+    font-variant-ligatures: none;
+    font-feature-settings: "tnum" 1, "zero" 1;
+    letter-spacing: var(--tc-tracking-normal);
+}
+
+.tc-money {
+    font-family: var(--tc-font-mono);
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: "tnum" 1, "zero" 1;
+    font-weight: var(--tc-weight-medium);
+    white-space: nowrap;
+}

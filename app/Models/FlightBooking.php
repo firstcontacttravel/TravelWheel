@@ -14,6 +14,7 @@ class FlightBooking extends Model
         'fare_source_code',
         'session_id',
         'fare_type',
+        'supplier',
         'trip_type',
         'route',
         'airline',
@@ -44,6 +45,8 @@ class FlightBooking extends Model
         'reconciliation_note',
         'contact_email',
         'contact_phone',
+        'contact_area_code',
+        'contact_country_code',
         'adult_count',
         'child_count',
         'infant_count',
@@ -104,6 +107,26 @@ class FlightBooking extends Model
         return $this->booking_status === 'ticketed';
     }
 
+    public function isSkylink(): bool
+    {
+        return $this->supplier === 'skylink';
+    }
+
+    /**
+     * Whether unique_id is a reference TravelNext issued.
+     *
+     * TravelNext's ticket_order, trip_details, cancel and post-ticketing
+     * endpoints all key on unique_id. On a SkyLink booking that field holds
+     * the SkyLink PNR, which TravelNext has never seen — every one of those
+     * calls fails, and ticket_order also leaves the booking marked
+     * ticketing_failed. Rows written before the supplier column existed are
+     * TravelNext (the column defaults to it), hence the fallback.
+     */
+    public function usesTravelNextApi(): bool
+    {
+        return ($this->supplier ?: 'travelnext') === 'travelnext';
+    }
+
     public function tktTimeLimitFormatted(): string
     {
         return $this->tkt_time_limit
@@ -136,6 +159,30 @@ class FlightBooking extends Model
     public function totalPassengers(): int
     {
         return $this->adult_count + $this->child_count + $this->infant_count;
+    }
+
+    /**
+     * The airport codes of this booking's journey, in order.
+     *
+     * The `route` column is written once at booking time and is the only field
+     * that is correct for all three trip types. Re-deriving a route from
+     * flight_snapshot.segments looks equivalent but is not: on a multi-city
+     * booking the legs live in .multiLegs and .segments is deliberately empty,
+     * so anything reading .segments shows a multi-city trip as having no route
+     * at all.
+     *
+     * 119 of the stored routes separate codes with "→" and 2 with "->", so both
+     * are accepted. Callers get the codes rather than the string because the
+     * console draws its connectors — "→" (U+2192) is in none of Inter's
+     * subsets, so a typed arrow falls back to a system font mid-route.
+     *
+     * @return list<string>
+     */
+    public function routeLegs(): array
+    {
+        $parts = preg_split('/\s*(?:→|->|—|–)\s*/u', (string) $this->route) ?: [];
+
+        return array_values(array_filter(array_map('trim', $parts), fn (string $leg): bool => $leg !== ''));
     }
 
     public function paymentVerificationRecords(): HasMany

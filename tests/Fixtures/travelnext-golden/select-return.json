@@ -1,0 +1,310 @@
+{
+    "requests": [
+        {
+            "url": "https://travelnext.works/api/aeroVE5/availability",
+            "body": {
+                "user_id": "[credential]",
+                "user_password": "[credential]",
+                "access": "[credential]",
+                "ip_address": "[credential]",
+                "requiredCurrency": "USD",
+                "journeyType": "Return",
+                "OriginDestinationInfo": [
+                    {
+                        "departureDate": "2026-10-20",
+                        "returnDate": "2026-11-03",
+                        "airportOriginCode": "LOS",
+                        "airportDestinationCode": "DXB"
+                    }
+                ],
+                "class": "Economy",
+                "adults": 2,
+                "childs": 1,
+                "infants": 0
+            }
+        },
+        {
+            "url": "https://travelnext.works/api/aeroVE5/revalidate",
+            "body": {
+                "session_id": "tn-session-1",
+                "fare_source_code": "FSC-RETURN-1"
+            }
+        },
+        {
+            "url": "https://travelnext.works/api/aeroVE5/extra_services",
+            "body": {
+                "session_id": "tn-session-1",
+                "fare_source_code": "FSC-RETURN-1"
+            }
+        },
+        {
+            "url": "https://travelnext.works/api/aeroVE5/fare_rules",
+            "body": {
+                "session_id": "tn-session-1",
+                "fare_source_code": "FSC-RETURN-1"
+            }
+        }
+    ],
+    "bookingFlight": {
+        "fareSourceCode": "FSC-RETURN-1",
+        "source": "travelnext",
+        "airline": "Emirates",
+        "airlineCode": "EK",
+        "airlineLogo": "https://travelnext.works/api/airlines/EK.gif",
+        "validatingCode": "EK",
+        "validatingAirline": "Emirates",
+        "validatingLogo": "https://travelnext.works/api/airlines/EK.gif",
+        "cabin": "Economy",
+        "cabinCode": "Y",
+        "stops": 0,
+        "price": 1711585.2,
+        "baseFare": 1320807.3,
+        "totalTax": 300777.9,
+        "currency": "NGN",
+        "isRefundable": true,
+        "fareType": "Private",
+        "ticketType": "eTicket",
+        "isPassportMandatory": true,
+        "directionInd": "return",
+        "ticketAdvisory": "Ticket within 24 hours.",
+        "segments": [
+            {
+                "from": "LOS",
+                "to": "DXB",
+                "fromCity": "Lagos (LOS)",
+                "toCity": "Dubai (DXB)",
+                "fromAirport": "Murtala Muhammed Airport",
+                "toAirport": "Dubai International Airport",
+                "fromCountry": "Nigeria",
+                "toCountry": "United Arab Emirates",
+                "fromLat": "6.58181858062744",
+                "fromLon": "3.32113480567932",
+                "toLat": "25.253173828125",
+                "toLon": "55.3656730651855",
+                "departTime": "14:10",
+                "arriveTime": "00:40",
+                "departDate": "Tue, 20 Oct 2026",
+                "arriveDate": "Wed, 21 Oct 2026",
+                "departDT": "2026-10-20T14:10:00",
+                "arriveDT": "2026-10-21T00:40:00",
+                "duration": 450,
+                "flightNo": "EK784",
+                "airline": "Emirates",
+                "airlineCode": "EK",
+                "airlineLogo": "https://travelnext.works/api/airlines/EK.gif",
+                "equipment": "359",
+                "cabin": "Economy",
+                "cabinCode": "Y",
+                "resBookCode": "Q",
+                "mealCode": "M",
+                "seatsLeft": 9,
+                "belowMinimum": false,
+                "isCodeshare": false,
+                "operatingCode": "EK",
+                "operatingAirline": "",
+                "operatingFlightNo": "EK784",
+                "operatingLogo": "https://travelnext.works/api/airlines/EK.gif",
+                "eticket": true
+            }
+        ],
+        "departTime": "14:10",
+        "arriveTime": "00:40",
+        "departDT": "2026-10-20T14:10:00",
+        "arriveDT": "2026-10-21T00:40:00",
+        "totalDuration": 450,
+        "durationLabel": "7h 30m",
+        "layoverDurations": [],
+        "departDateLabel": "Tue, 20 Oct",
+        "totalTimeMins": 450,
+        "totalTimeLabel": "7h 30m",
+        "returnSegments": [
+            {
+                "from": "DXB",
+                "to": "ADD",
+                "fromCity": "Dubai (DXB)",
+                "toCity": "Addis Ababa (ADD)",
+                "fromAirport": "Dubai International Airport",
+                "toAirport": "Addis Ababa Bole International Airport",
+                "fromCountry": "United Arab Emirates",
+                "toCountry": "Ethiopia",
+                "fromLat": "25.253173828125",
+                "fromLon": "55.3656730651855",
+                "toLat": "8.983759",
+                "toLon": "38.7959",
+                "departTime": "04:20",
+                "arriveTime": "07:45",
+                "departDate": "Tue, 03 Nov 2026",
+                "arriveDate": "Tue, 03 Nov 2026",
+                "departDT": "2026-11-03T04:20:00",
+                "arriveDT": "2026-11-03T07:45:00",
+                "duration": 265,
+                "flightNo": "ET601",
+                "airline": "Ethiopian Airlines",
+                "airlineCode": "ET",
+                "airlineLogo": "https://travelnext.works/api/airlines/ET.gif",
+                "equipment": "359",
+                "cabin": "Economy",
+                "cabinCode": "Y",
+                "resBookCode": "Q",
+                "mealCode": "M",
+                "seatsLeft": 9,
+                "belowMinimum": false,
+                "isCodeshare": false,
+                "operatingCode": "ET",
+                "operatingAirline": "",
+                "operatingFlightNo": "ET601",
+                "operatingLogo": "https://travelnext.works/api/airlines/ET.gif",
+                "eticket": true
+            },
+            {
+                "from": "ADD",
+                "to": "LOS",
+                "fromCity": "Addis Ababa (ADD)",
+                "toCity": "Lagos (LOS)",
+                "fromAirport": "Addis Ababa Bole International Airport",
+                "toAirport": "Murtala Muhammed Airport",
+                "fromCountry": "Ethiopia",
+                "toCountry": "Nigeria",
+                "fromLat": "8.983759",
+                "fromLon": "38.7959",
+                "toLat": "6.58181858062744",
+                "toLon": "3.32113480567932",
+                "departTime": "10:15",
+                "arriveTime": "14:05",
+                "departDate": "Tue, 03 Nov 2026",
+                "arriveDate": "Tue, 03 Nov 2026",
+                "departDT": "2026-11-03T10:15:00",
+                "arriveDT": "2026-11-03T14:05:00",
+                "duration": 350,
+                "flightNo": "ET901",
+                "airline": "Ethiopian Airlines",
+                "airlineCode": "ET",
+                "airlineLogo": "https://travelnext.works/api/airlines/ET.gif",
+                "equipment": "359",
+                "cabin": "Economy",
+                "cabinCode": "Y",
+                "resBookCode": "Q",
+                "mealCode": "M",
+                "seatsLeft": 9,
+                "belowMinimum": false,
+                "isCodeshare": false,
+                "operatingCode": "ET",
+                "operatingAirline": "",
+                "operatingFlightNo": "ET901",
+                "operatingLogo": "https://travelnext.works/api/airlines/ET.gif",
+                "eticket": true
+            }
+        ],
+        "returnStops": 1,
+        "returnDurationLabel": "10h 15m",
+        "returnDateLabel": "Tue, 03 Nov",
+        "returnLayoverDurations": [
+            "2h 30m"
+        ],
+        "returnTotalTimeMins": 765,
+        "returnTotalTimeLabel": "12h 45m",
+        "multiLegs": [],
+        "departSlot": "afternoon",
+        "arrivalSlot": "morning",
+        "fareBreakdown": [
+            {
+                "passengerType": "ADT",
+                "qty": 2,
+                "baseFare": 528322.92,
+                "totalFare": 648634.08,
+                "currency": "NGN",
+                "baggage": [
+                    "2PC",
+                    "1PC"
+                ],
+                "cabinBaggage": [
+                    "7KG",
+                    "7KG"
+                ],
+                "taxes": [
+                    {
+                        "TaxCode": "YQ",
+                        "Amount": "42.00"
+                    }
+                ],
+                "serviceTax": 4577.06,
+                "surcharges": 1634.66,
+                "changeAllowed": true,
+                "changePenalty": 196159.5,
+                "refundAllowed": true,
+                "refundPenalty": 392319.0
+            },
+            {
+                "passengerType": "CHD",
+                "qty": 1,
+                "baseFare": 264161.46,
+                "totalFare": 324317.04,
+                "currency": "NGN",
+                "baggage": [
+                    "2PC",
+                    "1PC"
+                ],
+                "cabinBaggage": [
+                    "7KG",
+                    "7KG"
+                ],
+                "taxes": [
+                    {
+                        "TaxCode": "YQ",
+                        "Amount": "42.00"
+                    }
+                ],
+                "serviceTax": 4577.06,
+                "surcharges": 1634.66,
+                "changeAllowed": false,
+                "changePenalty": 98079.75,
+                "refundAllowed": true,
+                "refundPenalty": 196159.5
+            }
+        ],
+        "supplierPrice": 1621585.2,
+        "markupAmount": 90000.0,
+        "markupRatePerPassenger": 30000.0,
+        "markupPassengerCount": 3,
+        "markupCategory": "from_nigeria",
+        "markupCabin": "economy"
+    },
+    "bookingSessionId": "tn-session-1",
+    "bookingSearchParams": {
+        "trip": "return",
+        "adults": 2,
+        "childs": 1,
+        "kids": 0,
+        "flight_type": "Y",
+        "from": "Lagos (LOS)",
+        "to": "Dubai (DXB)",
+        "depart": "20/10/2026",
+        "returning": "03/11/2026"
+    },
+    "extraServices": {
+        "ExtraServicesResponse": {
+            "ExtraServicesResult": {
+                "success": true,
+                "ExtraServicesData": {
+                    "DynamicBaggage": []
+                }
+            }
+        }
+    },
+    "fareRules": {
+        "FareRules1_1Response": {
+            "FareRules1_1Result": {
+                "FareRules": [
+                    {
+                        "FareRule": {
+                            "Category": "PENALTIES",
+                            "Rules": "Changes permitted for a fee."
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    "tripType": "return",
+    "bookingIntent": "travelflex"
+}

@@ -29,9 +29,9 @@ class VisaDestinationResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMap;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Visa Catalogue';
+    protected static string|\UnitEnum|null $navigationGroup = 'Visas';
 
-    protected static ?int $navigationSort = 15;
+    protected static ?int $navigationSort = 50;
 
     protected static ?string $recordTitleAttribute = 'name';
 

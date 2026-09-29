@@ -20,11 +20,11 @@ class NotificationOutboxResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedEnvelope;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+    protected static string|\UnitEnum|null $navigationGroup = 'System';
 
     protected static ?string $navigationLabel = 'Email Delivery';
 
-    protected static ?int $navigationSort = 45;
+    protected static ?int $navigationSort = 20;
 
     public static function table(Table $table): Table
     {

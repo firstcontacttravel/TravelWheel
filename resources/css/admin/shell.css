@@ -1,0 +1,701 @@
+/*
+ * TravelWheel Console — shell
+ * ===========================
+ *
+ * The rail, the flyouts, the topbar and the page frame. Everything here
+ * consumes role tokens only; there is no `.tc-dark` block in this file and
+ * there should never need to be one.
+ *
+ * These rules are UNLAYERED on purpose. Filament ships its component CSS
+ * inside `@layer components`, and unlayered rules beat layered ones outright
+ * regardless of specificity, so plain selectors are enough and !important is
+ * not needed to override the framework.
+ */
+
+/* ── Frame ────────────────────────────────────────────────────────────────*/
+
+.tc-body {
+    background: var(--tc-bg-canvas);
+    color: var(--tc-text-primary);
+    font-family: var(--tc-font-sans);
+    font-size: var(--tc-text-body);
+    line-height: var(--tc-leading-body);
+    letter-spacing: var(--tc-tracking-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.tc-shell {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+.tc-shell-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    /* Without this a wide table stretches the flex item instead of scrolling
+       inside it, and the whole page gains a horizontal scrollbar. */
+    min-width: 0;
+    background: var(--tc-bg-canvas);
+
+    /* Filament hides .fi-main-ctn with `opacity: 0` on a panel that has
+       navigation, and its own layout revealed it again with an inline
+       x-bind:style — a workaround for x-cloak flickering chart widgets. This
+       shell does not carry that binding, so the reveal is declared here
+       instead; without it the entire page renders and is invisible.
+       Filament also sets `width: 100vw`, which beside a 56px rail is 56px of
+       horizontal overflow on every screen. */
+    opacity: 1;
+    width: auto;
+}
+
+.tc-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: var(--tc-space-6) var(--tc-space-7) var(--tc-space-10);
+}
+
+/* ── Rail ─────────────────────────────────────────────────────────────────*/
+
+.tc-rail {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    width: var(--tc-rail-width);
+    height: 100vh;
+    height: 100dvh;
+    border: 0;
+    background: var(--tc-bg-rail);
+    box-shadow: none;
+    /* The flyouts escape the rail horizontally, so it must not clip them. */
+    overflow: visible;
+
+    /* Filament hides .fi-sidebar with Tailwind's `-translate-x-full` and only
+       brings it back at `lg`, so between 768px and 1023px the rail was off
+       screen with no toggle to open it. Note that Tailwind v4 writes the
+       `translate` PROPERTY, not `transform` — a `transform: translateX(0)`
+       here would apply alongside it and change nothing. */
+    translate: none;
+}
+
+.tc-rail-brand {
+    display: grid;
+    place-items: center;
+    height: var(--tc-topbar-height);
+    flex: none;
+}
+
+.tc-rail-mark {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-brand-500);
+    color: var(--tc-n-0);
+    font-size: 11px;
+    font-weight: var(--tc-weight-bold);
+    letter-spacing: 0.02em;
+    text-decoration: none;
+}
+
+.tc-rail-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--tc-space-2);
+    padding: var(--tc-space-2) 0;
+    /* Scrolls when a panel has more groups than fit. This DOES clip the
+       flyouts, which is exactly why they are position:fixed. */
+    overflow-y: auto;
+    scrollbar-width: none;
+}
+
+.tc-rail-nav::-webkit-scrollbar {
+    display: none;
+}
+
+.tc-rail-list {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tc-rail-rule {
+    width: 24px;
+    margin: var(--tc-space-2) auto;
+    border: 0;
+    border-top: 1px solid var(--tc-bg-rail-hover);
+}
+
+.tc-rail-group {
+    position: relative;
+}
+
+.tc-rail-btn {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: var(--tc-radius-md);
+    background: transparent;
+    color: var(--tc-text-on-rail);
+    cursor: pointer;
+    transition:
+        background-color var(--tc-duration-fast) var(--tc-ease-standard),
+        color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.tc-rail-btn .fi-icon,
+.tc-rail-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.tc-rail-btn:hover,
+.tc-rail-btn:focus-visible {
+    background: var(--tc-bg-rail-hover);
+    color: var(--tc-text-on-rail-active);
+}
+
+.tc-rail-btn.is-active {
+    background: var(--tc-bg-rail-active);
+    color: var(--tc-text-on-rail-active);
+}
+
+/* The current section, marked on the rail's leading edge. This is the only
+   place the accent green appears as a solid — everywhere else green means
+   "positive status", and a colour that means two things means neither. */
+.tc-rail-btn.is-active::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: -9px;
+    top: 9px;
+    bottom: 9px;
+    width: 2px;
+    border-radius: 0 2px 2px 0;
+    background: var(--tc-accent-500);
+}
+
+.tc-rail-foot {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding-block: var(--tc-space-3);
+    border-top: 1px solid var(--tc-bg-rail-hover);
+}
+
+/* ── Tooltip ──────────────────────────────────────────────────────────────
+   Collapsed icons need a name. Rendered from the label already in the markup
+   rather than a title attribute, so it appears immediately and can be styled. */
+
+.tc-rail-tip {
+    position: absolute;
+    inset-inline-start: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%) translateX(-4px);
+    z-index: 40;
+    padding: 3px var(--tc-space-3);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-n-900);
+    color: var(--tc-n-50);
+    font-size: var(--tc-text-small);
+    line-height: var(--tc-leading-small);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+        opacity var(--tc-duration-fast) var(--tc-ease-standard),
+        transform var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.tc-rail-btn:hover .tc-rail-tip,
+.tc-rail-btn:focus-visible .tc-rail-tip {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+}
+
+/* A group's flyout supersedes its tooltip — showing both is noise. */
+.tc-rail-group:hover .tc-rail-tip {
+    opacity: 0;
+}
+
+/* ── Flyout ───────────────────────────────────────────────────────────────*/
+
+/* Fixed, not absolute. The rail's nav scrolls vertically, and CSS computes
+   overflow-x to `auto` the moment overflow-y is anything but `visible` — so an
+   absolutely positioned flyout is clipped at the rail's 56px edge no matter
+   what overflow-x says. Its top offset is measured in the rail's Alpine
+   component and bound inline. */
+.tc-flyout {
+    position: fixed;
+    inset-inline-start: calc(var(--tc-rail-width) + 8px);
+    top: 0;
+    z-index: 40;
+    min-width: 216px;
+    max-height: calc(100dvh - 16px);
+    overflow-y: auto;
+    padding: var(--tc-space-2);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-lg);
+    background: var(--tc-bg-raised);
+    box-shadow: var(--tc-shadow-popover);
+}
+
+.tc-flyout-title {
+    padding: var(--tc-space-2) var(--tc-space-3) var(--tc-space-1);
+}
+
+.tc-flyout ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tc-flyout-item {
+    display: flex;
+    align-items: center;
+    gap: var(--tc-space-3);
+    min-height: 30px;
+    padding: var(--tc-space-1) var(--tc-space-3);
+    border-radius: var(--tc-radius-sm);
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-body);
+    text-decoration: none;
+    transition:
+        background-color var(--tc-duration-fast) var(--tc-ease-standard),
+        color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.tc-flyout-item .fi-icon,
+.tc-flyout-item svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    color: var(--tc-text-tertiary);
+}
+
+.tc-flyout-item:hover {
+    background: var(--tc-bg-sunken);
+    color: var(--tc-text-primary);
+}
+
+.tc-flyout-item.is-active {
+    background: var(--tc-bg-selected);
+    color: var(--tc-text-brand);
+    font-weight: var(--tc-weight-medium);
+}
+
+.tc-flyout-item.is-active .fi-icon,
+.tc-flyout-item.is-active svg {
+    color: var(--tc-text-brand);
+}
+
+.tc-flyout-item .tc-tag {
+    margin-inline-start: auto;
+}
+
+/* ── Topbar ───────────────────────────────────────────────────────────────*/
+
+.tc-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: var(--tc-space-4);
+    flex: none;
+    height: var(--tc-topbar-height);
+    padding-inline: var(--tc-space-5);
+    border-bottom: 1px solid var(--tc-border-subtle);
+    background: color-mix(in srgb, var(--tc-bg-surface) 86%, transparent);
+    backdrop-filter: blur(12px) saturate(1.6);
+    box-shadow: none;
+}
+
+.tc-topbar-start {
+    display: flex;
+    align-items: center;
+    gap: var(--tc-space-3);
+    flex: none;
+}
+
+.tc-topbar-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.tc-topbar-end {
+    display: flex;
+    align-items: center;
+    gap: var(--tc-space-2);
+    flex: none;
+}
+
+.tc-icon-btn {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: var(--tc-radius-sm);
+    background: transparent;
+    color: var(--tc-text-secondary);
+    cursor: pointer;
+    transition:
+        background-color var(--tc-duration-fast) var(--tc-ease-standard),
+        color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.tc-icon-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.tc-icon-btn:hover {
+    background: var(--tc-bg-sunken);
+    color: var(--tc-text-primary);
+}
+
+/* The rail is always present from `md` up, so its toggle is phone-only. */
+.tc-topbar-menu {
+    display: none;
+}
+
+/* ── Search ───────────────────────────────────────────────────────────────
+   Filament's GlobalSearch owns the input and the results panel. The console
+   supplies the frame, the leading icon and the shortcut hint, and focuses the
+   real field rather than reimplementing search. */
+
+.tc-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 440px;
+    height: var(--tc-control-height);
+    padding-inline: var(--tc-space-3);
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-md);
+    background: var(--tc-bg-sunken);
+    transition:
+        border-color var(--tc-duration-fast) var(--tc-ease-standard),
+        background-color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.tc-search:hover {
+    border-color: var(--tc-border-default);
+}
+
+.tc-search:focus-within {
+    border-color: var(--tc-border-focus);
+    background: var(--tc-bg-surface);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--tc-border-focus) 18%, transparent);
+}
+
+/* Filament's own prefix carries the magnifier and the search-in-progress
+   indicator. Sized and coloured here rather than replaced, so the loading
+   state survives. */
+.tc-search .fi-input-wrp-prefix {
+    padding: 0;
+    color: var(--tc-text-tertiary);
+}
+
+.tc-search .fi-input-wrp-prefix svg {
+    width: 15px;
+    height: 15px;
+}
+
+/* Filament renders its own wrapper and input inside; strip their chrome so the
+   field reads as part of this frame rather than as a control within it. */
+.tc-search .fi-global-search-ctn,
+.tc-search .fi-global-search-field,
+.tc-search .fi-input-wrp {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.tc-search input {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--tc-text-primary);
+    font-family: inherit;
+    font-size: var(--tc-text-body);
+    letter-spacing: var(--tc-tracking-body);
+}
+
+.tc-search input:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.tc-search input::placeholder {
+    color: var(--tc-text-tertiary);
+}
+
+.tc-kbd {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    flex: none;
+    height: 18px;
+    padding-inline: 5px;
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-xs);
+    background: var(--tc-bg-surface);
+    color: var(--tc-text-tertiary);
+    font-family: var(--tc-font-sans);
+    font-size: 10px;
+    font-weight: var(--tc-weight-medium);
+    line-height: 1;
+}
+
+.tc-kbd-mod {
+    margin-inline-end: 2px;
+}
+
+/* ── Theme switcher ───────────────────────────────────────────────────────
+   Filament's three-button switcher (light / dark / system), rendered as a
+   compact segmented control rather than three loose icon buttons. */
+
+.fi-theme-switcher {
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 2px;
+    border: 1px solid var(--tc-border-subtle);
+    border-radius: var(--tc-radius-sm);
+    background: var(--tc-bg-sunken);
+}
+
+.fi-theme-switcher-btn {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    border-radius: var(--tc-radius-xs);
+    background: transparent;
+    color: var(--tc-text-tertiary);
+    cursor: pointer;
+    transition:
+        background-color var(--tc-duration-fast) var(--tc-ease-standard),
+        color var(--tc-duration-fast) var(--tc-ease-standard);
+}
+
+.fi-theme-switcher-btn svg,
+.fi-theme-switcher-btn .fi-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.fi-theme-switcher-btn:hover {
+    color: var(--tc-text-primary);
+}
+
+.fi-theme-switcher-btn.fi-active,
+.fi-theme-switcher-btn[aria-pressed="true"] {
+    background: var(--tc-bg-surface);
+    color: var(--tc-text-primary);
+    box-shadow: var(--tc-shadow-popover);
+}
+
+/* ── Page header ──────────────────────────────────────────────────────────
+   Breadcrumb, title, actions. The heading is ink, not brand: blue belongs to
+   things you can click, and a page title the same colour as every link
+   teaches the eye nothing. */
+
+.fi-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--tc-space-5);
+    margin-bottom: var(--tc-space-6);
+}
+
+.fi-header-heading {
+    color: var(--tc-text-primary);
+    font-size: var(--tc-text-heading);
+    line-height: var(--tc-leading-heading);
+    font-weight: var(--tc-weight-semibold);
+    letter-spacing: var(--tc-tracking-tight);
+}
+
+.fi-header-subheading {
+    margin-top: 2px;
+    color: var(--tc-text-secondary);
+    font-size: var(--tc-text-base);
+    line-height: var(--tc-leading-base);
+}
+
+.fi-breadcrumbs {
+    margin-bottom: var(--tc-space-1);
+}
+
+.fi-breadcrumbs-list {
+    display: flex;
+    align-items: center;
+    gap: var(--tc-space-2);
+}
+
+.fi-breadcrumbs-item-label {
+    color: var(--tc-text-tertiary);
+    font-size: var(--tc-text-small);
+}
+
+.fi-breadcrumbs-item:last-child .fi-breadcrumbs-item-label {
+    color: var(--tc-text-secondary);
+}
+
+.fi-breadcrumbs-item-separator {
+    color: var(--tc-border-strong);
+}
+
+.fi-header-actions-ctn {
+    display: flex;
+    align-items: center;
+    gap: var(--tc-space-3);
+    flex: none;
+}
+
+/* ── Drawer scrim ─────────────────────────────────────────────────────────*/
+
+.tc-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    display: none;
+    background: var(--tc-bg-overlay);
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────────
+   The rail is a fixed edge of the window from `md` up. Below that it becomes
+   a drawer over the content, driven by the same $store.sidebar the layout,
+   the scrim and the topbar toggle all share. */
+
+@media (max-width: 767px) {
+    .tc-rail {
+        position: fixed;
+        inset-block: 0;
+        inset-inline-start: 0;
+        z-index: 35;
+        translate: -100% 0;
+        transition: translate var(--tc-duration-base) var(--tc-ease-standard);
+    }
+
+    .tc-rail.fi-sidebar-open {
+        translate: 0 0;
+    }
+
+    .tc-scrim {
+        display: block;
+    }
+
+    .tc-topbar-menu {
+        display: grid;
+    }
+
+    .tc-main {
+        padding: var(--tc-space-5) var(--tc-space-4) var(--tc-space-8);
+    }
+
+    .tc-topbar {
+        gap: var(--tc-space-3);
+        padding-inline: var(--tc-space-4);
+    }
+
+    /* The shortcut hint is meaningless without a keyboard. */
+    .tc-kbd {
+        display: none;
+    }
+
+    .fi-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--tc-space-4);
+    }
+
+    .fi-header-actions-ctn {
+        flex-wrap: wrap;
+    }
+
+    /* On a phone the flyout would run off the screen beside a drawer that
+       already fills it, so groups open in place instead. */
+    .tc-flyout {
+        /* `static` ignores the inline top the rail measures for desktop. */
+        position: static;
+        min-width: 0;
+        max-height: none;
+        margin-block: var(--tc-space-1);
+        box-shadow: none;
+    }
+
+    /* In the drawer the rail is the whole navigation, not a rail with flyouts
+       beside it, so the tooltip text becomes the item's visible label rather
+       than being hidden — one text node, two presentations. */
+    .tc-rail-tip {
+        position: static;
+        transform: none;
+        opacity: 1;
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+        color: inherit;
+        font-size: var(--tc-text-body);
+        pointer-events: auto;
+    }
+}
+
+/* The rail is wider on a phone drawer than 56px, because there it is the whole
+   navigation rather than a rail with flyouts beside it. */
+@media (max-width: 767px) {
+    .tc-rail {
+        width: min(280px, 82vw);
+        overflow-y: auto;
+    }
+
+    .tc-rail-list {
+        align-items: stretch;
+    }
+
+    .tc-rail-btn {
+        width: auto;
+        justify-content: start;
+        grid-auto-flow: column;
+        gap: var(--tc-space-3);
+        padding-inline: var(--tc-space-4);
+    }
+
+    .tc-rail-btn.is-active::after {
+        inset-inline-start: 0;
+    }
+}
+
+@media (min-width: 1600px) {
+    .tc-main {
+        padding-inline: var(--tc-space-8);
+    }
+}

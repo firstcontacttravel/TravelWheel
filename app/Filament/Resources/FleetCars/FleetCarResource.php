@@ -31,9 +31,9 @@ class FleetCarResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTruck;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Car Hire & Transfer';
+    protected static string|\UnitEnum|null $navigationGroup = 'Ground Transport';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 50;
 
     protected static ?string $navigationLabel = 'Fleet';
 

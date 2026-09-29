@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\FlightBooking;
-use Illuminate\Support\Facades\Http;
 
 class AdminPostTicketingService
 {
@@ -20,6 +19,16 @@ class AdminPostTicketingService
 
     public function call(FlightBooking $booking, string $operationType, array $extraPayload = []): array
     {
+        if (! $booking->usesTravelNextApi()) {
+            return [
+                'ok' => false,
+                'status' => 'failed',
+                'message' => 'Cancellations, voids, refunds and reissues go through TravelNext and are not available for SkyLink bookings.',
+                'request' => [],
+                'response' => [],
+            ];
+        }
+
         $tripDetails = app(AdminTicketingService::class)->tripDetails($booking);
 
         if (! ($tripDetails['ok'] ?? false)) {
@@ -70,8 +79,8 @@ class AdminPostTicketingService
             ];
         }
 
-        $response = Http::connectTimeout(10)->timeout(60)
-            ->post(config('services.travelnext.base_url').$endpoint, $apiPayload);
+        // $apiPayload already carries the credentials, from basePayload().
+        $response = app(TravelnextFlightService::class)->post($endpoint, $apiPayload, 60, withCredentials: false);
 
         $data = $response->json() ?: [];
         $ok = ! $response->failed() && $this->extractSuccess($data);
@@ -94,24 +103,14 @@ class AdminPostTicketingService
 
     private function basePayload(FlightBooking $booking): array
     {
-        return [
-            'user_id' => config('services.travelnext.user_id'),
-            'user_password' => config('services.travelnext.password'),
-            'access' => config('services.travelnext.access'),
-            'ip_address' => config('services.travelnext.ip'),
+        return array_merge(app(TravelnextFlightService::class)->credentials(), [
             'UniqueID' => $booking->unique_id,
-        ];
+        ]);
     }
 
     private function redactPayload(array $payload): array
     {
-        foreach (['user_id', 'user_password', 'access', 'ip_address'] as $key) {
-            if (array_key_exists($key, $payload)) {
-                $payload[$key] = '[redacted]';
-            }
-        }
-
-        return $payload;
+        return app(TravelnextFlightService::class)->redact($payload);
     }
 
     private function normalizePaxDetails(array $passengers, array $tripDetails): array

@@ -19,9 +19,9 @@ class CarHireResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedKey;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Car Hire & Transfer';
+    protected static string|\UnitEnum|null $navigationGroup = 'Ground Transport';
 
-    protected static ?int $navigationSort = 40;
+    protected static ?int $navigationSort = 10;
 
     protected static ?string $navigationLabel = 'Car Hire Bookings';
 

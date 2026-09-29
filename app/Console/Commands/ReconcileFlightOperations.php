@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\FlightBooking;
 use App\Services\AdminTicketingService;
+use App\Services\Flights\FlightPlatformHold;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 
@@ -44,7 +45,11 @@ class ReconcileFlightOperations extends Command
                     $booking->update([
                         'booking_status' => 'hold_expired_review',
                         'last_reconciled_at' => now(),
-                        'reconciliation_note' => 'Airline hold expired before ticketing completed.',
+                        // A fare held on our side (an API that can't hold
+                        // seats) was never held with the airline at all.
+                        'reconciliation_note' => app(FlightPlatformHold::class)->applies($booking)
+                            ? 'TravelWheel hold expired before payment; nothing was reserved with the supplier.'
+                            : 'Airline hold expired before ticketing completed.',
                         'ticketing_started_at' => null,
                     ]);
                     $counts['expired_holds']++;

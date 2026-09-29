@@ -24,7 +24,9 @@ class UnTicketedConfirmationAlert extends Mailable
     public function content()
     {
         return new \Illuminate\Mail\Mailables\Content(
-            markdown: 'emails.unticketed-confirmation-alert',
+            // Plain view, not markdown: the template now builds on the shared
+            // <x-mail.layout> components rather than Laravel's markdown theme.
+            view: 'emails.unticketed-confirmation-alert',
             with: ['data' => $this->alertData],
         );
     }

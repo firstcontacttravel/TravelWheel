@@ -23,7 +23,7 @@ class FlightBookingResource extends Resource
 
     protected static ?string $navigationLabel = 'Flight Bookings';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+    protected static string|\UnitEnum|null $navigationGroup = 'Flights';
 
     protected static ?int $navigationSort = 10;
 

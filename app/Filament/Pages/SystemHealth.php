@@ -18,11 +18,11 @@ class SystemHealth extends Page
 
     protected static ?string $navigationLabel = 'System Health';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+    protected static string|\UnitEnum|null $navigationGroup = 'System';
 
     protected static ?string $title = 'System Health';
 
-    protected static ?int $navigationSort = 90;
+    protected static ?int $navigationSort = 10;
 
     public array $report = [];
 

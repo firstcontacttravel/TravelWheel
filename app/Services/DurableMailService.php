@@ -4,12 +4,14 @@ namespace App\Services;
 
 use App\Mail\BookingPendingMail;
 use App\Mail\ETicketMail;
+use App\Mail\FlightSupplierAlertMail;
 use App\Mail\PaymentReceiptMail;
 use App\Mail\TravelFlexRepaymentReminderMail;
 use App\Mail\TravelFlexStatusMail;
 use App\Mail\TravelFlexTicketBookedMail;
 use App\Mail\UnTicketedConfirmationAlert;
 use App\Models\FlightBooking;
+use App\Models\FlightSupplierEvent;
 use App\Models\NotificationOutbox;
 use App\Models\TravelFlexApplication;
 use Illuminate\Database\Eloquent\Model;
@@ -37,6 +39,8 @@ class DurableMailService
     public const TRAVELFLEX_REPAYMENT = 'travelflex_repayment';
 
     public const TRAVELFLEX_TICKET_BOOKED = 'travelflex_ticket_booked';
+
+    public const FLIGHT_SUPPLIER_ALERT = 'flight_supplier_alert';
 
     public function sendNowOrStore(
         string $kind,
@@ -208,6 +212,7 @@ class DurableMailService
                 (string) ($payload['timing'] ?? 'due'),
             ),
             self::TRAVELFLEX_TICKET_BOOKED => new TravelFlexTicketBookedMail($this->flight($related)),
+            self::FLIGHT_SUPPLIER_ALERT => new FlightSupplierAlertMail($this->supplierEvent($related)),
             default => throw new \RuntimeException("Unsupported durable email kind [{$message->kind}]."),
         };
     }
@@ -216,6 +221,15 @@ class DurableMailService
     {
         if (! $model instanceof FlightBooking) {
             throw new \RuntimeException('Durable email requires a flight booking.');
+        }
+
+        return $model;
+    }
+
+    private function supplierEvent(Model $model): FlightSupplierEvent
+    {
+        if (! $model instanceof FlightSupplierEvent) {
+            throw new \RuntimeException('Durable email requires a flight supplier event.');
         }
 
         return $model;

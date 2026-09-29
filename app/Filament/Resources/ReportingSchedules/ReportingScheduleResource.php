@@ -29,7 +29,7 @@ class ReportingScheduleResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClock;
     protected static string|\UnitEnum|null $navigationGroup = 'Insights';
     protected static ?string $navigationLabel = 'Scheduled Reports';
-    protected static ?int $navigationSort = 42;
+    protected static ?int $navigationSort = 55;
 
     public static function form(Schema $schema): Schema
     {

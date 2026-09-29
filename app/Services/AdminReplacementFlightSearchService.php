@@ -6,7 +6,6 @@ use App\Models\FlightBooking;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 
 class AdminReplacementFlightSearchService
 {
@@ -37,10 +36,6 @@ class AdminReplacementFlightSearchService
 
         return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($booking, $from, $to, $date, $cabin, $airlineCode): array {
             $payload = [
-                'user_id' => config('services.travelnext.user_id'),
-                'user_password' => config('services.travelnext.password'),
-                'access' => config('services.travelnext.access'),
-                'ip_address' => config('services.travelnext.ip'),
                 'requiredCurrency' => $booking->currency ?: 'NGN',
                 'journeyType' => 'OneWay',
                 'OriginDestinationInfo' => [[
@@ -48,14 +43,16 @@ class AdminReplacementFlightSearchService
                     'airportOriginCode' => $from,
                     'airportDestinationCode' => $to,
                 ]],
-                'class' => $this->mapCabin($cabin),
+                'class' => app(TravelnextFlightService::class)->mapCabin($cabin),
                 'adults' => max(1, (int) $booking->adult_count),
                 'childs' => max(0, (int) $booking->child_count),
                 'infants' => max(0, (int) $booking->infant_count),
             ];
 
-            $response = Http::connectTimeout(10)->timeout(60)
-                ->post(config('services.travelnext.base_url').'availability', $payload);
+            $response = app(TravelnextFlightService::class)->post('availability', $payload, 60, log: [
+                'route' => $from.'-'.$to,
+                'trip_type' => 'reissue',
+            ]);
 
             if ($response->failed()) {
                 return [];
@@ -155,15 +152,7 @@ class AdminReplacementFlightSearchService
     private function airports(): Collection
     {
         return Cache::remember('travelnext-airport-list', now()->addMonth(), function (): Collection {
-            $payload = [
-                'user_id' => config('services.travelnext.user_id'),
-                'user_password' => config('services.travelnext.password'),
-                'access' => config('services.travelnext.access'),
-                'ip_address' => config('services.travelnext.ip'),
-            ];
-
-            $response = Http::connectTimeout(10)->timeout(60)
-                ->post(config('services.travelnext.base_url').'airport_list', $payload);
+            $response = app(TravelnextFlightService::class)->post('airport_list', [], 60);
 
             $airports = $response->failed() ? [] : $this->normalizeAirportResponse($response->json() ?: []);
 
@@ -338,13 +327,4 @@ class AdminReplacementFlightSearchService
         return trim(($hours > 0 ? $hours.'h ' : '').($remainingMinutes > 0 ? $remainingMinutes.'m' : ''));
     }
 
-    private function mapCabin(string $code): string
-    {
-        return match (strtoupper($code)) {
-            'S' => 'PremiumEconomy',
-            'C' => 'Business',
-            'F' => 'First',
-            default => 'Economy',
-        };
-    }
 }

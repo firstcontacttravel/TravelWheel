@@ -179,4 +179,38 @@ class FlightMarkupTest extends TestCase
         $this->assertSame(220000.0, $flight['price']);
         $this->assertSame('touches_nigeria', $flight['markupCategory']);
     }
+
+    public function test_applying_markup_twice_does_not_double_convert_fare_breakdown(): void
+    {
+        // SkyLink's _selectSkylinkFare() re-runs apply() on a flight whose
+        // fareBreakdown already went through this exact USD->NGN conversion
+        // once at search time (unlike TravelNext's own select() flow, which
+        // rebuilds fareBreakdown fresh from raw revalidate data every time).
+        // Without a guard, the second pass treats the already-NGN baseFare as
+        // if it were still raw USD and multiplies by the rate again — found
+        // live: a correct ~142,000 NGN became ~185,800,000 NGN (~1300x).
+        ExchangeRate::query()->updateOrCreate(['currency' => 'USD'], ['rate' => 1500]);
+        FlightMarkup::forgetCachedConfiguration();
+
+        $flight = [
+            'price' => 500,
+            'cabinCode' => 'Y',
+            'segments' => [['fromCountry' => 'Nigeria', 'toCountry' => 'Kenya']],
+            'fareBreakdown' => [
+                ['passengerType' => 'ADT', 'qty' => 1, 'baseFare' => 500, 'totalFare' => 500],
+            ],
+        ];
+
+        $firstPass = FlightMarkup::apply($flight);
+        $this->assertSame(750000.0, $firstPass['fareBreakdown'][0]['baseFare']);
+        $this->assertSame('NGN', $firstPass['fareBreakdown'][0]['currency']);
+
+        // Re-verify + re-price, same as select() does — everything else on
+        // the flight changes, but fareBreakdown is carried over untouched.
+        $secondPass = FlightMarkup::apply($firstPass);
+        $this->assertSame(750000.0, $secondPass['fareBreakdown'][0]['baseFare']);
+
+        $thirdPass = FlightMarkup::apply($secondPass);
+        $this->assertSame(750000.0, $thirdPass['fareBreakdown'][0]['baseFare']);
+    }
 }

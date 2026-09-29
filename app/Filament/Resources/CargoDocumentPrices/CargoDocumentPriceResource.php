@@ -25,7 +25,7 @@ class CargoDocumentPriceResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Air Cargo';
 
-    protected static ?int $navigationSort = 30;
+    protected static ?int $navigationSort = 55;
 
     protected static ?string $navigationLabel = 'Document Pricing';
 

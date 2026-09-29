@@ -75,7 +75,7 @@ class VisaProductForm
                                 Hidden::make('slug'),
                                 Select::make('countries')->relationship('countries', 'name', modifyQueryUsing: fn ($query) => $query->where('is_active', true))->multiple()->searchable()->preload()->required(),
                                 Hidden::make('version')->default(1), Hidden::make('is_active')->default(true),
-                            ])->noSearchResultsMessage('No groups yet. Create one here or under Visa Catalogue > Country Groups.')->visible(fn (Get $get) => in_array($get('rule_type'), ['include_group', 'exclude_group'], true)),
+                            ])->noSearchResultsMessage('No groups yet. Create one here or under Visas > Country Groups.')->visible(fn (Get $get) => in_array($get('rule_type'), ['include_group', 'exclude_group'], true)),
                             Textarea::make('public_message')->label('Customer message')->rows(2)->columnSpanFull(),
                             Toggle::make('is_active')->label('Rule is active')->default(true),
                         ])->columns(2)->orderColumn('sort_order')->collapsible()->itemLabel(fn (array $state): ?string => isset($state['rule_type']) ? Str::headline($state['rule_type']) : null)->columnSpanFull(),

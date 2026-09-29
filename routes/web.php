@@ -4,9 +4,11 @@ use App\Http\Controllers\AdminReportExportController;
 use App\Http\Controllers\AdminVisaDocumentController;
 use App\Http\Controllers\AirCargoController;
 use App\Http\Controllers\CarController;
+use App\Http\Controllers\DesignSystemController;
 use App\Http\Controllers\FlightBookingController;
 use App\Http\Controllers\FlightController;
 use App\Http\Controllers\FlightSearchController;
+use App\Http\Controllers\FlightSupplierSearchController;
 use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\LeadwayController;
 use App\Http\Controllers\LoungeController;
@@ -47,6 +49,9 @@ use App\Livewire\Pages\Support\Support as SupportPage;
 use App\Livewire\Pages\Visa\ApplicationWizard as VisaApplicationWizard;
 use App\Livewire\Pages\Visa\Discovery as VisaDiscovery;
 use App\Livewire\Pages\Visa\Results as VisaResults;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Session\Middleware\StartSession;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 if (app()->environment('local')) {
     Route::view('/__design-system/visa', 'design-system.visa')->name('design-system.visa');
@@ -72,6 +77,17 @@ Route::get('/air/flight-s', FlightPage::class)->name('air.flight-s');
 Route::post('/flights/search', [FlightController::class, 'search'])->middleware('throttle:12,1')->name('flights.search');
 Route::get('/flights/search/loading', [FlightController::class, 'loading'])->name('flights.search.loading');
 Route::get('/flights/search/run', [FlightController::class, 'runPendingSearch'])->middleware('throttle:12,1')->name('flights.search.run');
+
+// Parallel search: one API's flights for one search. Runs WITHOUT a session —
+// the results page calls it once per API, concurrently, and a session saved
+// by each of those requests would overwrite the others (and the customer's
+// own later choices). See FlightSupplierSearchController.
+Route::get('/flights/search/{search}/suppliers/{supplier}', FlightSupplierSearchController::class)
+    ->whereUuid('search')
+    ->where('supplier', '[a-z0-9_]+')
+    ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])
+    ->middleware('throttle:60,1')
+    ->name('flights.search.supplier');
 
 // Route::post('/flights/select', [FlightController::class, 'select'])->name('flights.select');
 
@@ -283,3 +299,16 @@ Route::get('/legal/travel-insurance-terms', TravelInsuranceTerms::class)->name('
 Route::get('/legal/airport-protocol-service-terms', AirportProtocolServiceTerms::class)->name('legal.protocol-terms');
 Route::get('/legal/cookie-policy', CookiePolicy::class)->name('legal.cookies');
 Route::get('/legal/disclaimer', Disclaimer::class)->name('legal.disclaimer');
+
+/*
+ * Design-system specimen and responsive harness — internal design tooling.
+ *
+ * Gated to users who can already reach the admin panel, because both render
+ * real booking references and amounts. Deliberately NOT under /admin: the
+ * specimen has to load without the panel's existing theme.css, so the new
+ * language can be judged on its own rather than fighting the old one.
+ */
+Route::get('/design-system', [DesignSystemController::class, 'index'])
+    ->name('design-system');
+Route::get('/design-system/responsive', [DesignSystemController::class, 'responsive'])
+    ->name('design-system.responsive');

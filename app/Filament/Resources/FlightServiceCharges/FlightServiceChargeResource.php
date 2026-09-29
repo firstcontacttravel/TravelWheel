@@ -21,9 +21,9 @@ class FlightServiceChargeResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+    protected static string|\UnitEnum|null $navigationGroup = 'Flights';
 
-    protected static ?int $navigationSort = 51;
+    protected static ?int $navigationSort = 50;
 
     protected static ?string $navigationLabel = 'Flight Service Charges';
 

@@ -70,6 +70,19 @@ class FlightMarkup
 
         if (! empty($flight['fareBreakdown']) && is_array($flight['fareBreakdown'])) {
             $flight['fareBreakdown'] = array_map(function ($fb) use ($rate) {
+                // Guard against apply() running twice on the same flight — e.g.
+                // SkyLink's _selectSkylinkFare() re-runs apply() on a flight
+                // whose fareBreakdown already went through this exact loop once
+                // at search time. Without this, a second pass treats the
+                // already-NGN baseFare/totalFare as if it were still raw USD
+                // and multiplies by the rate again — confirmed live: a correct
+                // ₦142,084.86 became ₦185,808,633.97 (~1300x) on the second
+                // call. currency is the marker apply() itself sets below, so
+                // this makes the whole method idempotent with no extra state.
+                if (($fb['currency'] ?? null) === 'NGN') {
+                    return $fb;
+                }
+
                 foreach (['baseFare', 'totalFare', 'serviceTax', 'surcharges', 'changePenalty', 'refundPenalty'] as $field) {
                     if (isset($fb[$field])) {
                         $fb[$field] = self::convert((float) $fb[$field], $rate);

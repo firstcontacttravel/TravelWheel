@@ -19,9 +19,9 @@ class TransferResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMapPin;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Car Hire & Transfer';
+    protected static string|\UnitEnum|null $navigationGroup = 'Ground Transport';
 
-    protected static ?int $navigationSort = 50;
+    protected static ?int $navigationSort = 20;
 
     protected static ?string $navigationLabel = 'Transfer Bookings';
 

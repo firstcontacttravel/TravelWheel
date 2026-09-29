@@ -20,9 +20,9 @@ class VisaProductResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedIdentification;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Visa Catalogue';
+    protected static string|\UnitEnum|null $navigationGroup = 'Visas';
 
-    protected static ?int $navigationSort = 30;
+    protected static ?int $navigationSort = 55;
 
     protected static ?string $recordTitleAttribute = 'name';
 

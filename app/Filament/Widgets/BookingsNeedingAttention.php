@@ -15,6 +15,10 @@ class BookingsNeedingAttention extends TableWidget
 
     protected int | string | array $columnSpan = 'full';
 
+    // See OperationsTriage: the 5-second default is the real cost here, not
+    // the queries.
+    protected ?string $pollingInterval = '60s';
+
     public function table(Table $table): Table
     {
         return $table

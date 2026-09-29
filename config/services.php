@@ -42,6 +42,65 @@ return [
         'ip' => env('TRAVELNEXT_IP'),
     ],
 
+    'skylink' => [
+        'base_url' => env('SKYLINK_BASE_URL', 'https://247travels.com/api/'),
+        'email' => env('SKYLINK_EMAIL'),
+        'password' => env('SKYLINK_PASSWORD'),
+        // Retired. SkyLink is switched on and off in the admin now (Flight
+        // APIs, flight_supplier_settings). This is read exactly once, by the
+        // migration that created those settings, so SkyLink starts in the
+        // same state it was in; nothing else reads it. Safe to delete, with
+        // SKYLINK_ENABLED, once that migration has run everywhere.
+        'enabled' => env('SKYLINK_ENABLED', false),
+
+        // SkyLink's timestamps (ticket_deadline, the invoice_id stamp) carry
+        // no UTC offset. They are Lagos time: across sandbox reservations the
+        // invoice stamp ran exactly an hour ahead of our UTC send time.
+        // Inferred, and pending SkyLink's confirmation. Read in the wrong zone,
+        // every stored ticketing deadline is an hour off in the direction that
+        // tells ops they have more time than they do.
+        'timezone' => env('SKYLINK_TIMEZONE', 'Africa/Lagos'),
+
+        // Per-call timeouts, in seconds. Deliberately different per endpoint
+        // because the cost of cutting one short is not the same:
+        //
+        //  search  — user-facing, fired from wire:init while the results page
+        //            is already painted. Live data over one week: 57 calls,
+        //            avg 7.2s, and a bimodal tail — 5 calls over 30s (worst
+        //            35.2s) and nothing at all between 20s and 30s. So a 20s
+        //            cap discards exactly the stuck calls and no healthy ones,
+        //            and keeps the whole request well inside a typical 30s
+        //            max_execution_time / proxy limit instead of letting the
+        //            web server kill it with a 500.
+        //  pricing — checkout, a deliberate user action; worth waiting longer.
+        //  reserve — payment has ALREADY been captured and this creates a live
+        //            PNR. Timing out here means we don't know whether a ticket
+        //            was issued, so it gets the most room, never less.
+        'search_timeout' => (int) env('SKYLINK_SEARCH_TIMEOUT', 20),
+        'pricing_timeout' => (int) env('SKYLINK_PRICING_TIMEOUT', 30),
+        'reserve_timeout' => (int) env('SKYLINK_RESERVE_TIMEOUT', 90),
+        // A credential POST that should answer in well under a second. Kept
+        // deliberately tight because on a cold token cache it is spent BEFORE
+        // the search, and the two together have to clear the proxy limit: the
+        // 35.2s call above ran to completion and logged, so PHP's own
+        // max_execution_time was never the thing killing those requests — the
+        // web server in front of it was. 6 + 20 leaves real headroom under a
+        // 30s gateway timeout, and skylink:warm-token means the 6 is almost
+        // never actually spent.
+        'auth_timeout' => (int) env('SKYLINK_AUTH_TIMEOUT', 6),
+
+        // SkyLink offers stay valid 10-15 minutes (their docs), so re-serving
+        // an identical search for a few minutes turns a reload, a back-button,
+        // or a repeated search from a ~7s wait into an instant one. Safe for
+        // booking because the cached booking_token is at most this old, still
+        // inside SkyLink's own validity window, and select() re-prices through
+        // /flights/pricing for a fresh token before anything is reserved.
+        // Prices are not customer-specific, so the entry is shared; markup is
+        // applied after the cache, so pricing config changes apply at once.
+        // Set to 0 to disable.
+        'search_cache_ttl' => (int) env('SKYLINK_SEARCH_CACHE_TTL', 180),
+    ],
+
     'seerbit' => [
         'base_url' => env('SEERBIT_BASE_URL', 'https://seerbitapi.com'),
         'public_key' => env('SEERBIT_PUBLIC_KEY'),

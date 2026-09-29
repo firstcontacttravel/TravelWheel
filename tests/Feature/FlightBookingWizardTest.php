@@ -24,16 +24,26 @@ class FlightBookingWizardTest extends TestCase
     {
         Livewire::test(FlightBooking::class)
             ->set('step', 2)
-            ->assertSee('Trip Customisation')
-            ->assertSee('Add extra check-in bags')
-            ->assertSee('Review Booking')
-            ->assertDontSee('Traveller Details');
+            ->assertSee('Trip customisation')
+            // With no extras on offer the banner used to be headed "Add extra
+            // check-in bags", which reads as an action on a step where none is
+            // available. It now names the situation and what the fare covers.
+            ->assertSee('No optional extras for this route')
+            ->assertSee('Review booking')
+            ->assertDontSee('Traveller details');
     }
 
-    public function test_passenger_summary_does_not_suggest_the_count_can_be_adjusted(): void
+    /**
+     * The count used to sit in a read-only three-column counter that looked
+     * like the adjustable one from the search form but had no controls. That
+     * block is gone; the count now rides along on the Traveller details
+     * heading, where it orients without implying it can be changed here.
+     */
+    public function test_passenger_count_is_shown_without_suggesting_it_can_be_adjusted(): void
     {
         Livewire::test(FlightBooking::class)
             ->assertSee('1 passenger')
-            ->assertDontSee('adjust if needed');
+            ->assertDontSee('adjust if needed')
+            ->assertDontSee('bk-pax-counter');
     }
 }

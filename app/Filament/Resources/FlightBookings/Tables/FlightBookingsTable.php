@@ -14,6 +14,7 @@ use App\Services\DurableMailService;
 use App\Services\SeerbitPaymentService;
 use App\Services\TravelFlexApplicationService;
 use App\Services\TravelFlexFlowService;
+use App\Support\FlightDisplay;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
@@ -34,7 +35,9 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -43,8 +46,14 @@ class FlightBookingsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->heading('Flight Bookings')
-            ->description('Operational queue for payment verification, ticketing, and customer support.')
+            /*
+             * Neither ->heading() nor ->description(). The page title directly
+             * above already says "Flight Bookings", as does the breadcrumb
+             * above that — three copies of the resource name on one screen.
+             * The description moved to the page subheading, where page-level
+             * context belongs; as a table band it cost a whole 50px stripe
+             * above a queue people scroll all day.
+             */
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
             ->paginated([10, 25, 50, 100])
@@ -55,23 +64,21 @@ class FlightBookingsTable
             ->columns([
                 TextColumn::make('attention')
                     ->label('Queue')
-                    ->state(fn (FlightBooking $record): string => self::queueLabel($record))
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'Awaiting transfer' => 'warning',
-                        'Ready to ticket' => 'success',
-                        'Ticketing failed' => 'danger',
-                        'Ticketed' => 'success',
-                        'Pending payment' => 'gray',
-                        default => 'info',
-                    }),
+                    ->state(fn (FlightBooking $record): HtmlString => self::statusDot(self::queueLabel($record)))
+                    ->html()
+                    ->searchable(false),
+                /*
+                 * The reference alone. What used to be its description — the
+                 * UniqueID and the fare type — are columns in their own right
+                 * further down, so nothing is lost; it is one click away in the
+                 * column manager rather than on every row forever.
+                 */
                 TextColumn::make('booking_ref')
                     ->label('Booking')
                     ->searchable()
                     ->copyable()
                     ->sortable()
-                    ->weight('bold')
-                    ->description(fn (FlightBooking $record): string => trim(($record->unique_id ?: 'No UniqueID').' | '.($record->fare_type ?: 'No fare type'))),
+                    ->extraAttributes(['class' => 'tc-mono']),
                 TextColumn::make('unique_id')
                     ->label('UniqueID')
                     ->searchable()
@@ -79,7 +86,7 @@ class FlightBookingsTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('route')
                     ->label('Journey')
-                    ->state(fn (FlightBooking $record): HtmlString => self::journeyColumn($record))
+                    ->state(fn (FlightBooking $record): HtmlString => self::routeCell($record))
                     ->html()
                     ->searchable()
                     ->placeholder('-')
@@ -96,8 +103,16 @@ class FlightBookingsTable
                 TextColumn::make('total_price')
                     ->label('Total')
                     ->formatStateUsing(fn (FlightBooking $record): string => self::money($record->total_price, $record->currency))
-                    ->description(fn (FlightBooking $record): string => self::pricingSummary($record))
+                    ->alignEnd()
+                    ->extraAttributes(['class' => 'tc-money'])
                     ->sortable(),
+                // Was the Total column's description. Service charge and
+                // supplier fare already have their own columns below.
+                TextColumn::make('passengers')
+                    ->label('Pax')
+                    ->state(fn (FlightBooking $record): string => (string) max(1, $record->totalPassengers()))
+                    ->alignEnd()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('markup_amount')
                     ->label('Service charge')
                     ->formatStateUsing(fn (FlightBooking $record): string => self::money($record->markup_amount, $record->currency))
@@ -109,28 +124,22 @@ class FlightBookingsTable
                     ->formatStateUsing(fn (FlightBooking $record): string => self::money($record->supplier_price, $record->currency))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+                /*
+                 * Booking status is hidden by default because the Queue column
+                 * is derived from it and from payment_status — three status
+                 * columns side by side is the same fact told three times.
+                 */
                 TextColumn::make('booking_status')
                     ->label('Booking')
-                    ->badge()
-                    ->color(fn (?string $state): string => match ($state) {
-                        'ticketed', 'confirmed' => 'success',
-                        'failed', 'cancelled', 'ticketing_failed' => 'danger',
-                        'on_hold' => 'warning',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (?string $state): string => self::label($state))
+                    ->state(fn (FlightBooking $record): HtmlString => self::statusDot(self::label($record->booking_status)))
+                    ->html()
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('payment_status')
                     ->label('Payment')
-                    ->badge()
-                    ->color(fn (?string $state): string => match ($state) {
-                        'paid', 'partially_paid' => 'success',
-                        'failed' => 'danger',
-                        'awaiting_bank_transfer', 'pending' => 'warning',
-                        default => 'gray',
-                    })
-                    ->formatStateUsing(fn (?string $state): string => self::label($state))
+                    ->state(fn (FlightBooking $record): HtmlString => self::statusDot(self::label($record->payment_status)))
+                    ->html()
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('payment_method')
@@ -138,7 +147,7 @@ class FlightBookingsTable
                     ->placeholder('-')
                     ->searchable()
                     ->formatStateUsing(fn (?string $state): string => self::label($state))
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('payment_reference')
                     ->copyable()
                     ->searchable()
@@ -162,12 +171,21 @@ class FlightBookingsTable
                     ->label('Customer')
                     ->searchable()
                     ->copyable()
-                    ->description(fn (FlightBooking $record): string => $record->contact_phone ?: '-')
                     ->toggleable(),
+                // Was the Customer column's description.
+                TextColumn::make('contact_phone')
+                    ->label('Phone')
+                    ->searchable()
+                    ->copyable()
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                // The exact timestamp was this column's description; "3 days
+                // ago" is what triage reads, the timestamp is what an
+                // investigation reads, and they are different jobs.
                 TextColumn::make('created_at')
                     ->label('Created')
                     ->since()
-                    ->description(fn (FlightBooking $record): string => self::watDateTime($record->created_at))
+                    ->tooltip(fn (FlightBooking $record): string => self::watDateTime($record->created_at))
                     ->sortable(),
             ])
             ->filters([
@@ -284,6 +302,7 @@ class FlightBookingsTable
                     self::verifySeerbitPaymentAction(),
                     self::sendPaymentReceiptAction(),
                     self::orderTicketAction(),
+                    self::recordSkylinkTicketsAction(),
                     self::fetchTripDetailsAction(),
                     self::resendETicketAction(),
                     self::sendTicketingFailureAlertAction(),
@@ -292,6 +311,72 @@ class FlightBookingsTable
                     ->icon('heroicon-o-ellipsis-horizontal')
                     ->color('gray'),
             ]);
+    }
+
+    /**
+     * Status as a dot plus a word.
+     *
+     * Eleven coloured pills in a column is a fruit salad; eleven dots in a
+     * fixed position is a stripe the eye scans without reading, and the red one
+     * is found before any word is. Shape carries the meaning too — filled is
+     * settled, open is not started, half is in progress — so the language never
+     * depends on colour alone.
+     */
+    private static function statusDot(string $label): HtmlString
+    {
+        [$tone, $shape] = match ($label) {
+            'Ticketing failed', 'Failed', 'Cancelled' => ['critical', ''],
+            'Awaiting transfer', 'On hold', 'Awaiting deposit' => ['warning', 'tc-status-progress'],
+            'Ticketed', 'Paid', 'Confirmed' => ['positive', ''],
+            'Ready to ticket', 'Review', 'Partially paid' => ['info', 'tc-status-progress'],
+            'Pending payment', 'Pending' => ['idle', 'tc-status-pending'],
+            default => ['idle', ''],
+        };
+
+        return new HtmlString(sprintf(
+            '<span class="tc-status tc-status-%s %s">%s</span>',
+            $tone,
+            $shape,
+            e($label ?: '---'),
+        ));
+    }
+
+    /**
+     * The journey on one line, drawn rather than typed.
+     *
+     * Built from the stored `route` column via FlightBooking::routeLegs(). The
+     * previous cell derived its legs from flight_snapshot.segments, which is
+     * deliberately empty on a multi-city booking — those keep their legs in
+     * .multiLegs — so every multi-city trip rendered with no route at all.
+     *
+     * The connector is drawn because U+2192 is in none of Inter's subsets: a
+     * typed arrow falls back to a system font in the middle of the route.
+     * Intermediate stops step back so the endpoints stay dominant; a return
+     * trip stores as LOS-IST-DXB-IST-LOS and five codes of equal weight make a
+     * cell you have to read rather than glance at.
+     */
+    private static function routeCell(FlightBooking $record): HtmlString
+    {
+        $legs = $record->routeLegs();
+
+        if ($legs === []) {
+            return new HtmlString('<span class="fi-ta-placeholder">---</span>');
+        }
+
+        $last = count($legs) - 1;
+
+        $html = '<span class="tc-route tc-t-body">';
+
+        foreach ($legs as $index => $leg) {
+            if ($index > 0) {
+                $html .= '<span class="tc-route-line"></span>';
+            }
+
+            $via = ($index > 0 && $index < $last) ? ' tc-route-via' : '';
+            $html .= '<span class="tc-mono'.$via.'">'.e($leg).'</span>';
+        }
+
+        return new HtmlString($html.'</span>');
     }
 
     private static function queueLabel(FlightBooking $record): string
@@ -337,146 +422,6 @@ class FlightBookingsTable
         ])->filter()->implode(' | ');
     }
 
-    private static function journeyColumn(FlightBooking $record): HtmlString
-    {
-        $groups = self::journeyGroups($record);
-
-        if ($groups === []) {
-            return new HtmlString('<span class="text-gray-500">'.e($record->route ?: '-').'</span>');
-        }
-
-        $hasMultiLegs = collect($record->flight_snapshot['multiLegs'] ?? [])
-            ->contains(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== []);
-        $tripLabel = count($groups) > 1
-            ? ($hasMultiLegs ? 'Multi-city' : 'Round trip')
-            : self::label($record->trip_type ?: 'one_way');
-
-        $html = '<div class="tw-journey-cell">';
-        $html .= '<div class="tw-journey-kind">'.e($tripLabel).'</div>';
-
-        foreach ($groups as $group) {
-            $segments = $group['segments'];
-            $first = $segments[0] ?? [];
-            $last = $segments[array_key_last($segments)] ?? [];
-            $origin = (string) self::segmentValue($first, ['from', 'airportOriginCode'], '');
-            $destination = (string) self::segmentValue($last, ['to', 'airportDestinationCode'], '');
-            $date = self::journeySegmentDate($first);
-            $flightLines = collect($segments)
-                ->map(function (array $segment): string {
-                    $airline = trim((string) self::segmentValue($segment, ['airline', 'airlineCode', 'MarketingAirlineCode'], ''));
-                    $flight = trim((string) self::segmentValue($segment, ['flightNo', 'flightNumber', 'FlightNumber'], ''));
-                    $cabin = trim((string) self::segmentValue($segment, ['cabin', 'cabinCode', 'CabinClassCode'], ''));
-                    $cabin = strlen($cabin) === 1 ? self::cabinLabel($cabin) : $cabin;
-                    $flightLabel = $flight;
-
-                    if (filled($airline) && filled($flight) && ! str_starts_with(strtoupper($flight), strtoupper($airline))) {
-                        $flightLabel = trim($airline.' '.$flight);
-                    }
-
-                    $time = trim(collect([
-                        self::journeySegmentTime($segment, ['departTime', 'DepartureDateTime', 'departDT']),
-                        self::journeySegmentTime($segment, ['arriveTime', 'ArrivalDateTime', 'arriveDT']),
-                    ])->filter()->implode('-'));
-
-                    $html = '';
-
-                    if (filled($time)) {
-                        $html .= '<span class="tw-journey-time">'.e($time).'</span>';
-                    }
-
-                    if (filled($flightLabel)) {
-                        $html .= '<span>'.e($flightLabel).'</span>';
-                    }
-
-                    if (filled($cabin)) {
-                        $html .= '<span class="tw-journey-cabin">'.e($cabin).'</span>';
-                    }
-
-                    return $html;
-                })
-                ->filter()
-                ->map(fn (string $line): string => '<div class="tw-journey-flight">'.$line.'</div>')
-                ->implode('');
-
-            $html .= '<div class="tw-journey-leg">';
-            $html .= '<div class="tw-journey-dot"></div>';
-            $html .= '<div class="tw-journey-leg-main">';
-            $html .= '<div class="tw-journey-leg-top">';
-            $html .= '<div class="tw-journey-route">';
-            $html .= '<span>'.e($origin ?: '-').'</span>';
-            $html .= '<span class="tw-journey-arrow">-></span>';
-            $html .= '<span>'.e($destination ?: '-').'</span>';
-            $html .= '</div>';
-            $html .= '<span class="tw-journey-label">'.e($group['label']).'</span>';
-            $html .= '</div>';
-            $html .= '<div class="tw-journey-date">'.e($date ?: '-').'</div>';
-            $html .= '<div class="tw-journey-flights">'.($flightLines ?: '<div class="tw-journey-flight">-</div>').'</div>';
-            $html .= '</div>';
-            $html .= '</div>';
-        }
-
-        $html .= '</div>';
-
-        return new HtmlString($html);
-    }
-
-    private static function journeyGroups(FlightBooking $record): array
-    {
-        $snapshot = $record->flight_snapshot ?? [];
-        $multiLegs = collect($snapshot['multiLegs'] ?? [])
-            ->filter(fn ($leg): bool => is_array($leg) && is_array($leg['segments'] ?? null) && ($leg['segments'] ?? []) !== [])
-            ->values();
-
-        if ($multiLegs->isNotEmpty()) {
-            return $multiLegs
-                ->map(fn (array $leg, int $index): array => [
-                    'label' => $leg['label'] ?? 'Leg '.($index + 1),
-                    'segments' => array_values($leg['segments'] ?? []),
-                ])
-                ->all();
-        }
-
-        $groups = [];
-        $outbound = is_array($snapshot['segments'] ?? null) ? array_values($snapshot['segments']) : [];
-        $return = is_array($snapshot['returnSegments'] ?? null) ? array_values($snapshot['returnSegments']) : [];
-
-        if ($outbound !== []) {
-            $groups[] = ['label' => $return !== [] ? 'Outbound' : 'Flight', 'segments' => $outbound];
-        }
-
-        if ($return !== []) {
-            $groups[] = ['label' => 'Return', 'segments' => $return];
-        }
-
-        return $groups;
-    }
-
-    private static function journeySegmentDate(array $segment): string
-    {
-        $value = self::segmentValue($segment, ['departDT', 'DepartureDateTime', 'departureDate', 'departDate'], null);
-
-        if (blank($value)) {
-            return '';
-        }
-
-        return preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $value)
-            ? self::watDateTime($value, 'D, d M Y')
-            : (string) $value;
-    }
-
-    private static function journeySegmentTime(array $segment, array $keys): string
-    {
-        $value = self::segmentValue($segment, $keys, null);
-
-        if (blank($value)) {
-            return '';
-        }
-
-        return preg_match('/^\d{4}-\d{2}-\d{2}/', (string) $value)
-            ? self::watDateTime($value, 'H:i')
-            : (string) $value;
-    }
-
     private static function label(?string $value): string
     {
         return filled($value) ? str((string) $value)->replace('_', ' ')->headline()->toString() : '-';
@@ -484,26 +429,18 @@ class FlightBookingsTable
 
     private static function actionContext(FlightBooking $record, string $title): HtmlString
     {
-        $amount = self::money($record->total_price, $record->currency);
-        $serviceCharge = self::money($record->markup_amount, $record->currency);
-        $customer = $record->contact_email ?: ($record->contact_phone ?: '-');
-
-        return new HtmlString(
-            '<div class="tw-action-context">'.
-                '<div>'.
-                    '<div class="tw-action-context-kicker">'.e($title).'</div>'.
-                    '<div class="tw-action-context-title">'.e($record->booking_ref ?: 'Booking').'</div>'.
-                    '<div class="tw-action-context-sub">'.e(trim(($record->route ?: '-').' | '.($record->airline ?: '-'))).'</div>'.
-                '</div>'.
-                '<dl>'.
-                    '<div><dt>Customer</dt><dd>'.e($customer).'</dd></div>'.
-                    '<div><dt>Amount</dt><dd>'.e($amount).'</dd></div>'.
-                    '<div><dt>Service charge</dt><dd>'.e($serviceCharge).'</dd></div>'.
-                    '<div><dt>Payment</dt><dd>'.e(self::label($record->payment_status)).'</dd></div>'.
-                    '<div><dt>Booking</dt><dd>'.e(self::label($record->booking_status)).'</dd></div>'.
-                '</dl>'.
-            '</div>',
-        );
+        return new HtmlString(view('filament.booking.action-context', [
+            'kicker' => $title,
+            'title' => $record->booking_ref ?: 'Booking',
+            'subtitle' => trim(($record->route ?: '---').' · '.($record->airline ?: '---')),
+            'rows' => [
+                'Customer' => $record->contact_email ?: ($record->contact_phone ?: '---'),
+                'Amount' => self::money($record->total_price, $record->currency),
+                'Service charge' => self::money($record->markup_amount, $record->currency),
+                'Payment' => self::label($record->payment_status),
+                'Booking' => self::label($record->booking_status),
+            ],
+        ])->render());
     }
 
     private static function money(mixed $amount, ?string $currency): string
@@ -1043,13 +980,167 @@ class FlightBookingsTable
             });
     }
 
+    /**
+     * SkyLink's API ends at reserve: it returns a PNR and a ticketing deadline
+     * but never a ticket number, and has no endpoint to fetch one later. Until
+     * it does, ops receive the numbers from SkyLink out of band and enter them
+     * here — which marks the booking ticketed and emails the customer the
+     * e-ticket they were promised at confirmation.
+     */
+    public static function recordSkylinkTicketsAction(): Action
+    {
+        return Action::make('recordSkylinkTickets')
+            ->label('Record ticket numbers')
+            ->icon('heroicon-o-ticket')
+            ->color('success')
+            ->visible(fn (FlightBooking $record): bool => self::canRecordSkylinkTickets($record))
+            ->modalHeading(fn (FlightBooking $record): string => 'Record ticket numbers for '.($record->booking_ref ?: 'booking'))
+            ->modalDescription("SkyLink issues tickets outside its API. Enter each passenger's e-ticket number once SkyLink provides it. Saving marks the booking ticketed and emails the customer their e-ticket.")
+            ->modalIcon('heroicon-o-ticket')
+            ->modalIconColor('success')
+            ->modalSubmitActionLabel('Save and email e-ticket')
+            ->modalWidth('lg')
+            ->form(fn (FlightBooking $record): array => [
+                Placeholder::make('booking_context')
+                    ->hiddenLabel()
+                    ->content(fn () => self::actionContext($record, 'SkyLink ticket numbers')),
+                ...collect(FlightDisplay::passengers($record->passengers_snapshot ?? []))
+                    ->map(fn (array $passenger, int $index): TextInput => TextInput::make("tickets.{$index}")
+                        ->label(self::passengerTicketLabel($passenger))
+                        ->required()
+                        ->placeholder('157 2345678901')
+                        // 13 digits: the 3-digit airline code then a 10-digit
+                        // serial. Spaces and dashes are accepted because that
+                        // is how carriers and GDS screens usually print them.
+                        ->regex('/^(?:[\s-]*\d){13}[\s-]*$/')
+                        ->validationMessages([
+                            'regex' => 'An e-ticket number is 13 digits: the 3-digit airline code followed by 10 digits.',
+                        ])
+                        ->dehydrateStateUsing(fn (?string $state): string => preg_replace('/\D+/', '', (string) $state)))
+                    ->all(),
+            ])
+            ->action(function (FlightBooking $record, array $data, Action $action): void {
+                $numbers = array_values(array_map(
+                    fn ($number): string => preg_replace('/\D+/', '', (string) $number),
+                    (array) ($data['tickets'] ?? [])
+                ));
+
+                if (count($numbers) !== count(array_unique($numbers))) {
+                    Notification::make()
+                        ->title('Duplicate ticket number')
+                        ->body('Every passenger has their own e-ticket number, but two of the numbers entered are the same.')
+                        ->danger()
+                        ->send();
+
+                    $action->halt();
+                }
+
+                $previousStatus = $record->booking_status;
+
+                // Re-read under a row lock so two people saving the same booking
+                // at once cannot both mark it ticketed and email the customer twice.
+                $recorded = DB::transaction(function () use ($record, $numbers): bool {
+                    $booking = FlightBooking::query()->lockForUpdate()->find($record->id);
+
+                    if (! $booking || ! self::canRecordSkylinkTickets($booking)) {
+                        return false;
+                    }
+
+                    $passengers = array_values($booking->passengers_snapshot ?? []);
+                    foreach ($numbers as $index => $number) {
+                        if (isset($passengers[$index]) && is_array($passengers[$index])) {
+                            $passengers[$index]['eticket'] = $number;
+                        }
+                    }
+
+                    $booking->update([
+                        'passengers_snapshot' => $passengers,
+                        'booking_status' => 'ticketed',
+                        'ticket_ordered' => true,
+                        'ticket_ordered_at' => now(),
+                    ]);
+
+                    return true;
+                });
+
+                if (! $recorded) {
+                    Notification::make()
+                        ->title('Ticket numbers not saved')
+                        ->body('This booking is no longer waiting for ticket numbers. Someone else may have just recorded them. Refresh to see its current state.')
+                        ->warning()
+                        ->send();
+
+                    return;
+                }
+
+                $record->refresh();
+
+                self::recordTicketing($record, [
+                    'action' => 'skylink_tickets_recorded',
+                    'previous_booking_status' => $previousStatus,
+                    'new_booking_status' => 'ticketed',
+                    'ticket_status' => 'TICKETED',
+                    'unique_id' => $record->unique_id,
+                    'message' => 'E-ticket numbers recorded manually: '.implode(', ', $numbers),
+                    'request_payload' => ['tickets' => $numbers],
+                ]);
+
+                try {
+                    // Its own outbox key: the booking-confirmed email already
+                    // used the default one, and the outbox treats a delivered
+                    // key as done, so reusing it would drop this email silently.
+                    app(AdminTicketingService::class)->sendETicket($record, [], 'flight-eticket:'.$record->id.':ticketed');
+                } catch (Throwable $exception) {
+                    Notification::make()
+                        ->title('Ticket numbers saved')
+                        ->body('The e-ticket email did not go out yet and will be retried automatically. '.$exception->getMessage())
+                        ->warning()
+                        ->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->title('Ticket numbers saved')
+                    ->body('The e-ticket was emailed to '.$record->contact_email.'.')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    private static function canRecordSkylinkTickets(FlightBooking $record): bool
+    {
+        return $record->isSkylink()
+            && $record->payment_status === 'paid'
+            && $record->booking_status === 'confirmed'
+            && ! $record->ticket_ordered
+            && filled($record->unique_id);
+    }
+
+    private static function passengerTicketLabel(array $passenger): string
+    {
+        $name = trim(implode(' ', array_filter([
+            $passenger['title'] ?? null,
+            $passenger['first_name'] ?? null,
+            $passenger['last_name'] ?? null,
+        ])));
+
+        $type = match (strtoupper((string) ($passenger['type'] ?? 'ADT'))) {
+            'CHD' => 'child',
+            'INF' => 'infant',
+            default => 'adult',
+        };
+
+        return ($name ?: 'Passenger').' · '.$type;
+    }
+
     public static function fetchTripDetailsAction(): Action
     {
         return Action::make('fetchTripDetails')
             ->label('Trip details')
             ->icon('heroicon-o-identification')
             ->color('info')
-            ->visible(fn (FlightBooking $record): bool => filled($record->unique_id))
+            ->visible(fn (FlightBooking $record): bool => filled($record->unique_id) && $record->usesTravelNextApi())
             ->modalHeading(fn (FlightBooking $record): string => 'Fetch Trip Details for '.($record->booking_ref ?: 'booking'))
             ->modalDescription('Refresh the latest ticket status, airline PNR, and itinerary details for this booking.')
             ->modalIcon('heroicon-o-identification')
@@ -1114,6 +1205,12 @@ class FlightBookingsTable
             ->modalIconColor('success')
             ->modalSubmitActionLabel('Resend e-ticket')
             ->action(function (FlightBooking $record): void {
+                if ($record->isSkylink()) {
+                    self::resendSkylinkETicket($record);
+
+                    return;
+                }
+
                 try {
                     $tripResult = app(AdminTicketingService::class)->tripDetails($record);
                     $tripDetails = self::tripDetailsWithLatestReissueTickets($record->fresh(), $tripResult['trip_details'] ?? []);
@@ -1159,6 +1256,49 @@ class FlightBookingsTable
                     ->success()
                     ->send();
             });
+    }
+
+    /**
+     * SkyLink has no trip-details endpoint: the ticket numbers ops recorded
+     * live on the passengers snapshot, so the e-ticket renders from the
+     * booking alone. Each resend is a deliberate new email and gets its own
+     * outbox key, because a key the outbox has already delivered is treated
+     * as done and nothing is sent.
+     */
+    private static function resendSkylinkETicket(FlightBooking $record): void
+    {
+        try {
+            app(AdminTicketingService::class)->sendETicket($record, [], 'flight-eticket:'.$record->id.':resend:'.Str::uuid());
+        } catch (Throwable $exception) {
+            self::recordTicketing($record, [
+                'action' => 'eticket_resend_failed',
+                'previous_booking_status' => $record->booking_status,
+                'new_booking_status' => $record->booking_status,
+                'unique_id' => $record->unique_id,
+                'message' => $exception->getMessage(),
+            ]);
+
+            Notification::make()
+                ->title('E-ticket not sent')
+                ->body($exception->getMessage())
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        self::recordTicketing($record, [
+            'action' => 'eticket_resent',
+            'previous_booking_status' => $record->booking_status,
+            'new_booking_status' => $record->booking_status,
+            'unique_id' => $record->unique_id,
+            'message' => 'E-ticket resent to '.$record->contact_email,
+        ]);
+
+        Notification::make()
+            ->title('E-ticket sent')
+            ->success()
+            ->send();
     }
 
     public static function sendTicketingFailureAlertAction(): Action
@@ -1227,6 +1367,7 @@ class FlightBookingsTable
         }
 
         return $paymentReady
+            && $record->usesTravelNextApi()
             && filled($record->unique_id)
             && (! $record->tkt_time_limit || $record->tkt_time_limit->isFuture())
             && ! $record->ticket_ordered
@@ -1311,7 +1452,7 @@ class FlightBookingsTable
             ->label('PTR status')
             ->icon('heroicon-o-magnifying-glass-circle')
             ->color('info')
-            ->visible(fn (FlightBooking $record): bool => filled($record->unique_id) && $record->postTicketingRequests()->whereNotNull('ptr_unique_id')->exists())
+            ->visible(fn (FlightBooking $record): bool => $record->usesTravelNextApi() && filled($record->unique_id) && $record->postTicketingRequests()->whereNotNull('ptr_unique_id')->exists())
             ->modalHeading(fn (FlightBooking $record): string => 'Check PTR status for '.($record->booking_ref ?: 'booking'))
             ->modalDescription('Check the latest status of a refund, void, reissue, or cancellation request.')
             ->modalIcon('heroicon-o-magnifying-glass-circle')
@@ -3452,7 +3593,8 @@ class FlightBookingsTable
 
     private static function canRunCancelBooking(FlightBooking $record): bool
     {
-        return filled($record->unique_id)
+        return $record->usesTravelNextApi()
+            && filled($record->unique_id)
             && $record->booking_status !== 'cancelled'
             && $record->booking_status !== 'ticketed'
             && ! $record->ticket_ordered
@@ -3505,7 +3647,7 @@ class FlightBookingsTable
 
     private static function canRunPostTicketing(FlightBooking $record, string $operationType, ?string $requiresQuoteType = null): bool
     {
-        if (! filled($record->unique_id) || $record->booking_status !== 'ticketed') {
+        if (! $record->usesTravelNextApi() || ! filled($record->unique_id) || $record->booking_status !== 'ticketed') {
             return false;
         }
 

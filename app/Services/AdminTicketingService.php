@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\FlightBooking;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
@@ -12,6 +11,15 @@ class AdminTicketingService
 {
     public function ticketOrder(FlightBooking $booking): array
     {
+        if (! $booking->usesTravelNextApi()) {
+            return [
+                'ok' => false,
+                'message' => 'SkyLink bookings have no ticket-order step. Record the ticket numbers once SkyLink issues them.',
+                'request' => [],
+                'response' => [],
+            ];
+        }
+
         $lock = Cache::lock('flight-ticketing:'.$booking->id, 300);
 
         if (! $lock->get()) {
@@ -80,8 +88,7 @@ class AdminTicketingService
         $payload = $this->travelNextPayload($booking->unique_id);
 
         try {
-            $response = Http::connectTimeout(10)->timeout(60)
-                ->post(config('services.travelnext.base_url').'ticket_order', $payload);
+            $response = $this->travelnext()->post('ticket_order', ['UniqueID' => $booking->unique_id], 60);
         } catch (\Throwable $exception) {
             Log::error('Admin ticket order request failed', [
                 'booking_id' => $booking->id,
@@ -121,11 +128,19 @@ class AdminTicketingService
 
     public function tripDetails(FlightBooking $booking): array
     {
+        if (! $booking->usesTravelNextApi()) {
+            return [
+                'ok' => false,
+                'message' => 'Trip details come from TravelNext and are not available for SkyLink bookings.',
+                'request' => [],
+                'response' => [],
+            ];
+        }
+
         $payload = $this->travelNextPayload($booking->unique_id);
 
         try {
-            $response = Http::connectTimeout(10)->timeout(30)
-                ->post(config('services.travelnext.base_url').'trip_details', $payload);
+            $response = $this->travelnext()->post('trip_details', ['UniqueID' => $booking->unique_id], 30);
         } catch (\Throwable $exception) {
             Log::error('Admin trip details request failed', [
                 'booking_id' => $booking->id,
@@ -171,14 +186,20 @@ class AdminTicketingService
         ];
     }
 
-    public function sendETicket(FlightBooking $booking, array $tripDetails): void
+    /**
+     * $uniqueKey defaults to the key the booking-confirmed email used. The
+     * outbox treats an already-sent key as delivered and returns true without
+     * sending, so a genuinely new email — the ticket once it is issued — needs
+     * a key of its own, or it is silently dropped.
+     */
+    public function sendETicket(FlightBooking $booking, array $tripDetails, ?string $uniqueKey = null): void
     {
         $sent = app(DurableMailService::class)->sendNowOrStore(
             DurableMailService::FLIGHT_ETICKET,
             (string) $booking->contact_email,
             $booking,
             ['trip_details' => $tripDetails],
-            'flight-eticket:'.$booking->id,
+            $uniqueKey ?? 'flight-eticket:'.$booking->id,
         );
 
         if (! $sent) {
@@ -243,26 +264,23 @@ class AdminTicketingService
         return null;
     }
 
+    /**
+     * The request exactly as sent, for the admin's ticketing record —
+     * credentials included so the record shows they were, then redacted.
+     */
     private function travelNextPayload(?string $uniqueId): array
     {
-        return [
-            'user_id' => config('services.travelnext.user_id'),
-            'user_password' => config('services.travelnext.password'),
-            'access' => config('services.travelnext.access'),
-            'ip_address' => config('services.travelnext.ip'),
-            'UniqueID' => $uniqueId,
-        ];
+        return array_merge($this->travelnext()->credentials(), ['UniqueID' => $uniqueId]);
     }
 
     private function redactPayload(array $payload): array
     {
-        foreach (['user_id', 'user_password', 'access', 'ip_address'] as $key) {
-            if (array_key_exists($key, $payload)) {
-                $payload[$key] = '[redacted]';
-            }
-        }
+        return $this->travelnext()->redact($payload);
+    }
 
-        return $payload;
+    private function travelnext(): TravelnextFlightService
+    {
+        return app(TravelnextFlightService::class);
     }
 
     private function extractApiErrorMessage(array $payload, string $fallback): string

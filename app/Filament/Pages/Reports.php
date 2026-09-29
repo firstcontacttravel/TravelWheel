@@ -26,7 +26,7 @@ class Reports extends Page
 
     protected static ?string $title = 'Business Intelligence';
 
-    protected static ?int $navigationSort = 40;
+    protected static ?int $navigationSort = 10;
 
     public string $from = '';
     public string $to = '';

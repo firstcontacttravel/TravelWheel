@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\FlightSearch;
+use App\Models\FlightSearchResult;
 use App\Services\TravelFlexApplicationService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -32,6 +34,16 @@ Schedule::command('queue:work --stop-when-empty --sleep=1 --tries=3 --timeout=18
     ->everyMinute()
     ->withoutOverlapping(5);
 
+Schedule::command('flights:re-enable-suppliers')
+    ->everyMinute()
+    ->withoutOverlapping(2);
+
+// Parallel searches and each API's results are kept for a couple of hours at
+// most (config/flights.php); clear the expired ones so the tables stay small.
+Schedule::command('model:prune', ['--model' => [FlightSearch::class, FlightSearchResult::class]])
+    ->hourly()
+    ->withoutOverlapping(30);
+
 Schedule::command('flights:reconcile --limit=200')
     ->everyFiveMinutes()
     ->withoutOverlapping(10);
@@ -44,3 +56,10 @@ Schedule::command('reports:send-scheduled')
     ->hourly()
     ->timezone('Africa/Lagos')
     ->withoutOverlapping(120);
+
+// The SkyLink JWT caches for 13 minutes against a 15-minute lifetime; refresh
+// it just inside that window so a customer's search never pays for the login
+// round trip on top of SkyLink's own ~7s average.
+Schedule::command('skylink:warm-token')
+    ->everyTenMinutes()
+    ->withoutOverlapping(5);

@@ -26,9 +26,9 @@ class VisaVendorResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Visa Catalogue';
+    protected static string|\UnitEnum|null $navigationGroup = 'Visas';
 
-    protected static ?int $navigationSort = 25;
+    protected static ?int $navigationSort = 60;
 
     protected static ?string $recordTitleAttribute = 'name';
 

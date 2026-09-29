@@ -118,7 +118,9 @@ class FlightReleaseCheck extends Command
 
             if (Schema::hasTable('system_heartbeats')) {
                 $heartbeat = DB::table('system_heartbeats')->where('name', 'scheduler')->value('last_seen_at');
-                if (! $heartbeat || now()->diffInMinutes($heartbeat) > 3) {
+                // Signed diff: a past heartbeat is negative, so `> 3` never fired
+                // and this gate has never once warned about a stale scheduler.
+                if (! $heartbeat || \Illuminate\Support\Carbon::parse($heartbeat)->lt(now()->subMinutes(3))) {
                     $warnings[] = 'The scheduler heartbeat is missing or older than three minutes.';
                 }
             }

@@ -537,7 +537,10 @@ class SystemHealthService
             $pendingMail = DB::table('notification_outboxes')->whereNull('sent_at')->count();
             $failedMail = DB::table('notification_outboxes')->whereNotNull('failed_at')->whereNull('sent_at')->count();
             $oldestMail = DB::table('notification_outboxes')->whereNull('sent_at')->min('created_at');
-            $mailAge = $oldestMail ? now()->diffInMinutes($oldestMail) : 0;
+            // Signed diff: this read as a large negative age, so neither the
+            // 30-minute failure nor the 5-minute warning below could ever fire,
+            // and the panel printed "Oldest pending email: -44640 minute(s)".
+            $mailAge = $oldestMail ? (int) \Illuminate\Support\Carbon::parse($oldestMail)->diffInMinutes(now()) : 0;
             $details['Pending email outbox'] = $pendingMail;
             $details['Failed email outbox'] = $failedMail;
             $details['Oldest pending email'] = $oldestMail ? $mailAge.' minute(s)' : 'None';
