@@ -57,7 +57,8 @@ class TransportRateResource extends Resource
                 ->description('Applied the same way to both Car Hire and Pickup & Dropoff.')
                 ->columns(2)
                 ->schema([
-                    TextInput::make('transfer_fuel_rate_per_minute')->numeric()->required()->prefix('₦')->label('Fuel Rate (per minute)')->helperText('Drive time for Pickup & Dropoff, rental duration for Car Hire.'),
+                    TextInput::make('fuel_litres_per_hour')->numeric()->step(0.001)->minValue(0)->required()->suffix('L / hr')->label('Fuel Consumption')->helperText('Fuel/min = fuel pump price × litres per hour ÷ 60.'),
+                    TextInput::make('transfer_fuel_rate_per_minute')->disabled()->prefix('₦')->label('Fuel Rate (per minute)')->helperText('Calculated on save. Drive time for Pickup & Dropoff, rental duration for Car Hire.'),
                     TextInput::make('transfer_admin_fee_percent')->numeric()->step(0.1)->minValue(0)->maxValue(100)->required()->suffix('%')->label('Admin Fee')->helperText('Applied to (Base Fare + Tear & Wear + Fuel).'),
                 ]),
         ])->columns(1);
@@ -84,6 +85,7 @@ class TransportRateResource extends Resource
                 TextColumn::make('transfer_base_executive')->money('NGN')->label('Executive')
                     ->visible(fn ($livewire) => ($livewire->activeTab ?? 'car_hire') === 'pickup_dropoff'),
 
+                TextColumn::make('fuel_litres_per_hour')->suffix(' L/hr')->label('Consumption'),
                 TextColumn::make('transfer_fuel_rate_per_minute')->money('NGN')->label('Fuel /min'),
                 TextColumn::make('transfer_admin_fee_percent')->suffix('%')->label('Admin Fee'),
             ])

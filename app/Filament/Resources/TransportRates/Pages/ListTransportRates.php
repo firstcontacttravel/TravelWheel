@@ -18,7 +18,8 @@ class ListTransportRates extends ListRecords
     {
         return [
             // One pump price for every vehicle type — shown to customers as
-            // "Fuel (₦…)" in the Car Hire price breakdown.
+            // "Fuel (₦…)" in the Car Hire price breakdown, and it drives each
+            // type's fuel/min (recalculated by TransportRate on save).
             Action::make('fuelPumpPrice')
                 ->label(fn (): string => 'Fuel pump price: ₦' . number_format((int) TransportRate::max('fuel_pump_price')))
                 ->icon('heroicon-o-beaker')
@@ -29,8 +30,8 @@ class ListTransportRates extends ListRecords
                         ->numeric()->minValue(0)->required()->prefix('₦'),
                 ])
                 ->action(function (array $data): void {
-                    TransportRate::query()->update(['fuel_pump_price' => (int) $data['fuel_pump_price']]);
-                    Notification::make()->title('Fuel pump price updated')->success()->send();
+                    TransportRate::all()->each->update(['fuel_pump_price' => (int) $data['fuel_pump_price']]);
+                    Notification::make()->title('Fuel pump price updated')->body('Fuel/min recalculated for every vehicle type.')->success()->send();
                 }),
         ];
     }
