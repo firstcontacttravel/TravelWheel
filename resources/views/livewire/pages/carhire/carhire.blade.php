@@ -146,9 +146,8 @@
     .feat-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
     .feat-list li { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; color: #444; line-height: 1.4; }
     .feat-list li svg { width: 12px; height: 12px; fill: #0d1883; flex-shrink: 0; margin-top: 1px; opacity: .85; }
-    .expected-models { display: flex; flex-wrap: wrap; gap: 6px; }
-    .expected-models span { background: #f4f5fb; border: 1px solid #e4e6f0; color: #333; font-size: 11.5px; padding: 4px 10px; border-radius: 20px; }
-    .expected-note { font-size: 11px; color: #888; margin-top: 7px; line-height: 1.4; }
+    .expected-models { display: flex; flex-wrap: wrap; gap: 4px; }
+    .expected-models span { background: #eef1ff; color: #0d1883; font-size: 9.5px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
     .di-actions { display: flex; gap: 9px; margin-top: 4px; }
     .btn-change { padding: 9px 13px; background: #f0f3ff; color: #0d1883; border: 1.5px solid #c5cef8; border-radius: 9px; font-size: 11.5px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
     .btn-change:hover { background: #e0e8ff; }
@@ -912,13 +911,10 @@ function ch_buildDetail(type, cat) {
         .map(f => `<li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>${esc(f)}</li>`)
         .join('');
 
+    // Expected models sit where the category badge was; fall back to the badge if none
     const expected = models.length
-        ? `<div>
-                <div class="feat-label">Expected models</div>
-                <div class="expected-models">${models.map(m => `<span>${esc(m.name)}</span>`).join('')}</div>
-                <div class="expected-note">You'll get one of these or a similar ${esc(cat.name.toLowerCase())} ${esc(typeName.toLowerCase())}, depending on availability at pick-up.</div>
-           </div>`
-        : '';
+        ? `<div class="expected-models">${models.map(m => `<span>${esc(m.name)}</span>`).join('')}</div>`
+        : `<div class="di-type-tag">${esc(typeName)}</div>`;
 
     const panel = document.getElementById('ch_detailPanel');
     panel.innerHTML = `<div class="detail-inner">
@@ -926,13 +922,12 @@ function ch_buildDetail(type, cat) {
         <div class="detail-info">
             <div>
                 <div class="di-cat-name">${esc(cat.name)} ${esc(typeName)}</div>
-                <div class="di-type-tag">${esc(typeName)}</div>
+                ${expected}
             </div>
             <div>
                 <div class="di-price">&#8358;${Number(cat.price).toLocaleString()} <span>base price / trip</span></div>
                 <div class="di-pax"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>${esc(cat.passengers || '—')} passengers</div>
             </div>
-            ${expected}
             ${feats ? `<div><div class="feat-label">What's included</div><ul class="feat-list">${feats}</ul></div>` : ''}
             <div class="di-actions">
                 <button class="btn-change" onclick="ch_resetCat()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Change</button>
