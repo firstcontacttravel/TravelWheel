@@ -499,12 +499,22 @@ class SkylinkFlightService implements FlightSupplier
      * searched (it sums qty across fareBreakdown, defaulting to 1 when
      * empty) — found via live testing.
      *
-     * changeAllowed/changePenalty have no SkyLink equivalent at all (not in
-     * the API docs, not in any raw field observed) — left null rather than
-     * guessing true/false, since a wrong guess here is actively misleading
-     * (a customer relying on "Not Allowed" to decide whether to buy). The
-     * Fare Rules tab renders null as a neutral "Not specified" instead of
-     * red/green.
+     * Refundable offers also carry cancel_penalty and change_penalty
+     * ({allowed, amount, currency, text}) — undocumented, and absent from
+     * non-refundable offers; seen on every refundable offer in live searches
+     * on 2026-09-29. They become refundPenalty / changePenalty, which the
+     * Fare Rules tab shows and TravelFlex's risk check needs to size a down
+     * payment.
+     *
+     * SkyLink states one amount "for the ticket", the same whatever the
+     * passenger count, without saying whether that is per passenger or per
+     * booking. It is taken as PER PASSENGER, and applied to every passenger
+     * type: if it is really per booking, TravelFlex asks for a larger down
+     * payment than it needs to — never a smaller one. Not yet confirmed
+     * with SkyLink.
+     *
+     * An offer without them keeps null — "Not specified" on the Fare Rules
+     * tab, and ineligible for TravelFlex, which won't guess a penalty.
      */
     private function buildFareBreakdown(array $raw, array $criteria, bool $refundable): array
     {
@@ -512,6 +522,12 @@ class SkylinkFlightService implements FlightSupplier
         $baggage = (array) ($raw['baggage_allowance'] ?? []);
         $checkedBag = (string) ($baggage['checked'] ?? '');
         $cabinBag = (string) ($baggage['cabin'] ?? '');
+        $cancel = $this->penalty($raw['cancel_penalty'] ?? null);
+        $change = $this->penalty($raw['change_penalty'] ?? null);
+
+        // SkyLink saying a refund isn't allowed outranks a leg saying the
+        // fare is refundable.
+        $refundAllowed = $cancel['allowed'] === false ? false : $refundable;
 
         $types = [
             'ADT' => ['count' => max(1, $counts['adults']), 'baseField' => 'actual_adult_base'],
@@ -533,9 +549,10 @@ class SkylinkFlightService implements FlightSupplier
                 'qty' => $type['count'],
                 'baggage' => [$checkedBag],
                 'cabinBaggage' => [$cabinBag],
-                'refundAllowed' => $refundable,
-                'changeAllowed' => null,
-                'changePenalty' => null,
+                'refundAllowed' => $refundAllowed,
+                'refundPenalty' => $refundAllowed ? $cancel['amount'] : null,
+                'changeAllowed' => $change['allowed'],
+                'changePenalty' => $change['allowed'] ? $change['amount'] : null,
                 // SkyLink doesn't break tax out separately per passenger type —
                 // this is the supplier's own base fare, same as TravelNext's
                 // fareBreakdown entries carry supplier-original (pre-markup)
@@ -546,6 +563,35 @@ class SkylinkFlightService implements FlightSupplier
         }
 
         return $breakdown;
+    }
+
+    /**
+     * One of SkyLink's {allowed, amount, currency} penalty objects, with the
+     * amount in USD — the supplier-price contract every fareBreakdown figure
+     * follows (FlightMarkup::apply() converts to NGN). An amount in a
+     * currency other than NGN or USD, or missing, is left null rather than
+     * converted at a guessed rate.
+     *
+     * @return array{allowed: ?bool, amount: ?float}
+     */
+    private function penalty(mixed $penalty): array
+    {
+        if (! is_array($penalty)) {
+            return ['allowed' => null, 'amount' => null];
+        }
+
+        $allowed = array_key_exists('allowed', $penalty) ? (bool) $penalty['allowed'] : null;
+        $amount = $penalty['amount'] ?? null;
+
+        if (! is_numeric($amount) || (float) $amount < 0) {
+            return ['allowed' => $allowed, 'amount' => null];
+        }
+
+        return ['allowed' => $allowed, 'amount' => match (strtoupper((string) ($penalty['currency'] ?? 'NGN'))) {
+            'NGN' => $this->ngnToUsd((float) $amount),
+            'USD' => round((float) $amount, 2),
+            default => null,
+        }];
     }
 
     /**

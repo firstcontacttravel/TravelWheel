@@ -45,9 +45,29 @@ class FlightPage extends Component
         $enabled = app(FlightSupplierControl::class)->enabledKeys();
 
         return array_values(array_filter(
-            FlightMatch::tag(array_values(array_filter(session('flightResultsStore', []), 'is_array'))),
+            self::withIds(FlightMatch::tag(array_values(array_filter(session('flightResultsStore', []), 'is_array')))),
             fn (array $flight): bool => in_array($flight['source'] ?? TravelnextFlightService::KEY, $enabled, true),
         ));
+    }
+
+    /**
+     * Every card on the page is keyed by flight.id (the x-for in
+     * flight-result.blade.php), and duplicate keys make Alpine draw nothing
+     * at all — "56 flights found" over an empty list. TravelNext's mapper
+     * numbers its flights; SkyLink's never did, since it used to arrive only
+     * as a supplement, which the page numbers itself. Now that any API can
+     * fill the first page, one without ids gets them here. Supplements are
+     * numbered "{source}-{n}", so "first-{n}" can never collide with them.
+     */
+    private static function withIds(array $flights): array
+    {
+        foreach ($flights as $index => $flight) {
+            if (! isset($flight['id']) || $flight['id'] === '') {
+                $flights[$index]['id'] = 'first-'.$index;
+            }
+        }
+
+        return $flights;
     }
 
     protected function searchParams(): array
