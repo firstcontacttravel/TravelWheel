@@ -151,10 +151,8 @@ class SkylinkBookingFlowTest extends TestCase
     {
         // SkyLink can't hold seats, so TravelFlex holds the booking here while
         // Fast Credit reviews — nothing is sent to SkyLink and no PNR exists.
-        //
-        // SkyLink doesn't send refund penalties today (see the next test), so
-        // this fare carries them as it would once SkyLink — or another API
-        // that can't hold seats — supplies them.
+        // The refund penalty is what SkylinkFlightService reads from a
+        // refundable offer's cancel_penalty (see SkylinkPenaltyMappingTest).
         $session = $this->skylinkBookingSession();
         $session['bookingFlight']['isRefundable'] = true;
         $session['bookingFlight']['departDT'] = now()->addDays(40)->toIso8601String();
@@ -184,10 +182,10 @@ class SkylinkBookingFlowTest extends TestCase
 
     public function test_a_refundable_skylink_fare_without_penalty_details_is_refused(): void
     {
-        // The shape SkyLink really sends (checked against a live search on
-        // 2026-09-27): refundAllowed per passenger type, no refundPenalty.
-        // TravelFlex sizes the down payment to cover the refund penalty, so
-        // without one it refuses — deliberately, not because of the supplier.
+        // A refundable offer that arrives without cancel_penalty (every one
+        // seen so far has had it). TravelFlex sizes the down payment to cover
+        // the refund penalty, so without one it refuses — deliberately, not
+        // because of the supplier.
         $session = $this->skylinkBookingSession();
         $session['bookingFlight']['isRefundable'] = true;
         $session['bookingFlight']['fareBreakdown'] = [[
