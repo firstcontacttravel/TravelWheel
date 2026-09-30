@@ -74,6 +74,9 @@ class LoungeResource extends Resource
                     TextInput::make('markup_price')
                         ->label('Markup (all tiers)')
                         ->numeric()->required()->minValue(0)->prefix('₦')
+                        ->helperText(fn (?Lounge $record): ?string => $record?->provider === 'loungepair'
+                            ? 'Not used for LoungePair lounges — set their markup with the "LoungePair markup" button on the Lounges list.'
+                            : null)
                         ->live(onBlur: true)
                         ->afterStateUpdated(function ($state, callable $set, callable $get) {
                             $set('priceA', Lounge::totalPrice($get('given_PriceA'), $state));

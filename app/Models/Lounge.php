@@ -89,10 +89,28 @@ class Lounge extends Model
         return 3;
     }
 
-    /** Flat markup added to a converted LoungePair price, by whether the lounge's airport is in Nigeria. */
-    private const PROVIDER_MARKUP_NIGERIA = 10000.0;
+    /**
+     * Flat markup added to a converted LoungePair price, by whether the
+     * lounge's airport is in Nigeria. Admin sets both from the Lounges list
+     * page ("LoungePair markup"); these are the fallbacks if unset.
+     */
+    public const PROVIDER_MARKUP_NIGERIA_KEY = 'loungepair_markup_nigeria';
 
-    private const PROVIDER_MARKUP_INTERNATIONAL = 15000.0;
+    public const PROVIDER_MARKUP_INTERNATIONAL_KEY = 'loungepair_markup_international';
+
+    private const DEFAULT_PROVIDER_MARKUP_NIGERIA = 10000.0;
+
+    private const DEFAULT_PROVIDER_MARKUP_INTERNATIONAL = 15000.0;
+
+    public static function providerMarkupNigeria(): float
+    {
+        return (float) AppSetting::get(self::PROVIDER_MARKUP_NIGERIA_KEY, self::DEFAULT_PROVIDER_MARKUP_NIGERIA);
+    }
+
+    public static function providerMarkupInternational(): float
+    {
+        return (float) AppSetting::get(self::PROVIDER_MARKUP_INTERNATIONAL_KEY, self::DEFAULT_PROVIDER_MARKUP_INTERNATIONAL);
+    }
 
     /**
      * Convert a LoungePair price (given_Price* is stored in provider_currency,
@@ -138,8 +156,8 @@ class Lounge extends Model
         $country = (string) data_get($this->provider_payload, 'airport.country');
 
         return strcasecmp(trim($country), 'Nigeria') === 0
-            ? self::PROVIDER_MARKUP_NIGERIA
-            : self::PROVIDER_MARKUP_INTERNATIONAL;
+            ? self::providerMarkupNigeria()
+            : self::providerMarkupInternational();
     }
 
     public function getPriceAAttribute(): float
