@@ -45,6 +45,11 @@
     .chs-btn-primary:hover { background: #091264; color: #fff; }
     .chs-btn-ghost { background: #f0f3ff; color: #0d1883; border: 1.5px solid #c5cef8; }
     .chs-btn-ghost:hover { background: #e0e8ff; color: #0d1883; }
+    /* The fixed top bar + navbar cover the top of the page above 650px (the
+       layout only pads for them below that) — same offset as the lounge pages. */
+    @media (min-width: 651px) {
+        .chs-root { margin-top: 100px; }
+    }
     @media (max-width: 480px) {
         .chs-root { padding: 24px 12px 40px; }
         .chs-head { padding: 28px 18px 22px; }
