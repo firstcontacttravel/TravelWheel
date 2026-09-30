@@ -183,8 +183,10 @@ class CarController extends Controller
 
     public function successCarHire()
     {
-        return view('air.carhire.success')
-            ->with('success', session('success', 'Your Car Hire booking was confirmed!'));
+        return view('air.carhire.success', [
+            'productType' => 'car_hire',
+            'booking' => $this->lastBooking(CarHire::class, 'car_hire'),
+        ]);
     }
 
     /*
@@ -286,8 +288,24 @@ class CarController extends Controller
 
     public function successTransfer()
     {
-        return view('air.carhire.success')
-            ->with('success', session('success', 'Your Transfer booking was confirmed!'));
+        return view('air.carhire.success', [
+            'productType' => 'transfer',
+            'booking' => $this->lastBooking(Transfer::class, 'transfer'),
+        ]);
+    }
+
+    /**
+     * The paid booking this visitor just completed, so the success page can
+     * show its details. Read from their session (set in finalizeBooking),
+     * never from the URL, so one customer can't view another's booking.
+     */
+    private function lastBooking(string $model, string $product_type)
+    {
+        $reference = session('last_booking.' . $product_type);
+
+        return $reference
+            ? $model::where('payment_reference', $reference)->whereIn('payment_status', ['paid', 'confirmed'])->first()
+            : null;
     }
 
     /*
@@ -482,11 +500,9 @@ class CarController extends Controller
             $this->sendMails($record, $product_type);
         }
 
-        $successMessage = $product_type === 'car_hire'
-            ? 'Car Hire booking confirmed! Your vehicle is reserved.'
-            : 'Transfer booking confirmed! Your vehicle is reserved.';
+        session()->put('last_booking.' . $product_type, $record->payment_reference);
 
-        return redirect()->route($success_route)->with('success', $successMessage);
+        return redirect()->route($success_route);
     }
 
     /*
