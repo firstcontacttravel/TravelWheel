@@ -158,6 +158,30 @@ class FlightPageSupplementTest extends TestCase
             ->assertDispatched('supplier-results-ready', fn (string $name, array $params): bool => $params['flights'] === []);
     }
 
+    public function test_a_first_page_filled_by_skylink_gives_every_card_its_own_key(): void
+    {
+        // TravelNext failed or found nothing, so SkyLink filled the page. Its
+        // flights carry no id, and the page keys every card by flight.id:
+        // with all of them missing, Alpine drew no cards at all under
+        // "N flights found" (seen in Chrome, 2026-09-29).
+        $this->configureSkylink();
+        session([
+            'searchParamsStore' => $this->searchParams(),
+            'searchSupplementSuppliers' => [],
+            'flightResultsStore' => [
+                ['fareSourceCode' => 'btk_1', 'source' => 'skylink'],
+                ['fareSourceCode' => 'btk_2', 'source' => 'skylink'],
+                ['fareSourceCode' => 'btk_3', 'source' => 'skylink'],
+            ],
+        ]);
+
+        Livewire::test(FlightPage::class)->assertViewHas('flightResults', function (array $flights): bool {
+            $ids = array_column($flights, 'id');
+
+            return count($ids) === 3 && count(array_unique($ids)) === 3 && ! in_array(null, $ids, true);
+        });
+    }
+
     public function test_it_dispatches_an_empty_list_when_there_is_no_pending_search(): void
     {
         $this->configureSkylink();

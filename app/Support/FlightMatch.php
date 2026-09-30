@@ -78,26 +78,12 @@ class FlightMatch
         return $segments;
     }
 
-    /** economy, premium_economy, business or first. */
+    /**
+     * economy, premium_economy, business or first — the same reading the
+     * markup uses (cabin name first, code only as a fallback).
+     */
     public static function cabin(array $flight): string
     {
-        $name = strtolower(trim((string) (
-            ($flight['cabin'] ?? null)
-            ?: data_get($flight, 'segments.0.cabin')
-            ?: data_get($flight, 'multiLegs.0.segments.0.cabin')
-            ?: ''
-        )));
-        $name = str_replace(['_', '-'], ' ', $name);
-
-        if ($name !== '') {
-            return match (true) {
-                str_contains($name, 'premium') => 'premium_economy',
-                str_contains($name, 'business') => 'business',
-                str_contains($name, 'first') => 'first',
-                default => 'economy',
-            };
-        }
-
         return FlightMarkup::cabinCategory($flight);
     }
 }

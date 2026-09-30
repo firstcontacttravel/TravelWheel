@@ -42,6 +42,57 @@ class FlightMarkupTest extends TestCase
         $this->assertSame('from_nigeria', $flight['markupCategory']);
     }
 
+    public function test_the_cabin_name_decides_the_markup_not_a_booking_class_letter(): void
+    {
+        // SkyLink's cabinCode is the booking-class letter. W and P are sold as
+        // Economy and Premium Economy; read as cabin codes they charged the
+        // premium and first-class markup (seen live on 2026-09-29).
+        $economyInW = FlightMarkup::apply(['price' => 100000, 'cabin' => 'Economy', 'cabinCode' => 'W',
+            'segments' => [['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom']]]);
+        $premiumInP = FlightMarkup::apply(['price' => 100000, 'cabin' => 'Premium Economy', 'cabinCode' => 'P',
+            'segments' => [['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom']]]);
+
+        $this->assertSame('economy', $economyInW['markupCabin']);
+        $this->assertSame(30000.0, $economyInW['markupAmount']);
+        $this->assertSame('premium_economy', $premiumInP['markupCabin']);
+        $this->assertSame(60000.0, $premiumInP['markupAmount']);
+    }
+
+    public function test_a_trip_starting_in_nigeria_with_a_domestic_first_flight_is_from_nigeria(): void
+    {
+        $viaAbuja = FlightMarkup::apply(['price' => 100000, 'cabin' => 'Economy', 'segments' => [
+            ['fromCountry' => 'Nigeria', 'toCountry' => 'Nigeria'],
+            ['fromCountry' => 'Nigeria', 'toCountry' => 'Egypt'],
+            ['fromCountry' => 'Egypt', 'toCountry' => 'United Arab Emirates'],
+        ]]);
+
+        $this->assertSame('from_nigeria', $viaAbuja['markupCategory']);
+        $this->assertSame(30000.0, $viaAbuja['markupAmount']);
+    }
+
+    public function test_the_other_route_types_are_unchanged(): void
+    {
+        $route = fn (array $segments): string => FlightMarkup::routeCategory(['segments' => $segments]);
+
+        $this->assertSame('domestic', $route([['fromCountry' => 'Nigeria', 'toCountry' => 'Nigeria']]));
+        $this->assertSame('touches_nigeria', $route([['fromCountry' => 'United Kingdom', 'toCountry' => 'Nigeria']]));
+        $this->assertSame('touches_nigeria', $route([
+            ['fromCountry' => 'Ghana', 'toCountry' => 'Nigeria'],
+            ['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom'],
+        ]));
+        $this->assertSame('not_nigeria', $route([['fromCountry' => 'United Kingdom', 'toCountry' => 'United States']]));
+    }
+
+    public function test_without_a_cabin_name_the_code_still_decides(): void
+    {
+        // TravelNext can leave the cabin name empty; its code is a real cabin code.
+        $business = FlightMarkup::apply(['price' => 100000, 'cabin' => '', 'cabinCode' => 'C',
+            'segments' => [['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom']]]);
+
+        $this->assertSame('business', $business['markupCabin']);
+        $this->assertSame(100000.0, $business['markupAmount']);
+    }
+
     public function test_admin_configured_charge_is_used_for_every_passenger(): void
     {
         FlightServiceCharge::query()
@@ -145,11 +196,14 @@ class FlightMarkupTest extends TestCase
         $this->assertSame('domestic', $flight['markupCategory']);
     }
 
-    public function test_domestic_leg_that_also_leaves_nigeria_uses_touching_markup(): void
+    public function test_domestic_leg_that_also_leaves_nigeria_is_not_domestic(): void
     {
         // One leg starts and ends in Nigeria, but the itinerary isn't
         // entirely domestic — the return leg leaves the country — so this
-        // must not be priced as 'domestic'.
+        // must not be priced as 'domestic'. It starts in Nigeria, so it is
+        // "from Nigeria" (agreed 2026-09-29; it used to fall through to
+        // "touches Nigeria" because only the first flight's destination was
+        // checked).
         $flight = FlightMarkup::apply([
             'price' => 100000,
             'cabinCode' => 'Y',
@@ -161,7 +215,8 @@ class FlightMarkupTest extends TestCase
             ],
         ]);
 
-        $this->assertSame('touches_nigeria', $flight['markupCategory']);
+        $this->assertNotSame('domestic', $flight['markupCategory']);
+        $this->assertSame('from_nigeria', $flight['markupCategory']);
     }
 
     public function test_multi_city_touching_nigeria_uses_touching_markup(): void
