@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\FlightBookings\Schemas;
 
+use App\Models\FlightBooking;
 use App\Support\Admin\FlightBookingPresentation;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
