@@ -25,6 +25,11 @@
         .amount-row .detail-value { color: #0d1883; font-size: 15px; }
         .ref-row .detail-value { font-family: monospace; font-size: 12.5px; color: #555; }
         .note { background: #fffbea; border-left: 3px solid #f5a623; border-radius: 6px; padding: 12px 16px; font-size: 13px; color: #6b4a00; line-height: 1.6; margin-bottom: 24px; }
+        .rules-card { border: 1px solid #e0e4f8; border-radius: 12px; padding: 20px 24px; margin-bottom: 8px; }
+        .rules-card h3 { font-size: 13px; font-weight: 700; color: #0d1883; letter-spacing: 0.08em; text-transform: uppercase; margin: 0 0 6px; }
+        .rules-card h4 { font-size: 13.5px; color: #1a1a1a; margin: 14px 0 6px; }
+        .rules-card ul { margin: 0; padding-left: 18px; }
+        .rules-card li { font-size: 13px; color: #555; line-height: 1.6; margin-bottom: 4px; }
         .footer { background: #f7f8ff; padding: 24px 32px; text-align: center; border-top: 1px solid #e8eaf5; }
         .footer p { font-size: 12.5px; color: #999; margin: 4px 0; line-height: 1.6; }
         .footer a { color: #0d1883; text-decoration: none; }
@@ -102,6 +107,19 @@
         <div class="note">
             📌 Please save your booking reference <strong>{{ $reference }}</strong> for any enquiries.
             If you need to make changes, contact us at least 2 hours before your pick-up time.
+        </div>
+
+        {{-- Same rules the customer saw in the Fare Rules popup when booking (config/carhire.php) --}}
+        <div class="rules-card">
+            <h3>📋 Fare Rules</h3>
+            @foreach (config('carhire.fare_rules', []) as $section)
+                <h4>{{ $section['title'] }}</h4>
+                <ul>
+                    @foreach ($section['items'] as $item)
+                        <li>{{ $item }}</li>
+                    @endforeach
+                </ul>
+            @endforeach
         </div>
     </div>
 

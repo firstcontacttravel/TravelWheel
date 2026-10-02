@@ -690,36 +690,12 @@ let trSelType=null, trSelCat=null, trSelModel=null, trDistKm=0, trDurationMins=0
 let activeModal=null;
 
 /* ══ FARE RULES MODAL ══ */
-const FARE_RULES_HTML = `
+// Fare rules live in config/carhire.php, shared with the confirmation email
+const FARE_RULES_HTML = @json(config('carhire.fare_rules')).map(sec => `
     <div class="fr-section">
-        <h6>Cancellation</h6>
-        <ul>
-            <li>Cancellation is free of charge up to 5 hours prior to the trip. The money will be refunded in full to the card, bank account or credit limit according to the terms of the agreement.</li>
-            <li>If you cancel a paid order less than 5 hours before the start of the trip, we will not be able to refund the money.</li>
-            <li>If an order canceled less than 5 hours before the start of the trip has not been paid, you will have to pay a penalty of 100% of the order value.</li>
-        </ul>
-    </div>
-    <div class="fr-section">
-        <h6>Changing the Order</h6>
-        <ul>
-            <li>We do not charge a fee for the very fact of making changes, but if you change your route, car class or make other significant changes, this may result in a change in price.</li>
-        </ul>
-    </div>
-    <div class="fr-section">
-        <h6>What is Included in the Transfer Price</h6>
-        <ul>
-            <li>The price includes: a trip from point A to point B, transport fees, tips, meeting the passenger with the sign, escorting with baggage from the meeting point to the car.</li>
-            <li>Possible car options: Toyota Hiace, Opel Vivaro, Hyundai H1 or similar.</li>
-            <li>Free waiting time is 90 minutes. Additional waiting time is charged separately.</li>
-        </ul>
-    </div>
-    <div class="fr-section">
-        <h6>Baggage Allowance</h6>
-        <ul>
-            <li>Baggage count is calculated based on the standard size of one piece of baggage: 55x45x25 cm (22x18x10 inches).</li>
-            <li>Please contact Customer Support if the passenger is going to have oversize baggage. We will reach the service provider in order to pick the appropriate car.</li>
-        </ul>
-    </div>`;
+        <h6>${esc(sec.title)}</h6>
+        <ul>${sec.items.map(item => `<li>${esc(item)}</li>`).join('')}</ul>
+    </div>`).join('');
 
 function openFareRulesModal() {
     const old = document.getElementById('_gtOverlay');
