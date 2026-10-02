@@ -67,6 +67,11 @@ class FlightBookingInfolist
 
                                 Section::make('Pricing')
                                     ->schema([
+                                        TextEntry::make('supplier')
+                                            ->label('Supplier')
+                                            ->badge()
+                                            ->color(fn (?string $state): string => $state === 'skylink' ? 'info' : 'gray')
+                                            ->formatStateUsing(fn (?string $state): string => FlightBooking::supplierLabel($state)),
                                         TextEntry::make('supplier_price')
                                             ->label('Supplier fare')
                                             ->state(fn ($record): string => self::money($record->supplier_price, $record->currency))
