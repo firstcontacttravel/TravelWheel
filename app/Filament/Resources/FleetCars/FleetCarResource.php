@@ -60,7 +60,22 @@ class FleetCarResource extends Resource
                 ->numeric()
                 ->minValue(2005)
                 ->maxValue((int) date('Y') + 1)
-                ->required()
+                // Required for new cars only: many existing cars were added
+                // before Year existed and keep their category until a year is set
+                ->required(fn (string $operation): bool => $operation === 'create')
+                // A year outside the vehicle type's ranges would save the car
+                // with no category, and it would never show on the booking page
+                ->rule(fn (Get $get) => function (string $attribute, $value, \Closure $fail) use ($get): void {
+                    if (blank($value) || blank($get('vehicle_type'))) {
+                        return;
+                    }
+                    if (FleetCar::categoryForYear((int) $value, $get('vehicle_type')) === null) {
+                        $ranges = collect(array_keys(FleetCar::yearRangesFor($get('vehicle_type'))))
+                            ->map(fn (string $c): string => $c.' '.FleetCar::yearRangeLabel($c, $get('vehicle_type')))
+                            ->implode(', ');
+                        $fail("A {$get('vehicle_type')} from {$value} doesn't fit any category ({$ranges}).");
+                    }
+                })
                 ->live(onBlur: true)
                 ->afterStateUpdated(function (Get $get, Set $set): void {
                     $year = (int) $get('year');
