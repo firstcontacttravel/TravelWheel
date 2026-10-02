@@ -9,6 +9,7 @@ use App\Services\CarFleetCatalogService;
 use App\Services\SeerbitPaymentService;
 use App\Services\TransferPricingService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -96,7 +97,7 @@ class CarController extends Controller
     public function submitCarHire(Request $request)
     {
         $data = $request->validate([
-            'car_type' => 'required|string',
+            'car_type' => ['required', 'string', Rule::in(CarFleetCatalogService::bookableVehicleTypes())],
             'category' => 'required|in:Regular,Standard,Executive',
             'rental_hours' => 'required|numeric|min:1',
             'full_name' => 'required|string|max:255',
@@ -197,7 +198,7 @@ class CarController extends Controller
     public function submitTransfer(Request $request)
     {
         $data = $request->validate([
-            'vehicle_type' => 'required|string',
+            'vehicle_type' => ['required', 'string', Rule::in(CarFleetCatalogService::bookableVehicleTypes())],
             'vehicle_name' => 'required|string',
             'category' => 'required|string|in:Regular,Standard,Executive',
             'distance_km' => 'required|numeric|min:0.1',

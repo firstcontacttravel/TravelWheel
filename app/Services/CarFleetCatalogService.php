@@ -8,6 +8,19 @@ class CarFleetCatalogService
 {
     public const VEHICLE_TYPES = ['saloon', 'suv', 'van', 'bus', 'luxury'];
 
+    /**
+     * Vehicle types customers can't book right now: hidden on the Car Hire
+     * and Transfer tabs and rejected on submit. Admin rates and fleet cars
+     * for them are kept. Empty this list to bring a type back.
+     */
+    public const DISABLED_VEHICLE_TYPES = ['bus'];
+
+    /** VEHICLE_TYPES minus DISABLED_VEHICLE_TYPES, in display order. */
+    public static function bookableVehicleTypes(): array
+    {
+        return array_values(array_diff(self::VEHICLE_TYPES, self::DISABLED_VEHICLE_TYPES));
+    }
+
     public function __construct(private readonly TransferPricingService $transferPricing = new TransferPricingService())
     {
     }

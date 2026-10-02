@@ -379,7 +379,7 @@
 
                                 <div class="sidebar">
                                     <div class="section-label">1 · Vehicle type</div>
-                                    @foreach(['saloon','suv','van','bus','luxury'] as $vtype)
+                                    @foreach($vehicleTypes as $vtype)
                                     <div class="type-card" onclick="ch_setType('{{ $vtype }}',this)">
                                         <div class="type-thumb">
                                             <img src="{{ $typeThumbs[$vtype] }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" alt="{{ ucfirst($vtype) }}">
@@ -531,7 +531,7 @@
                                     <div class="section-label">2 · Vehicle type</div>
                                     <p style="font-size:12.5px;color:#888;margin-bottom:14px;">Select the type of vehicle you need.</p>
                                     <div id="tr_typeCards" style="display:flex;gap:10px;flex-wrap:wrap;">
-                                        @foreach(['saloon','suv','van','bus','luxury'] as $vtype)
+                                        @foreach($vehicleTypes as $vtype)
                                         <div class="type-card" onclick="tr_setType('{{ $vtype }}',this)" style="flex:1;min-width:130px;max-width:200px;margin-bottom:0;">
                                             <div class="type-thumb">
                                                 <img src="{{ $transferVehicles[$vtype]['items'][0]['images'][0] ?? '' }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" alt="{{ ucfirst($vtype) }}">

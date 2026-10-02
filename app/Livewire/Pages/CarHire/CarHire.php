@@ -26,6 +26,7 @@ class CarHire extends Component
             'categories' => $this->categories,
             'transferVehicles' => $this->transferVehicles,
             'typeThumbs' => $this->typeThumbs,
+            'vehicleTypes' => CarFleetCatalogService::bookableVehicleTypes(),
         ])->layout('layouts.app', ['title' => 'Car Hire & Transfers - TravelWheel']);
     }
 }
