@@ -467,15 +467,15 @@
 
                                         <span class="pay-title">Payment Method</span>
                                         <div class="pay-opts">
-                                            <label class="pay-opt active" id="ch_p_budpay" onclick="ch_pay('budpay')">
+                                            <label class="pay-opt active" id="ch_p_seerbit" onclick="ch_pay('seerbit')">
                                                 <input type="radio" checked>
                                                 <div class="pay-dot"><div class="pay-dot-inner"></div></div>
-                                                <div><div class="pay-label">BudPay</div><div class="pay-sub">Card, bank transfer</div></div>
+                                                <div><div class="pay-label">SeerBit</div><div class="pay-sub">Card, USSD, bank</div></div>
                                             </label>
-                                            <label class="pay-opt" id="ch_p_seerbit" onclick="ch_pay('seerbit')">
+                                            <label class="pay-opt" id="ch_p_budpay" onclick="ch_pay('budpay')">
                                                 <input type="radio">
                                                 <div class="pay-dot"><div class="pay-dot-inner"></div></div>
-                                                <div><div class="pay-label">SeerBit</div><div class="pay-sub">Card, USSD, bank</div></div>
+                                                <div><div class="pay-label">BudPay</div><div class="pay-sub">Card, bank transfer</div></div>
                                             </label>
                                         </div>
                                         <button type="button" class="btn-review" onclick="openModal('ch')">Review &amp; Proceed to Payment</button>
@@ -602,15 +602,15 @@
 
                                     <span class="pay-title">Payment Method</span>
                                     <div class="pay-opts">
-                                        <label class="pay-opt active" id="tr_p_budpay" onclick="tr_pay('budpay')">
+                                        <label class="pay-opt active" id="tr_p_seerbit" onclick="tr_pay('seerbit')">
                                             <input type="radio" checked>
                                             <div class="pay-dot"><div class="pay-dot-inner"></div></div>
-                                            <div><div class="pay-label">BudPay</div><div class="pay-sub">Card, bank transfer</div></div>
+                                            <div><div class="pay-label">SeerBit</div><div class="pay-sub">Card, USSD, bank</div></div>
                                         </label>
-                                        <label class="pay-opt" id="tr_p_seerbit" onclick="tr_pay('seerbit')">
+                                        <label class="pay-opt" id="tr_p_budpay" onclick="tr_pay('budpay')">
                                             <input type="radio">
                                             <div class="pay-dot"><div class="pay-dot-inner"></div></div>
-                                            <div><div class="pay-label">SeerBit</div><div class="pay-sub">Card, USSD, bank</div></div>
+                                            <div><div class="pay-label">BudPay</div><div class="pay-sub">Card, bank transfer</div></div>
                                         </label>
                                     </div>
                                     <button type="button" class="btn-review" onclick="openModal('tr')">Review &amp; Proceed to Payment</button>
@@ -679,8 +679,8 @@ const PAX_LIMITS = { saloon:3, suv:3, van:5, bus:12, luxury:4 };
 const SVG_FB = `<svg viewBox="0 0 60 38" fill="none"><rect x="3" y="10" width="50" height="22" rx="3" fill="#0d1883" opacity="0.3"/><circle cx="14" cy="34" r="5" fill="#0d1883" opacity="0.6"/><circle cx="42" cy="34" r="5" fill="#0d1883" opacity="0.6"/></svg>`;
 
 /* ── state ── */
-let chSelType=null, chSelCat=null, chFinalPrice=0, chPayment='budpay';
-let trSelType=null, trSelCat=null, trSelModel=null, trDistKm=0, trDurationMins=0, trFinalPrice=0, trPayment='budpay';
+let chSelType=null, chSelCat=null, chFinalPrice=0, chPayment='seerbit';
+let trSelType=null, trSelCat=null, trSelModel=null, trDistKm=0, trDurationMins=0, trFinalPrice=0, trPayment='seerbit';
 let activeModal=null;
 
 /* ══ FARE RULES MODAL ══ */
