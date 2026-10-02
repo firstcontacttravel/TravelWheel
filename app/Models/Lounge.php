@@ -30,6 +30,7 @@ class Lounge extends Model
         'given_PriceB',
         'given_PriceC',
         'markup_price',
+        'is_active',
         'provider_currency',
         'provider_url',
         'provider_images',
@@ -58,7 +59,14 @@ class Lounge extends Model
             'provider_images' => 'array',
             'provider_payload' => 'array',
             'provider_synced_at' => 'datetime',
+            'is_active' => 'boolean',
         ];
+    }
+
+    /** Lounges admin hasn't disabled — the only ones customers can see or book. */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 
     /** Return a LoungePair image URL when supplied, otherwise the local asset. */

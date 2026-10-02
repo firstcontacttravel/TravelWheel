@@ -97,7 +97,12 @@ class LoungeController extends Controller
 
     public function loungeBooking($id)
     {
-        $lounges = Lounge::where('id', $id)->get();
+        $lounges = Lounge::active()->where('id', $id)->get();
+
+        if ($lounges->isEmpty()) {
+            return redirect()->route('air.lounge')->with('error', 'That lounge is no longer available. Please choose another.');
+        }
+
         return view('air.lounge.loungebooking', compact('lounges'));
     }
 
@@ -109,6 +114,11 @@ class LoungeController extends Controller
         );
 
         $dataform = $request->all();
+
+        // Admin may have disabled the lounge after the customer opened it
+        if (filled($dataform['lounge_id'] ?? null) && ! Lounge::active()->whereKey($dataform['lounge_id'])->exists()) {
+            return redirect()->route('air.lounge')->with('error', 'That lounge is no longer available. Please choose another.');
+        }
 
         return view('air.lounge.loungecheckout', compact('dataform'));
     }

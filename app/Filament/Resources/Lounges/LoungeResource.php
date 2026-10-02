@@ -12,12 +12,15 @@ use Filament\Actions\EditAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ToggleColumn;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class LoungeResource extends Resource
@@ -93,6 +96,11 @@ class LoungeResource extends Resource
                         ->label('Total (Infant) — shown to public')
                         ->numeric()->prefix('₦')->disabled()->dehydrated(false),
                 ]),
+            Toggle::make('is_active')
+                ->label('Active')
+                ->helperText('Turn off to hide this lounge from customers. It stays in admin and can be turned back on any time.')
+                ->default(true)
+                ->columnSpanFull(),
             FileUpload::make('pics1')->label('Image 1')->image()->previewable(false)->disk('lounge_assets')->visibility('public')->required(),
             FileUpload::make('pics2')->label('Image 2')->image()->previewable(false)->disk('lounge_assets')->visibility('public')->required(),
             FileUpload::make('pics3')->label('Image 3')->image()->previewable(false)->disk('lounge_assets')->visibility('public')->required(),
@@ -108,6 +116,7 @@ class LoungeResource extends Resource
             ->columns([
                 ImageColumn::make('pics1')->label('')->getStateUsing(fn (Lounge $record): string => asset('assets/lounge/' . $record->pics1)),
                 TextColumn::make('brand_name')->searchable()->description(fn (Lounge $record): string => $record->location),
+                ToggleColumn::make('is_active')->label('Active'),
                 TextColumn::make('airport')->searchable(),
                 TextColumn::make('terminal'),
                 TextColumn::make('given_PriceA')->label('Vendor (Adult)')->money('NGN'),
@@ -117,6 +126,9 @@ class LoungeResource extends Resource
                 TextColumn::make('priceA')->label('Total (Adult)')->money('NGN')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('priceB')->label('Total (Child)')->money('NGN')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('priceC')->label('Total (Infant)')->money('NGN')->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                TernaryFilter::make('is_active')->label('Active')->trueLabel('Active only')->falseLabel('Disabled only'),
             ])
             ->recordActions([
                 EditAction::make(),

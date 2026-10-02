@@ -23,7 +23,7 @@ class LoungePairResults extends Component
         abort_unless(preg_match('/^[A-Z]{3}$/', $iata), 404);
 
         $this->iata = $iata;
-        $this->lounges = LoungeProduct::query()
+        $this->lounges = LoungeProduct::active()
             ->where('provider', 'loungepair')
             ->where('provider_airport_iata', $this->iata)
             ->latest('provider_synced_at')

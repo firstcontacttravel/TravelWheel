@@ -12,7 +12,12 @@ class LoungePlan extends Component
 
     public function mount(int $id): void
     {
-        $this->lounges = LoungeProduct::where('id', $id)->get();
+        $this->lounges = LoungeProduct::active()->where('id', $id)->get();
+
+        if ($this->lounges->isEmpty()) {
+            $this->redirectRoute('air.lounge');
+            session()->flash('error', 'That lounge is no longer available. Please choose another.');
+        }
     }
 
     public function render()

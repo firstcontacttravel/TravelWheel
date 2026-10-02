@@ -25,7 +25,7 @@ class LoungeResults extends Component
         $this->airportType = $airport !== null ? (int) $airport : null;
         $this->service = request()->query('service');
 
-        $query = LoungeProduct::where('location', $this->location)
+        $query = LoungeProduct::active()->where('location', $this->location)
             ->where('airport', $this->airportType);
 
         if ($this->service) {
