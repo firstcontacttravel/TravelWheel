@@ -31,7 +31,7 @@ class FleetCarResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTruck;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Ground Transport';
+    protected static string|\UnitEnum|null $navigationGroup = 'Travel Connections';
 
     protected static ?int $navigationSort = 50;
 
@@ -53,14 +53,14 @@ class FleetCarResource extends Resource
                 ->label('Year of Vehicle')
                 ->numeric()
                 ->minValue(2005)
-                ->maxValue(2026)
+                ->maxValue((int) date('Y') + 1)
                 ->required()
                 ->live(onBlur: true)
                 ->afterStateUpdated(function (Get $get, Set $set): void {
                     $year = (int) $get('year');
                     $set('category', $year ? FleetCar::categoryForYear($year) : null);
                 })
-                ->helperText('Category is derived automatically: 2005–2015 Regular · 2016–2019 Standard · 2020–2026 Executive.'),
+                ->helperText('Category is derived automatically: '.collect(array_keys(FleetCar::CATEGORY_YEAR_RANGES))->map(fn (string $c): string => $c.' '.FleetCar::yearRangeLabel($c))->implode(' · ').'.'),
             TextInput::make('category')
                 ->label('Category (auto)')
                 ->disabled()

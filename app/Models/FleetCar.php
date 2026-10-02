@@ -9,13 +9,28 @@ class FleetCar extends Model
     /**
      * Vehicle-year ranges that define each pricing category. A car's category
      * is always derived from its year, never picked independently, so the
-     * two can never drift out of sync.
+     * two can never drift out of sync. A null upper bound means "and above".
      */
     public const CATEGORY_YEAR_RANGES = [
         'Regular' => [2005, 2015],
         'Standard' => [2016, 2019],
-        'Executive' => [2020, 2026],
+        'Executive' => [2020, null],
     ];
+
+    /**
+     * Customer-facing year range for a category, e.g. "2005 to 2015" or
+     * "2020 and above" — shown on the booking page and in admin.
+     */
+    public static function yearRangeLabel(string $category): ?string
+    {
+        [$from, $to] = static::CATEGORY_YEAR_RANGES[$category] ?? [null, null];
+
+        if ($from === null) {
+            return null;
+        }
+
+        return $to === null ? "{$from} and above" : "{$from} to {$to}";
+    }
 
     protected $fillable = [
         'service_type',
@@ -52,7 +67,7 @@ class FleetCar extends Model
     public static function categoryForYear(int $year): ?string
     {
         foreach (static::CATEGORY_YEAR_RANGES as $category => [$from, $to]) {
-            if ($year >= $from && $year <= $to) {
+            if ($year >= $from && ($to === null || $year <= $to)) {
                 return $category;
             }
         }

@@ -55,6 +55,8 @@ class CarFleetCatalogService
                     'name' => $catName,
                     'price' => (int) $priceMap[$catName],
                     'passengers' => $passengers,
+                    'years' => FleetCar::yearRangeLabel($catName),
+                    'makes' => $modelsInCat->map(fn ($car) => $this->makeOf($car->car_name))->filter()->unique()->values()->all(),
                     'images' => $catImages,
                     'models' => $models,
                 ];
@@ -176,6 +178,26 @@ class CarFleetCatalogService
             ->where('category', $category)
             ->where('car_name', $carName)
             ->exists();
+    }
+
+    /**
+     * The manufacturer from a fleet car name ("Toyota Corolla" -> "Toyota"),
+     * for the "Car Specification" line on the booking page. Customers see
+     * makes rather than exact models, since the car they get depends on
+     * what's available on the day.
+     */
+    public function makeOf(?string $carName): ?string
+    {
+        $parts = preg_split('/\s+/', trim((string) $carName));
+        $first = $parts[0] ?? '';
+
+        return match (strtolower($first)) {
+            '' => null,
+            'mercedes', 'mercedes-benz' => 'Mercedes-Benz',
+            'land' => strtolower($parts[1] ?? '') === 'rover' ? 'Land Rover' : $first,
+            'bmw' => 'BMW',
+            default => ucfirst($first),
+        };
     }
 
     public function defaultPassengerLabel(string $vtype): string
