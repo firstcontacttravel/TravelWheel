@@ -928,7 +928,7 @@ function ch_buildDetail(type, cat) {
         <div class="detail-info">
             <dl class="di-spec">
                 <div><dt>Car Type</dt><dd>${esc(typeName)}</dd></div>
-                <div><dt>Car Category</dt><dd>${esc(cat.name)}${cat.years ? ` <span>(Cars within year ${esc(cat.years)})</span>` : ''}</dd></div>
+                <div><dt>Car Category</dt><dd>${esc(cat.name)}${cat.year_note ? ` <span>(${esc(cat.year_note)})</span>` : ''}</dd></div>
                 <div><dt>Car Specification</dt><dd>${esc(spec)}</dd></div>
             </dl>
             <div>

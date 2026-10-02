@@ -18,12 +18,47 @@ class FleetCar extends Model
     ];
 
     /**
+     * Per-vehicle-type overrides of CATEGORY_YEAR_RANGES. Luxury cars are
+     * newer saloons or SUVs, so their categories start later.
+     */
+    public const VEHICLE_TYPE_YEAR_RANGES = [
+        'luxury' => [
+            'Regular' => [2016, 2020],
+            'Standard' => [2021, 2023],
+            'Executive' => [2024, null],
+        ],
+    ];
+
+    /** What the year range applies to, per vehicle type ("Cars" by default). */
+    public const VEHICLE_TYPE_YEAR_SUBJECT = [
+        'luxury' => 'Saloon or SUV',
+    ];
+
+    public static function yearRangesFor(?string $vehicleType): array
+    {
+        return static::VEHICLE_TYPE_YEAR_RANGES[$vehicleType] ?? static::CATEGORY_YEAR_RANGES;
+    }
+
+    /**
+     * The bracketed note after a category on the booking page, e.g.
+     * "Cars within year 2005 to 2015" or "Saloon or SUV within year 2016 to 2020".
+     */
+    public static function categoryYearNote(string $category, ?string $vehicleType = null): ?string
+    {
+        $range = static::yearRangeLabel($category, $vehicleType);
+
+        return $range === null
+            ? null
+            : (static::VEHICLE_TYPE_YEAR_SUBJECT[$vehicleType] ?? 'Cars').' within year '.$range;
+    }
+
+    /**
      * Customer-facing year range for a category, e.g. "2005 to 2015" or
      * "2020 and above" — shown on the booking page and in admin.
      */
-    public static function yearRangeLabel(string $category): ?string
+    public static function yearRangeLabel(string $category, ?string $vehicleType = null): ?string
     {
-        [$from, $to] = static::CATEGORY_YEAR_RANGES[$category] ?? [null, null];
+        [$from, $to] = static::yearRangesFor($vehicleType)[$category] ?? [null, null];
 
         if ($from === null) {
             return null;
@@ -55,18 +90,18 @@ class FleetCar extends Model
     {
         static::saving(function (FleetCar $car): void {
             if ($car->year) {
-                $car->category = static::categoryForYear($car->year);
+                $car->category = static::categoryForYear($car->year, $car->vehicle_type);
             }
         });
     }
 
     /**
      * Map a vehicle's model year to its pricing category, per
-     * CATEGORY_YEAR_RANGES. Returns null for years outside all defined ranges.
+     * its vehicle type's year ranges. Returns null for years outside all of them.
      */
-    public static function categoryForYear(int $year): ?string
+    public static function categoryForYear(int $year, ?string $vehicleType = null): ?string
     {
-        foreach (static::CATEGORY_YEAR_RANGES as $category => [$from, $to]) {
+        foreach (static::yearRangesFor($vehicleType) as $category => [$from, $to]) {
             if ($year >= $from && ($to === null || $year <= $to)) {
                 return $category;
             }

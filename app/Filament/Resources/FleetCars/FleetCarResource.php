@@ -48,7 +48,13 @@ class FleetCarResource extends Resource
                 ->live(),
             Select::make('vehicle_type')
                 ->options(['saloon' => 'Saloon', 'suv' => 'SUV', 'van' => 'Van', 'bus' => 'Bus', 'luxury' => 'Luxury'])
-                ->required(),
+                ->required()
+                ->live()
+                // Luxury has its own year ranges, so re-derive the category
+                ->afterStateUpdated(function (Get $get, Set $set): void {
+                    $year = (int) $get('year');
+                    $set('category', $year ? FleetCar::categoryForYear($year, $get('vehicle_type')) : null);
+                }),
             TextInput::make('year')
                 ->label('Year of Vehicle')
                 ->numeric()
@@ -58,9 +64,9 @@ class FleetCarResource extends Resource
                 ->live(onBlur: true)
                 ->afterStateUpdated(function (Get $get, Set $set): void {
                     $year = (int) $get('year');
-                    $set('category', $year ? FleetCar::categoryForYear($year) : null);
+                    $set('category', $year ? FleetCar::categoryForYear($year, $get('vehicle_type')) : null);
                 })
-                ->helperText('Category is derived automatically: '.collect(array_keys(FleetCar::CATEGORY_YEAR_RANGES))->map(fn (string $c): string => $c.' '.FleetCar::yearRangeLabel($c))->implode(' · ').'.'),
+                ->helperText(fn (Get $get): string => 'Category is derived automatically: '.collect(array_keys(FleetCar::yearRangesFor($get('vehicle_type'))))->map(fn (string $c): string => $c.' '.FleetCar::yearRangeLabel($c, $get('vehicle_type')))->implode(' · ').'.'),
             TextInput::make('category')
                 ->label('Category (auto)')
                 ->disabled()

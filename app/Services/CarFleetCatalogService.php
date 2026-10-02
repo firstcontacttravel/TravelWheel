@@ -68,7 +68,7 @@ class CarFleetCatalogService
                     'name' => $catName,
                     'price' => (int) $priceMap[$catName],
                     'passengers' => $passengers,
-                    'years' => FleetCar::yearRangeLabel($catName),
+                    'year_note' => FleetCar::categoryYearNote($catName, $vtype),
                     'makes' => $modelsInCat->map(fn ($car) => $this->makeOf($car->car_name))->filter()->unique()->values()->all(),
                     'images' => $catImages,
                     'models' => $models,
