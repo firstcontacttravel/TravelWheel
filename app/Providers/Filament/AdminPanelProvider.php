@@ -101,7 +101,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Visas')->icon(Heroicon::OutlinedIdentification),
                 NavigationGroup::make('Support Requests')->icon(Heroicon::OutlinedLifebuoy),
                 NavigationGroup::make('Air Cargo')->icon(Heroicon::OutlinedCube),
-                NavigationGroup::make('Ground Transport')->icon(Heroicon::OutlinedTruck),
+                NavigationGroup::make('Travel Connections')->icon(Heroicon::OutlinedTruck),
                 NavigationGroup::make('Airport Services')->icon(Heroicon::OutlinedSparkles),
                 NavigationGroup::make('Insurance')->icon(Heroicon::OutlinedShieldCheck),
                 NavigationGroup::make('Insights')->icon(Heroicon::OutlinedChartBar),

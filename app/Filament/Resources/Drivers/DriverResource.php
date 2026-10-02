@@ -26,7 +26,7 @@ class DriverResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserCircle;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Ground Transport';
+    protected static string|\UnitEnum|null $navigationGroup = 'Travel Connections';
 
     protected static ?int $navigationSort = 55;
 

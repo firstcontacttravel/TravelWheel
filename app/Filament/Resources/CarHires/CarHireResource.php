@@ -19,7 +19,7 @@ class CarHireResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedKey;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Ground Transport';
+    protected static string|\UnitEnum|null $navigationGroup = 'Travel Connections';
 
     protected static ?int $navigationSort = 10;
 
