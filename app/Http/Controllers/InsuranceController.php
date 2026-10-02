@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\InsurancePurchaseNotificationMail;
 use App\Models\InsurancePurchase;
 use App\Models\InsuranceQuote;
 use App\Services\SeerbitPaymentService;
@@ -11,6 +12,7 @@ use GuzzleHttp\Exception\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
 
 class InsuranceController extends Controller
@@ -196,9 +198,10 @@ class InsuranceController extends Controller
                 ? $this->familyBooking($token, $dataform, $dataform2)
                 : $this->individualBooking($token, $dataform, $dataform2);
 
-            InsurancePurchase::create($this->purchaseAttributes(
+            $purchase = InsurancePurchase::create($this->purchaseAttributes(
                 $dataform, $dataform2, $paymentReference, $bookingTypeId, $coverId, 'Successful',
             ));
+            $this->notifyReservations($purchase);
 
             Session::forget(['insurance_data_form', 'insurance_data_form2']);
             return redirect()->route('air.insurance.success');
@@ -210,15 +213,26 @@ class InsuranceController extends Controller
             // policy could not be confirmed — record it as failed so ops can follow
             // up, instead of silently telling a paying customer they're covered.
             if (! InsurancePurchase::where('trans_id', $paymentReference)->exists()) {
-                InsurancePurchase::create($this->purchaseAttributes(
+                $purchase = InsurancePurchase::create($this->purchaseAttributes(
                     $dataform, $dataform2, $paymentReference, $bookingTypeId, null, 'Failed',
                 ));
+                $this->notifyReservations($purchase);
             }
 
             return redirect()->route('air.insurance.success')->with([
                 'insurance_pending_review' => true,
                 'message' => "Your payment was received, but we couldn't confirm your policy automatically. Our team has been notified and will email your policy documents shortly. If you don't hear from us within 24 hours, please contact support with reference {$paymentReference}.",
             ]);
+        }
+    }
+
+    /** Email the reservations team; never let a mail problem break the customer's redirect. */
+    private function notifyReservations(InsurancePurchase $purchase): void
+    {
+        try {
+            Mail::to(config('travelwheel.reservations_email'))->send(new InsurancePurchaseNotificationMail($purchase));
+        } catch (\Throwable $e) {
+            Log::error('Insurance reservation notification failed', ['reference' => $purchase->trans_id, 'error' => $e->getMessage()]);
         }
     }
 

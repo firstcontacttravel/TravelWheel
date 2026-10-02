@@ -22,6 +22,7 @@ return [
         // Flights
         \App\Mail\BookingPendingMail::class => null,          // bank transfer, awaiting payment
         \App\Mail\PaymentReceiptMail::class => null,          // paid booking
+        \App\Mail\ETicketMail::class => null,                 // ticketed straight after payment (LCC, SkyLink, TravelFlex) — these send no receipt
         \App\Mail\TravelFlexTicketBookedMail::class => null,  // TravelFlex ticket issued
         // Car Hire & Pick up 'n' Drop off (internal notification copy)
         \App\Mail\CarHireNotificationMail::class => null,
@@ -35,6 +36,8 @@ return [
         \App\Mail\SupportExtraLuggageNotificationMail::class => null,
         \App\Mail\SupportVisaConfirmationNotificationMail::class => null,
         \App\Mail\SupportYellowCardNotificationMail::class => null,
+        // Insurance: InsurancePurchaseNotificationMail is sent straight to the
+        // reservations inbox by InsuranceController, so it isn't listed here.
         // Visa — only the "application submitted" update, not every status change
         \App\Mail\VisaApplicationUpdateMail::class => 'Visa application submitted',
     ],
