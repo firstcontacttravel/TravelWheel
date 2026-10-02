@@ -95,6 +95,15 @@ class FlightBookingsTable
                     ->searchable()
                     ->placeholder('-')
                     ->toggleable(),
+                // Which flight API the booking went through. Rows from before
+                // the supplier column existed default to travelnext.
+                TextColumn::make('supplier')
+                    ->label('Supplier')
+                    ->badge()
+                    ->color(fn (?string $state): string => $state === 'skylink' ? 'info' : 'gray')
+                    ->formatStateUsing(fn (?string $state): string => FlightBooking::supplierLabel($state))
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('fare_type')
                     ->label('Fare')
                     ->badge()
@@ -250,6 +259,11 @@ class FlightBookingsTable
                         'WebFare' => 'WebFare',
                         'Public' => 'Public',
                         'Private' => 'Private',
+                    ]),
+                SelectFilter::make('supplier')
+                    ->options([
+                        'travelnext' => 'TravelNext',
+                        'skylink' => 'SkyLink',
                     ]),
                 SelectFilter::make('booking_status')
                     ->options([

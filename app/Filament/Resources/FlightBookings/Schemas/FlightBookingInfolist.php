@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\FlightBookings\Schemas;
 
+use App\Models\FlightBooking;
 use App\Support\Admin\FlightBookingPresentation;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
@@ -67,6 +68,11 @@ class FlightBookingInfolist
 
                                 Section::make('Pricing')
                                     ->schema([
+                                        TextEntry::make('supplier')
+                                            ->label('Supplier')
+                                            ->badge()
+                                            ->color(fn (?string $state): string => $state === 'skylink' ? 'info' : 'gray')
+                                            ->formatStateUsing(fn (?string $state): string => FlightBooking::supplierLabel($state)),
                                         TextEntry::make('supplier_price')
                                             ->label('Supplier fare')
                                             ->state(fn ($record): string => self::money($record->supplier_price, $record->currency))

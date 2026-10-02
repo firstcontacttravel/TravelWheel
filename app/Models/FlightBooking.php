@@ -127,6 +127,18 @@ class FlightBooking extends Model
         return ($this->supplier ?: 'travelnext') === 'travelnext';
     }
 
+    /**
+     * Admin-facing name of the flight API a supplier key refers to.
+     */
+    public static function supplierLabel(?string $supplier): string
+    {
+        return match ($supplier ?: 'travelnext') {
+            'travelnext' => 'TravelNext',
+            'skylink' => 'SkyLink',
+            default => str($supplier)->headline()->toString(),
+        };
+    }
+
     public function tktTimeLimitFormatted(): string
     {
         return $this->tkt_time_limit
