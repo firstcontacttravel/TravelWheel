@@ -95,7 +95,9 @@
     .cat-thumb-card { flex: 1; min-width: 110px; max-width: 170px; border: 2px solid #e0e4f0; border-radius: 14px; padding: 13px 10px; cursor: pointer; transition: border-color .2s, background .2s, transform .2s, box-shadow .2s; background: #fff; text-align: center; position: relative; user-select: none; }
     .cat-thumb-card:hover { border-color: #0d1883; background: #f5f7ff; transform: translateY(-3px); box-shadow: 0 6px 18px rgba(13,24,131,.1); }
     .cat-thumb-card.active { border-color: #0d1883; background: #eef1ff; box-shadow: 0 6px 18px rgba(13,24,131,.15); }
-    .cat-thumb-card.dimmed { opacity: .35; transform: none; pointer-events: none; }
+    /* Unselected cards fade but stay clickable, so the customer can switch category directly */
+    .cat-thumb-card.dimmed { opacity: .45; transition: opacity .2s, border-color .2s, background .2s, transform .2s, box-shadow .2s; }
+    .cat-thumb-card.dimmed:hover { opacity: 1; }
     .ctc-img { width: 100%; height: 58px; background: #e8ecff; border-radius: 9px; display: flex; align-items: center; justify-content: center; margin-bottom: 9px; overflow: hidden; }
     .ctc-img img { width: 100%; height: 100%; object-fit: contain; }
     .ctc-img svg { width: 50px; height: 32px; }
