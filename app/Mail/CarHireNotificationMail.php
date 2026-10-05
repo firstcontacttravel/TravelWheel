@@ -48,6 +48,7 @@ class CarHireNotificationMail extends Mailable
                         'pickup_date'      => $this->booking->pickup_date,
                         'pickup_time'      => $this->booking->pickup_time,
                         'passengers'       => $this->booking->passengers,
+                        'rental_hours'     => $this->booking->rental_hours,
                         'amount'           => $this->booking->amount,
                         'reference'        => $this->booking->payment_reference,
                         'payment_option'   => strtoupper($this->booking->payment_option),

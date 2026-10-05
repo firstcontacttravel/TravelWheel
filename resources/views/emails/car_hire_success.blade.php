@@ -60,7 +60,7 @@
             </div>
             <div class="detail-row">
                 <span class="detail-label">Vehicle Model</span>
-                <span class="detail-value">{{ $car_model ?: 'Any available ' . strtolower($category) . ' ' . strtolower($car_type) }}</span>
+                <span class="detail-value">{{ $car_model ?: 'Vehicle Model will be communicated' }}</span>
             </div>
             <div class="detail-row">
                 <span class="detail-label">Category</span>
@@ -79,9 +79,15 @@
                 <span class="detail-value">{{ $pickup_location }}</span>
             </div>
             <div class="detail-row">
+                <span class="detail-label">Duration</span>
+                <span class="detail-value">{{ (float) $rental_hours ? rtrim(rtrim(number_format((float) $rental_hours, 1), '0'), '.') . ' hour' . ((float) $rental_hours == 1 ? '' : 's') : '—' }}</span>
+            </div>
+            @if (filled($dropoff_location))
+            <div class="detail-row">
                 <span class="detail-label">Drop-off Location</span>
                 <span class="detail-value">{{ $dropoff_location }}</span>
             </div>
+            @endif
             <div class="detail-row">
                 <span class="detail-label">Pick-up Date</span>
                 <span class="detail-value">{{ \Carbon\Carbon::parse($pickup_date)->format('D, d M Y') }}</span>
