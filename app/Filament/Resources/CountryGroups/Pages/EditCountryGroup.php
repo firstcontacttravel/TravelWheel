@@ -3,12 +3,14 @@
 namespace App\Filament\Resources\CountryGroups\Pages;
 
 use App\Filament\Concerns\HasBackHeaderActionAndInlineDelete;
+use App\Filament\Concerns\RecordsPageActivity;
 use App\Filament\Resources\CountryGroups\CountryGroupResource;
 use Filament\Resources\Pages\EditRecord;
 
 class EditCountryGroup extends EditRecord
 {
     use HasBackHeaderActionAndInlineDelete;
+    use RecordsPageActivity;
 
     protected static string $resource = CountryGroupResource::class;
 

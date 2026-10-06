@@ -465,6 +465,7 @@ class FlightBookingsTable
     public static function markBankTransferPaidAction(): Action
     {
         return Action::make('markBankTransferPaid')
+            ->authorize(fn (): bool => self::canHandleMoney())
             ->label('Mark paid')
             ->icon('heroicon-o-banknotes')
             ->color('success')
@@ -639,6 +640,7 @@ class FlightBookingsTable
     public static function markFeesTransferPaidAction(): Action
     {
         return Action::make('markFeesTransferPaid')
+            ->authorize(fn (): bool => self::canHandleMoney())
             ->label('Mark fees paid')
             ->icon('heroicon-o-shield-check')
             ->color('success')
@@ -737,6 +739,7 @@ class FlightBookingsTable
     public static function verifySeerbitPaymentAction(): Action
     {
         return Action::make('verifySeerbitPayment')
+            ->authorize(fn (): bool => self::canHandleMoney())
             ->label('Verify SeerBit')
             ->icon('heroicon-o-shield-check')
             ->color('info')
@@ -888,6 +891,11 @@ class FlightBookingsTable
 
             return false;
         }
+    }
+
+    private static function canHandleMoney(): bool
+    {
+        return auth()->user()?->canHandleMoney() ?? false;
     }
 
     private static function recordPaymentVerification(FlightBooking $record, array $data): void
@@ -1506,6 +1514,9 @@ class FlightBookingsTable
         ?string $requiresQuoteType = null,
     ): Action {
         return Action::make('postTicketing'.str($operationType)->studly())
+            // Quotes are information anyone may fetch; carrying out a void or
+            // refund moves money, so only Finance (and the CEO) can.
+            ->authorize(fn (): bool => ! in_array($operationType, ['void', 'refund'], true) || self::canHandleMoney())
             ->label($label)
             ->icon($icon)
             ->color($color)

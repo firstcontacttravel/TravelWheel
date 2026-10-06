@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\VisaProducts\Pages;
 
 use App\Enums\VisaPublicationStatus;
+use App\Filament\Concerns\RecordsPageActivity;
 use App\Filament\Resources\VisaProducts\VisaProductResource;
 use App\Services\VisaCataloguePublicationService;
 use App\Services\VisaFormWorkflow;
@@ -14,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class EditVisaProduct extends EditRecord
 {
+    use RecordsPageActivity;
+
     protected static string $resource = VisaProductResource::class;
 
     protected function mutateFormDataBeforeFill(array $data): array
