@@ -1,6 +1,6 @@
 # TravelWheel Workflow System: Implementation Plan
 
-Status as of 2026-10-06. Branch: `feature/workflow-phase-0`.
+Status as of 2026-10-06: **all six phases built and on `main`.** Remaining work is production rollout (each phase's Ship checklist) and the Linear webhook.
 
 ## What we are building
 
@@ -37,7 +37,7 @@ Escalations can go out to Linear and sync back.
 
 ---
 
-## Phase 0: Foundation (staff, departments, permissions, action log)
+## Phase 0: Foundation (staff, departments, permissions, action log) ✅ built
 
 **Goal:** know who everyone is, limit money actions to Finance, and record every action.
 
@@ -381,20 +381,41 @@ Escalations can go out to Linear and sync back.
 
 ---
 
-## Phase 6: Workload reporting
+## Phase 6: Workload reporting ✅ built
 
 **Goal:** the CEO can see how work is flowing.
 
-### 6.1 Reports
-- Time spent in each step.
-- Deadlines met vs missed.
-- Bookings handled per person and per department.
-- Escalations by department and how long they took to resolve.
+### 6.1 Workload page ✅ built
+- **Insights → Workload** (`/admin/workload`), **CEO only**, because it names individuals. Filters: last 7, 30 or 90 days; one service or all.
+- *Differs from plan:* this is its own page, not a section of the Reports page. Reports is built on `ReportingFact`, a sales-and-revenue table synced every five minutes. Workload reads work items and their history directly, so it is always current and covers every service the same way. It uses the Reports page's styles, so the two look the same.
+- Logic in `App\Support\Admin\WorkloadReport`; page `App\Filament\Pages\Workload`.
 
-Shown on the existing Reports page, built on the existing reporting platform (`ReportingFact`).
+**Summary:**
+- needs action now, with unclaimed and waiting-on-customer counts;
+- overdue now, and deadlines missed in the period;
+- completed, and the share completed without missing a deadline;
+- escalations, and their median time to resolve.
 
-### 6.2 Staff activity summary
-- Per person: actions taken, items closed, escalations raised and resolved, over a chosen period.
+**Time in each step:** for each step left during the period, the number of times it was done, the typical (median) and slowest time, the deadline, and how many ran over it. The slowest steps are listed first, because those are where bookings get stuck. Only steps where staff act are included; waiting on a customer isn't anyone's backlog.
+
+**By department:** for each queue, what needs action now, what's unclaimed and overdue, what was completed in the period, escalations received, and the median time to answer them.
+
+**By person** (this covers 6.2): what each person owns now and how much of it is overdue, then for the period: completed, claimed, escalations raised and resolved, and admin actions taken (from the Activity Log).
+
+- **"Completed" comes from each booking's history:** a booking counts only when it moves into a finished step during the period. Running against the local data showed why this matters: counting by close date reported 46 completions on the first day, which were just old finished bookings picked up by the backfill. The real number was 2. A test covers this.
+
+### 6.2 Tests ✅ built
+- `tests/Feature/WorkflowWorkloadTest.php`, 8 tests:
+  - step times taken from the history; steps over their deadline;
+  - completions on time vs late; bookings already finished when tracking began not counted;
+  - credit to the right people; department queues and escalation response times;
+  - the service filter; the CEO-only page.
+- Also run against the local MySQL database, read-only, to confirm the queries work there and not just in the test database.
+- Full suite: 583 passed. The only failures are the 2 that were already failing before this work.
+
+### 6.3 Ship
+- [ ] Nothing extra to deploy: no migration, no settings.
+- [ ] The step times fill in as bookings move. Right after deploy, Time in each step is empty until bookings start changing steps.
 
 **Phase 6 is done when:** the CEO can answer "who is overloaded, where do bookings get stuck, and are we meeting deadlines?" from the Reports page.
 
