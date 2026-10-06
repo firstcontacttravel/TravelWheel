@@ -67,9 +67,15 @@
                 <span class="detail-value">{{ $vehicle_type }}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">Vehicle Name</span>
-                <span class="detail-value">{{ $vehicle_name }}</span>
+                <span class="detail-label">Vehicle Model</span>
+                <span class="detail-value">Vehicle Model will be communicated</span>
             </div>
+            @if (filled($category))
+            <div class="detail-row">
+                <span class="detail-label">Category</span>
+                <span class="detail-value">{{ $category }}</span>
+            </div>
+            @endif
         </div>
 
         <div class="details-card">

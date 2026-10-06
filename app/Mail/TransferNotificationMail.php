@@ -42,6 +42,7 @@ class TransferNotificationMail extends Mailable
                         'phone'            => $this->booking->phone_number,
                         'vehicle_type'     => $vehicleTypeDisplay,
                         'vehicle_name'     => $this->booking->vehicle_name,
+                        'category'         => $this->booking->category,
                         'pickup_location'  => $this->booking->pickup_location,
                         'dropoff_location' => $this->booking->dropoff_location,
                         'pickup_date'      => $this->booking->pickup_date,

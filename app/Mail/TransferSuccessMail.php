@@ -40,6 +40,7 @@ class TransferSuccessMail extends Mailable
                         'name'             => $this->booking->full_name ?? 'Customer',
                         'vehicle_type'     => $vehicleTypeDisplay,
                         'vehicle_name'     => $this->booking->vehicle_name,
+                        'category'         => $this->booking->category,
                         'pickup_location'  => $this->booking->pickup_location,
                         'dropoff_location' => $this->booking->dropoff_location,
                         'pickup_date'      => $this->booking->pickup_date,
