@@ -80,6 +80,11 @@ class WorkItem extends Model
         return $this->hasMany(WorkItemEvent::class)->latest('created_at')->latest('id');
     }
 
+    public function escalations(): HasMany
+    {
+        return $this->hasMany(Escalation::class)->latest('id');
+    }
+
     public function workflow(): Workflow
     {
         return app(WorkflowRegistry::class)->forService($this->service);

@@ -142,44 +142,50 @@ Escalations can go out to Linear and sync back.
 
 ---
 
-## Phase 2: "My Work" page and escalations
+## Phase 2: "My Work" page and escalations ✅ built
 
 **Goal:** one place where staff see their work, and escalation in both modes.
 
-### 2.1 Notifications
-- Add Laravel's `notifications` table and turn on Filament database notifications (the bell in the top bar).
-- Important notifications also go by email through the existing `NotificationOutbox`.
+### 2.1 Notifications ✅ built
+- Laravel's `notifications` table and Filament's notification bell in the top bar, checked every 60 seconds.
+- Escalation emails go through the existing outbox, using a new `DurableMailService::store()` that queues without sending on the spot. The person escalating never waits on the mail server, and the scheduled outbox run sends them within a few minutes.
 
-### 2.2 Escalation service
-- `escalations` table: work item, `mode` (help/handoff), who escalated, target department and/or person, `reason`, `priority`, `status` (open → accepted → resolved, or declined), `resolution_note`, timestamps, and the Linear fields (filled in phase 3).
+### 2.2 Escalations ✅ built
+- `escalations` table: work item, `mode` (help/handoff), `status` (open, accepted, resolved, declined, withdrawn), raised by, target department and/or person, priority, reason, response note, timestamps, and reserved `linear_issue_id`/`linear_issue_url` for phase 3.
 - `EscalationService`:
-  - **Hand-off:** ownership moves to the target once they accept. If the target is a department, anyone in it can accept.
-  - **Ask for help:** the owner stays; the target resolves and the escalation returns to the owner with a note.
-  - Declining needs a reason and goes back to the person who escalated.
-- Every step writes a work item event and a notification.
+  - **Ask for help** (default): the owner keeps the booking. The other side may accept ("I'm on it"), then **resolves with a note**, which goes back to whoever asked and to the owner.
+  - **Hand-off:** whoever accepts becomes the owner, and the booking moves into their department's queue.
+  - **Decline** needs a reason and goes back to whoever asked. **Withdraw** is only for whoever raised it.
+  - Aimed at a person: only that person (or the CEO) can answer. Aimed at a department: anyone in it can.
+  - A named person brings their department along. You can't escalate to yourself or to a deactivated account.
+- Every step writes a line in the booking's history and sends a bell notification. Being escalated to, a resolution and a decline also send an email.
+- Emails carry only the booking reference, its stage and the staff-written reason: no passenger, passport or payment details.
 
-### 2.3 Escalate dialog
-- On the booking page: mode (help is the default), department, person (optional, limited to that department), reason (required), priority.
-- An **Escalations** section on the booking lists open and past escalations, with Accept, Resolve and Decline.
+### 2.3 On the booking page ✅ built
+- **Work → Escalate**: choose help or hand-off, department, person (optional), priority, and "What do you need?". Refused on the form if there is no department or person.
+- An **Escalation** menu appears only when an escalation is waiting on you (Accept, Resolve, Decline) or was raised by you (Withdraw).
+- The Work panel shows **Open escalations** above the history.
 
-### 2.4 "My Work" page
-- A top-level page and the first link in the sidebar. Tabs:
-  - **Mine**
-  - **My department**
-  - **Unclaimed**
-  - **Escalated to me / my department**
-  - **Escalated by me**
-  - **Overdue**
-- Covers every service; each row links to the booking.
-- The sidebar link shows a count of open items assigned to the person or their department.
+### 2.4 My Work page ✅ built
+- The first item in the rail, next to the Dashboard (`/admin/my-work`), across every service.
+- Tabs with counts: **Mine** (the default), **My department**, **Unclaimed** (needs action, nobody owns it), **Escalated to me**, **Escalated by me**, **Overdue**, **All open**.
+- Search by booking reference across services. Filters by service, queue and priority. Claim from the row; click a row to open the booking.
 
-### 2.5 Dashboard
-- The "broken" and "waiting" signals on the operations dashboard read from work items instead of queries written by hand for each service.
+### 2.5 Dashboard ✅ built
+- The **Waiting** band now starts with your own work: **Your open work**, **Escalated to you**, **Unclaimed**, each linking to the matching My Work tab.
+- "Open post-ticketing" now counts only real supplier changes, not unanswered quotes. It had been counting stale quotes from May.
+- *Differs from plan:* the service queues (Awaiting transfer, Ready to ticket…) still use their own queries rather than reading from work items. They give the same answers, and moving them is not worth the risk until phase 4 brings every service in.
 
-### 2.6 Tests
-- Both escalation modes from start to finish: accept, decline, resolve.
-- Notifications go to the right people.
-- The My Work tabs show the right items.
+### 2.6 Tests ✅ built
+- `tests/Feature/WorkflowEscalationsTest.php`, 15 tests:
+  - both modes end to end; who may answer; declining and withdrawing;
+  - invalid escalations refused; the email content and its delivery through the outbox;
+  - the booking-page actions, the My Work tabs and search, and the dashboard counts.
+- Full suite: 513 passed. The only failures are the 2 that were already failing before this work.
+
+### 2.7 Ship
+- [ ] Production rollout: `php artisan migrate`. The scheduler already runs the outbox every minute.
+- [ ] PR → review → merge (after phases 0 and 1).
 
 **Phase 2 is done when:** staff start their day on My Work, and any booking can be escalated to a person or department in either mode.
 

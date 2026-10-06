@@ -3,6 +3,7 @@
 namespace App\Support\Admin;
 
 use App\Models\ActivityLog;
+use App\Models\Escalation;
 use App\Models\WorkItem;
 use App\Models\WorkItemEvent;
 use Carbon\CarbonInterface;
@@ -27,8 +28,30 @@ class WorkItemPresentation
         return new HtmlString(view('filament.workflow.work-panel', [
             'item' => $item,
             'facts' => $item ? self::facts($item) : [],
+            'escalations' => $item ? self::openEscalations($item) : [],
             'feed' => $item ? self::feed($item, $subject) : [],
         ])->render());
+    }
+
+    /**
+     * What is still waiting on someone else, above the history so it is not
+     * lost in it.
+     *
+     * @return list<array{title: string, when: string, body: string|null, tone: string}>
+     */
+    private static function openEscalations(WorkItem $item): array
+    {
+        return $item->escalations()->active()->with(['raiser', 'toUser', 'toDepartment', 'responder'])->get()
+            ->map(fn (Escalation $escalation): array => [
+                'title' => ($escalation->mode === Escalation::MODE_HANDOFF ? 'Hand-off to ' : 'Help from ').$escalation->targetLabel()
+                    .' · '.($escalation->status === Escalation::STATUS_ACCEPTED
+                        ? ($escalation->responder?->name ?? 'Someone').' is on it'
+                        : 'waiting for a response'),
+                'when' => ($escalation->raiser?->name ?? 'Someone').', '.self::when($escalation->created_at),
+                'body' => $escalation->reason,
+                'tone' => $escalation->status === Escalation::STATUS_ACCEPTED ? 'progress' : (in_array($escalation->priority, ['high', 'urgent'], true) ? 'critical' : 'warning'),
+            ])
+            ->all();
     }
 
     /** @return array<string, string> */
@@ -95,6 +118,16 @@ class WorkItemPresentation
             WorkItemEvent::MOVED => ["{$who} moved it to the {$event->to} queue", 'info'],
             WorkItemEvent::NOTE => ["{$who} added a note", 'info'],
             WorkItemEvent::PRIORITY_CHANGED => ["{$who} set priority to ".(WorkItem::PRIORITIES[$event->to] ?? $event->to), 'warning'],
+            WorkItemEvent::ESCALATED => [
+                ($event->metadata['mode'] ?? null) === Escalation::MODE_HANDOFF
+                    ? "{$who} handed it off to {$event->to}"
+                    : "{$who} asked {$event->to} for help",
+                'warning',
+            ],
+            WorkItemEvent::ESCALATION_ACCEPTED => ["{$who} accepted the escalation", 'info'],
+            WorkItemEvent::ESCALATION_RESOLVED => ["{$who} resolved the escalation", 'positive'],
+            WorkItemEvent::ESCALATION_DECLINED => ["{$who} declined the escalation", 'critical'],
+            WorkItemEvent::ESCALATION_WITHDRAWN => ["{$who} withdrew the escalation", 'idle'],
             default => [str($event->type)->headline()->toString()." ({$who})", 'idle'],
         };
 

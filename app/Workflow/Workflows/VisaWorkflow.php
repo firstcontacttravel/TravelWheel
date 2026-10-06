@@ -67,6 +67,11 @@ class VisaWorkflow extends Workflow
         return (string) ($subject->reference ?: 'Visa #'.$subject->getKey());
     }
 
+    public function referenceColumn(): string
+    {
+        return 'reference';
+    }
+
     public function url(Model $subject): string
     {
         return VisaApplicationResource::getUrl('view', ['record' => $subject]);

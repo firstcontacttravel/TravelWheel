@@ -41,6 +41,9 @@ abstract class Workflow
     /** The booking reference staff search by. */
     abstract public function reference(Model $subject): string;
 
+    /** The column that reference lives in, for searching across services. */
+    abstract public function referenceColumn(): string;
+
     /** The admin page for the booking. */
     abstract public function url(Model $subject): string;
 

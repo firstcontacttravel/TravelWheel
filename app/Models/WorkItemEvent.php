@@ -29,6 +29,16 @@ class WorkItemEvent extends Model
 
     public const PRIORITY_CHANGED = 'priority_changed';
 
+    public const ESCALATED = 'escalated';
+
+    public const ESCALATION_ACCEPTED = 'escalation_accepted';
+
+    public const ESCALATION_RESOLVED = 'escalation_resolved';
+
+    public const ESCALATION_DECLINED = 'escalation_declined';
+
+    public const ESCALATION_WITHDRAWN = 'escalation_withdrawn';
+
     protected $fillable = [
         'type',
         'user_id',

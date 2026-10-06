@@ -3,6 +3,7 @@
 
     @param \App\Models\WorkItem|null $item
     @param array<string,string> $facts
+    @param list<array{title:string, when:string, body:string|null, tone:string}> $escalations
     @param list<array{title:string, when:string, body:string|null, tone:string}> $feed
 --}}
 @if (! $item)
@@ -17,5 +18,11 @@
         @endforeach
     </dl>
 
+    @if ($escalations !== [])
+        <h3 class="tc-t-label">Open escalations</h3>
+        @include('filament.booking.feed', ['items' => $escalations, 'empty' => ''])
+    @endif
+
+    <h3 class="tc-t-label">History</h3>
     @include('filament.booking.feed', ['items' => $feed, 'empty' => 'No history yet.'])
 @endif

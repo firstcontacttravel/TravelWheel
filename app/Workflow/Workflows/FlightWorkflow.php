@@ -120,6 +120,11 @@ class FlightWorkflow extends Workflow
         return (string) ($subject->booking_ref ?: 'Flight #'.$subject->getKey());
     }
 
+    public function referenceColumn(): string
+    {
+        return 'booking_ref';
+    }
+
     public function url(Model $subject): string
     {
         return FlightBookingResource::getUrl('view', ['record' => $subject]);

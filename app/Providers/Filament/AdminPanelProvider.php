@@ -66,6 +66,10 @@ class AdminPanelProvider extends PanelProvider
             // window rather than Filament's centred reading column.
             ->maxContentWidth(Width::Full)
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
+            // The bell: escalations to you and answers to yours. Sixty
+            // seconds for the same reason the dashboard polls at sixty.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('60s')
             ->colors([
                 'primary' => self::BRAND_RAMP,
                 'success' => Color::hex('#00a859'),

@@ -31,6 +31,7 @@ class WorkItemActions
             self::claimAction(),
             self::releaseAction(),
             self::reassignAction(),
+            EscalationActions::escalateAction(),
             self::noteAction(),
             self::priorityAction(),
         ])
@@ -94,14 +95,7 @@ class WorkItemActions
                 Select::make('owner_id')
                     ->label('Person')
                     ->placeholder('Nobody, leave it in the queue')
-                    ->options(fn (Get $get): array => User::query()
-                        ->whereNull('deactivated_at')
-                        ->when($get('department_id'), fn ($query, $department) => $query->where(fn ($query) => $query
-                            ->where('department_id', $department)
-                            ->orWhere('is_admin', true)))
-                        ->orderBy('name')
-                        ->pluck('name', 'id')
-                        ->all())
+                    ->options(fn (Get $get): array => self::staffOptions($get('department_id')))
                     ->searchable(),
                 Textarea::make('note')
                     ->label('Note')
@@ -162,6 +156,25 @@ class WorkItemActions
             });
     }
 
+    /**
+     * Active staff to pick from, narrowed to a department when one is chosen.
+     * The CEO is always listed: anything can be sent up to them.
+     *
+     * @return array<int, string>
+     */
+    public static function staffOptions(mixed $departmentId, ?int $except = null): array
+    {
+        return User::query()
+            ->whereNull('deactivated_at')
+            ->when($except, fn ($query) => $query->whereKeyNot($except))
+            ->when($departmentId, fn ($query) => $query->where(fn ($query) => $query
+                ->where('department_id', $departmentId)
+                ->orWhere('is_admin', true)))
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
+    }
+
     private static function item(Model $record): ?WorkItem
     {
         // Queried, not the loaded relation: after Claim the page must see the
@@ -170,7 +183,7 @@ class WorkItemActions
     }
 
     /** Bookings from before the backfill get their work item on first touch. */
-    private static function itemOrSync(Model $record): WorkItem
+    public static function itemOrSync(Model $record): WorkItem
     {
         $service = app(WorkItemService::class);
 
