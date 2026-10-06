@@ -27,8 +27,13 @@ class LinearClient
      */
     public function createIssue(string $teamKey, string $title, string $description, int $priority, array $labelIds = [], ?string $assigneeId = null): array
     {
+        $team = $this->team($teamKey);
+
         $input = array_filter([
-            'teamId' => $this->team($teamKey)['id'],
+            'teamId' => $team['id'],
+            // Straight into the team's first "unstarted" state (Todo). The
+            // default is Backlog, where an escalation waits unseen.
+            'stateId' => collect($team['states'])->firstWhere('type', 'unstarted')['id'] ?? null,
             'title' => $title,
             'description' => $description,
             'priority' => $priority,

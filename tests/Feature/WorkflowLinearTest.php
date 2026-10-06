@@ -60,6 +60,7 @@ class WorkflowLinearTest extends TestCase
         $create = $this->linearCall('issueCreate');
         $this->assertSame('team-it', $create['variables']['input']['teamId']);
         $this->assertSame(1, $create['variables']['input']['priority'], 'Urgent is Linear priority 1.');
+        $this->assertSame('state-it-todo', $create['variables']['input']['stateId'], 'Into Todo, not the default Backlog.');
         $this->assertArrayNotHasKey('labelIds', $create['variables']['input'], 'IT has its own team, no label.');
 
         $description = $create['variables']['input']['description'];

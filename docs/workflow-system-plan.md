@@ -251,7 +251,7 @@ Escalations can go out to Linear and sync back.
   - URL: `https://<production domain>/webhooks/linear`
   - Events: **Issues** and **Comments**; teams: IT Department and TravelWheel
   - Copy the signing secret into production's `.env` as `LINEAR_WEBHOOK_SECRET`.
-- [ ] Optional live check: raise one real escalation to IT and confirm the issue appears.
+- [x] Live check (2026-10-06): a real escalation to IT created IT-8 in the IT team (low priority, no customer details). Resolving it in the admin moved IT-8 to Done, commented and archived it; Linear went back to 7 active issues. It landed in Backlog, so new issues now go straight to Todo.
 - [ ] Check production's `QUEUE_CONNECTION`. With `database` (as in `.env.example`), Linear calls run in the background through the scheduled queue worker, which is better. With `sync` they run during the request, but are still safe.
 
 **Phase 3 is done when:** an IT escalation appears in Linear within seconds, and closing it in Linear closes it in the admin.
