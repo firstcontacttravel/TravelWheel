@@ -66,6 +66,10 @@ class AdminPanelProvider extends PanelProvider
             // window rather than Filament's centred reading column.
             ->maxContentWidth(Width::Full)
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
+            // The bell: escalations to you and answers to yours. Sixty
+            // seconds for the same reason the dashboard polls at sixty.
+            ->databaseNotifications()
+            ->databaseNotificationsPolling('60s')
             ->colors([
                 'primary' => self::BRAND_RAMP,
                 'success' => Color::hex('#00a859'),
@@ -105,6 +109,8 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Airport Services')->icon(Heroicon::OutlinedSparkles),
                 NavigationGroup::make('Insurance')->icon(Heroicon::OutlinedShieldCheck),
                 NavigationGroup::make('Insights')->icon(Heroicon::OutlinedChartBar),
+                // Staff, departments and the activity log. Only the CEO sees it.
+                NavigationGroup::make('Team')->icon(Heroicon::OutlinedUserGroup),
                 NavigationGroup::make('System')->icon(Heroicon::OutlinedCog6Tooth),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasWorkItem;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class SupportExtraLuggage extends Model
 {
-    use HasFactory;
+    use HasFactory, HasWorkItem;
 
     protected $table = 'support_extra_luggage_requests';
 
@@ -23,6 +24,7 @@ class SupportExtraLuggage extends Model
         'payment_reference',
         'payment_status',
         'amount',
+        'fulfilment_status',
     ];
 
     protected $casts = [

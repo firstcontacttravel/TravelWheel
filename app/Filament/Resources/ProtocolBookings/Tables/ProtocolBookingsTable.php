@@ -2,14 +2,14 @@
 
 namespace App\Filament\Resources\ProtocolBookings\Tables;
 
+use App\Filament\Workflow\FulfilmentActions;
+use App\Filament\Workflow\WorkItemTable;
 use App\Models\ProtocolBooking;
-use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Select;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ProtocolBookingsTable
 {
@@ -24,7 +24,9 @@ class ProtocolBookingsTable
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('workItem.owner'))
             ->columns([
+                WorkItemTable::ownerColumn(),
                 TextColumn::make('trans_id')->label('Reference')->searchable()->copyable()->weight('bold'),
                 TextColumn::make('fullname')
                     ->label('Customer')
@@ -51,31 +53,12 @@ class ProtocolBookingsTable
                 TextColumn::make('created_at')->since()->sortable(),
             ])
             ->filters([
+                WorkItemTable::filter(),
                 SelectFilter::make('status')->options(self::STATUS_OPTIONS),
             ])
             ->recordActions([
                 ViewAction::make(),
-                self::changeStatusAction(),
+                FulfilmentActions::rowGroup(),
             ]);
-    }
-
-    public static function changeStatusAction(): Action
-    {
-        return Action::make('changeStatus')
-            ->label('Change status')
-            ->icon('heroicon-o-arrow-path')
-            ->color('gray')
-            ->form(fn (ProtocolBooking $record): array => [
-                Select::make('status')
-                    ->label('Status')
-                    ->options(self::STATUS_OPTIONS)
-                    ->default($record->status)
-                    ->required(),
-            ])
-            ->action(function (ProtocolBooking $record, array $data): void {
-                $record->update(['status' => $data['status']]);
-
-                Notification::make()->title('Status updated')->success()->send();
-            });
     }
 }

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasWorkItem;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Transfer extends Model
 {
-    use HasFactory;
+    use HasFactory, HasWorkItem;
 
     protected $table = 'transfers';
 
@@ -36,6 +37,7 @@ class Transfer extends Model
         'payment_reference',
         'payment_status',
         'driver_assigned',
+        'fulfilment_status',
     ];
 
     protected $casts = [

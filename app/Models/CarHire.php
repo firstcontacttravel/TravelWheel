@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasWorkItem;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CarHire extends Model
 {
-    use HasFactory;
+    use HasFactory, HasWorkItem;
 
     protected $table = 'car_hires';
 
@@ -35,6 +36,7 @@ class CarHire extends Model
         'payment_reference',
         'payment_status',
         'driver_assigned',
+        'fulfilment_status',
     ];
 
     protected $casts = [

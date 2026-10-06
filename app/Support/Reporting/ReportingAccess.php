@@ -2,6 +2,7 @@
 
 namespace App\Support\Reporting;
 
+use App\Models\Department;
 use App\Models\User;
 
 class ReportingAccess
@@ -9,35 +10,26 @@ class ReportingAccess
     public static function canView(?User $user): bool
     {
         return (bool) ($user && (
-            $user->is_admin
+            $user->isAdmin()
             || in_array($user->visa_role, ['administrator', 'finance', 'support'], true)
-            || self::isConfiguredAdmin($user)
+            || $user->inDepartment(Department::FINANCE, Department::CUSTOMER_SUPPORT)
         ));
     }
 
     public static function canViewFinancials(?User $user): bool
     {
         return (bool) ($user && (
-            $user->is_admin
+            $user->isAdmin()
             || in_array($user->visa_role, ['administrator', 'finance'], true)
-            || self::isConfiguredAdmin($user)
+            || $user->inDepartment(Department::FINANCE)
         ));
     }
 
     public static function canManage(?User $user): bool
     {
         return (bool) ($user && (
-            $user->is_admin
+            $user->isAdmin()
             || $user->visa_role === 'administrator'
-            || self::isConfiguredAdmin($user)
         ));
-    }
-
-    private static function isConfiguredAdmin(User $user): bool
-    {
-        return collect(explode(',', (string) env('ADMIN_EMAILS', '')))
-            ->map(fn (string $email): string => strtolower(trim($email)))
-            ->filter()
-            ->contains(strtolower($user->email));
     }
 }

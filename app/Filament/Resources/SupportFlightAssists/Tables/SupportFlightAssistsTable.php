@@ -2,14 +2,14 @@
 
 namespace App\Filament\Resources\SupportFlightAssists\Tables;
 
+use App\Filament\Workflow\FulfilmentActions;
+use App\Filament\Workflow\WorkItemTable;
 use App\Models\SupportFlightAssist;
-use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Select;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class SupportFlightAssistsTable
 {
@@ -17,7 +17,9 @@ class SupportFlightAssistsTable
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('workItem.owner'))
             ->columns([
+                WorkItemTable::ownerColumn(),
                 TextColumn::make('payment_reference')->label('Reference')->searchable()->copyable()->weight('bold'),
                 TextColumn::make('name_on_ticket')->label('Customer')->searchable()->description(fn (SupportFlightAssist $record): string => $record->email),
                 TextColumn::make('request_type')->badge(),
@@ -36,6 +38,7 @@ class SupportFlightAssistsTable
                 TextColumn::make('created_at')->since()->sortable(),
             ])
             ->filters([
+                WorkItemTable::filter(),
                 SelectFilter::make('payment_status')->options([
                     'pending' => 'Pending',
                     'billed_with_main_fee' => 'Billed with main fee',
@@ -51,34 +54,7 @@ class SupportFlightAssistsTable
             ])
             ->recordActions([
                 ViewAction::make(),
-                self::changeStatusAction(),
+                FulfilmentActions::rowGroup(),
             ]);
-    }
-
-    public static function changeStatusAction(): Action
-    {
-        return Action::make('changeStatus')
-            ->label('Change status')
-            ->icon('heroicon-o-arrow-path')
-            ->color('gray')
-            ->form(fn (SupportFlightAssist $record): array => [
-                Select::make('status')
-                    ->label('Payment status')
-                    ->options([
-                        'pending' => 'Pending',
-                        'billed_with_main_fee' => 'Billed with main fee',
-                        'paid' => 'Paid',
-                        'confirmed' => 'Confirmed',
-                        'cancelled' => 'Cancelled',
-                        'completed' => 'Completed',
-                    ])
-                    ->default($record->payment_status)
-                    ->required(),
-            ])
-            ->action(function (SupportFlightAssist $record, array $data): void {
-                $record->update(['payment_status' => $data['status']]);
-
-                Notification::make()->title('Status updated')->success()->send();
-            });
     }
 }

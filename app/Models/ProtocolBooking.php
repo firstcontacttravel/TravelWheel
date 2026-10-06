@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasWorkItem;
 use Illuminate\Database\Eloquent\Model;
 
 class ProtocolBooking extends Model
 {
+    use HasWorkItem;
+
     protected $table = 'protocol_bookings';
 
     protected $casts = [
@@ -44,5 +47,6 @@ class ProtocolBooking extends Model
         'means_id',
         'trans_id',
         'ref_id',
+        'fulfilment_status',
     ];
 }

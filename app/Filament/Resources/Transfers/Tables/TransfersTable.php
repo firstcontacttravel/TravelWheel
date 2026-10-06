@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Transfers\Tables;
 
+use App\Filament\Workflow\FulfilmentActions;
+use App\Filament\Workflow\WorkItemTable;
 use App\Mail\DriverAssignedMail;
 use App\Models\Driver;
 use App\Models\DriverAssignment;
@@ -17,6 +19,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
@@ -26,7 +29,9 @@ class TransfersTable
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('workItem.owner'))
             ->columns([
+                WorkItemTable::ownerColumn(),
                 TextColumn::make('payment_reference')->label('Reference')->searchable()->copyable()->weight('bold'),
                 TextColumn::make('full_name')->label('Customer')->searchable()->description(fn (Transfer $record): string => $record->email),
                 TextColumn::make('phone_number')->copyable(),
@@ -43,6 +48,7 @@ class TransfersTable
                 TextColumn::make('created_at')->since()->sortable(),
             ])
             ->filters([
+                WorkItemTable::filter(),
                 SelectFilter::make('payment_status')->options([
                     'pending' => 'Pending',
                     'paid' => 'Paid',
@@ -54,7 +60,7 @@ class TransfersTable
             ->recordActions([
                 ViewAction::make(),
                 self::assignDriverAction(),
-                self::changeStatusAction(),
+                FulfilmentActions::rowGroup(),
             ]);
     }
 
@@ -133,32 +139,6 @@ class TransfersTable
                 }
 
                 Notification::make()->title('Driver assigned')->success()->send();
-            });
-    }
-
-    public static function changeStatusAction(): Action
-    {
-        return Action::make('changeStatus')
-            ->label('Change status')
-            ->icon('heroicon-o-arrow-path')
-            ->color('gray')
-            ->form(fn (Transfer $record): array => [
-                Select::make('status')
-                    ->label('Payment status')
-                    ->options([
-                        'pending' => 'Pending',
-                        'paid' => 'Paid',
-                        'confirmed' => 'Confirmed',
-                        'cancelled' => 'Cancelled',
-                        'completed' => 'Completed',
-                    ])
-                    ->default($record->payment_status)
-                    ->required(),
-            ])
-            ->action(function (Transfer $record, array $data): void {
-                $record->update(['payment_status' => $data['status']]);
-
-                Notification::make()->title('Status updated')->success()->send();
             });
     }
 }
