@@ -199,7 +199,6 @@ class CarController extends Controller
     {
         $data = $request->validate([
             'vehicle_type' => ['required', 'string', Rule::in(CarFleetCatalogService::bookableVehicleTypes())],
-            'vehicle_name' => 'required|string',
             'category' => 'required|string|in:Regular,Standard,Executive',
             'distance_km' => 'required|numeric|min:0.1',
             'duration_mins' => 'required|integer|min:1',
@@ -216,9 +215,17 @@ class CarController extends Controller
             'payment_option' => 'required|in:budpay,seerbit',
         ]);
 
-        if (! $this->catalog->transferVehicleExists($data['vehicle_type'], $data['category'], $data['vehicle_name'])) {
-            return back()->with('error', 'The selected vehicle is no longer available. Please choose another.');
+        if (! $this->catalog->transferCategoryAvailable($data['vehicle_type'], $data['category'])) {
+            return back()->with('error', 'That vehicle category is no longer available. Please choose another.');
         }
+
+        // Customers book a category, not a specific car: the car sent depends
+        // on what's available and is recorded when a driver is assigned.
+        $data['vehicle_name'] = $data['category'] . ' ' . match ($data['vehicle_type']) {
+            'van' => 'Mini Van',
+            'suv' => 'SUV',
+            default => ucfirst($data['vehicle_type']),
+        };
 
         $quote = $this->transferPricing->quote($data['vehicle_type'], $data['category'], $data['duration_mins']);
         $verifiedPrice = (int) round($quote['total']);

@@ -82,7 +82,7 @@
                 <div class="chs-label">{{ $isTransfer ? 'Your transfer' : 'Your car hire' }}</div>
                 <div class="chs-rows">
                     @if ($isTransfer)
-                        <div class="chs-row"><span>Vehicle</span><strong>{{ $booking->vehicle_name }}@if (filled($booking->category)) · {{ $booking->category }}@endif</strong></div>
+                        <div class="chs-row"><span>Vehicle</span><strong>{{ filled($booking->category) ? $booking->category.' '.$typeName($booking->vehicle_type) : $booking->vehicle_name }}</strong></div>
                         <div class="chs-row"><span>Pick-up</span><strong>{{ $booking->pickup_location }}</strong></div>
                         <div class="chs-row"><span>Drop-off</span><strong>{{ $booking->dropoff_location }}</strong></div>
                         @if ($booking->distance_km)

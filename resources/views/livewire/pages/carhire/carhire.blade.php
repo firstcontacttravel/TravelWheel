@@ -557,22 +557,11 @@
                                             <p>Choose a vehicle type first</p>
                                         </div>
                                     </div>
-                                </div>
-
-                                {{-- Step 4: Select car model --}}
-                                <div class="inner-card tinted" id="tr_modelCard" style="display:none;">
-                                    <div class="section-label">4 · Select car</div>
-                                    <div id="tr_typeLbl" style="font-size:12px;font-weight:500;color:#0d1883;margin-bottom:14px;"></div>
-                                    <div id="tr_modelArea">
-                                        <div class="cat-empty">
-                                            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/></svg>
-                                            <p>Choose a category first</p>
-                                        </div>
-                                    </div>
+                                    {{-- Category details: customers book the category, the car is assigned later --}}
                                     <div id="tr_detailPanel" class="cat-detail-panel"></div>
                                 </div>
 
-                                {{-- Step 5: Booking form --}}
+                                {{-- Step 4: Booking form --}}
                                 <div class="inner-card" id="tr_formCard" style="display:none;">
                                     <div class="form-section-title">Transfer Details</div>
                                     <div class="form-chip"><svg viewBox="0 0 24 24"><path d="M21 3L3 10.53v.98l6.84 2.65L12.48 21h.98L21 3z"/></svg><span id="tr_chipTxt"></span></div>
@@ -649,7 +638,6 @@
             <form id="tr_form" method="POST" action="{{ route('air.transfer.submit') }}" style="display:none">
                 @csrf
                 <input type="hidden" name="vehicle_type"      id="h_tr_type">
-                <input type="hidden" name="vehicle_name"      id="h_tr_vname">
                 <input type="hidden" name="category"          id="h_tr_cat">
                 <input type="hidden" name="price"             id="h_tr_price">
                 <input type="hidden" name="distance_km"       id="h_tr_dist">
@@ -686,7 +674,7 @@ const SVG_FB = `<svg viewBox="0 0 60 38" fill="none"><rect x="3" y="10" width="5
 
 /* ── state ── */
 let chSelType=null, chSelCat=null, chFinalPrice=0, chPayment='seerbit';
-let trSelType=null, trSelCat=null, trSelModel=null, trDistKm=0, trDurationMins=0, trFinalPrice=0, trPayment='seerbit';
+let trSelType=null, trSelCat=null, trDistKm=0, trDurationMins=0, trFinalPrice=0, trPayment='seerbit';
 let activeModal=null;
 
 /* ══ FARE RULES MODAL ══ */
@@ -1015,11 +1003,10 @@ function ch_pay(m) { chPayment=m; ['budpay','seerbit'].forEach(x=>document.getEl
 function tr_setType(type, el) {
     document.querySelectorAll('#tr_typeCards .type-card').forEach(c=>c.classList.remove('active'));
     el.classList.add('active');
-    trSelType=type; trSelCat=null; trSelModel=null; trFinalPrice=0;
+    trSelType=type; trSelCat=null; trFinalPrice=0;
     const lbl=document.getElementById('tr_catTypeLbl');
     lbl.textContent=(type==='van'?'Mini Van':type.charAt(0).toUpperCase()+type.slice(1))+' — choose a category';
     document.getElementById('tr_catCard').style.display='block';
-    document.getElementById('tr_modelCard').style.display='none';
     document.getElementById('tr_priceBox')?.classList.remove('show');
     document.getElementById('tr_detailPanel').classList.remove('visible');
     document.getElementById('tr_detailPanel').innerHTML='';
@@ -1052,63 +1039,13 @@ function tr_selectCat(type, name) {
     const cat=(TR_VEHICLES[type]?.items||[]).find(c=>c.name===name);
     if (!cat) return;
     if (trSelCat?.name===name) {
-        trSelCat=null; trSelModel=null; trFinalPrice=0;
-        document.getElementById('tr_modelCard').style.display='none';
-        document.getElementById('tr_priceBox')?.classList.remove('show');
-        document.getElementById('tr_detailPanel').classList.remove('visible');
-        document.getElementById('tr_detailPanel').innerHTML='';
-        document.getElementById('tr_formCard').style.display='none';
-        tr_renderCats(type,null);
+        tr_resetCat();
         return;
     }
-    trSelCat=cat; trSelModel=null;
+    trSelCat=cat;
     tr_renderCats(type, name);
-    document.getElementById('tr_detailPanel').classList.remove('visible');
-    document.getElementById('tr_detailPanel').innerHTML='';
-    document.getElementById('tr_priceBox')?.classList.remove('show');
     document.getElementById('tr_formCard').style.display='none';
-    tr_renderModels(cat, null);
-}
-
-function tr_renderModels(cat, activeName) {
-    const models=cat.models||[];
-    const area=document.getElementById('tr_modelArea');
-    const lbl=document.getElementById('tr_typeLbl');
-    lbl.textContent=cat.name+' — select the specific car model you prefer';
-    if (!models.length) { area.innerHTML=`<div class="cat-empty"><p>No models listed for this category.</p></div>`; document.getElementById('tr_modelCard').style.display='block'; return; }
-    area.innerHTML=`<div class="cat-row">`+models.map(m=>{
-        const isActive=activeName===m.name;
-        const isDimmed=activeName&&activeName!==m.name;
-        const cls=`cat-thumb-card${isActive?' active':''}${isDimmed?' dimmed':''}`;
-        const thumbImg=m.images?.[0]||'';
-        const thumb=thumbImg?`<img src="${thumbImg}" alt="${esc(m.name)}" onerror="this.parentNode.innerHTML=SVG_FB">`:SVG_FB;
-        return `<div class="${cls}" onclick="tr_selectModel('${escQ(m.name)}')">
-            <div class="ctc-check"><svg viewBox="0 0 12 10" fill="none"><path d="M1 5l3 3 7-7" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-            <div class="ctc-img">${thumb}</div>
-            <div class="ctc-name">${esc(m.name)}</div>
-            <div class="ctc-pax">&#128100; ${esc(m.passengers||'—')}</div>
-        </div>`;
-    }).join('')+`</div>`;
-    document.getElementById('tr_modelCard').style.display='block';
-    document.getElementById('tr_modelCard').scrollIntoView({behavior:'smooth',block:'nearest'});
-}
-
-function tr_selectModel(name) {
-    if (!trSelCat) return;
-    const model=(trSelCat.models||[]).find(m=>m.name===name);
-    if (!model) return;
-    if (trSelModel?.name===name) {
-        trSelModel=null; trFinalPrice=0;
-        document.getElementById('tr_detailPanel').classList.remove('visible');
-        document.getElementById('tr_priceBox')?.classList.remove('show');
-        document.getElementById('tr_formCard').style.display='none';
-        tr_renderModels(trSelCat,null);
-        return;
-    }
-    trSelModel=model;
-    tr_renderModels(trSelCat, name);
-    tr_buildDetail(trSelType, trSelCat, model);
-    document.getElementById('tr_formCard').style.display='none';
+    tr_buildDetail(type, cat);
 }
 
 /* Computes Base Fare + Tear & Wear + Fuel + Admin Fee for the selected
@@ -1129,19 +1066,25 @@ function tr_computePricing() {
     return {base, wearPct, wear, fuelRate, fuel, adminPct, admin, total};
 }
 
-/* Kept for the recompute-on-duration-change path when no model is selected yet
-   (no price card is shown at that point, so this just refreshes trFinalPrice). */
+/* Refreshes trFinalPrice when the route changes before a category is shown. */
 function tr_calcPrice() {
     const p=tr_computePricing();
     return p ? p.total : null;
 }
 
-function tr_buildDetail(type, cat, model) {
+/* Same layout as Car Hire: type / category (with years) / makes in the
+   fleet — the customer books the category, the car is assigned later. */
+function tr_buildDetail(type, cat) {
     const typeName=type==='van'?'Mini Van':type.charAt(0).toUpperCase()+type.slice(1);
-    const images=model.images||[];
-    const slides=buildSlides(images, model.name);
+    const models=cat.models||[];
+    const modelImgs=[...new Set(models.map(m=>m.images?.[0]).filter(Boolean))];
+    const images=modelImgs.length?modelImgs:(cat.images||[]);
+    const slides=buildSlides(images, cat.name+' '+typeName);
     const dots=buildDots(images.length||1, 'trCar');
-    const feats=(model.features||cat.features||[]).map(f=>`<li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>${esc(f)}</li>`).join('');
+    const modelFeats=[...new Set(models.flatMap(m=>m.features||[]))];
+    const feats=(modelFeats.length?modelFeats:(cat.features||[])).map(f=>`<li><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>${esc(f)}</li>`).join('');
+    const makes=cat.makes||[];
+    const spec=makes.length?makes.join(', ')+', or something similar.':'Any available model.';
     const pricing=tr_computePricing();
     const priceDisplay=pricing
         ?`&#8358;${pricing.total.toLocaleString()} <span>estimated total</span>`
@@ -1158,18 +1101,22 @@ function tr_buildDetail(type, cat, model) {
     panel.innerHTML=`<div class="detail-inner">
         ${buildCarousel(slides, dots, 'trCar')}
         <div class="detail-info">
-            <div><div class="di-cat-name">${esc(model.name)}</div><div class="di-type-tag">${esc(cat.name)} · ${esc(typeName)}</div></div>
+            <dl class="di-spec">
+                <div><dt>Car Type</dt><dd>${esc(typeName)}</dd></div>
+                <div><dt>Car Category</dt><dd>${esc(cat.name)}${cat.year_note?` <span>(${esc(cat.year_note)})</span>`:''}</dd></div>
+                <div><dt>Car Specification</dt><dd>${esc(spec)}</dd></div>
+            </dl>
             <div class="di-body">
                 <div class="di-main">
                     <div class="di-price">${priceDisplay}</div>
-                    <div class="di-pax"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>${esc(model.passengers||cat.passengers||'—')} passengers</div>
-                    <div style="margin-top:10px;"><div class="feat-label">What's included</div><ul class="feat-list">${feats}</ul></div>
+                    <div class="di-pax"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>${esc(cat.passengers||'—')} passengers</div>
+                    ${feats?`<div style="margin-top:10px;"><div class="feat-label">What's included</div><ul class="feat-list">${feats}</ul></div>`:''}
                 </div>
                 ${priceBreakdown}
             </div>
             <div class="di-actions">
-                <button class="btn-change" onclick="tr_resetModel()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Change</button>
-                <button class="btn-proceed-cat" onclick="tr_openForm()"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Book This Car</button>
+                <button class="btn-change" onclick="tr_resetCat()"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>Change</button>
+                <button class="btn-proceed-cat" onclick="tr_openForm()"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Book This Category</button>
             </div>
         </div>
     </div>`;
@@ -1178,12 +1125,18 @@ function tr_buildDetail(type, cat, model) {
     panel.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
-function tr_resetModel() { trSelModel=null; trFinalPrice=0; document.getElementById('tr_detailPanel').classList.remove('visible'); document.getElementById('tr_priceBox')?.classList.remove('show'); document.getElementById('tr_formCard').style.display='none'; if(trSelCat) tr_renderModels(trSelCat,null); }
+function tr_resetCat() {
+    trSelCat=null; trFinalPrice=0;
+    const panel=document.getElementById('tr_detailPanel');
+    panel.classList.remove('visible'); panel.innerHTML='';
+    document.getElementById('tr_formCard').style.display='none';
+    if (trSelType) tr_renderCats(trSelType, null);
+}
 
 function tr_openForm() {
     if (!trDistKm||!trDurationMins) { showErr('tr_alertA','Please calculate the route distance before booking.'); document.getElementById('tr_from').scrollIntoView({behavior:'smooth',block:'nearest'}); return; }
     const typeName=trSelType==='van'?'Mini Van':trSelType.charAt(0).toUpperCase()+trSelType.slice(1);
-    document.getElementById('tr_chipTxt').textContent=typeName+' · '+trSelCat.name+' · '+trSelModel.name+' · '+trDistKm+' km · ₦'+trFinalPrice.toLocaleString();
+    document.getElementById('tr_chipTxt').textContent=typeName+' · '+trSelCat.name+' · '+trDistKm+' km · ₦'+trFinalPrice.toLocaleString();
     const paxInput=document.getElementById('tr_pax');
     const maxPax=PAX_LIMITS[trSelType]??20;
     paxInput.max=maxPax; paxInput.placeholder='e.g. 2 (max '+maxPax+')';
@@ -1200,9 +1153,8 @@ function tr_clearDist() {
     const toVal   = document.getElementById('tr_to').value.trim();
     if (!fromVal || !toVal) {
         document.getElementById('tr_typeCard').style.display = 'none';
-        trSelType = null; trSelCat = null; trSelModel = null;
+        trSelType = null; trSelCat = null;
         document.getElementById('tr_catCard').style.display = 'none';
-        document.getElementById('tr_modelCard').style.display = 'none';
         document.getElementById('tr_priceBox')?.classList.remove('show');
         document.getElementById('tr_formCard').style.display = 'none';
     }
@@ -1224,8 +1176,8 @@ async function tr_calcDist() {
         document.getElementById('tr_distRes').classList.add('show');
         /* Unlock vehicle type card */
         document.getElementById('tr_typeCard').style.display = 'block';
-        /* Recompute price if a category/model was already selected */
-        if (trSelModel) { tr_buildDetail(trSelType, trSelCat, trSelModel); } else { tr_calcPrice(); }
+        /* Recompute price if a category was already selected */
+        if (trSelCat) { tr_buildDetail(trSelType, trSelCat); } else { tr_calcPrice(); }
     } catch(e) { showErr('tr_alertA', e.message); }
     finally { document.getElementById('tr_calcSt').classList.remove('show'); }
 }
@@ -1339,8 +1291,7 @@ function openModal(tab) {
             </div>`;
 
     } else {
-        /* FIX 4: was using undefined trSelVehicle — now correctly uses trSelModel and trSelType */
-        if (!trSelType || !trSelCat || !trSelModel) { showErr('tr_alertB', 'Please select a vehicle type, category and model first.'); return; }
+        if (!trSelType || !trSelCat) { showErr('tr_alertB', 'Please select a vehicle type and category first.'); return; }
         if (!trDistKm || !trDurationMins)           { showErr('tr_alertA', 'Please calculate the route distance first.'); return; }
 
         const fields = [
@@ -1371,7 +1322,7 @@ function openModal(tab) {
             rsec('🚗', 'Transfer',
                 ri('Type',    typeName) +
                 ri('Category', esc(trSelCat.name)) +
-                ri('Vehicle', esc(trSelModel.name)) +
+                ri('Vehicle Model', 'Vehicle Model will be communicated') +
                 ri('Distance', document.getElementById('tr_distKmLbl').textContent) +
                 ri('Pick-up',  esc(document.getElementById('tr_from').value), true) +
                 ri('Drop-off', esc(document.getElementById('tr_to').value),   true) +
@@ -1474,7 +1425,6 @@ function submitBooking() {
         document.getElementById('ch_form').submit();
     } else {
         document.getElementById('h_tr_type').value    = trSelType;
-        document.getElementById('h_tr_vname').value   = trSelModel.name;
         document.getElementById('h_tr_cat').value     = trSelCat.name;
         document.getElementById('h_tr_price').value   = trFinalPrice;
         document.getElementById('h_tr_dist').value    = trDistKm;

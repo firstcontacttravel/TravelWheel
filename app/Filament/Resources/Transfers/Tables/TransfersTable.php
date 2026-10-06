@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Transfers\Tables;
 use App\Mail\DriverAssignedMail;
 use App\Models\Driver;
 use App\Models\DriverAssignment;
+use App\Models\FleetCar;
 use App\Models\Transfer;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
@@ -82,7 +83,11 @@ class TransfersTable
                     ->tel()
                     ->visible(fn ($get) => blank($get('driver_id')))
                     ->maxLength(20),
-                TextInput::make('car_model')->default($record->vehicle_name)->required()->maxLength(100),
+                // Older bookings name the car the customer picked; newer ones only
+                // name the category (e.g. "Standard Mini Van"), so start empty then
+                TextInput::make('car_model')
+                    ->default(FleetCar::where('car_name', $record->vehicle_name)->exists() ? $record->vehicle_name : null)
+                    ->required()->maxLength(100),
                 TextInput::make('car_colour')->required()->maxLength(60),
                 TextInput::make('plate_number')->required()->maxLength(20),
                 FileUpload::make('car_images')->multiple()->image()->disk('fleet_assets')->directory('fleet/assigned'),

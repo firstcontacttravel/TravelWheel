@@ -127,6 +127,8 @@ class CarFleetCatalogService
                     'name' => $catName,
                     'price' => (int) ($rateInfo['transfer_base_fares'][$catName] ?? 0),
                     'passengers' => $passengers,
+                    'year_note' => FleetCar::categoryYearNote($catName, $vtype),
+                    'makes' => $modelsInCat->map(fn ($car) => $this->makeOf($car->car_name))->filter()->unique()->values()->all(),
                     'images' => [$this->defaultVehicleImage($vtype)],
                     'models' => $models,
                 ];
@@ -180,16 +182,15 @@ class CarFleetCatalogService
     }
 
     /**
-     * Whether an active Transfer fleet car exists for the given vehicle
-     * type + category + name — used to validate a Transfer submission
-     * before computing its (server-authoritative) price.
+     * Whether any active Transfer fleet car exists in the given vehicle type
+     * + category — customers book a category, not a specific car, so this
+     * guards a Transfer submission against an empty category.
      */
-    public function transferVehicleExists(string $vehicleType, string $category, string $carName): bool
+    public function transferCategoryAvailable(string $vehicleType, string $category): bool
     {
         return FleetCar::active()->forTransfer()
             ->where('vehicle_type', $vehicleType)
             ->where('category', $category)
-            ->where('car_name', $carName)
             ->exists();
     }
 
