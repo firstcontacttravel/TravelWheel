@@ -191,40 +191,68 @@ Escalations can go out to Linear and sync back.
 
 ---
 
-## Phase 3: Linear
+## Phase 3: Linear ✅ built (live webhook pending)
 
 **Goal:** escalations that need tracking show up in Linear and sync back.
 
-### 3.0 Needed from you
-- A Linear API key, created by someone with Linear admin rights.
-- The webhook signing secret.
-- Confirmation of the free-tier limit on active issues (believed to be 250; also check whether archived issues count toward it).
+### 3.0 Linear access ✅ done
+- `LINEAR_API_KEY` is set and checked against the live workspace. Read-only checks only:
+  - **Connection:** TravelWheel workspace, as "First Contact" (a Linear admin).
+  - **Teams:** IT Department (`IT`) and TravelWheel (`TRA`), both with Done and Canceled states.
+  - **Issues:** 7 active; 11 including archived ones.
+- `phpunit.xml` blanks the Linear key and secret, so the test suite can never reach the real workspace. Confirmed: the count is unchanged after the full suite.
 
-### 3.1 Linear client
-- `LinearClient` using Linear's API, configured in `config/services.php` and `.env`.
-- A **Test connection** button.
+### 3.1 Linear client ✅ built
+- `App\Services\Linear\LinearClient`: create issue, move to Done or Canceled, comment, archive, count active issues.
+- Teams, workflow states, labels and users are looked up by name or key and cached for an hour. No Linear IDs are hard-coded in config.
+- `config/services.php` → `linear`: `api_key`, `webhook_secret`, team keys (`LINEAR_TEAM_IT=IT`, `LINEAR_TEAM_TRAVELWHEEL=TRA`), and the warning threshold (`LINEAR_ISSUE_WARNING_THRESHOLD=200`).
 
-### 3.2 Mapping
-- Department → Linear team (IT or Travelwheel) and label. The table already exists from phase 0.
-- Staff → Linear user, matched by email, with a manual override.
+### 3.2 Mapping ✅ built
+- Department → Linear team (IT or TravelWheel) and label, from the Departments screen. A missing label is created as a workspace label the first time it's needed, so Flights, Visas, Finance, Customer Support and Ground & Airport labels appear on first use.
+- A named person is matched to their Linear account by email and becomes the assignee, if they have a seat.
 
-### 3.3 Creating issues
-- **Escalations to IT always create a Linear issue.** For other departments it's an "Also create in Linear" checkbox.
-- The issue contains: booking reference, service, stage, escalation reason, priority, and a link back to the booking in the admin. **No passport numbers, payment details or contact details.**
-- Created by a queued job. If Linear is down, the escalation still works and the issue is created on retry.
+### 3.3 Creating issues ✅ built
+- **Escalations to IT always become an issue in the IT team.** For other departments, the Escalate dialog has an **"Also track it in Linear"** switch, which creates the issue in TravelWheel with the department's label.
+- What the issue contains:
+  - title: mode, booking reference, and a short form of the reason;
+  - body: the reason, the booking reference and its service, its stage, who asked, the mode, and a link back to the booking in the admin;
+  - priority: urgent, high, normal and low map to Linear's 1 to 4.
+- **No passenger, passport or contact details.** The dialog warns staff not to type them into the reason.
+- Created by a queued job, retried up to 3 times; the outcome is written into the booking's history ("Linear issue IT-12 opened", or a failure line).
+- **If Linear is down, the escalation still goes through.** A test covers this, including when the queue runs jobs inline (`QUEUE_CONNECTION=sync`, as it does locally).
 
-### 3.4 Syncing back
-- `POST /webhooks/linear` checks Linear's signature and ignores repeat deliveries (`linear_webhook_receipts` table).
-- Issue completed or cancelled → the escalation is resolved in the admin.
-- Linear comments → appear in the booking's history.
-- Payloads are small, well under the hosting's 1 MiB request limit.
+### 3.4 Syncing back ✅ built (needs the webhook registered)
+- `POST /webhooks/linear` (no CSRF check, rate-limited). It refuses:
+  - requests not signed with `LINEAR_WEBHOOK_SECRET`;
+  - deliveries older than 60 seconds;
+  - everything, with a 404, when no secret is set.
+- A repeated delivery is applied once (`linear_webhook_receipts` table).
+- **Issue completed in Linear:** the escalation is resolved ("Completed in Linear by …"), matched to staff by email when possible. A completed **hand-off** makes that person the owner, if they are staff here.
+- **Issue cancelled in Linear:** the escalation is declined.
+- **Comment in Linear:** appears in the booking's history. The admin's own comments carry a signature and are skipped, so nothing echoes back.
 
-### 3.5 Keeping under the free-tier limit
-- When an escalation is resolved in the admin, the Linear issue is closed and archived.
-- A daily check counts active issues and warns the CEO before the limit is reached.
+### 3.5 Staying under the free-plan limit ✅ built
+- Closing an escalation in the admin (resolved, hand-off accepted, declined, withdrawn) moves its issue to Done or Canceled, comments with the outcome, and **archives** it. Closing it from Linear archives it too.
+- `php artisan linear:status` checks the connection, teams and active issue count. It runs daily at 08:00 with `--warn`, and notifies the CEO in the admin once active issues reach 200.
 
-### 3.6 Tests
-- Linear calls are faked: issue creation, signature checking, completing and commenting, repeat deliveries ignored, Linear outages.
+### 3.6 Tests ✅ built
+- `tests/Feature/WorkflowLinearTest.php`, 16 tests, all with Linear faked:
+  - IT always vs other departments when asked; labels; assignee;
+  - resolve, decline and archive; Linear down;
+  - the form switch;
+  - completed, cancelled, hand-off and comments from Linear; our own comment ignored; repeated delivery;
+  - forged, unsigned and stale requests refused; no secret means no endpoint;
+  - non-escalation issues ignored; the CEO warning.
+- Full suite: 529 passed. The only failures are the 2 that were already failing before this work.
+
+### 3.7 Ship
+- [ ] Production: `php artisan migrate`; set `LINEAR_API_KEY` in production's `.env`.
+- [ ] **Register the webhook** in Linear (Settings → API → Webhooks → New webhook):
+  - URL: `https://<production domain>/webhooks/linear`
+  - Events: **Issues** and **Comments**; teams: IT Department and TravelWheel
+  - Copy the signing secret into production's `.env` as `LINEAR_WEBHOOK_SECRET`.
+- [ ] Optional live check: raise one real escalation to IT and confirm the issue appears.
+- [ ] Check production's `QUEUE_CONNECTION`. With `database` (as in `.env.example`), Linear calls run in the background through the scheduled queue worker, which is better. With `sync` they run during the request, but are still safe.
 
 **Phase 3 is done when:** an IT escalation appears in Linear within seconds, and closing it in Linear closes it in the admin.
 

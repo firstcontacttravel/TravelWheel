@@ -46,7 +46,9 @@ class WorkItemPresentation
                 'title' => ($escalation->mode === Escalation::MODE_HANDOFF ? 'Hand-off to ' : 'Help from ').$escalation->targetLabel()
                     .' · '.($escalation->status === Escalation::STATUS_ACCEPTED
                         ? ($escalation->responder?->name ?? 'Someone').' is on it'
-                        : 'waiting for a response'),
+                        : 'waiting for a response')
+                    .($escalation->linear_identifier ? " · Linear {$escalation->linear_identifier}" : ($escalation->linear_requested ? ' · Linear issue pending' : '')),
+                'url' => $escalation->linear_issue_url,
                 'when' => ($escalation->raiser?->name ?? 'Someone').', '.self::when($escalation->created_at),
                 'body' => $escalation->reason,
                 'tone' => $escalation->status === Escalation::STATUS_ACCEPTED ? 'progress' : (in_array($escalation->priority, ['high', 'urgent'], true) ? 'critical' : 'warning'),
@@ -128,6 +130,9 @@ class WorkItemPresentation
             WorkItemEvent::ESCALATION_RESOLVED => ["{$who} resolved the escalation", 'positive'],
             WorkItemEvent::ESCALATION_DECLINED => ["{$who} declined the escalation", 'critical'],
             WorkItemEvent::ESCALATION_WITHDRAWN => ["{$who} withdrew the escalation", 'idle'],
+            WorkItemEvent::LINEAR_LINKED => ["Linear issue {$event->to} opened", 'info'],
+            WorkItemEvent::LINEAR_FAILED => ['Could not open the Linear issue; the escalation still stands', 'critical'],
+            WorkItemEvent::LINEAR_COMMENT => ["{$event->from} commented in Linear ({$event->to})", 'info'],
             default => [str($event->type)->headline()->toString()." ({$who})", 'idle'],
         };
 
@@ -136,6 +141,7 @@ class WorkItemPresentation
             'when' => self::when($event->created_at),
             'body' => $event->body,
             'tone' => $tone,
+            'url' => $event->metadata['url'] ?? null,
         ];
     }
 

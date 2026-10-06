@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\Escalation;
 use App\Models\User;
 use App\Models\WorkItem;
+use App\Services\Linear\LinearClient;
 use App\Workflow\EscalationService;
 use Closure;
 use Filament\Actions\Action;
@@ -13,6 +14,7 @@ use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -74,10 +76,17 @@ class EscalationActions
                     ->required(),
                 Textarea::make('reason')
                     ->label('What do you need?')
-                    ->helperText('Be specific: they may not have seen this booking before.')
+                    ->helperText('Be specific: they may not have seen this booking before. If it goes to Linear this text goes too, so leave out passport and card numbers.')
                     ->required()
                     ->rows(4)
                     ->maxLength(2000),
+                Toggle::make('linear')
+                    ->label('Also track it in Linear')
+                    ->helperText(fn (Get $get): string => self::goesToIt($get('department_id'))
+                        ? 'Escalations to IT always go to Linear.'
+                        : 'Creates an issue in the TravelWheel team. Completing it there closes this escalation.')
+                    ->disabled(fn (Get $get): bool => self::goesToIt($get('department_id')))
+                    ->visible(fn (): bool => app(LinearClient::class)->isConfigured()),
             ])
             ->action(function (Model $record, array $data, Action $action): void {
                 $escalation = self::attempt($action, fn () => app(EscalationService::class)->raise(
@@ -88,6 +97,7 @@ class EscalationActions
                     filled($data['person_id'] ?? null) ? User::find($data['person_id']) : null,
                     $data['reason'],
                     $data['priority'],
+                    (bool) ($data['linear'] ?? false),
                 ));
 
                 Notification::make()->title('Escalated to '.$escalation->targetLabel())->success()->send();
@@ -187,6 +197,11 @@ class EscalationActions
         return $item
             ? $item->escalations()->active()->with(['raiser', 'toUser', 'toDepartment'])->get()
             : collect();
+    }
+
+    private static function goesToIt(mixed $departmentId): bool
+    {
+        return filled($departmentId) && Department::query()->whereKey($departmentId)->value('linear_team') === 'it';
     }
 
     private static function summary(?Escalation $escalation): string

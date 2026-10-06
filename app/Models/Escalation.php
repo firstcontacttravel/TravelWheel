@@ -52,7 +52,9 @@ class Escalation extends Model
         'response_note',
         'accepted_at',
         'closed_at',
+        'linear_requested',
         'linear_issue_id',
+        'linear_identifier',
         'linear_issue_url',
     ];
 
@@ -61,6 +63,7 @@ class Escalation extends Model
         return [
             'accepted_at' => 'datetime',
             'closed_at' => 'datetime',
+            'linear_requested' => 'boolean',
         ];
     }
 

@@ -39,6 +39,13 @@ class WorkItemEvent extends Model
 
     public const ESCALATION_WITHDRAWN = 'escalation_withdrawn';
 
+    public const LINEAR_LINKED = 'linear_linked';
+
+    public const LINEAR_FAILED = 'linear_failed';
+
+    /** A comment someone wrote on the escalation's Linear issue. */
+    public const LINEAR_COMMENT = 'linear_comment';
+
     protected $fillable = [
         'type',
         'user_id',

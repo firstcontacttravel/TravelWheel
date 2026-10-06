@@ -2,6 +2,8 @@
 
 namespace App\Workflow;
 
+use App\Jobs\CloseLinearIssueForEscalation;
+use App\Jobs\CreateLinearIssueForEscalation;
 use App\Models\Department;
 use App\Models\Escalation;
 use App\Models\User;
@@ -11,6 +13,7 @@ use App\Services\DurableMailService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use Throwable;
@@ -39,6 +42,7 @@ class EscalationService
         ?User $person,
         string $reason,
         string $priority = 'normal',
+        bool $toLinear = false,
     ): Escalation {
         if (! array_key_exists($mode, Escalation::MODES)) {
             throw new InvalidArgumentException("Unknown escalation mode [{$mode}].");
@@ -60,8 +64,10 @@ class EscalationService
         }
 
         $department ??= $person?->department;
+        // IT works in Linear, so anything sent to IT always goes there.
+        $toLinear = $toLinear || $department?->linear_team === 'it';
 
-        $escalation = DB::transaction(function () use ($item, $raiser, $mode, $department, $person, $reason, $priority): Escalation {
+        $escalation = DB::transaction(function () use ($item, $raiser, $mode, $department, $person, $reason, $priority, $toLinear): Escalation {
             $escalation = $item->escalations()->create([
                 'mode' => $mode,
                 'status' => Escalation::STATUS_OPEN,
@@ -70,6 +76,7 @@ class EscalationService
                 'to_user_id' => $person?->getKey(),
                 'priority' => $priority,
                 'reason' => trim($reason),
+                'linear_requested' => $toLinear,
             ]);
 
             $this->event($escalation, WorkItemEvent::ESCALATED, $raiser, null, $escalation->targetLabel(), $escalation->reason);
@@ -85,6 +92,10 @@ class EscalationService
             $escalation,
             'raised',
         );
+
+        if ($escalation->linear_requested) {
+            $this->toLinear(new CreateLinearIssueForEscalation($escalation->getKey()));
+        }
 
         return $escalation;
     }
@@ -124,6 +135,8 @@ class EscalationService
             $escalation,
         );
 
+        $this->closeInLinear($escalation->fresh());
+
         return $escalation->fresh();
     }
 
@@ -157,6 +170,8 @@ class EscalationService
             'resolved',
         );
 
+        $this->closeInLinear($escalation->fresh());
+
         return $escalation->fresh();
     }
 
@@ -184,6 +199,8 @@ class EscalationService
             'declined',
         );
 
+        $this->closeInLinear($escalation->fresh());
+
         return $escalation->fresh();
     }
 
@@ -208,7 +225,104 @@ class EscalationService
             $escalation,
         );
 
+        $this->closeInLinear($escalation->fresh());
+
         return $escalation->fresh();
+    }
+
+    /**
+     * Its Linear issue was completed or cancelled. Completing a hand-off
+     * means someone took it on, so whoever did it in Linear becomes the owner
+     * if they are staff here; otherwise it is resolved and the owner stays.
+     */
+    public function closeFromLinear(Escalation $escalation, string $stateType, ?User $by, string $byName): void
+    {
+        if (! $escalation->isActive()) {
+            return;
+        }
+
+        if ($stateType === 'completed'
+            && $escalation->mode === Escalation::MODE_HANDOFF
+            && $escalation->status === Escalation::STATUS_OPEN
+            && $by && ! $by->isDeactivated() && $escalation->canBeRespondedToBy($by)) {
+            $this->accept($escalation, $by);
+
+            return;
+        }
+
+        $resolved = $stateType === 'completed';
+        $note = ($resolved ? 'Completed' : 'Cancelled')." in Linear by {$byName}.";
+
+        DB::transaction(function () use ($escalation, $by, $resolved, $note): void {
+            $escalation->update([
+                'status' => $resolved ? Escalation::STATUS_RESOLVED : Escalation::STATUS_DECLINED,
+                'responded_by' => $by?->getKey(),
+                'response_note' => $note,
+                'closed_at' => now(),
+            ]);
+
+            $escalation->workItem->events()->create([
+                'type' => $resolved ? WorkItemEvent::ESCALATION_RESOLVED : WorkItemEvent::ESCALATION_DECLINED,
+                'user_id' => $by?->getKey(),
+                'body' => $note,
+                'metadata' => ['escalation_id' => $escalation->getKey(), 'mode' => $escalation->mode, 'source' => 'linear'],
+            ]);
+            $escalation->workItem->touch();
+        });
+
+        $this->notify(
+            $this->raiser($escalation)->push($escalation->workItem->owner)->filter()->unique('id'),
+            ($resolved ? 'Resolved: ' : 'Declined: ').$this->reference($escalation),
+            $note,
+            $escalation,
+            $resolved ? 'resolved' : 'declined',
+        );
+
+        $this->toLinear(new CloseLinearIssueForEscalation($escalation->getKey(), closedInLinear: true));
+    }
+
+    /** A comment on the escalation's Linear issue, copied into the booking's history. */
+    public function commentFromLinear(Escalation $escalation, ?User $by, string $byName, string $body): void
+    {
+        $body = trim($body);
+        if ($body === '') {
+            return;
+        }
+
+        $escalation->workItem->events()->create([
+            'type' => WorkItemEvent::LINEAR_COMMENT,
+            'user_id' => $by?->getKey(),
+            'from' => $byName,
+            'to' => $escalation->linear_identifier,
+            'body' => $body,
+            'metadata' => ['escalation_id' => $escalation->getKey()],
+        ]);
+        $escalation->workItem->touch();
+    }
+
+    /**
+     * Queues the Linear job after the escalation is saved. On a sync queue
+     * the job runs right here, so its failure is caught: Linear being down
+     * must never undo or block the escalation. The job's own failed() hook
+     * has already written the failure into the booking's history.
+     */
+    private function toLinear(object $job): void
+    {
+        try {
+            // Dispatched here and now, not through dispatch()'s pending object,
+            // whose destructor would run outside this try.
+            $job->afterCommit();
+            Bus::dispatch($job);
+        } catch (Throwable $e) {
+            report($e);
+        }
+    }
+
+    private function closeInLinear(Escalation $escalation): void
+    {
+        if ($escalation->linear_issue_id && ! $escalation->isActive()) {
+            $this->toLinear(new CloseLinearIssueForEscalation($escalation->getKey()));
+        }
     }
 
     /** The people an escalation is waiting on. */

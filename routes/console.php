@@ -63,3 +63,10 @@ Schedule::command('reports:send-scheduled')
 Schedule::command('skylink:warm-token')
     ->everyTenMinutes()
     ->withoutOverlapping(5);
+
+// Linear's free plan caps active issues; tell the CEO before escalations
+// start failing to reach it. Does nothing without LINEAR_API_KEY.
+Schedule::command('linear:status --warn')
+    ->dailyAt('08:00')
+    ->timezone('Africa/Lagos')
+    ->withoutOverlapping(10);
