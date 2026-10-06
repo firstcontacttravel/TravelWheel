@@ -13,6 +13,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class CarController extends Controller
 {
@@ -119,7 +120,7 @@ class CarController extends Controller
         $quote = $this->transferPricing->quoteForBaseFare($data['car_type'], $basePrice, $durationMins);
         $verifiedPrice = $quote['total'];
 
-        $reference = 'CARHIRE-' . strtoupper(bin2hex(random_bytes(5)));
+        $reference = 'CARHIRE' . strtoupper(bin2hex(random_bytes(5)));
 
         CarHire::create([
             'car_type' => $data['car_type'],
@@ -153,7 +154,7 @@ class CarController extends Controller
             phone: $data['phone_number'],
             customerName: $data['full_name'],
             reference: $reference,
-            product_title: 'Car Hire — ' . ucfirst($data['car_type']) . ' · ' . $data['category'],
+            product_title: 'Car Hire - ' . $data['category'] . ' ' . ucfirst($data['car_type']),
             callback_route: 'air.carhire.budpay.callback',
             cancel_route: 'air.carhire',
             seerbit_route: 'air.carhire.seerbit.callback',
@@ -230,7 +231,7 @@ class CarController extends Controller
         $quote = $this->transferPricing->quote($data['vehicle_type'], $data['category'], $data['duration_mins']);
         $verifiedPrice = (int) round($quote['total']);
 
-        $reference = 'TRANSFER-' . strtoupper(bin2hex(random_bytes(5)));
+        $reference = 'TRANSFER' . strtoupper(bin2hex(random_bytes(5)));
 
         Transfer::create([
             'vehicle_type' => $data['vehicle_type'],
@@ -265,7 +266,7 @@ class CarController extends Controller
             phone: $data['phone_number'],
             customerName: $data['full_name'],
             reference: $reference,
-            product_title: 'Transfer — ' . $data['vehicle_name'] . ' (' . $data['distance_km'] . ' km)',
+            product_title: 'Transfer - ' . $data['vehicle_name'] . ' (' . $data['distance_km'] . ' km)',
             callback_route: 'air.transfer.budpay.callback',
             cancel_route: 'air.carhire',
             seerbit_route: 'air.transfer.seerbit.callback',
@@ -337,6 +338,7 @@ class CarController extends Controller
             return $this->launchSeerbitPayment(
                 amount: $amount,
                 email: $email,
+                phone: $phone,
                 customerName: $customerName,
                 reference: $reference,
                 product_title: $product_title,
@@ -424,6 +426,7 @@ class CarController extends Controller
     private function launchSeerbitPayment(
         float $amount,
         string $email,
+        string $phone,
         string $customerName,
         string $reference,
         string $product_title,
@@ -437,8 +440,11 @@ class CarController extends Controller
                 'callbackUrl' => route($seerbit_route),
                 'email' => $email,
                 'fullName' => $customerName,
+                'mobileNumber' => $phone,
                 'paymentReference' => $reference,
-                'productDescription' => $product_title,
+                // Keep the description plain, like the products whose SeerBit
+                // checkout works; "—" and "·" here coincided with checkout errors
+                'productDescription' => trim(preg_replace('/[^A-Za-z0-9 ().,-]/', '', Str::ascii($product_title))),
                 'productId' => 'PRD' . $reference,
             ]);
 
