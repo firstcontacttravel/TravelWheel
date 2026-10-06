@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\FlightBookings\Tables;
 
 use App\Filament\Resources\FlightBookings\FlightBookingResource;
+use App\Filament\Workflow\WorkItemTable;
 use App\Models\FlightBooking;
 use App\Models\PaymentVerificationRecord;
 use App\Models\PostTicketingRequest;
@@ -61,12 +62,14 @@ class FlightBookingsTable
             ->persistFiltersInSession()
             ->striped()
             ->poll('60s')
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('workItem.owner'))
             ->columns([
                 TextColumn::make('attention')
                     ->label('Queue')
                     ->state(fn (FlightBooking $record): HtmlString => self::statusDot(self::queueLabel($record)))
                     ->html()
                     ->searchable(false),
+                WorkItemTable::ownerColumn(),
                 /*
                  * The reference alone. What used to be its description — the
                  * UniqueID and the fare type — are columns in their own right
@@ -198,6 +201,7 @@ class FlightBookingsTable
                     ->sortable(),
             ])
             ->filters([
+                WorkItemTable::filter(),
                 SelectFilter::make('operations_queue')
                     ->label('Operations queue')
                     ->options([

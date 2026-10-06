@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasWorkItem;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class VisaApplication extends Model
 {
+    use HasWorkItem;
+
     protected $fillable = ['reference', 'resume_token_hash', 'visa_product_id', 'visa_processing_option_id', 'product_version', 'status', 'assigned_to', 'assigned_at', 'decision_date', 'decision_reference', 'issued_at', 'visa_valid_from', 'visa_valid_until', 'no_document_reason', 'current_step', 'completed_step', 'nationality_country_id', 'residence_country_id', 'destination_country_id', 'visa_destination_id', 'arrival_date', 'departure_date', 'adult_count', 'child_count', 'infant_count', 'contact_email', 'declaration_accepted', 'declaration_accepted_at', 'search_snapshot', 'product_snapshot', 'form_configuration', 'last_activity_at', 'expires_at'];
 
     protected function casts(): array

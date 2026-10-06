@@ -93,47 +93,50 @@ Escalations can go out to Linear and sync back.
 
 ---
 
-## Phase 1: Work items and history (Flights and Visas)
+## Phase 1: Work items and history (Flights and Visas) ✅ built
 
 **Goal:** every flight booking and visa application has an owner, a current step and a history.
 
-### 1.1 Schema
-- `work_items` table: the booking it belongs to, `service`, `stage`, `owner_id`, `department_id`, `priority` (low/normal/high/urgent), `due_at`, `state` (open/waiting/done/cancelled), `claimed_at`, `closed_at`. One per booking (enforced by the database).
-- `work_item_events` table: `type` (stage_changed, claimed, released, reassigned, note, escalated, system), the person (or none for system events), old and new values, `body`, details.
-- `activity_logs` stays the raw record of actions; `work_item_events` is the readable history shown to staff.
+### 1.1 Schema ✅ built
+- Migration `2026_10_07_000000_create_work_items_tables.php`:
+  - `work_items`: the booking it belongs to (one per booking, enforced by the database), `service`, `stage`, `state` (open/waiting/done/cancelled), `owner_id`, `department_id`, `priority`, `due_at`, `claimed_at`, `closed_at`.
+  - `work_item_events`: `type` (created, stage_changed, claimed, released, reassigned, moved, note, priority_changed), the person (none = system), from/to, `body`, details. Append-only.
+- Models `WorkItem` and `WorkItemEvent`; `workItem()` on `FlightBooking` and `VisaApplication` (`HasWorkItem` trait).
 
-**Deliverable:** migrations and models, with the relationships on `FlightBooking` and `VisaApplication`.
+### 1.2 Workflow definitions ✅ built
+- `App\Workflow\Workflow`: stages (label, state, default department), `stageFor()` read from the booking's own columns, `dueAt()`, reference and admin link, optional owner column on the booking.
+- `WorkflowRegistry` lists the workflows. Phase 4 adds the other services there.
+- `WorkItemService`: `sync`, `claim`, `release`, `assign` (to a person, a department queue, or both), `addNote`, `setPriority`. Every change writes a history line.
+- `SyncsWorkItems` re-syncs whenever a flight booking, post-ticketing request or visa application is saved, from any source (admin, webhook, reconcile job, checkout). **If work tracking fails, the error is reported and the booking still saves.**
 
-### 1.2 Workflow definitions
-- A `Workflow` contract with: list of stages, how to work out the current stage from the booking, default department, which stages count as closed, and the deadline setting for each stage.
-- A `WorkflowRegistry` that maps each kind of booking to its workflow.
-- A `WorkItemService` with: sync from the booking, claim, release, reassign, add note, close.
+### 1.3 Flights workflow ✅ built
+- Stages: Awaiting payment → Confirm bank transfer (Finance) / TravelFlex review (Finance) / Awaiting TravelFlex deposit / Hold expired, rebook → Ready to ticket → Ticketing in progress / Ticketing failed → Ticketed, plus Change with supplier and Cancelled.
+- Same rules as the existing queue tabs, so the two never disagree.
+- An unowned booking moves to the queue of its new stage; an owned one stays with its owner.
+- Due time = the airline's ticketing deadline (`tkt_time_limit`) while work is open.
+- Only real changes (void, refund, reissue, cancel) count as "Change with supplier". Quotes don't: unanswered quotes stay "in process" at the supplier indefinitely (found in real data from May), which would have held finished bookings open.
 
-**Deliverable:** the service and contract, unit-tested.
+### 1.4 Visas workflow ✅ built
+- Stage = the application's status (draft, awaiting payment, submitted, under review, waiting on applicant, processing, approved, issued, rejected, cancelled, expired).
+- The assigned officer and the work owner are the same person, kept in sync both ways. A claim through the Work menu goes through `VisaOperationsService::assign`, so the visa's own audit trail records it too.
+- *Differs from plan:* the visa's existing status history and internal notes are not yet merged into the Work timeline; the timeline shows work events and admin actions.
 
-### 1.3 Flights workflow
-- Stages: `awaiting_payment`, `awaiting_transfer`, `ready_to_ticket`, `ticketing_failed`, `ticketed`, `post_ticketing`, `closed`. Worked out from `payment_status`, `booking_status`, `ticket_ordered` and any open post-ticketing request, using the same rules as the existing queue tabs.
-- A model observer on `FlightBooking`, `PostTicketingRequest` and `TicketingRecord` re-syncs the stage and writes a `stage_changed` event.
-- Default department: Flights. The `awaiting_transfer` stage suggests Finance.
+### 1.5 Backfill ✅ built
+- `php artisan workflow:backfill [--service=flights|visas]`, safe to repeat. Local run: 122 flights, 20 visas.
 
-### 1.4 Visas workflow
-- Stages follow the existing `VisaApplicationTransitionService` statuses (submitted → … → issued).
-- `assigned_to` becomes the work item's owner, kept in sync both ways.
-- Existing status history and internal notes appear in the timeline.
+### 1.6 Work panel on booking pages ✅ built
+- A **Work** section near the top of the Flight Booking and Visa Application pages: owner, queue, stage, status, priority, due time, and one history (work events plus admin actions, newest first).
+- A **Work** menu in the page header: Claim (or Take over), Release, Reassign (person and/or department, with a note), Add note, Set priority. Open to every member of staff.
+- Flight Bookings list: **Owner** column. Both lists: **Work** filter (Mine, My department, Unclaimed, Needs action, Overdue).
+- *Differs from plan:* no separate Stage column, because the flight list's Queue column and the visa list's Status column already show it.
 
-### 1.5 Backfill
-- `php artisan workflow:backfill`: creates work items for existing open flights and visas. Safe to run more than once.
+### 1.7 Tests ✅ built
+- `tests/Feature/WorkflowWorkItemsTest.php`, 27 tests: every flight stage, queue moves, owned items staying put, supplier changes reopening and closing, quotes ignored, due times, failure isolation, the full claim/reassign/note/priority/release history, department moves, deactivated staff, visa owner sync both ways, the backfill, and the page actions, panel and filter.
+- Full suite: 497 passed. The only failures are the 2 that were already failing before this work.
 
-### 1.6 Work panel on booking pages
-- On the Flight Booking and Visa Application view pages, show: owner, department, stage, due time, priority.
-- Actions: **Claim**, **Release**, **Reassign** (to a person or department), **Add note**, **Set priority**.
-- The timeline lists the newest first and combines work item events with the relevant activity log entries.
-- Add **Owner** and **Stage** columns and a **Mine / Unclaimed** filter to both tables.
-
-### 1.7 Tests
-- Stages are worked out correctly for every status combination.
-- Rules for claiming and reassigning; every change writes an event.
-- Running the backfill twice changes nothing the second time.
+### 1.8 Ship
+- [ ] Production rollout: `php artisan migrate`, then `php artisan workflow:backfill` once.
+- [ ] PR → review → merge (after phase 0).
 
 **Phase 1 is done when:** every flight and visa shows who owns it, what step it's at and its full history, and anyone can claim it.
 

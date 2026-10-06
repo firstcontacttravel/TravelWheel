@@ -4,6 +4,7 @@ namespace App\Filament\Resources\VisaApplications\Pages;
 
 use App\Filament\Resources\VisaApplications\Tables\VisaApplicationsTable;
 use App\Filament\Resources\VisaApplications\VisaApplicationResource;
+use App\Filament\Workflow\WorkItemActions;
 use Filament\Actions\ActionGroup;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -14,6 +15,7 @@ class ViewVisaApplication extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            WorkItemActions::group(),
             ActionGroup::make([VisaApplicationsTable::assignAction(), VisaApplicationsTable::addNoteAction()])->label('Ownership')->icon('heroicon-o-user-group')->button(),
             VisaApplicationsTable::sendToVendorAction()->button(),
             ActionGroup::make([VisaApplicationsTable::requestDocumentAction(), VisaApplicationsTable::reviewDocumentAction(), VisaApplicationsTable::reviewRequestAction()])->label('Documents')->icon('heroicon-o-document-check')->button(),

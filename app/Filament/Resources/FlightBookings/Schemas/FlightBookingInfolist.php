@@ -4,6 +4,7 @@ namespace App\Filament\Resources\FlightBookings\Schemas;
 
 use App\Models\FlightBooking;
 use App\Support\Admin\FlightBookingPresentation;
+use App\Support\Admin\WorkItemPresentation;
 use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Grid;
@@ -18,6 +19,15 @@ class FlightBookingInfolist
         return $schema
             ->components([
                 Html::make(fn ($record) => FlightBookingPresentation::workspaceSummary($record))
+                    ->columnSpanFull(),
+
+                Section::make('Work')
+                    ->description('Who owns this booking, which queue it is in, and everything done to it.')
+                    ->schema([
+                        Html::make(fn ($record) => WorkItemPresentation::panel($record))
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsible()
                     ->columnSpanFull(),
 
                 Grid::make([

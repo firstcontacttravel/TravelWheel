@@ -4,6 +4,7 @@ namespace App\Filament\Resources\FlightBookings\Pages;
 
 use App\Filament\Resources\FlightBookings\FlightBookingResource;
 use App\Filament\Resources\FlightBookings\Tables\FlightBookingsTable;
+use App\Filament\Workflow\WorkItemActions;
 use Filament\Actions\ActionGroup;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -14,6 +15,8 @@ class ViewFlightBooking extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            WorkItemActions::group(),
+
             ActionGroup::make([
                 FlightBookingsTable::markBankTransferPaidAction(),
                 FlightBookingsTable::markFeesTransferPaidAction(),
