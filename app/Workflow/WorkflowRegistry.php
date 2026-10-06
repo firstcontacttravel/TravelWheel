@@ -2,13 +2,27 @@
 
 namespace App\Workflow;
 
+use App\Workflow\Workflows\AirCargoWorkflow;
+use App\Workflow\Workflows\CarHireWorkflow;
+use App\Workflow\Workflows\ExtraLuggageWorkflow;
+use App\Workflow\Workflows\FlightAssistWorkflow;
 use App\Workflow\Workflows\FlightWorkflow;
+use App\Workflow\Workflows\InsuranceWorkflow;
+use App\Workflow\Workflows\LoungeWorkflow;
+use App\Workflow\Workflows\ProtocolWorkflow;
+use App\Workflow\Workflows\TransferWorkflow;
+use App\Workflow\Workflows\VisaConfirmationWorkflow;
 use App\Workflow\Workflows\VisaWorkflow;
+use App\Workflow\Workflows\YellowCardWorkflow;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 
 /**
- * Every service that has a workflow. Phase 4 adds the rest here.
+ * Every service that has a workflow, in the order My Work lists them.
+ *
+ * TravelFlex has none of its own on purpose: its review and deposit are
+ * stages of the flight booking it finances, so one customer journey is one
+ * work item.
  */
 class WorkflowRegistry
 {
@@ -16,6 +30,16 @@ class WorkflowRegistry
     private const WORKFLOWS = [
         FlightWorkflow::class,
         VisaWorkflow::class,
+        CarHireWorkflow::class,
+        TransferWorkflow::class,
+        LoungeWorkflow::class,
+        ProtocolWorkflow::class,
+        AirCargoWorkflow::class,
+        YellowCardWorkflow::class,
+        ExtraLuggageWorkflow::class,
+        FlightAssistWorkflow::class,
+        VisaConfirmationWorkflow::class,
+        InsuranceWorkflow::class,
     ];
 
     /** @var array<string, Workflow>|null */

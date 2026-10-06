@@ -2,14 +2,14 @@
 
 namespace App\Filament\Resources\SupportVisaConfirmations\Tables;
 
+use App\Filament\Workflow\FulfilmentActions;
+use App\Filament\Workflow\WorkItemTable;
 use App\Models\SupportVisaConfirmation;
-use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Select;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 
 class SupportVisaConfirmationsTable
@@ -18,7 +18,9 @@ class SupportVisaConfirmationsTable
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('workItem.owner'))
             ->columns([
+                WorkItemTable::ownerColumn(),
                 TextColumn::make('payment_reference')->label('Reference')->searchable()->copyable()->weight('bold'),
                 TextColumn::make('full_name')->label('Customer')->searchable()->description(fn (SupportVisaConfirmation $record): string => $record->email),
                 TextColumn::make('phone_number')->copyable(),
@@ -34,6 +36,7 @@ class SupportVisaConfirmationsTable
                 TextColumn::make('created_at')->since()->sortable(),
             ])
             ->filters([
+                WorkItemTable::filter(),
                 SelectFilter::make('payment_status')->options([
                     'pending' => 'Pending',
                     'paid' => 'Paid',
@@ -44,33 +47,7 @@ class SupportVisaConfirmationsTable
             ])
             ->recordActions([
                 ViewAction::make(),
-                self::changeStatusAction(),
+                FulfilmentActions::rowGroup(),
             ]);
-    }
-
-    public static function changeStatusAction(): Action
-    {
-        return Action::make('changeStatus')
-            ->label('Change status')
-            ->icon('heroicon-o-arrow-path')
-            ->color('gray')
-            ->form(fn (SupportVisaConfirmation $record): array => [
-                Select::make('status')
-                    ->label('Payment status')
-                    ->options([
-                        'pending' => 'Pending',
-                        'paid' => 'Paid',
-                        'confirmed' => 'Confirmed',
-                        'cancelled' => 'Cancelled',
-                        'completed' => 'Completed',
-                    ])
-                    ->default($record->payment_status)
-                    ->required(),
-            ])
-            ->action(function (SupportVisaConfirmation $record, array $data): void {
-                $record->update(['payment_status' => $data['status']]);
-
-                Notification::make()->title('Status updated')->success()->send();
-            });
     }
 }

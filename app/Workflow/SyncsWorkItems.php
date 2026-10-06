@@ -2,9 +2,7 @@
 
 namespace App\Workflow;
 
-use App\Models\FlightBooking;
 use App\Models\PostTicketingRequest;
-use App\Models\VisaApplication;
 use Illuminate\Database\Eloquent\Model;
 use Throwable;
 
@@ -20,8 +18,10 @@ class SyncsWorkItems
 {
     public static function register(): void
     {
-        FlightBooking::saved(fn (FlightBooking $booking) => self::sync($booking));
-        VisaApplication::saved(fn (VisaApplication $application) => self::sync($application));
+        // Every booking type with a workflow re-syncs on save.
+        foreach (app(WorkflowRegistry::class)->all() as $workflow) {
+            ($workflow->subjectClass())::saved(fn (Model $subject) => self::sync($subject));
+        }
 
         // An open refund, void or reissue moves a ticketed booking into
         // "Change with supplier" and back out when it completes.

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasWorkItem;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class SupportFlightAssist extends Model
 {
-    use HasFactory;
+    use HasFactory, HasWorkItem;
 
     protected $fillable = [
         'request_type',
@@ -30,6 +31,7 @@ class SupportFlightAssist extends Model
         'amount',
         'payment_reference',
         'payment_status',
+        'fulfilment_status',
     ];
 
     protected $casts = [

@@ -28,17 +28,25 @@ class BackfillWorkItems extends Command
             $synced = 0;
             $failed = 0;
 
-            $workflow->backfillQuery()->chunkById(200, function ($subjects) use ($items, &$synced, &$failed): void {
-                foreach ($subjects as $subject) {
-                    try {
-                        $items->sync($subject);
-                        $synced++;
-                    } catch (Throwable $e) {
-                        $failed++;
-                        report($e);
+            try {
+                $workflow->backfillQuery()->chunkById(200, function ($subjects) use ($items, &$synced, &$failed): void {
+                    foreach ($subjects as $subject) {
+                        try {
+                            $items->sync($subject);
+                            $synced++;
+                        } catch (Throwable $e) {
+                            $failed++;
+                            report($e);
+                        }
                     }
-                }
-            });
+                });
+            } catch (Throwable $e) {
+                // One service's table being unreadable must not stop the rest.
+                report($e);
+                $this->error("{$workflow->label()}: skipped, {$e->getMessage()}");
+
+                continue;
+            }
 
             $this->info("{$workflow->label()}: {$synced} synced".($failed ? ", {$failed} failed (see the log)" : '').'.');
         }

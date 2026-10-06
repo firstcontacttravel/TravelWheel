@@ -258,34 +258,65 @@ Escalations can go out to Linear and sync back.
 
 ---
 
-## Phase 4: Workflows for the remaining services
+## Phase 4: Workflows for the remaining services ✅ built
 
 **Goal:** replace the free-for-all "Change status" dropdown on every other service with proper steps.
 
-### 4.1 Separate payment from fulfilment
-- Services that use `payment_status` for everything (Car Hire stores `confirmed` and `completed` there) get a separate `fulfilment_status`. Existing values are moved over by migration.
+### 4.1 Payment kept apart from fulfilment ✅ built
+- **Problem:** every one of these services had a single status column. Checkout wrote the payment result into it, then the admin dropdown overwrote it with words like "confirmed", "completed" or "cancelled". A paid car hire marked "completed" no longer recorded that it was paid.
+- Migration `2026_10_10_000000_add_fulfilment_status_to_service_bookings.php` adds a separate `fulfilment_status` (default `new`) to all ten tables. The old column goes back to meaning payment only.
+- Existing rows are split:
+  - "completed" → fulfilment completed, and payment recorded as paid;
+  - "confirmed" → payment recorded as paid (driver assigned if a driver was);
+  - "cancelled" → fulfilment cancelled.
+- Tables that don't exist are skipped (some development databases never created them; production has them all).
 
-### 4.2 Workflows, one group at a time
+### 4.2 Workflows ✅ built
 
-| Group | Services | Default department |
-|---|---|---|
-| Ground | Car Hire, Transfers (including driver assignment) | Ground & Airport Services |
-| Airport | Lounge bookings, Protocol bookings | Ground & Airport Services |
-| Cargo | Air Cargo | Ground & Airport Services |
-| Support requests | Yellow Card, Extra Luggage, Flight Assist, Visa Confirmation | Customer Support |
-| Insurance | Insurance purchases and quotes | Customer Support |
-| TravelFlex | Applications | Finance |
+| Service | Steps after payment | Queue | Due time |
+|---|---|---|---|
+| Car Hire, Transfers | Assign a driver → Driver assigned, awaiting trip → Trip completed | Ground & Airport | pickup date and time |
+| Lounge | Confirm with the lounge → Confirmed → Used | Ground & Airport | travel date and time |
+| Protocol | Arrange a protocol officer → Officer arranged → Service delivered | Ground & Airport | travel date and time |
+| Air Cargo | Receive the shipment → Received, ship it → In transit → Delivered | Ground & Airport | |
+| Yellow Card, Extra Luggage, Visa Confirmation | Handle the request → In progress → Completed | Customer Support | |
+| Flight Assist | the same | Customer Support | travel date |
+| Insurance | **Paid, policy not issued** (the insurer failed after payment) → Policy issued | Customer Support | |
 
-For each group:
-- [ ] A workflow class and stages.
-- [ ] Move buttons that ask for the right information (for example, a cancellation reason).
-- [ ] Moves to `paid` limited to Finance.
-- [ ] The booking work panel.
-- [ ] Backfill.
-- [ ] Tests.
+- Every service also has **Awaiting payment** (waiting on the customer), **Payment failed** and **Cancelled**.
+- Built on one shared base, `App\Workflow\ServiceWorkflow`. Each service's steps are short code in `app/Workflow/Workflows/`.
+- Assigning a driver with the existing button moves a car hire or transfer on by itself.
+- Flight Assist "billed with main fee" counts as paid.
+- Dates are free text on these forms. One that won't parse means no due time, never an error.
+- *Differs from plan:* **TravelFlex has no separate workflow.** Its review and deposit are already steps on the flight booking it pays for, so a second work item would split one customer journey in two.
 
-### 4.3 Remove the old dropdowns
-- Delete the `changeStatus` actions once each group's replacement is live.
+### 4.3 Old dropdowns removed ✅ built
+- `changeStatus` is gone from all ten services. In its place, a **Progress** menu on the booking page and on each list row:
+  - **Move to next step**: only steps that can come next, with an optional note;
+  - **Cancel booking**: needs a reason, and warns that it does not refund;
+  - **Mark payment received**: **Finance only**, needs payment details, and only shown while the booking is unpaid.
+- Every service's booking page now has the **Work panel** plus the Work and Escalation menus, through a shared `HasWorkPanel` trait.
+- Every service list has an **Owner** column and the **Work** filter.
+- My Work, escalations, Linear and the dashboard counts cover these services with no further changes.
+
+### 4.4 Tests ✅ built
+- `tests/Feature/WorkflowServiceBookingsTest.php`, 33 tests:
+  - every service lands in the right queue, paid and unpaid;
+  - driver to trip without touching payment; invalid steps and unpaid bookings refused;
+  - cancelling needs a reason; only Finance can mark payment received; flight assist billed with a flight;
+  - insurance with no policy; due times; unreadable dates;
+  - the existing-data split (migration rolled back and re-run);
+  - the page panel and actions; Mark paid hidden from everyone but Finance; the list filter; the backfill covering every service.
+- Full suite: 562 passed. The only failures are the 2 that were already failing before this work.
+- Bugs caught by the tests and fixed:
+  - due times stored an hour off (Lagos time saved as UTC);
+  - a booking time silently dropped when combined with its date;
+  - the lounge's date cast throwing on unreadable legacy dates.
+
+### 4.5 Ship
+- [ ] Production: `php artisan migrate`, then `php artisan workflow:backfill` once. The backfill now skips any unreadable service and carries on with the rest.
+- [ ] Tell staff: "Change status" is now **Progress**, and only Finance can record a payment.
+- [ ] Not done: the dashboard's per-service counts ("Awaiting transfer", "Ready to ticket"…) still use their own queries. The counts are correct; moving them onto work items is cosmetic and can come with phase 6 reporting.
 
 **Phase 4 is done when:** every service appears on My Work with an owner, steps and history, and nobody can jump a booking to any status at will.
 
