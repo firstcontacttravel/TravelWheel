@@ -47,6 +47,10 @@ class WorkItem extends Model
         'department_id',
         'priority',
         'due_at',
+        'stage_entered_at',
+        'warned_at',
+        'breached_at',
+        'ceo_alerted_at',
         'claimed_at',
         'closed_at',
     ];
@@ -55,6 +59,10 @@ class WorkItem extends Model
     {
         return [
             'due_at' => 'datetime',
+            'stage_entered_at' => 'datetime',
+            'warned_at' => 'datetime',
+            'breached_at' => 'datetime',
+            'ceo_alerted_at' => 'datetime',
             'claimed_at' => 'datetime',
             'closed_at' => 'datetime',
         ];

@@ -39,6 +39,13 @@ class WorkItemEvent extends Model
 
     public const ESCALATION_WITHDRAWN = 'escalation_withdrawn';
 
+    public const DEADLINE_WARNING = 'deadline_warning';
+
+    public const DEADLINE_MISSED = 'deadline_missed';
+
+    /** Still not done well after the deadline; the CEO was told. */
+    public const DEADLINE_CEO = 'deadline_ceo';
+
     public const LINEAR_LINKED = 'linear_linked';
 
     public const LINEAR_FAILED = 'linear_failed';

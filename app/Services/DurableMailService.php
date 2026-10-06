@@ -10,12 +10,14 @@ use App\Mail\TravelFlexRepaymentReminderMail;
 use App\Mail\TravelFlexStatusMail;
 use App\Mail\TravelFlexTicketBookedMail;
 use App\Mail\UnTicketedConfirmationAlert;
+use App\Mail\WorkDeadlineMail;
 use App\Mail\WorkEscalationMail;
 use App\Models\Escalation;
 use App\Models\FlightBooking;
 use App\Models\FlightSupplierEvent;
 use App\Models\NotificationOutbox;
 use App\Models\TravelFlexApplication;
+use App\Models\WorkItem;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Mailable;
 use Illuminate\Support\Facades\Cache;
@@ -45,6 +47,8 @@ class DurableMailService
     public const FLIGHT_SUPPLIER_ALERT = 'flight_supplier_alert';
 
     public const WORK_ESCALATION = 'work_escalation';
+
+    public const WORK_DEADLINE = 'work_deadline';
 
     public function sendNowOrStore(
         string $kind,
@@ -245,6 +249,7 @@ class DurableMailService
             self::TRAVELFLEX_TICKET_BOOKED => new TravelFlexTicketBookedMail($this->flight($related)),
             self::FLIGHT_SUPPLIER_ALERT => new FlightSupplierAlertMail($this->supplierEvent($related)),
             self::WORK_ESCALATION => new WorkEscalationMail($this->escalation($related), (string) ($payload['event'] ?? 'raised')),
+            self::WORK_DEADLINE => new WorkDeadlineMail($this->workItem($related), (string) ($payload['event'] ?? 'missed')),
             default => throw new \RuntimeException("Unsupported durable email kind [{$message->kind}]."),
         };
     }
@@ -271,6 +276,15 @@ class DurableMailService
     {
         if (! $model instanceof TravelFlexApplication) {
             throw new \RuntimeException('Durable email requires a TravelFlex application.');
+        }
+
+        return $model;
+    }
+
+    private function workItem(Model $model): WorkItem
+    {
+        if (! $model instanceof WorkItem) {
+            throw new \RuntimeException('Durable email requires a work item.');
         }
 
         return $model;

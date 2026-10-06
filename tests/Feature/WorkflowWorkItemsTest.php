@@ -137,7 +137,8 @@ class WorkflowWorkItemsTest extends TestCase
 
     public function test_the_airline_ticketing_deadline_is_the_due_time_while_work_is_open(): void
     {
-        $deadline = now()->addHours(5)->startOfMinute();
+        // Sooner than the step's own hour (phase 5), so the airline's limit wins.
+        $deadline = now()->addMinutes(30)->startOfMinute();
         $booking = $this->booking(['payment_status' => 'paid', 'booking_status' => 'confirmed', 'tkt_time_limit' => $deadline]);
 
         $this->assertTrue($booking->workItem->due_at->equalTo($deadline));

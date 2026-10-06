@@ -322,25 +322,60 @@ Escalations can go out to Linear and sync back.
 
 ---
 
-## Phase 5: Deadlines and automatic escalation
+## Phase 5: Deadlines and automatic escalation ✅ built
 
 **Goal:** late work is visible and gets escalated automatically.
 
-### 5.1 Workflow Settings page (CEO only)
-- Deadline for each service and step, and the default department for each service. Stored in `AppSetting`, so changes apply without a deploy.
+### 5.1 Deadlines page (CEO only) ✅ built
+- **Team → Deadlines** (`/admin/workflow-settings`):
+  - hours allowed for every step where staff must act, across all 12 services;
+  - when to warn (default 75% of the time used);
+  - when to tell the CEO (default 2 hours after a deadline is missed).
+- An empty step means no deadline. Waiting on a customer or supplier is never on the clock.
+- Stored in `AppSetting` (`workflow.deadlines`), so changes need no deploy. Saving recalculates due times for all open work straight away, and the change is recorded in the Activity Log.
+- Starting allowances in `App\Workflow\Deadlines::DEFAULT_STEPS`:
+  - Flights: confirm transfer 2h, TravelFlex review 4h, hold expired 1h, ready to ticket 1h, ticketing failed 30 min.
+  - Visas: submitted 24h, under review 48h, approved 4h.
+  - Car hire, transfers and protocol 12h; lounge 4h; air cargo 24h per step.
+  - Support requests: 24h, then 48h (flight assist 12h, then 24h).
+  - Insurance with no policy: 4h.
+  - All set to be achievable: a deadline that is always missed gets ignored.
 
-### 5.2 Due times
-- `due_at` is set when a booking enters a step, using that step's deadline.
-- Flights use the airline's `tkt_time_limit` when it is sooner.
+### 5.2 Due times ✅ built
+- Each step's clock starts when the booking enters it (`stage_entered_at`).
+- Due = the earlier of the step's allowance and the booking's own hard deadline (the airline's ticketing limit, a pickup or travel time).
+- Moving to a new step restarts the clock and clears earlier alerts. A due time pushed later (a longer allowance, an extended airline limit) clears alerts too.
+- **On deploy, open work starts its clock fresh.** Otherwise the first check would declare months-old items overdue at once and flood everyone, the CEO included.
 
-### 5.3 Deadline monitor
-- `workflow:check-sla` runs every 5 minutes on the existing scheduler:
-  - At 75% of the time allowed: notify the owner.
-  - When the deadline passes: mark it as missed, notify the owner and the department.
-  - Still unresolved after a further set time: notify the CEO.
+### 5.3 Deadline monitor ✅ built
+- `workflow:check-deadlines` runs every 5 minutes. Each alert goes out once per step and is written into the booking's history:
 
-### 5.4 Showing deadlines
-- Overdue and due-soon markers on My Work, the booking tables and the dashboard.
+| When | Who | How |
+|---|---|---|
+| 75% of the time gone | the owner, or the whole queue if nobody owns it | bell |
+| deadline passed | the owner **and** the queue | bell + email |
+| still overdue 2h later | the CEO | bell + email |
+
+- Emails go through the outbox and carry the booking reference, step, due time, owner and queue. No customer details.
+- Alerts don't count as "touching" the item, so they don't reorder My Work.
+
+### 5.4 Showing deadlines ✅ built
+- Every service list: the **Owner** column shows "Due in 3 hours" or "Overdue 20 minutes" beneath the name, in red when overdue.
+- **Dashboard:** a new **Overdue work** signal in the "broken" band, across every service, linking to My Work's Overdue tab.
+- The booking's Work panel shows the due time, plus "Due soon", "Deadline missed" and "Still overdue, the CEO was told" in the history.
+
+### 5.5 Tests ✅ built
+- `tests/Feature/WorkflowDeadlinesTest.php`, 13 tests:
+  - due from the allowance; the booking's own deadline winning when sooner; waiting not on the clock; a new step restarting the clock;
+  - the warning at 75%, sent once; unowned items warning the whole queue; missed deadlines by bell and email; the CEO only after the grace period;
+  - finished work never chased; email content;
+  - the settings page applying to open work; only the CEO can open it; the dashboard signal.
+- Four earlier tests updated: they assumed the due time was always the booking's own date, or rolled back "the latest" migration.
+- Full suite: 575 passed. The only failures are the 2 that were already failing before this work.
+
+### 5.6 Ship
+- [ ] Production: `php artisan migrate`. The scheduler already runs every minute, and the new check is in `routes/console.php`.
+- [ ] The CEO reviews **Team → Deadlines** and adjusts the starting allowances to how the team actually works.
 
 **Phase 5 is done when:** nothing goes past its deadline without the right people being told.
 

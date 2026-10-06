@@ -70,3 +70,9 @@ Schedule::command('linear:status --warn')
     ->dailyAt('08:00')
     ->timezone('Africa/Lagos')
     ->withoutOverlapping(10);
+
+// Workflow deadlines: due soon, missed, and long missed (to the CEO). Each
+// alert goes out once per step.
+Schedule::command('workflow:check-deadlines')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(10);

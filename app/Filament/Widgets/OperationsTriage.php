@@ -88,6 +88,17 @@ class OperationsTriage extends Widget
             ];
         }
 
+        $overdue = WorkItem::query()->active()->whereNotNull('due_at')->where('due_at', '<', now())->count();
+
+        if ($overdue > 0) {
+            $signals[] = [
+                'count' => $overdue,
+                'label' => 'Overdue work',
+                'detail' => 'Bookings past their deadline, across every service',
+                'url' => WorkItemResource::getUrl('index', ['activeTab' => 'overdue']),
+            ];
+        }
+
         $failedMail = NotificationOutbox::query()
             ->whereNotNull('failed_at')
             ->whereNull('sent_at')

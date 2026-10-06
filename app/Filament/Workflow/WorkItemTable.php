@@ -20,7 +20,21 @@ class WorkItemTable
             ->label('Owner')
             ->state(fn (Model $record): ?string => $record->workItem?->owner?->name)
             ->placeholder('Unclaimed')
+            // The deadline beneath the name: who has it, and how long they have.
+            ->description(fn (Model $record): ?string => self::due($record->workItem))
+            ->color(fn (Model $record): ?string => $record->workItem?->isOverdue() ? 'danger' : null)
             ->toggleable();
+    }
+
+    private static function due(?WorkItem $item): ?string
+    {
+        if (! $item?->isActive() || ! $item->due_at) {
+            return null;
+        }
+
+        return $item->isOverdue()
+            ? 'Overdue '.$item->due_at->diffForHumans(syntax: \Carbon\CarbonInterface::DIFF_ABSOLUTE)
+            : 'Due '.$item->due_at->diffForHumans();
     }
 
     public static function filter(): SelectFilter

@@ -16,7 +16,10 @@ use InvalidArgumentException;
  */
 class WorkItemService
 {
-    public function __construct(private readonly WorkflowRegistry $registry) {}
+    public function __construct(
+        private readonly WorkflowRegistry $registry,
+        private readonly Deadlines $deadlines,
+    ) {}
 
     public function for(Model $subject): ?WorkItem
     {
@@ -41,10 +44,10 @@ class WorkItemService
         $actor ??= auth()->user();
         $stage = $workflow->stageFor($subject);
         $definition = $workflow->stages()[$stage];
-        $dueAt = $workflow->dueAt($subject, $stage);
+        $bookingDeadline = $workflow->dueAt($subject, $stage);
         $subjectOwner = $workflow->ownerIdFromSubject($subject);
 
-        return DB::transaction(function () use ($subject, $workflow, $actor, $stage, $definition, $dueAt, $subjectOwner): WorkItem {
+        return DB::transaction(function () use ($subject, $workflow, $actor, $stage, $definition, $bookingDeadline, $subjectOwner): WorkItem {
             $item = WorkItem::query()
                 ->where('subject_type', $subject->getMorphClass())
                 ->where('subject_id', $subject->getKey())
@@ -57,12 +60,13 @@ class WorkItemService
                     'stage' => $stage,
                     'state' => $definition['state'],
                     'department_id' => $this->departmentId($definition['department']),
-                    'due_at' => $dueAt,
+                    'stage_entered_at' => now(),
                     'owner_id' => $subjectOwner ?: null,
                     'claimed_at' => $subjectOwner ? now() : null,
                     'closed_at' => $this->isClosed($definition['state']) ? now() : null,
                 ]);
                 $item->subject()->associate($subject);
+                $item->due_at = $this->deadlines->dueAt($item, $bookingDeadline);
                 $item->save();
 
                 $this->event($item, WorkItemEvent::CREATED, null, null, $stage);
@@ -76,6 +80,11 @@ class WorkItemService
                     'stage' => $stage,
                     'state' => $definition['state'],
                     'closed_at' => $this->isClosed($definition['state']) ? ($item->closed_at ?? now()) : null,
+                    // A new step starts a new clock and a clean set of alerts.
+                    'stage_entered_at' => now(),
+                    'warned_at' => null,
+                    'breached_at' => null,
+                    'ceo_alerted_at' => null,
                 ]);
                 // An unowned item moves to whichever queue the new stage
                 // belongs in. An owned one stays with its owner.
@@ -85,8 +94,14 @@ class WorkItemService
                 $this->event($item, WorkItemEvent::STAGE_CHANGED, $actor, $from, $stage);
             }
 
+            $dueAt = $this->deadlines->dueAt($item, $bookingDeadline);
             if ($item->due_at?->toIso8601String() !== $dueAt?->toIso8601String()) {
                 $item->due_at = $dueAt;
+                // Pushed later (a new allowance, an extended airline limit):
+                // whatever was sent about the old time no longer applies.
+                if ($dueAt?->isFuture()) {
+                    $item->fill(['warned_at' => null, 'breached_at' => null, 'ceo_alerted_at' => null]);
+                }
             }
 
             if ($subjectOwner !== false && (int) $item->owner_id !== (int) $subjectOwner) {

@@ -188,6 +188,12 @@ class WorkflowServiceBookingsTest extends TestCase
 
     public function test_the_service_date_is_the_due_time_while_work_is_open(): void
     {
+        // With no step allowance (phase 5), the service date alone decides.
+        $deadlines = app(\App\Workflow\Deadlines::class);
+        $settings = $deadlines->settings();
+        $settings['steps']['lounge']['new'] = null;
+        $deadlines->save($settings);
+
         $lounge = $this->lounge(paid: true, travelDate: now()->addDays(3)->format('Y-m-d'), time: '14:30');
 
         $this->assertSame(now()->addDays(3)->format('Y-m-d').' 14:30', $lounge->workItem->due_at->timezone('Africa/Lagos')->format('Y-m-d H:i'));
@@ -202,14 +208,18 @@ class WorkflowServiceBookingsTest extends TestCase
         $item = app(WorkItemService::class)->sync(LoungeBooking::query()->findOrFail($id));
 
         $this->assertSame('new', $item->stage);
-        $this->assertNull($item->due_at);
+        // No service date to go by: the step's own allowance applies alone.
+        $this->assertSame(
+            $item->stage_entered_at->copy()->addMinutes(\App\Workflow\Deadlines::DEFAULT_STEPS['lounge']['new'])->toIso8601String(),
+            $item->due_at->toIso8601String(),
+        );
     }
 
     // ── Existing data ────────────────────────────────────────────────────
 
     public function test_fulfilment_words_in_the_payment_column_move_to_fulfilment(): void
     {
-        $this->artisan('migrate:rollback', ['--step' => 1])->assertSuccessful();
+        $this->artisan('migrate:rollback', ['--path' => 'database/migrations/2026_10_10_000000_add_fulfilment_status_to_service_bookings.php'])->assertSuccessful();
 
         $completed = DB::table('car_hires')->insertGetId($this->carHireRow(['payment_status' => 'completed']));
         $confirmed = DB::table('car_hires')->insertGetId($this->carHireRow(['payment_status' => 'confirmed', 'driver_assigned' => true]));
