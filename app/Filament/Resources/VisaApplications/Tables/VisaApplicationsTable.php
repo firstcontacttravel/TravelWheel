@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\VisaApplications\Tables;
 
+use App\Filament\Workflow\WorkItemTable;
 use App\Models\User;
 use App\Models\VisaApplication;
 use App\Services\VisaApplicationTransitionService;
@@ -39,6 +40,7 @@ class VisaApplicationsTable
                 TextColumn::make('created_at')->label('Started')->since()->sortable(),
             ])
             ->filters([
+                WorkItemTable::filter(),
                 SelectFilter::make('status')->multiple()->options(self::statuses()),
                 SelectFilter::make('visa_product_id')->label('Visa product')->relationship('product', 'name')->searchable()->preload(),
                 SelectFilter::make('assigned_to')->label('Officer')->relationship('assignee', 'name')->searchable()->preload()->placeholder('All officers'),

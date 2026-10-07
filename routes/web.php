@@ -11,6 +11,7 @@ use App\Http\Controllers\FlightSearchController;
 use App\Http\Controllers\FlightSupplierSearchController;
 use App\Http\Controllers\InsuranceController;
 use App\Http\Controllers\LeadwayController;
+use App\Http\Controllers\LinearWebhookController;
 use App\Http\Controllers\LoungeController;
 use App\Http\Controllers\ProtocolController;
 use App\Http\Controllers\SupportController;
@@ -271,6 +272,9 @@ Route::get('/flights/pending', [FlightBookingController::class, 'pending'])->nam
 Route::get('/flights/confirmation', [FlightBookingController::class, 'confirmation'])->name('flights.confirmation');
 Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerbitCallback'])->middleware('throttle:30,1')->name('payments.seerbit.callback');
 Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->middleware('throttle:60,1')->name('payments.seerbit.webhook');
+
+// Linear: escalation issues completed, cancelled or commented on (workflow phase 3).
+Route::post('/webhooks/linear', LinearWebhookController::class)->middleware('throttle:120,1')->name('webhooks.linear');
 Route::get('/payments/seerbit/processing', [FlightBookingController::class, 'seerbitProcessing'])->name('payments.seerbit.processing');
 Route::get('/payments/seerbit/status', [FlightBookingController::class, 'seerbitStatus'])->middleware('throttle:120,1')->name('payments.seerbit.status');
 Route::get('/flights/travelflex', [FlightBookingController::class, 'travelFlex'])->name('flights.travelflex');

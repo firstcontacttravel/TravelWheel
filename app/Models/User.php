@@ -6,6 +6,7 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -25,6 +26,8 @@ class User extends Authenticatable implements FilamentUser
         'password',
         'is_admin',
         'visa_role',
+        'department_id',
+        'deactivated_at',
     ];
 
     /**
@@ -48,42 +51,76 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'deactivated_at' => 'datetime',
         ];
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * The CEO. The only account that manages staff, departments and settings.
+     */
+    public function isAdmin(): bool
+    {
+        if ($this->is_admin) {
+            return true;
+        }
+
+        return collect(explode(',', (string) env('ADMIN_EMAILS', '')))
+            ->map(fn (string $email): string => strtolower(trim($email)))
+            ->filter()
+            ->contains(strtolower((string) $this->email));
+    }
+
+    public function isDeactivated(): bool
+    {
+        return $this->deactivated_at !== null;
+    }
+
+    public function inDepartment(string ...$slugs): bool
+    {
+        return $this->department_id !== null && in_array($this->department?->slug, $slugs, true);
+    }
+
+    /**
+     * Marking payments paid, refunds and voids, TravelFlex credit decisions.
+     * visa_role 'finance' is the pre-department way of saying the same thing.
+     */
+    public function canHandleMoney(): bool
+    {
+        return $this->isAdmin() || $this->inDepartment(Department::FINANCE) || $this->visa_role === 'finance';
     }
 
     public function canAccessPanel(Panel $panel): bool
     {
-        if ($panel->getId() !== 'admin') {
+        if ($panel->getId() !== 'admin' || $this->isDeactivated()) {
             return false;
         }
 
-        if ($this->is_admin || in_array($this->visa_role, ['administrator', 'visa_officer', 'finance', 'support'], true)) {
-            return true;
-        }
-
-        $adminEmails = collect(explode(',', (string) env('ADMIN_EMAILS', '')))
-            ->map(fn (string $email): string => strtolower(trim($email)))
-            ->filter();
-
-        return $adminEmails->contains(strtolower($this->email));
+        return $this->isAdmin()
+            || $this->department_id !== null
+            || in_array($this->visa_role, ['administrator', 'visa_officer', 'finance', 'support'], true);
     }
 
     public function isVisaAdministrator(): bool
     {
-        if ($this->is_admin || $this->visa_role === 'administrator') {
-            return true;
-        }
-
-        return collect(explode(',', (string) env('ADMIN_EMAILS', '')))->map(fn (string $email) => strtolower(trim($email)))->contains(strtolower($this->email));
+        return $this->isAdmin() || $this->visa_role === 'administrator';
     }
 
     public function canOperateVisas(): bool
     {
-        return $this->isVisaAdministrator() || $this->visa_role === 'visa_officer';
+        return $this->isVisaAdministrator() || $this->inDepartment(Department::VISAS) || $this->visa_role === 'visa_officer';
     }
 
+    /**
+     * Every member of staff can see every queue; acting on it is gated
+     * separately.
+     */
     public function canViewVisaOperations(): bool
     {
-        return $this->canOperateVisas() || $this->visa_role === 'support';
+        return $this->canOperateVisas() || $this->visa_role === 'support' || $this->department_id !== null;
     }
 }

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasWorkItem;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class SupportYellowCard extends Model
 {
-    use HasFactory;
+    use HasFactory, HasWorkItem;
 
     protected $fillable = [
         'service_type',
@@ -21,6 +22,7 @@ class SupportYellowCard extends Model
         'payment_reference',
         'payment_status',
         'amount',
+        'fulfilment_status',
     ];
 
     protected $casts = [

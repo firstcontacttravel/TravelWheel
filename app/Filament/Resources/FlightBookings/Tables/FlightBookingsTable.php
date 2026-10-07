@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\FlightBookings\Tables;
 
 use App\Filament\Resources\FlightBookings\FlightBookingResource;
+use App\Filament\Workflow\WorkItemTable;
 use App\Models\FlightBooking;
 use App\Models\PaymentVerificationRecord;
 use App\Models\PostTicketingRequest;
@@ -61,12 +62,14 @@ class FlightBookingsTable
             ->persistFiltersInSession()
             ->striped()
             ->poll('60s')
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('workItem.owner'))
             ->columns([
                 TextColumn::make('attention')
                     ->label('Queue')
                     ->state(fn (FlightBooking $record): HtmlString => self::statusDot(self::queueLabel($record)))
                     ->html()
                     ->searchable(false),
+                WorkItemTable::ownerColumn(),
                 /*
                  * The reference alone. What used to be its description — the
                  * UniqueID and the fare type — are columns in their own right
@@ -198,6 +201,7 @@ class FlightBookingsTable
                     ->sortable(),
             ])
             ->filters([
+                WorkItemTable::filter(),
                 SelectFilter::make('operations_queue')
                     ->label('Operations queue')
                     ->options([
@@ -465,6 +469,7 @@ class FlightBookingsTable
     public static function markBankTransferPaidAction(): Action
     {
         return Action::make('markBankTransferPaid')
+            ->authorize(fn (): bool => self::canHandleMoney())
             ->label('Mark paid')
             ->icon('heroicon-o-banknotes')
             ->color('success')
@@ -639,6 +644,7 @@ class FlightBookingsTable
     public static function markFeesTransferPaidAction(): Action
     {
         return Action::make('markFeesTransferPaid')
+            ->authorize(fn (): bool => self::canHandleMoney())
             ->label('Mark fees paid')
             ->icon('heroicon-o-shield-check')
             ->color('success')
@@ -737,6 +743,7 @@ class FlightBookingsTable
     public static function verifySeerbitPaymentAction(): Action
     {
         return Action::make('verifySeerbitPayment')
+            ->authorize(fn (): bool => self::canHandleMoney())
             ->label('Verify SeerBit')
             ->icon('heroicon-o-shield-check')
             ->color('info')
@@ -888,6 +895,11 @@ class FlightBookingsTable
 
             return false;
         }
+    }
+
+    private static function canHandleMoney(): bool
+    {
+        return auth()->user()?->canHandleMoney() ?? false;
     }
 
     private static function recordPaymentVerification(FlightBooking $record, array $data): void
@@ -1506,6 +1518,9 @@ class FlightBookingsTable
         ?string $requiresQuoteType = null,
     ): Action {
         return Action::make('postTicketing'.str($operationType)->studly())
+            // Quotes are information anyone may fetch; carrying out a void or
+            // refund moves money, so only Finance (and the CEO) can.
+            ->authorize(fn (): bool => ! in_array($operationType, ['void', 'refund'], true) || self::canHandleMoney())
             ->label($label)
             ->icon($icon)
             ->color($color)

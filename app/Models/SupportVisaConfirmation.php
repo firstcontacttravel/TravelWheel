@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasWorkItem;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class SupportVisaConfirmation extends Model
 {
-    use HasFactory;
+    use HasFactory, HasWorkItem;
 
     protected $fillable = [
         'full_name',
@@ -19,6 +20,7 @@ class SupportVisaConfirmation extends Model
         'payment_reference',
         'payment_status',
         'amount',
+        'fulfilment_status',
     ];
 
     protected $casts = [

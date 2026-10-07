@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\CarHires\Tables;
 
+use App\Filament\Workflow\FulfilmentActions;
+use App\Filament\Workflow\WorkItemTable;
 use App\Models\CarHire;
 use App\Models\Driver;
 use App\Models\DriverAssignment;
@@ -17,6 +19,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class CarHiresTable
 {
@@ -24,7 +27,9 @@ class CarHiresTable
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('workItem.owner'))
             ->columns([
+                WorkItemTable::ownerColumn(),
                 TextColumn::make('payment_reference')->label('Reference')->searchable()->copyable()->weight('bold'),
                 TextColumn::make('full_name')->label('Customer')->searchable()->description(fn (CarHire $record): string => $record->email),
                 TextColumn::make('phone_number')->copyable(),
@@ -41,6 +46,7 @@ class CarHiresTable
                 TextColumn::make('created_at')->since()->sortable(),
             ])
             ->filters([
+                WorkItemTable::filter(),
                 SelectFilter::make('payment_status')->options([
                     'pending' => 'Pending',
                     'paid' => 'Paid',
@@ -52,7 +58,7 @@ class CarHiresTable
             ->recordActions([
                 ViewAction::make(),
                 self::assignDriverAction(),
-                self::changeStatusAction(),
+                FulfilmentActions::rowGroup(),
             ]);
     }
 
@@ -147,32 +153,6 @@ class CarHiresTable
                     ->{$result['problems'] ? 'warning' : 'success'}()
                     ->persistent(filled($result['problems']))
                     ->send();
-            });
-    }
-
-    public static function changeStatusAction(): Action
-    {
-        return Action::make('changeStatus')
-            ->label('Change status')
-            ->icon('heroicon-o-arrow-path')
-            ->color('gray')
-            ->form(fn (CarHire $record): array => [
-                Select::make('status')
-                    ->label('Payment status')
-                    ->options([
-                        'pending' => 'Pending',
-                        'paid' => 'Paid',
-                        'confirmed' => 'Confirmed',
-                        'cancelled' => 'Cancelled',
-                        'completed' => 'Completed',
-                    ])
-                    ->default($record->payment_status)
-                    ->required(),
-            ])
-            ->action(function (CarHire $record, array $data): void {
-                $record->update(['payment_status' => $data['status']]);
-
-                Notification::make()->title('Status updated')->success()->send();
             });
     }
 }

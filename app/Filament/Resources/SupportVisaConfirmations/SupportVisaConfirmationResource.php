@@ -19,7 +19,7 @@ class SupportVisaConfirmationResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Support Requests';
+    protected static string|\UnitEnum|null $navigationGroup = 'Customer Support';
 
     protected static ?int $navigationSort = 30;
 

@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasWorkItem;
 use Illuminate\Database\Eloquent\Model;
 
 class LoungeBooking extends Model
 {
+    use HasWorkItem;
+
     protected $table = 'lounge_service';
 
     protected $casts = [
@@ -37,6 +40,7 @@ class LoungeBooking extends Model
         'status',
         'trans_id',
         'ref_id',
+        'fulfilment_status',
     ];
 
     public function requiresManualProviderBooking(): bool

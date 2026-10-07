@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\VisaApplications\Schemas;
 
+use App\Support\Admin\WorkItemPresentation;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Html;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -12,6 +14,9 @@ class VisaApplicationInfolist
     public static function configure(Schema $schema): Schema
     {
         return $schema->components([
+            Section::make('Work')->description('Who owns this application, which queue it is in, and everything done to it.')
+                ->schema([Html::make(fn ($record) => WorkItemPresentation::panel($record))->columnSpanFull()])
+                ->collapsible()->columnSpanFull(),
             Section::make('Application overview')->schema([
                 TextEntry::make('reference')->copyable()->weight('bold'), TextEntry::make('status')->badge(), TextEntry::make('product.name')->label('Visa product'),
                 TextEntry::make('product.family')->label('Flow')->badge(), TextEntry::make('product.vendor.name')->label('Vendor')->placeholder('Not assigned'), TextEntry::make('contact_email')->copyable(), TextEntry::make('assignee.name')->label('Assigned officer')->placeholder('Shared queue'),

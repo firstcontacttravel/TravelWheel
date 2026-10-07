@@ -31,6 +31,10 @@
         <!-- Seeds SkyLink switched off in flight_supplier_settings, whatever
              the developer's own .env says. Tests that need it switch it on. -->
         <env name="SKYLINK_ENABLED" value="false"/>
+        <!-- Never let a test reach the real Linear workspace. Linear tests set
+             a fake key and fake the HTTP calls themselves. -->
+        <env name="LINEAR_API_KEY" value="" force="true"/>
+        <env name="LINEAR_WEBHOOK_SECRET" value="" force="true"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>

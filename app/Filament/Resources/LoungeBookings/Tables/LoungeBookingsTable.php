@@ -2,16 +2,17 @@
 
 namespace App\Filament\Resources\LoungeBookings\Tables;
 
+use App\Filament\Workflow\FulfilmentActions;
+use App\Filament\Workflow\WorkItemTable;
 use App\Models\LoungeBooking;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
-use Filament\Forms\Components\Select;
-use Filament\Notifications\Notification;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class LoungeBookingsTable
 {
@@ -26,7 +27,9 @@ class LoungeBookingsTable
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('workItem.owner'))
             ->columns([
+                WorkItemTable::ownerColumn(),
                 TextColumn::make('trans_id')->label('Reference')->searchable()->copyable()->weight('bold'),
                 TextColumn::make('fullname')->label('Customer')->searchable()->description(fn (LoungeBooking $record): string => $record->email),
                 TextColumn::make('phone_no')->copyable(),
@@ -52,6 +55,7 @@ class LoungeBookingsTable
                 TextColumn::make('created_at')->since()->sortable(),
             ])
             ->filters([
+                WorkItemTable::filter(),
                 SelectFilter::make('status')->options(self::STATUS_OPTIONS),
                 TernaryFilter::make('provider')
                     ->label('Needs LoungePair booking')
@@ -63,7 +67,7 @@ class LoungeBookingsTable
             ->recordActions([
                 ViewAction::make(),
                 self::bookOnProviderAction(),
-                self::changeStatusAction(),
+                FulfilmentActions::rowGroup(),
             ]);
     }
 
@@ -76,25 +80,5 @@ class LoungeBookingsTable
             ->url(fn (LoungeBooking $record): string => (string) $record->provider_url)
             ->openUrlInNewTab()
             ->visible(fn (LoungeBooking $record): bool => $record->requiresManualProviderBooking());
-    }
-
-    public static function changeStatusAction(): Action
-    {
-        return Action::make('changeStatus')
-            ->label('Change status')
-            ->icon('heroicon-o-arrow-path')
-            ->color('gray')
-            ->form(fn (LoungeBooking $record): array => [
-                Select::make('status')
-                    ->label('Status')
-                    ->options(self::STATUS_OPTIONS)
-                    ->default($record->status)
-                    ->required(),
-            ])
-            ->action(function (LoungeBooking $record, array $data): void {
-                $record->update(['status' => $data['status']]);
-
-                Notification::make()->title('Status updated')->success()->send();
-            });
     }
 }

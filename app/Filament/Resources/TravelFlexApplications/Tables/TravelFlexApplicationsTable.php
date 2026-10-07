@@ -240,6 +240,7 @@ class TravelFlexApplicationsTable
     public static function approveAction(): Action
     {
         return Action::make('approve')
+            ->authorize(fn (): bool => auth()->user()?->canHandleMoney() ?? false)
             ->label('Approve')
             ->icon('heroicon-o-check-circle')
             ->color('success')
@@ -290,6 +291,7 @@ class TravelFlexApplicationsTable
     public static function rejectAction(): Action
     {
         return Action::make('reject')
+            ->authorize(fn (): bool => auth()->user()?->canHandleMoney() ?? false)
             ->label('Reject')
             ->icon('heroicon-o-x-circle')
             ->color('danger')

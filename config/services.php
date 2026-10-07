@@ -112,6 +112,21 @@ return [
         'key' => env('GOOGLE_MAPS_API_KEY'),
     ],
 
+    // Escalations become Linear issues (workflow phase 3). Without an API
+    // key nothing is sent and escalations work exactly as before.
+    'linear' => [
+        'api_key' => env('LINEAR_API_KEY'),
+        'webhook_secret' => env('LINEAR_WEBHOOK_SECRET'),
+        // Department.linear_team => the Linear team's key (the prefix on
+        // its issue numbers, e.g. IT-12, TRA-4).
+        'teams' => [
+            'it' => env('LINEAR_TEAM_IT', 'IT'),
+            'travelwheel' => env('LINEAR_TEAM_TRAVELWHEEL', 'TRA'),
+        ],
+        // Linear's free plan caps active issues. Warn the CEO from here.
+        'issue_warning_threshold' => (int) env('LINEAR_ISSUE_WARNING_THRESHOLD', 200),
+    ],
+
     'budpay' => [
         'public_key' => env('BUDPAY_PUBLIC_KEY'),
         'secret_key' => env('BUDPAY_SECRET_KEY'),

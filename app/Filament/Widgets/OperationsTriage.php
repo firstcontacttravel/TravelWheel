@@ -4,6 +4,8 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Resources\FlightBookings\FlightBookingResource;
 use App\Filament\Resources\VisaApplications\VisaApplicationResource;
+use App\Filament\Resources\WorkItems\WorkItemResource;
+use App\Models\Escalation;
 use App\Models\FlightBooking;
 use App\Models\NotificationOutbox;
 use App\Models\PostTicketingRequest;
@@ -11,6 +13,8 @@ use App\Models\SystemHeartbeat;
 use App\Models\TravelFlexApplication;
 use App\Models\VisaAdditionalDocumentRequest;
 use App\Models\VisaApplication;
+use App\Models\WorkItem;
+use App\Workflow\Workflows\FlightWorkflow;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\DB;
 
@@ -84,6 +88,17 @@ class OperationsTriage extends Widget
             ];
         }
 
+        $overdue = WorkItem::query()->active()->whereNotNull('due_at')->where('due_at', '<', now())->count();
+
+        if ($overdue > 0) {
+            $signals[] = [
+                'count' => $overdue,
+                'label' => 'Overdue work',
+                'detail' => 'Bookings past their deadline, across every service',
+                'url' => WorkItemResource::getUrl('index', ['activeTab' => 'overdue']),
+            ];
+        }
+
         $failedMail = NotificationOutbox::query()
             ->whereNotNull('failed_at')
             ->whereNull('sent_at')
@@ -124,6 +139,9 @@ class OperationsTriage extends Widget
     public function getWaiting(): array
     {
         $queues = [
+            // Personal first: what is yours, what is asking for you, what
+            // nobody has picked up. The service queues below are everyone's.
+            ...$this->getMyWork(),
             [
                 'count' => FlightBooking::query()->where('payment_status', 'awaiting_bank_transfer')->count(),
                 'label' => 'Awaiting transfer',
@@ -139,8 +157,11 @@ class OperationsTriage extends Widget
                 'url' => FlightBookingResource::getUrl('index', ['activeTab' => 'ready_to_ticket']),
             ],
             [
+                // Real changes only. An unanswered quote stays "inprocess" at
+                // the supplier forever and would keep this count up for good.
                 'count' => PostTicketingRequest::query()
-                    ->whereIn('status', ['pending', 'submitted', 'in_process', 'inprocess'])
+                    ->whereIn('operation_type', FlightWorkflow::CHANGING_PTR_OPERATIONS)
+                    ->whereIn('status', FlightWorkflow::ACTIVE_PTR_STATUSES)
                     ->count(),
                 'label' => 'Open post-ticketing',
                 'url' => null,
@@ -179,6 +200,33 @@ class OperationsTriage extends Widget
         }
 
         return $queues;
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function getMyWork(): array
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return [];
+        }
+
+        return [
+            [
+                'count' => WorkItem::query()->active()->where('owner_id', $user->getKey())->count(),
+                'label' => 'Your open work',
+                'url' => WorkItemResource::getUrl('index', ['activeTab' => 'mine']),
+            ],
+            [
+                'count' => Escalation::query()->awaiting($user)->where('raised_by', '!=', $user->getKey())->distinct()->count('work_item_id'),
+                'label' => 'Escalated to you',
+                'url' => WorkItemResource::getUrl('index', ['activeTab' => 'escalated_to_me']),
+            ],
+            [
+                'count' => WorkItem::query()->where('state', WorkItem::STATE_OPEN)->whereNull('owner_id')->count(),
+                'label' => 'Unclaimed',
+                'url' => WorkItemResource::getUrl('index', ['activeTab' => 'unclaimed']),
+            ],
+        ];
     }
 
     /** @return array<string, string> */

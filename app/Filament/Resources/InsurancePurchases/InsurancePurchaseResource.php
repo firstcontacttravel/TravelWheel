@@ -19,11 +19,11 @@ class InsurancePurchaseResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Insurance';
+    protected static string|\UnitEnum|null $navigationGroup = 'Customer Support';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 45;
 
-    protected static ?string $navigationLabel = 'Purchases';
+    protected static ?string $navigationLabel = 'Insurance Purchases';
 
     protected static ?string $recordTitleAttribute = 'trans_id';
 

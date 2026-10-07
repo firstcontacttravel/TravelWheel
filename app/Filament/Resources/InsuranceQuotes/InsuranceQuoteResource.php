@@ -20,11 +20,11 @@ class InsuranceQuoteResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentMagnifyingGlass;
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Insurance';
+    protected static string|\UnitEnum|null $navigationGroup = 'Customer Support';
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 55;
 
-    protected static ?string $navigationLabel = 'Quotes';
+    protected static ?string $navigationLabel = 'Insurance Quotes';
 
     protected static ?string $recordTitleAttribute = 'quoteId';
 
