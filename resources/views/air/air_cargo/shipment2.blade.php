@@ -113,7 +113,8 @@
     <div class="container">
         <div class="company-header">
             <div class="logo-container">
-                <img class="logo" src="{{ 'data:image/png;base64,' . base64_encode(file_get_contents('https://travelwheel.ng/travelwheel.png')) }}" alt="TravelWheel">
+                {{-- Local copy of the logo: downloading it from the live site on every PDF could hang past PHP's time limit --}}
+                <img class="logo" src="{{ 'data:image/png;base64,' . base64_encode(file_get_contents(public_path('assets/travelwheel.png'))) }}" alt="TravelWheel">
             </div>
             
         </div>
