@@ -2,11 +2,11 @@
 
 namespace App\Filament\Resources\Transfers\Tables;
 
-use App\Mail\DriverAssignedMail;
 use App\Models\Driver;
 use App\Models\DriverAssignment;
 use App\Models\FleetCar;
 use App\Models\Transfer;
+use App\Services\DriverAssignmentNotifier;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\FileUpload;
@@ -18,8 +18,6 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Mail;
-use Throwable;
 
 class TransfersTable
 {
@@ -83,6 +81,12 @@ class TransfersTable
                     ->tel()
                     ->visible(fn ($get) => blank($get('driver_id')))
                     ->maxLength(20),
+                TextInput::make('driver_email')
+                    ->label('New driver email')
+                    ->email()
+                    ->helperText('So the driver receives the trip details by email.')
+                    ->visible(fn ($get) => blank($get('driver_id')))
+                    ->maxLength(255),
                 // Older bookings name the car the customer picked; newer ones only
                 // name the category (e.g. "Standard Mini Van"), so start empty then
                 TextInput::make('car_model')
@@ -91,7 +95,7 @@ class TransfersTable
                 TextInput::make('car_colour')->required()->maxLength(60),
                 TextInput::make('plate_number')->required()->maxLength(20),
                 FileUpload::make('car_images')->multiple()->image()->disk('fleet_assets')->directory('fleet/assigned'),
-                Toggle::make('send_email')->label('Email the customer now')->default(true),
+                Toggle::make('send_email')->label('Email the customer, the driver and reservations now')->default(true),
             ])
             ->action(function (Transfer $record, array $data): void {
                 if (filled($data['driver_id'] ?? null)) {
@@ -107,8 +111,13 @@ class TransfersTable
                         ?? Driver::create([
                             'name' => trim($data['driver_name']),
                             'phone' => trim($data['driver_phone']),
+                            'email' => filled($data['driver_email'] ?? null) ? trim($data['driver_email']) : null,
                             'is_active' => true,
                         ]);
+
+                    if (blank($driver->email) && filled($data['driver_email'] ?? null)) {
+                        $driver->update(['email' => trim($data['driver_email'])]);
+                    }
                 }
 
                 DriverAssignment::where('transfer_id', $record->id)->delete();
@@ -126,18 +135,23 @@ class TransfersTable
 
                 $record->update(['driver_assigned' => true, 'payment_status' => 'confirmed']);
 
-                if ($data['send_email'] ?? false) {
-                    try {
-                        Mail::to($record->email)->send(new DriverAssignedMail($assignment));
-                        $assignment->update(['email_sent_at' => now()]);
-                    } catch (Throwable $e) {
-                        Notification::make()->title('Driver assigned, but the email failed to send.')->body($e->getMessage())->warning()->send();
+                if (! ($data['send_email'] ?? false)) {
+                    Notification::make()->title('Driver assigned (no emails sent)')->success()->send();
 
-                        return;
-                    }
+                    return;
                 }
 
-                Notification::make()->title('Driver assigned')->success()->send();
+                $result = app(DriverAssignmentNotifier::class)->notify($assignment);
+
+                Notification::make()
+                    ->title('Driver assigned')
+                    ->body(collect([
+                        $result['sent'] ? 'Emailed: '.implode(', ', $result['sent']).'.' : null,
+                        $result['problems'] ? 'Not sent: '.implode('; ', $result['problems']).'.' : null,
+                    ])->filter()->implode(' '))
+                    ->{$result['problems'] ? 'warning' : 'success'}()
+                    ->persistent(filled($result['problems']))
+                    ->send();
             });
     }
 

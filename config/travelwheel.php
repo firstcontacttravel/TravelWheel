@@ -27,6 +27,7 @@ return [
         // Car Hire & Pick up 'n' Drop off (internal notification copy)
         \App\Mail\CarHireNotificationMail::class => null,
         \App\Mail\TransferNotificationMail::class => null,
+        \App\Mail\DriverAssignedMail::class => null,          // driver assigned (the customer's copy)
         // Lounge, Protocol, Air Cargo (customer confirmation — no internal copy exists)
         \App\Mail\LoungeBookingMail::class => null,
         \App\Mail\ProtocolBookingMail::class => null,
