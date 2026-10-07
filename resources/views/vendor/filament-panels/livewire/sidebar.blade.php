@@ -36,6 +36,13 @@
             $pinned[] = $item;
         }
     }
+
+    // The signed-in person's own department first, under its own rule;
+    // everything else after, in the panel's order. Nothing is hidden.
+    $sections = array_values(array_filter(
+        \App\Support\Admin\DepartmentNavigation::split($groups, auth()->user()),
+        fn (array $section) => $section !== [],
+    ));
 @endphp
 
 <div>
@@ -124,8 +131,12 @@
                 <hr class="tc-rail-rule">
             @endif
 
+            @foreach ($sections as $sectionGroups)
+            @if (! $loop->first)
+                <hr class="tc-rail-rule">
+            @endif
             <ul class="tc-rail-list tc-rail-groups">
-                @foreach ($groups as $group)
+                @foreach ($sectionGroups as $group)
                     @php
                         $label = $group->getLabel();
                         $items = $group->getItems();
@@ -189,6 +200,7 @@
                     </li>
                 @endforeach
             </ul>
+            @endforeach
 
             {{ FilamentView::renderHook(PanelsRenderHook::SIDEBAR_NAV_END) }}
         </nav>
