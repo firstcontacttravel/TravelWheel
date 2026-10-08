@@ -56,6 +56,14 @@
     $ticketSuccess = (bool) ($ticketSuccess ?? session('ticketSuccess', false));
     $isTicketed = $ticketSuccess || $dbBooking?->isTicketed() || $ticketStatusText === 'TICKETED';
     $isProcessing = ! $isTicketed && in_array($bookingStatusText, ['CONFIRMED', 'BOOKED', 'PAID_UNTICKETED', 'ON_HOLD'], true);
+    // Paid, but the supplier booking or ticket failed. The SeerBit callback
+    // still lands here, and this page used to call that "Booking confirmed".
+    // The row decides, not the session, which can predate the failure.
+    $needsAttention = ! $isTicketed && in_array(
+        strtoupper((string) ($dbBooking?->booking_status ?? $bookingStatusText)),
+        ['FAILED', 'TICKETING_FAILED', 'HOLD_EXPIRED_REVIEW'],
+        true,
+    );
     // SkyLink reserves the seat but issues tickets outside its API, on no
     // schedule it tells us, so the TravelNext timing promises on this page
     // don't hold for its bookings.
@@ -115,12 +123,18 @@
         return str_pad((string) $hour, 2, '0', STR_PAD_LEFT).':'.$m[2];
     };
 
-    $statusTitle = $isTicketed ? 'Booking confirmed and ticketed' : 'Booking confirmed';
+    $statusTitle = match (true) {
+        $isTicketed => 'Booking confirmed and ticketed',
+        $needsAttention => 'Payment received, booking needs attention',
+        default => 'Booking confirmed',
+    };
     $statusCopy = $isTicketed
         ? 'Your ticket has been issued. A copy of your itinerary has been sent to your email.'
-        : ($isSkylink
-            ? 'Your seat is reserved and your payment is complete. The airline issues your ticket separately, and we will email it to you as soon as it is issued.'
-            : 'Your seat is reserved and ticketing is in progress. Your e-ticket will be sent to your email once issued.');
+        : ($needsAttention
+            ? 'Your payment is confirmed, but we could not complete the booking with the airline. Our team has been notified and will contact you shortly. Please do not book again; quote your booking reference if you contact us.'
+            : ($isSkylink
+                ? 'Your seat is reserved and your payment is complete. The airline issues your ticket separately, and we will email it to you as soon as it is issued.'
+                : 'Your seat is reserved and ticketing is in progress. Your e-ticket will be sent to your email once issued.'));
 @endphp
 
 <style>
@@ -206,6 +220,11 @@
     .cf-status.processing {
         background: #fff7ed;
         color: var(--cf-amber);
+    }
+
+    .cf-status.attention {
+        background: #fef2f2;
+        color: var(--cf-red);
     }
 
     .cf-title {
@@ -808,10 +827,13 @@
 
     <section class="cf-hero">
         <div>
-            <div class="cf-status {{ $isTicketed ? '' : 'processing' }}">
+            <div class="cf-status {{ $isTicketed ? '' : ($needsAttention ? 'attention' : 'processing') }}">
                 @if($isTicketed)
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
                     Ticket issued
+                @elseif($needsAttention)
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+                    Needs attention
                 @else
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                     {{ $isSkylink ? 'Awaiting ticket' : 'Ticketing in progress' }}
@@ -820,7 +842,7 @@
             <h1 class="cf-title">{{ $statusTitle }}</h1>
             <p class="cf-subtitle">
                 {{ $statusCopy }}
-                @if(! empty($contact['email']))
+                @if(! empty($contact['email']) && ! $needsAttention)
                     Confirmation details are being sent to <strong>{{ $contact['email'] }}</strong>.
                 @endif
             </p>
@@ -996,6 +1018,8 @@
                                 numbers yet &mdash; they will be emailed to you as soon as it does, and your
                                 booking reference above is enough to check in or contact the airline
                                 in the meantime.
+                            @elseif($needsAttention)
+                                No ticket has been issued. Our team will contact you about this booking.
                             @else
                                 Your e-ticket is being processed. We will send the ticket number to your
                                 email once it is issued.

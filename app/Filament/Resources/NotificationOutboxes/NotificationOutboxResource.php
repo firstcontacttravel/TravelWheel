@@ -43,6 +43,16 @@ class NotificationOutboxResource extends Resource
                     }),
                 TextColumn::make('attempts')->numeric(),
                 TextColumn::make('last_error')->limit(80)->wrap(),
+                // Why an alert was raised, e.g. the supplier's reason a paid
+                // reservation failed. The payload is encrypted at rest, so
+                // this is the only place ops can read it short of the inbox.
+                TextColumn::make('message')
+                    ->label('Message')
+                    ->state(fn (NotificationOutbox $record): ?string => data_get($record->payload, 'message'))
+                    ->placeholder('-')
+                    ->limit(120)
+                    ->tooltip(fn (NotificationOutbox $record): ?string => data_get($record->payload, 'message'))
+                    ->wrap(),
                 TextColumn::make('available_at')->dateTime()->sortable(),
                 TextColumn::make('sent_at')->dateTime()->sortable(),
                 TextColumn::make('created_at')->dateTime()->sortable(),
