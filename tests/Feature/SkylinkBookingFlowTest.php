@@ -293,6 +293,9 @@ class SkylinkBookingFlowTest extends TestCase
             if (str_contains($request->url(), '/api/login')) {
                 return Http::response($this->loginResponse());
             }
+            if (str_contains($request->url(), '/flights/pricing')) {
+                return Http::response($this->repricedResponse());
+            }
             if (str_contains($request->url(), '/flights/reserve')) {
                 return Http::response([
                     'success' => true,
@@ -359,6 +362,9 @@ class SkylinkBookingFlowTest extends TestCase
             }
             if (str_contains($request->url(), '/api/login')) {
                 return Http::response($this->loginResponse());
+            }
+            if (str_contains($request->url(), '/flights/pricing')) {
+                return Http::response($this->repricedResponse());
             }
             if (str_contains($request->url(), '/flights/reserve')) {
                 return Http::response([
@@ -476,6 +482,9 @@ class SkylinkBookingFlowTest extends TestCase
             if (str_contains($request->url(), '/api/login')) {
                 return Http::response($this->loginResponse());
             }
+            if (str_contains($request->url(), '/flights/pricing')) {
+                return Http::response($this->repricedResponse());
+            }
             if (str_contains($request->url(), '/flights/reserve')) {
                 return Http::response([
                     'success' => false,
@@ -580,6 +589,15 @@ class SkylinkBookingFlowTest extends TestCase
                 'gender' => 'M', 'dob' => '1990-01-01', 'nationality' => 'NG',
             ]],
         ];
+    }
+
+    /** The re-price SkyLink requires just before reserve: a supplier fare that, marked up, is within what was charged; new token. */
+    private function repricedResponse(): array
+    {
+        return ['success' => true, 'data' => [
+            'booking_token' => 'btk_repriced', 'verified' => true, 'price_changed' => false,
+            'original_price' => 650000, 'verified_price' => 650000, 'currency' => 'NGN',
+        ]];
     }
 
     private function skylinkPendingBooking(array $overrides = []): FlightBooking

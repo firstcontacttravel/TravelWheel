@@ -54,6 +54,9 @@ class SkylinkTicketingOperationsTest extends TestCase
                     'gatewayCode' => '00', 'gatewayMessage' => 'Successful', 'amount' => 750000, 'currency' => 'NGN',
                 ]]]),
                 str_contains($request->url(), '/api/login') => Http::response(['data' => ['access_token' => 'token']]),
+                str_contains($request->url(), '/flights/pricing') => Http::response(['success' => true, 'data' => [
+                    'booking_token' => 'btk_repriced', 'verified' => true, 'verified_price' => 650000, 'currency' => 'NGN',
+                ]]),
                 str_contains($request->url(), '/flights/reserve') => Http::response(['success' => true, 'data' => [
                     'pnr' => '9P5QB2',
                     'booking_reference' => '9P5QB2',

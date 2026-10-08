@@ -10,6 +10,7 @@ use App\Services\Flights\FlightBookingGuard;
 use App\Services\Flights\FlightPlatformHold;
 use App\Services\Flights\FlightSearchStore;
 use App\Services\Flights\FlightSupplierRegistry;
+use App\Services\Flights\SkylinkFareRefresh;
 use App\Services\SeerbitPaymentService;
 use App\Services\SkylinkFlightService;
 use App\Services\TravelFlexApplicationPdfService;
@@ -1089,6 +1090,22 @@ class FlightBookingController extends Controller
             }
 
             $booking = $this->_prepareSeerbitBooking($flow);
+
+            // Refresh the SkyLink fare token before the card is charged, so it
+            // is still live when the customer comes back from SeerBit. Only a
+            // fare that is gone or dearer stops here, before money moves.
+            if ($flow === 'skylink_reserve_full') {
+                $refreshed = app(SkylinkFareRefresh::class)->refresh($booking);
+
+                if (! $refreshed['ok']) {
+                    return $refreshed['reason'] === 'unconfirmed'
+                        ? redirect()->route('flights.payment.gateway')->withErrors(['error' => $refreshed['message']])
+                        : redirect()->route('air.flight-s')->with('fareUnavailable', ['message' => $refreshed['message'], 'alternate' => null]);
+                }
+
+                $booking = $booking->fresh();
+            }
+
             $amount = $this->_paymentAmountForFlow($flow, $booking);
             $currency = $booking->currency ?: 'NGN';
             $existingRedirect = $this->_seerbitRedirectLink($booking->payment_gateway_response ?? []);
@@ -1368,7 +1385,25 @@ class FlightBookingController extends Controller
 
     private function _completeSkylinkReservation(FlightBooking $booking)
     {
-        $reserved = $this->_reserveSkylink($booking);
+        // SkyLink wants pricing within five minutes of reserve, with the token
+        // that pricing returns. Payment has been taken by now, so a fare that
+        // can't be refreshed goes to support (rebook or refund), like any
+        // reservation that fails after payment.
+        $refreshed = app(SkylinkFareRefresh::class)->refresh($booking);
+
+        if (! $refreshed['ok']) {
+            $booking->update(['payment_status' => 'paid', 'booking_status' => 'failed']);
+            $this->_sendTicketingFailureAlert(
+                $booking->fresh(),
+                'Payment received, but the SkyLink fare could not be re-priced before reserving ('.$refreshed['reason'].': '.$refreshed['detail'].'). Nothing was reserved. Rebook or refund.',
+            );
+
+            return redirect()->route('flights.payment.gateway')->withErrors([
+                'error' => 'Your payment was received, but we could not confirm your seat automatically. TravelWheel has been alerted and will contact you shortly.',
+            ]);
+        }
+
+        $reserved = $this->_reserveSkylink($booking->fresh());
         $result = ['data' => $reserved['data']];
         $pnr = $reserved['pnr'];
 
