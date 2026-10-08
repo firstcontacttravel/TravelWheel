@@ -23,6 +23,7 @@ return [
     'colors' => [
         'brand' => '#303191',
         'brand_dark' => '#24246e',
+        'brand_bg' => '#f0f0fa',
         'accent' => '#00a859',
         'ink' => '#111827',
         'text' => '#1f2937',

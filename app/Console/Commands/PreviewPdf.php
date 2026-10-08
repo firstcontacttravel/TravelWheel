@@ -41,7 +41,15 @@ class PreviewPdf extends Command
             'eticket-oneway-pending' => fn () => $eticket->generate($this->booking(ticketed: false, roundTrip: false), []),
             'eticket-multicity' => fn () => $eticket->generate($this->booking(multiCity: true), $this->tripDetails()),
             'itinerary-ticketed' => fn () => $itinerary->generate($this->booking(), $this->tripDetails()),
-            'itinerary-not-ticketed' => fn () => $itinerary->generate($this->booking(ticketed: false), []),
+            'itinerary-payment-pending' => fn () => $itinerary->generate($this->booking(ticketed: false, paid: false), [], 'payment_pending'),
+            'itinerary-ticket-being-issued' => fn () => $itinerary->generate($this->booking(ticketed: false), [], 'ticketed'),
+            'itinerary-skylink-awaiting-ticket' => fn () => $itinerary->generate($this->booking(ticketed: false, roundTrip: false, supplier: 'skylink'), [], 'ticketed'),
+            'itinerary-on-hold' => fn () => $itinerary->generate($this->booking(ticketed: false, status: 'on_hold', paid: false), [], 'on_hold'),
+            'itinerary-multicity' => fn () => $itinerary->generate($this->booking(multiCity: true), $this->tripDetails()),
+            'itinerary-travelflex-review' => fn () => $itinerary->generate($this->booking(ticketed: false, paid: false), [], 'travelflex_review'),
+            'itinerary-travelflex-approved' => fn () => $itinerary->generate($this->booking(ticketed: false, paid: false), [], 'travelflex_approved'),
+            'itinerary-travelflex-declined' => fn () => $itinerary->generate($this->booking(ticketed: false, paid: false), [], 'travelflex_rejected'),
+            'itinerary-internal-ticketing-required' => fn () => $itinerary->generate($this->booking(ticketed: false), [], 'ticketing_required', 'internal'),
         ];
 
         $failed = 0;
@@ -61,7 +69,7 @@ class PreviewPdf extends Command
         return $failed === 0 ? self::SUCCESS : self::FAILURE;
     }
 
-    private function booking(bool $ticketed = true, bool $roundTrip = true, bool $multiCity = false): FlightBooking
+    private function booking(bool $ticketed = true, bool $roundTrip = true, bool $multiCity = false, string $supplier = 'travelnext', ?string $status = null, bool $paid = true): FlightBooking
     {
         $out = [
             $this->segment('LOS', 'Lagos', 'Murtala Muhammed International', 'AMS', 'Amsterdam', 'Schiphol', '2026-10-14T22:35:00', '2026-10-15T06:10:00', 'KL', 'KLM Royal Dutch Airlines', 'KL 588', 'Boeing 777-300ER', 455),
@@ -92,7 +100,7 @@ class PreviewPdf extends Command
 
         return new FlightBooking([
             'booking_ref' => 'TW-8F3K2A',
-            'unique_id' => $ticketed ? 'KL7X2MQ' : '',
+            'unique_id' => $ticketed || $supplier === 'skylink' ? 'KL7X2MQ' : '',
             'route' => 'Lagos (LOS) → London (LHR)',
             'airline' => 'KLM Royal Dutch Airlines',
             'total_price' => 1284500,
@@ -100,11 +108,12 @@ class PreviewPdf extends Command
             'contact_email' => 'adebayo.okonkwo@example.com',
             'contact_phone' => '+234 803 111 2233',
             'payment_method' => 'gateway',
-            'payment_status' => 'paid',
+            'supplier' => $supplier,
+            'payment_status' => $paid ? 'paid' : 'pending',
             'ticket_ordered' => $ticketed,
             'ticket_ordered_at' => $ticketed ? '2026-09-20 11:24:00' : null,
             'tkt_time_limit' => $ticketed ? null : '2026-09-26 18:00:00',
-            'booking_status' => $ticketed ? 'ticketed' : 'confirmed',
+            'booking_status' => $status ?? ($ticketed ? 'ticketed' : 'confirmed'),
             'passengers_snapshot' => [
                 ['type' => 'ADT', 'title' => 'Mr', 'first_name' => 'Adebayo', 'last_name' => 'Okonkwo', 'passport_no' => 'A01234567', 'nationality' => 'Nigerian', 'gender' => 'Male', 'date_of_birth' => '1988-04-12'],
                 ['type' => 'ADT', 'title' => 'Mrs', 'first_name' => 'Chidinma', 'last_name' => 'Okonkwo', 'passport_no' => 'A07654321', 'nationality' => 'Nigerian', 'gender' => 'Female', 'date_of_birth' => '1990-11-03'],

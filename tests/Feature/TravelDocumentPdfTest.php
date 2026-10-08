@@ -71,13 +71,15 @@ class TravelDocumentPdfTest extends TestCase
      */
     public function test_both_documents_are_built_from_the_shared_stylesheet(): void
     {
+        // The itinerary was redesigned with its own stylesheet; both still
+        // take their colours from config/brand.php.
         foreach ([
-            'resources/views/pdf/eticket.blade.php',
-            'resources/views/pdf/itinerary.blade.php',
-        ] as $view) {
+            'resources/views/pdf/eticket.blade.php' => 'pdf.partials.styles',
+            'resources/views/pdf/itinerary.blade.php' => 'pdf.partials.itinerary-styles',
+        ] as $view => $stylesheet) {
             $source = (string) file_get_contents(base_path($view));
 
-            $this->assertStringContainsString("@include('pdf.partials.styles')", $source, "{$view} does not use the shared stylesheet.");
+            $this->assertStringContainsString("@include('{$stylesheet}')", $source, "{$view} does not use its stylesheet.");
             $this->assertDoesNotMatchRegularExpression(
                 '/#(0[Dd]1883|39328[Ff]|303191|009933|2[Ff]2[Cc]90)/',
                 $source,
@@ -108,6 +110,32 @@ class TravelDocumentPdfTest extends TestCase
             $this->assertStringNotContainsString('data:image', $html, "The {$doc} embeds an image data URI.");
             $this->assertStringContainsString('TravelWheel', $html);
         }
+    }
+
+    /**
+     * DomPDF converts px through the dpi option, which ItineraryPdfService
+     * sets to 150, so the itinerary's 9px body text printed at 4.3pt and its
+     * labels at 3.6pt. Sizes are in pt so they print as written.
+     */
+    public function test_itinerary_type_sizes_are_set_in_points(): void
+    {
+        $css = (string) file_get_contents(resource_path('views/pdf/partials/itinerary-styles.blade.php'));
+
+        $this->assertDoesNotMatchRegularExpression('/font-size:\s*[\d.]+px/', $css);
+        $this->assertMatchesRegularExpression('/font-size:\s*9\.5pt/', $css);
+    }
+
+    /**
+     * Without merging over config/dompdf.php, DomPDF's chroot is its own
+     * vendor folder, the bundled fonts are refused, and every PDF silently
+     * falls back to DejaVu.
+     */
+    public function test_the_itinerary_embeds_its_bundled_typeface(): void
+    {
+        $pdf = app(ItineraryPdfService::class)->generate($this->booking(), $this->tripDetails($this->booking()));
+
+        $this->assertStringContainsString('IBMPlexSans', $pdf);
+        $this->assertStringContainsString('IBMPlexMono', $pdf);
     }
 
     /** A document that is not a ticket has to say so, in both places. */

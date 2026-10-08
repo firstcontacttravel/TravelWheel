@@ -17,6 +17,8 @@ class ETicketMail extends Mailable
 {
     use Queueable, SerializesModels;
 
+    private ?bool $ticketed = null;
+
     public function __construct(
         public readonly FlightBooking $booking,
         public readonly array $tripDetails = [],
@@ -25,22 +27,22 @@ class ETicketMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->awaitingSupplierTicket()
-                ? 'Booking confirmed - '.$this->booking->booking_ref.' | TravelWheel'
-                : 'Your E-Ticket - '.$this->booking->booking_ref.' | TravelWheel',
+            subject: $this->ticketed()
+                ? 'Your E-Ticket - '.$this->booking->booking_ref.' | TravelWheel'
+                : 'Booking confirmed - '.$this->booking->booking_ref.' | TravelWheel',
         );
     }
 
     /**
-     * A SkyLink booking is emailed at reservation, before any ticket exists:
-     * SkyLink issues tickets outside its API. Titling that email "Your
-     * E-Ticket" tells the customer they already hold something they don't.
+     * This email also goes out before any ticket exists: at SkyLink
+     * reservation, and when a TravelNext booking is made but its ticket
+     * numbers are not back yet. Titling those "Your E-Ticket" tells the
+     * customer they hold something they don't. Subject, body and attachment
+     * all follow the rule the PDF itself uses, so they can never disagree.
      */
-    private function awaitingSupplierTicket(): bool
+    private function ticketed(): bool
     {
-        return $this->booking->isSkylink()
-            && ! $this->booking->isTicketed()
-            && ! $this->booking->ticket_ordered;
+        return $this->ticketed ??= app(ItineraryPdfService::class)->isTicketed($this->booking, $this->tripDetails);
     }
 
     public function content(): Content
@@ -53,9 +55,7 @@ class ETicketMail extends Mailable
             with: array_merge($viewData, [
                 'booking' => $this->booking,
                 'bookingRef' => $this->booking->booking_ref,
-                'isTicketed' => strtoupper($this->tripDetails['TicketStatus'] ?? '') === 'TICKETED'
-                    || $this->booking->isTicketed()
-                    || $this->booking->ticket_ordered,
+                'isTicketed' => $this->ticketed(),
                 'tripDetails' => $this->tripDetails,
             ]),
         );
@@ -86,10 +86,13 @@ class ETicketMail extends Mailable
             throw $e;
         }
 
+        // Until a ticket exists the PDF is an itinerary, and its name says so.
+        $prefix = $this->ticketed() ? 'eticket-' : 'booking-itinerary-';
+
         return [
             Attachment::fromData(
                 fn () => $pdfBytes,
-                'eticket-'.$this->booking->booking_ref.'.pdf'
+                $prefix.$this->booking->booking_ref.'.pdf'
             )->withMime('application/pdf'),
         ];
     }
