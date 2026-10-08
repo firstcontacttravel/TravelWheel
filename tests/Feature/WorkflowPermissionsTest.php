@@ -170,10 +170,10 @@ class WorkflowPermissionsTest extends TestCase
         app(WorkItemService::class)->claim($application->workItem, $officer);
 
         $this->actingAs($officer);
-        Livewire::test(ViewVisaApplication::class, ['record' => $application->getRouteKey()])->assertActionHidden('assign');
+        Livewire::test(ViewVisaApplication::class, ['record' => $application->getRouteKey()])->assertActionHidden('workReassign')->assertActionDoesNotExist('assign');
 
         $this->actingAs($this->staff('operations', head: true));
-        Livewire::test(ViewVisaApplication::class, ['record' => $application->getRouteKey()])->assertActionVisible('assign');
+        Livewire::test(ViewVisaApplication::class, ['record' => $application->getRouteKey()])->assertActionVisible('workReassign');
     }
 
     // ── Escalations ──────────────────────────────────────────────────────

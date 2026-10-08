@@ -1,6 +1,6 @@
 @php
-    $statusLabels = ['draft'=>'Draft','awaiting_payment'=>'Awaiting payment','submitted'=>'Submitted','under_review'=>'In review','action_required'=>'Action required','processing'=>'Processing','approved'=>'Approved','issued'=>'Visa issued','rejected'=>'Not approved','cancelled'=>'Cancelled','expired'=>'Expired'];
-    $statusLabel = $statusLabels[$application->status] ?? str($application->status)->replace('_',' ')->title();
+    $statusLabel = \App\Enums\VisaApplicationStatus::customerLabelFor($application->status);
+    $requestStates = ['open' => 'Required', 'replacement_requested' => 'Replacement needed', 'submitted' => 'Received', 'accepted' => 'Accepted'];
     $openRequests = $application->additionalDocumentRequests->whereIn('status', ['open', 'replacement_requested']);
     $issuedDocuments = $application->issuedDocuments->whereNull('superseded_at');
 @endphp
@@ -25,13 +25,15 @@
         <section class="vp-card">
             <div class="vp-card-head"><div><p class="vp-eyebrow">Next steps</p><h2>Outstanding actions</h2></div><span class="vp-count">{{ $openRequests->count() }}</span></div>
             @forelse($application->additionalDocumentRequests as $request)
-                <article class="vp-request {{ $request->status !== 'open' ? 'vp-request--complete' : '' }}">
-                    <div class="vp-request-copy"><span class="vp-request-state">{{ $request->status === 'open' ? 'Required' : 'Received' }}</span><h3>{{ $request->title }}</h3>
+                @php($needsUpload = in_array($request->status, ['open', 'replacement_requested'], true))
+                <article class="vp-request {{ $needsUpload ? '' : 'vp-request--complete' }}">
+                    <div class="vp-request-copy"><span class="vp-request-state">{{ $requestStates[$request->status] ?? 'Received' }}</span><h3>{{ $request->title }}</h3>
                         @if($request->traveler)<p>For {{ $request->traveler->first_name }} {{ $request->traveler->last_name }}</p>@endif
                         @if($request->instructions)<p>{{ $request->instructions }}</p>@endif
+                        @if($request->status === 'replacement_requested' && $request->review_note)<p><strong>Why we need a new copy:</strong> {{ $request->review_note }}</p>@endif
                         @if($request->due_at)<small>Due {{ $request->due_at->format('d M Y, H:i') }}</small>@endif
                     </div>
-                    @if(in_array($request->status, ['open', 'replacement_requested'], true))
+                    @if($needsUpload)
                     <form method="POST" enctype="multipart/form-data" action="{{ route('visa.portal.requests.upload', [$application, $request]) }}" class="vp-upload">@csrf
                         <label><x-ui.icon name="upload" :size="22" /><span><strong>Choose document</strong><small>PDF, JPG or PNG · max {{ number_format(($request->requirement?->maximum_file_size_kb ?: 5120)/1024, 0) }} MB</small></span><input type="file" name="document" accept=".pdf,.jpg,.jpeg,.png" required></label>
                         <button class="vp-button vp-button--small" type="submit">Upload securely</button>
@@ -44,7 +46,7 @@
         </section>
 
         <section class="vp-card"><div class="vp-card-head"><div><p class="vp-eyebrow">Progress</p><h2>Application timeline</h2></div></div>
-            <div class="vp-timeline">@foreach($application->statusHistory->sortByDesc('created_at') as $history)<div class="vp-timeline-item"><i></i><div><strong>{{ $statusLabels[$history->to_status] ?? str($history->to_status)->replace('_',' ')->title() }}</strong><p>{{ $history->reason ?: 'Application status updated' }}</p><time>{{ $history->created_at->format('d M Y, H:i') }}</time></div></div>@endforeach</div>
+            <div class="vp-timeline">@foreach($application->statusHistory->sortByDesc('created_at') as $history)<div class="vp-timeline-item"><i></i><div><strong>{{ \App\Enums\VisaApplicationStatus::customerLabelFor($history->to_status) }}</strong><p>{{ $history->reason ?: 'Application status updated' }}</p><time>{{ $history->created_at->format('d M Y, H:i') }}</time></div></div>@endforeach</div>
         </section>
     </main><aside class="vp-side">
         <section class="vp-card"><p class="vp-eyebrow">Payments</p><h2>Payment & receipts</h2>

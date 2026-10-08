@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\VisaApplications\Pages\ListVisaApplications;
+use App\Filament\Resources\VisaApplications\Pages\ViewVisaApplication;
 use App\Filament\Resources\VisaApplications\VisaApplicationResource;
 use App\Mail\VisaApplicationVendorMail;
 use App\Models\Country;
@@ -17,6 +19,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class VisaOperationsTest extends TestCase
@@ -30,6 +33,24 @@ class VisaOperationsTest extends TestCase
 
         $this->actingAs($admin)->get(VisaApplicationResource::getUrl('index'))->assertOk()->assertSee('Visa application queue');
         $this->actingAs($admin)->get(VisaApplicationResource::getUrl('view', ['record' => $application]))->assertOk()->assertSee($application->reference);
+    }
+
+    public function test_queue_shows_open_actions_and_the_latest_payment_without_per_row_queries(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $application = $this->application('action_required');
+        $application->additionalDocumentRequests()->create(['title' => 'Passport', 'status' => 'open']);
+        $application->additionalDocumentRequests()->create(['title' => 'Photo', 'status' => 'accepted']);
+        $quote = $application->quotes()->create(['reference' => (string) Str::ulid(), 'visa_product_id' => $application->visa_product_id, 'product_version' => 1, 'payable_total' => 100, 'source_totals' => [], 'exchange_rate_snapshot' => [], 'pricing_fingerprint' => 'x', 'expires_at' => now()->addHour()]);
+        foreach (['failed', 'paid'] as $status) {
+            $application->payments()->create(['reference' => (string) Str::ulid(), 'visa_quote_id' => $quote->id, 'status' => $status, 'expected_amount' => 100, 'expected_currency' => 'NGN', 'idempotency_key' => Str::random(40)]);
+        }
+        $this->actingAs($admin);
+
+        Livewire::test(ListVisaApplications::class)
+            ->assertTableColumnStateSet('open_actions_count', 1, $application)
+            ->assertTableColumnStateSet('latest_payment_status', 'paid', $application)
+            ->assertTableColumnFormattedStateSet('status', 'Action required', $application);
     }
 
     public function test_officer_accepts_assignment_and_starts_review_with_an_immutable_audit(): void
@@ -125,6 +146,45 @@ class VisaOperationsTest extends TestCase
             'user_id' => $officer->id,
             'event_type' => 'sent_to_vendor',
         ]);
+    }
+
+    public function test_send_to_vendor_can_go_to_other_addresses_as_separate_emails(): void
+    {
+        Mail::fake();
+        $application = $this->application('under_review');
+        $vendor = VisaVendor::query()->create(['name' => 'Consular Partner', 'email' => 'vendor@example.com', 'is_active' => true]);
+        $application->product->update(['visa_vendor_id' => $vendor->id]);
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        Livewire::test(ViewVisaApplication::class, ['record' => $application->getRouteKey()])
+            ->callAction('sendToVendor', data: ['include_vendor' => true, 'other_recipients' => ['Desk2@Example.com', 'agent@example.org']])
+            ->assertHasNoActionErrors();
+
+        Mail::assertQueuedCount(3);
+        foreach (['vendor@example.com', 'desk2@example.com', 'agent@example.org'] as $email) {
+            Mail::assertQueued(VisaApplicationVendorMail::class, fn ($mail) => $mail->hasTo($email) && count($mail->to) === 1);
+        }
+        $this->assertSame(['vendor@example.com', 'desk2@example.com', 'agent@example.org'], $application->auditEvents()->where('event_type', 'sent_to_vendor')->first()->metadata['recipients']);
+    }
+
+    public function test_send_to_vendor_works_without_a_vendor_and_rejects_bad_addresses(): void
+    {
+        Mail::fake();
+        $application = $this->application('under_review');
+        $this->actingAs(User::factory()->create(['is_admin' => true]));
+
+        Livewire::test(ViewVisaApplication::class, ['record' => $application->getRouteKey()])
+            ->callAction('sendToVendor', data: ['other_recipients' => []])
+            ->assertHasActionErrors(['other_recipients' => 'required']);
+        Livewire::test(ViewVisaApplication::class, ['record' => $application->getRouteKey()])
+            ->callAction('sendToVendor', data: ['other_recipients' => ['not-an-email']])
+            ->assertHasActionErrors();
+        Mail::assertNothingQueued();
+
+        Livewire::test(ViewVisaApplication::class, ['record' => $application->getRouteKey()])
+            ->callAction('sendToVendor', data: ['other_recipients' => ['processor@example.com']])
+            ->assertHasNoActionErrors();
+        Mail::assertQueued(VisaApplicationVendorMail::class, fn ($mail) => $mail->hasTo('processor@example.com'));
     }
 
     private function application(string $status): VisaApplication

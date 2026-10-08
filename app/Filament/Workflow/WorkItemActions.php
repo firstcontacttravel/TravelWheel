@@ -37,9 +37,9 @@ class WorkItemActions
             self::noteAction(),
             self::priorityAction(),
         ])
-            ->label('Work')
+            ->label('Action')
             ->icon('heroicon-o-user-circle')
-            ->color('gray')
+            ->color('danger')
             ->button();
     }
 
