@@ -82,7 +82,7 @@ class WorkflowDeadlinesTest extends TestCase
 
     public function test_the_owner_is_warned_once_most_of_the_time_is_gone(): void
     {
-        $owner = $this->staff('flights');
+        $owner = $this->staff('operations');
         $item = app(WorkItemService::class)->claim($this->readyToTicket()->workItem, $owner);
 
         $this->travel(30)->minutes();
@@ -100,8 +100,8 @@ class WorkflowDeadlinesTest extends TestCase
 
     public function test_an_unowned_item_warns_its_whole_queue(): void
     {
-        $a = $this->staff('flights');
-        $b = $this->staff('flights');
+        $a = $this->staff('operations');
+        $b = $this->staff('operations');
         $finance = $this->staff('finance');
         $this->readyToTicket();
 
@@ -113,8 +113,8 @@ class WorkflowDeadlinesTest extends TestCase
 
     public function test_a_missed_deadline_tells_the_owner_and_the_queue_by_bell_and_email(): void
     {
-        $owner = $this->staff('flights');
-        $colleague = $this->staff('flights');
+        $owner = $this->staff('operations');
+        $colleague = $this->staff('operations');
         $item = app(WorkItemService::class)->claim($this->readyToTicket()->workItem, $owner);
 
         $this->travel(61)->minutes();
@@ -163,7 +163,7 @@ class WorkflowDeadlinesTest extends TestCase
     public function test_the_overdue_email_carries_the_reference_and_step_only(): void
     {
         Mail::fake();
-        $this->staff('flights');
+        $this->staff('operations');
         $booking = $this->readyToTicket();
 
         $this->travel(61)->minutes();
@@ -210,7 +210,7 @@ class WorkflowDeadlinesTest extends TestCase
         $this->readyToTicket();
         $this->travel(2)->hours();
 
-        $this->actingAs($this->staff('flights'));
+        $this->actingAs($this->staff('operations'));
         $broken = collect(app(OperationsTriage::class)->getBroken())->keyBy('label');
 
         $this->assertSame(1, $broken['Overdue work']['count']);

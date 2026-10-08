@@ -26,7 +26,7 @@ Escalations can go out to Linear and sync back.
 | Money actions | Only the Finance department (and the CEO). Finance acts without needing approval, but every action is recorded. |
 | Changing workflows | Steps and the moves between them are defined in code by developers. Deadlines and default departments are set by the CEO in the admin. |
 | Linear | Free tier, two teams: **IT department** and **Travelwheel** (everything else). Only escalations become Linear issues, never every booking. The admin stays the record of truth. No customer personal data is sent to Linear. |
-| Departments | Flights, Visas, Finance, Customer Support, Ground & Airport Services, IT. |
+| Departments | **Operations** (flights, visas, car hire, transfers, lounge, protocol, air cargo), Finance, Customer Support, IT. Flights, Visas and Ground & Airport Services were merged into Operations on 2026-10-08. |
 
 ### Principles
 

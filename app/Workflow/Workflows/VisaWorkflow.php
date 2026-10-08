@@ -36,7 +36,7 @@ class VisaWorkflow extends Workflow
 
     public function stages(): array
     {
-        $visas = Department::VISAS;
+        $visas = Department::OPERATIONS;
 
         return [
             'draft' => ['label' => 'Customer filling in', 'state' => WorkItem::STATE_WAITING, 'department' => $visas],

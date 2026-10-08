@@ -51,7 +51,7 @@ class WorkflowWorkItemsTest extends TestCase
         $this->assertSame('flights', $item->service);
         $this->assertSame('pending_payment', $item->stage);
         $this->assertSame(WorkItem::STATE_WAITING, $item->state);
-        $this->assertSame($this->department('flights'), $item->department_id);
+        $this->assertSame($this->department('operations'), $item->department_id);
         $this->assertSame([WorkItemEvent::CREATED], $item->events()->pluck('type')->all());
     }
 
@@ -87,7 +87,7 @@ class WorkflowWorkItemsTest extends TestCase
 
         $item = $booking->workItem()->first();
         $this->assertSame('ready_to_ticket', $item->stage);
-        $this->assertSame($this->department('flights'), $item->department_id);
+        $this->assertSame($this->department('operations'), $item->department_id);
 
         $change = $item->events()->where('type', WorkItemEvent::STAGE_CHANGED)->firstOrFail();
         $this->assertSame(['awaiting_transfer', 'ready_to_ticket'], [$change->from, $change->to]);
@@ -162,7 +162,7 @@ class WorkflowWorkItemsTest extends TestCase
     public function test_claim_release_reassign_note_and_priority_each_leave_history(): void
     {
         $items = app(WorkItemService::class);
-        $ada = $this->staff('flights', ['name' => 'Ada']);
+        $ada = $this->staff('operations', ['name' => 'Ada']);
         $bola = $this->staff('finance', ['name' => 'Bola']);
         $item = $this->booking(['payment_status' => 'paid', 'booking_status' => 'confirmed'])->workItem;
 
@@ -188,7 +188,7 @@ class WorkflowWorkItemsTest extends TestCase
 
     public function test_moving_to_another_department_queue_without_a_person(): void
     {
-        $ada = $this->staff('flights');
+        $ada = $this->staff('operations');
         $item = $this->booking()->workItem;
         $it = Department::query()->where('slug', 'it')->firstOrFail();
 
@@ -197,14 +197,14 @@ class WorkflowWorkItemsTest extends TestCase
         $item->refresh();
         $this->assertSame($it->id, $item->department_id);
         $moved = $item->events()->where('type', WorkItemEvent::MOVED)->firstOrFail();
-        $this->assertSame(['Flights', 'IT', 'Supplier API keeps timing out'], [$moved->from, $moved->to, $moved->body]);
+        $this->assertSame(['Operations', 'IT', 'Supplier API keeps timing out'], [$moved->from, $moved->to, $moved->body]);
     }
 
     public function test_a_deactivated_person_cannot_be_given_work(): void
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        app(WorkItemService::class)->assign($this->booking()->workItem, $this->staff('flights', ['deactivated_at' => now()]), null, $this->staff('flights'));
+        app(WorkItemService::class)->assign($this->booking()->workItem, $this->staff('operations', ['deactivated_at' => now()]), null, $this->staff('operations'));
     }
 
     // ── Visas ────────────────────────────────────────────────────────────
@@ -213,7 +213,7 @@ class WorkflowWorkItemsTest extends TestCase
     {
         $application = $this->visa('submitted');
         $this->assertSame('submitted', $application->workItem->stage);
-        $this->assertSame($this->department('visas'), $application->workItem->department_id);
+        $this->assertSame($this->department('operations'), $application->workItem->department_id);
 
         $application->update(['status' => 'action_required']);
         $this->assertSame(WorkItem::STATE_WAITING, $application->workItem()->first()->state);
@@ -221,8 +221,8 @@ class WorkflowWorkItemsTest extends TestCase
 
     public function test_the_visa_officer_and_the_work_owner_are_always_the_same_person(): void
     {
-        $officer = $this->staff('visas', ['name' => 'Officer Ngozi']);
-        $other = $this->staff('visas', ['name' => 'Officer Tunde']);
+        $officer = $this->staff('operations', ['name' => 'Officer Ngozi']);
+        $other = $this->staff('operations', ['name' => 'Officer Tunde']);
         $application = $this->visa('submitted');
 
         // Assigned the visa way: the work item follows.
@@ -281,7 +281,7 @@ class WorkflowWorkItemsTest extends TestCase
         $booking = $this->booking();
         $finance = $this->staff('finance', ['name' => 'Bola Finance']);
 
-        $this->actingAs($this->staff('flights'));
+        $this->actingAs($this->staff('operations'));
         Livewire::test(ViewFlightBooking::class, ['record' => $booking->getRouteKey()])
             ->callAction('workNote', data: ['body' => 'Customer says the transfer was sent yesterday'])
             ->assertHasNoActionErrors()
@@ -297,7 +297,7 @@ class WorkflowWorkItemsTest extends TestCase
     {
         $application = $this->visa('under_review');
 
-        $this->actingAs($this->staff('visas'))
+        $this->actingAs($this->staff('operations'))
             ->get(VisaApplicationResource::getUrl('view', ['record' => $application]))
             ->assertOk()
             ->assertSee('Under review')
@@ -306,7 +306,7 @@ class WorkflowWorkItemsTest extends TestCase
 
     public function test_the_flight_queue_filters_to_my_work(): void
     {
-        $me = $this->staff('flights');
+        $me = $this->staff('operations');
         $mine = $this->booking();
         $theirs = $this->booking();
         app(WorkItemService::class)->claim($mine->workItem, $me);

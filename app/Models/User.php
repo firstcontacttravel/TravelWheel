@@ -112,7 +112,7 @@ class User extends Authenticatable implements FilamentUser
 
     public function canOperateVisas(): bool
     {
-        return $this->isVisaAdministrator() || $this->inDepartment(Department::VISAS) || $this->visa_role === 'visa_officer';
+        return $this->isVisaAdministrator() || $this->inDepartment(Department::OPERATIONS) || $this->visa_role === 'visa_officer';
     }
 
     /**

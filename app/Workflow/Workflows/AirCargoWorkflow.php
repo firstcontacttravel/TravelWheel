@@ -4,6 +4,7 @@ namespace App\Workflow\Workflows;
 
 use App\Filament\Resources\AirCargoBookings\AirCargoBookingResource;
 use App\Models\AirCargoModel;
+use App\Models\Department;
 use App\Models\WorkItem;
 use App\Workflow\ServiceWorkflow;
 
@@ -45,7 +46,7 @@ class AirCargoWorkflow extends ServiceWorkflow
 
     protected function department(): string
     {
-        return 'ground-airport';
+        return Department::OPERATIONS;
     }
 
     public function referenceColumn(): string

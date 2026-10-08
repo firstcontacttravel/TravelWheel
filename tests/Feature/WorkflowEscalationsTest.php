@@ -47,7 +47,7 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_asking_a_department_for_help_tells_everyone_in_it_and_the_owner_keeps_the_booking(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $bola = $this->staff('finance', 'Bola');
         $chi = $this->staff('finance', 'Chi');
         $this->staff('finance', 'Gone', ['deactivated_at' => now()]);
@@ -72,7 +72,7 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_help_is_accepted_then_resolved_and_goes_back_to_the_owner_with_a_note(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $bola = $this->staff('finance', 'Bola');
         $item = $this->ownedBy($ada);
         $escalation = $this->escalations->raise($item, $ada, Escalation::MODE_HELP, $this->department('finance'), null, 'Check the transfer');
@@ -94,33 +94,33 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_a_hand_off_moves_the_booking_to_whoever_accepts_it(): void
     {
-        $ada = $this->staff('flights', 'Ada');
-        $ngozi = $this->staff('visas', 'Ngozi');
+        $ada = $this->staff('operations', 'Ada');
+        $ngozi = $this->staff('operations', 'Ngozi');
         $item = $this->ownedBy($ada);
 
-        $escalation = $this->escalations->raise($item, $ada, Escalation::MODE_HANDOFF, $this->department('visas'), null, 'Customer also needs a visa, please take it from here');
+        $escalation = $this->escalations->raise($item, $ada, Escalation::MODE_HANDOFF, $this->department('operations'), null, 'Customer also needs a visa, please take it from here');
         $this->escalations->accept($escalation, $ngozi);
 
         $item->refresh();
         $this->assertSame($ngozi->id, $item->owner_id);
-        $this->assertSame($this->department('visas')->id, $item->department_id);
+        $this->assertSame($this->department('operations')->id, $item->department_id);
         $this->assertSame(Escalation::STATUS_RESOLVED, $escalation->fresh()->status);
     }
 
     public function test_a_hand_off_cannot_be_resolved_without_being_accepted(): void
     {
-        $ada = $this->staff('flights', 'Ada');
-        $escalation = $this->escalations->raise($this->ownedBy($ada), $ada, Escalation::MODE_HANDOFF, $this->department('visas'), null, 'Take it');
+        $ada = $this->staff('operations', 'Ada');
+        $escalation = $this->escalations->raise($this->ownedBy($ada), $ada, Escalation::MODE_HANDOFF, $this->department('operations'), null, 'Take it');
 
         $this->expectException(InvalidArgumentException::class);
-        $this->escalations->resolve($escalation, $this->staff('visas', 'Ngozi'), 'Done');
+        $this->escalations->resolve($escalation, $this->staff('operations', 'Ngozi'), 'Done');
     }
 
     // ── Who may answer ───────────────────────────────────────────────────
 
     public function test_only_the_named_person_or_the_ceo_can_answer_a_personal_escalation(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $bola = $this->staff('finance', 'Bola');
         $colleague = $this->staff('finance', 'Colleague');
         $escalation = $this->escalations->raise($this->ownedBy($ada), $ada, Escalation::MODE_HELP, null, $bola, 'Bola, you handled this one before');
@@ -137,7 +137,7 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_declining_needs_a_reason_and_tells_whoever_raised_it(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $bola = $this->staff('finance', 'Bola');
         $escalation = $this->escalations->raise($this->ownedBy($ada), $ada, Escalation::MODE_HELP, $this->department('finance'), null, 'Please refund');
 
@@ -156,7 +156,7 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_only_whoever_raised_it_can_withdraw_it(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $escalation = $this->escalations->raise($this->ownedBy($ada), $ada, Escalation::MODE_HELP, $this->department('it'), null, 'Supplier API down?');
 
         try {
@@ -171,7 +171,7 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_an_escalation_needs_somewhere_to_go_and_a_reason(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $item = $this->ownedBy($ada);
 
         foreach ([
@@ -194,7 +194,7 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_the_email_carries_the_reference_and_reason_but_no_passenger_details(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $item = $this->ownedBy($ada);
         $escalation = $this->escalations->raise($item, $ada, Escalation::MODE_HANDOFF, $this->department('finance'), null, 'Bank transfer reference does not match', 'urgent');
 
@@ -211,7 +211,7 @@ class WorkflowEscalationsTest extends TestCase
     public function test_the_outbox_delivers_escalation_emails(): void
     {
         Mail::fake();
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $bola = $this->staff('finance', 'Bola');
         $this->escalations->raise($this->ownedBy($ada), $ada, Escalation::MODE_HELP, null, $bola, 'Please look');
 
@@ -225,7 +225,7 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_escalating_and_answering_from_the_booking_page(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $bola = $this->staff('finance', 'Bola');
         $booking = $this->ownedBy($ada)->subject;
 
@@ -253,7 +253,7 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_escalating_with_no_department_or_person_is_refused_on_the_form(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $booking = $this->ownedBy($ada)->subject;
 
         $this->actingAs($ada);
@@ -266,10 +266,10 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_my_work_shows_mine_and_whats_escalated_to_me(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $bola = $this->staff('finance', 'Bola');
         $mine = $this->ownedBy($ada);
-        $someoneElses = $this->ownedBy($this->staff('flights', 'Other'));
+        $someoneElses = $this->ownedBy($this->staff('operations', 'Other'));
         $escalated = $this->ownedBy($ada);
         $this->escalations->raise($escalated, $ada, Escalation::MODE_HELP, $this->department('finance'), null, 'Check please');
 
@@ -292,7 +292,7 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_my_work_finds_a_booking_by_its_reference(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $wanted = $this->ownedBy($ada);
         $other = $this->ownedBy($ada);
 
@@ -305,7 +305,7 @@ class WorkflowEscalationsTest extends TestCase
 
     public function test_the_dashboard_counts_what_is_escalated_to_you(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $bola = $this->staff('finance', 'Bola');
         $this->escalations->raise($this->ownedBy($ada), $ada, Escalation::MODE_HELP, null, $bola, 'Please look');
 

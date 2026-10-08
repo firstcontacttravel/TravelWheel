@@ -21,11 +21,9 @@ class DepartmentNavigation
      * screen has none until it is listed here, and sees the normal order.
      */
     public const GROUPS = [
-        'flights' => ['Flights'],
-        'visas' => ['Visas'],
+        'operations' => ['Flights', 'Visas', 'Travel Connections', 'Airport Services', 'Air Cargo'],
         'finance' => ['Finance'],
         'customer-support' => ['Customer Support'],
-        'ground-airport' => ['Travel Connections', 'Airport Services', 'Air Cargo'],
         'it' => ['System'],
     ];
 

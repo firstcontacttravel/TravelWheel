@@ -3,6 +3,7 @@
 namespace App\Workflow\Workflows;
 
 use App\Filament\Resources\ProtocolBookings\ProtocolBookingResource;
+use App\Models\Department;
 use App\Models\ProtocolBooking;
 use App\Models\WorkItem;
 use App\Workflow\ServiceWorkflow;
@@ -47,7 +48,7 @@ class ProtocolWorkflow extends ServiceWorkflow
 
     protected function department(): string
     {
-        return 'ground-airport';
+        return Department::OPERATIONS;
     }
 
     public function referenceColumn(): string

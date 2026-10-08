@@ -18,6 +18,7 @@ use App\Models\FlightBooking;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -36,25 +37,54 @@ class WorkflowStaffAccessTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('admin'));
     }
 
-    public function test_the_six_departments_exist_and_only_it_lands_in_the_it_linear_team(): void
+    public function test_the_four_departments_exist_and_only_it_lands_in_the_it_linear_team(): void
     {
         $this->assertEqualsCanonicalizing(
-            ['flights', 'visas', 'finance', 'customer-support', 'ground-airport', 'it'],
+            ['operations', 'finance', 'customer-support', 'it'],
             Department::query()->pluck('slug')->all(),
         );
         $this->assertSame(['it'], Department::query()->where('linear_team', 'it')->pluck('slug')->all());
     }
 
+    public function test_visas_and_ground_staff_queues_and_escalations_move_into_operations(): void
+    {
+        $migration = 'database/migrations/2026_10_12_000000_merge_flights_visas_and_ground_into_operations.php';
+        $this->artisan('migrate:rollback', ['--path' => $migration])->assertSuccessful();
+
+        $visas = Department::query()->where('slug', 'visas')->value('id');
+        $ground = Department::query()->where('slug', 'ground-airport')->value('id');
+        $officer = User::factory()->create(['department_id' => $visas]);
+        $driverDesk = User::factory()->create(['department_id' => $ground]);
+        $itemId = DB::table('work_items')->insertGetId([
+            'subject_type' => 'test', 'subject_id' => 1, 'service' => 'visas', 'stage' => 'submitted',
+            'state' => 'open', 'department_id' => $visas, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $escalationId = DB::table('escalations')->insertGetId([
+            'work_item_id' => $itemId, 'mode' => 'help', 'status' => 'open', 'to_department_id' => $ground,
+            'reason' => 'Help', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->artisan('migrate')->assertSuccessful();
+
+        $operations = Department::query()->where('slug', 'operations')->firstOrFail();
+        $this->assertSame('Operations', $operations->name);
+        $this->assertSame([$operations->id, $operations->id], [$officer->fresh()->department_id, $driverDesk->fresh()->department_id]);
+        $this->assertSame($operations->id, DB::table('work_items')->where('id', $itemId)->value('department_id'));
+        $this->assertSame($operations->id, DB::table('escalations')->where('id', $escalationId)->value('to_department_id'));
+        $this->assertFalse(Department::query()->whereIn('slug', ['visas', 'ground-airport', 'flights'])->exists());
+        $this->assertTrue($officer->fresh()->canOperateVisas(), 'Operations works visas now.');
+    }
+
     public function test_department_staff_can_sign_in_and_people_without_one_cannot(): void
     {
-        $this->actingAs($this->staff('flights'))->get('/admin')->assertOk();
+        $this->actingAs($this->staff('operations'))->get('/admin')->assertOk();
 
         $this->actingAs(User::factory()->create())->get('/admin')->assertForbidden();
     }
 
     public function test_a_deactivated_member_of_staff_is_locked_out(): void
     {
-        $staff = $this->staff('flights', ['deactivated_at' => now()]);
+        $staff = $this->staff('operations', ['deactivated_at' => now()]);
 
         $this->actingAs($staff)->get('/admin')->assertForbidden();
     }
@@ -89,7 +119,7 @@ class WorkflowStaffAccessTest extends TestCase
     public function test_the_admin_adds_staff_to_a_department_and_it_is_on_record(): void
     {
         $admin = $this->admin();
-        $visas = Department::query()->where('slug', 'visas')->firstOrFail();
+        $visas = Department::query()->where('slug', 'operations')->firstOrFail();
 
         $this->actingAs($admin);
         Livewire::test(CreateStaff::class)
@@ -117,7 +147,7 @@ class WorkflowStaffAccessTest extends TestCase
     public function test_every_action_run_in_the_admin_leaves_a_receipt(): void
     {
         $admin = $this->admin();
-        $leaver = $this->staff('flights');
+        $leaver = $this->staff('operations');
 
         $this->actingAs($admin);
         Livewire::test(ListStaff::class)->callTableAction('deactivate', $leaver);
@@ -153,7 +183,7 @@ class WorkflowStaffAccessTest extends TestCase
         $this->actingAs($finance);
 
         $log = ActivityLog::record('test', 'Something happened');
-        $finance->update(['department_id' => Department::query()->where('slug', 'flights')->value('id')]);
+        $finance->update(['department_id' => Department::query()->where('slug', 'operations')->value('id')]);
 
         $this->assertSame(Department::query()->where('slug', 'finance')->value('id'), $log->fresh()->department_id);
     }
@@ -172,7 +202,7 @@ class WorkflowStaffAccessTest extends TestCase
     {
         $booking = $this->awaitingTransfer();
 
-        $this->actingAs($this->staff('flights'));
+        $this->actingAs($this->staff('operations'));
         Livewire::test(ViewFlightBooking::class, ['record' => $booking->getRouteKey()])
             ->assertActionHidden('markBankTransferPaid');
 
