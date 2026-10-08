@@ -41,6 +41,11 @@ class StaffRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('name')
                     ->description(fn (User $record): string => $record->email),
+                TextColumn::make('head')
+                    ->label('Role')
+                    ->state(fn (User $record): string => $record->is_department_head ? 'Head' : 'Staff')
+                    ->badge()
+                    ->color(fn (string $state): string => $state === 'Head' ? 'info' : 'gray'),
                 TextColumn::make('status')
                     ->state(fn (User $record): string => $record->isDeactivated() ? 'Deactivated' : 'Active')
                     ->badge()

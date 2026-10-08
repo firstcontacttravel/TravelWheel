@@ -21,7 +21,7 @@ Escalations can go out to Linear and sync back.
 | Scope | Customer bookings and applications only. Internal company processes (leave, expenses, purchasing) are out of scope. |
 | Admin | One admin: the CEO. Manages staff, departments and settings, and sees everything. |
 | Staff | Each person belongs to one department. A department can have any number of staff, and the CEO adds them. |
-| Ownership | Any member of staff can claim any booking. |
+| Ownership | Any member of staff can claim an unowned booking, then works **only bookings they own**. **Department heads** (one or more per department, named by the CEO) escalate, reassign, take work over, set priority, work anything in their department, and answer escalations sent to it. Added 2026-10-08. |
 | Escalation | Within the department or to another one, aimed at a department or a named person. There are two modes, chosen when escalating:<br>• **Ask for help** (default): the owner keeps the booking.<br>• **Hand-off**: the booking moves to the new owner. |
 | Money actions | Only the Finance department (and the CEO). Finance acts without needing approval, but every action is recorded. |
 | Changing workflows | Steps and the moves between them are defined in code by developers. Deadlines and default departments are set by the CEO in the admin. |
@@ -418,6 +418,25 @@ Escalations can go out to Linear and sync back.
 - [ ] The step times fill in as bookings move. Right after deploy, Time in each step is empty until bookings start changing steps.
 
 **Phase 6 is done when:** the CEO can answer "who is overloaded, where do bookings get stuck, and are we meeting deadlines?" from the Reports page.
+
+---
+
+## After phase 6: department heads (2026-10-08) ✅ built
+
+| Who | May |
+|---|---|
+| Anyone in staff | claim an unowned booking |
+| The owner | work it: every action on the booking, notes, releasing it |
+| A department head | escalate, reassign, take over, set priority, and work anything in their department's queue or owned by their staff; answer escalations sent to their department |
+| The CEO | anything |
+
+- Finance-only money actions and Operations-only visa actions still apply on top. So Finance staff claim a booking before recording its payment.
+- **Escalations to a department** go to its heads, by bell and email, and only they (or a person the escalation names, or the CEO) can answer them. A department with no head yet falls back to everyone in it, so nothing is stranded.
+- **The CEO names heads** with a switch on each staff page. A **Head** badge shows on Team → Staff and on each department's staff list.
+- **Enforced in one place** (`App\Workflow\WorkAccess`), applied to every admin action on a booking. A button a person may not use is hidden, and Filament refuses it even if called directly. The services check the same rules again.
+- Bug found and fixed along the way: taking over a visa application didn't update its assigned officer.
+- Tests: `tests/Feature/WorkflowPermissionsTest.php` (10). Older workflow tests now act as heads, since they test other features. Full suite: 602 passed. The only failures are the 2 that were already failing before this work.
+- Ship: `php artisan migrate`, then **the CEO names at least one head per department** on Team → Staff. Until then, escalations to that department reach everyone in it, and only the CEO can reassign.
 
 ---
 

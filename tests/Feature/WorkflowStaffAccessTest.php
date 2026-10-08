@@ -206,7 +206,12 @@ class WorkflowStaffAccessTest extends TestCase
         Livewire::test(ViewFlightBooking::class, ['record' => $booking->getRouteKey()])
             ->assertActionHidden('markBankTransferPaid');
 
-        $this->actingAs($this->staff('finance'));
+        // Finance staff see it once the booking is theirs.
+        $finance = $this->staff('finance');
+        $this->actingAs($finance);
+        Livewire::test(ViewFlightBooking::class, ['record' => $booking->getRouteKey()])
+            ->assertActionHidden('markBankTransferPaid');
+        app(\App\Workflow\WorkItemService::class)->claim($booking->workItem()->first(), $finance);
         Livewire::test(ViewFlightBooking::class, ['record' => $booking->getRouteKey()])
             ->assertActionVisible('markBankTransferPaid');
 

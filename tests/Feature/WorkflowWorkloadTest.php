@@ -163,7 +163,8 @@ class WorkflowWorkloadTest extends TestCase
 
     private function staff(string $department, string $name): User
     {
-        return User::factory()->create(['name' => $name, 'department_id' => Department::query()->where('slug', $department)->value('id')]);
+        // Heads, so they may escalate; permissions are tested in WorkflowPermissionsTest.
+        return User::factory()->create(['name' => $name, 'department_id' => Department::query()->where('slug', $department)->value('id'), 'is_department_head' => true]);
     }
 
     private function booking(array $overrides = []): FlightBooking

@@ -150,7 +150,10 @@ class WorkflowServiceBookingsTest extends TestCase
         } catch (InvalidArgumentException) {
         }
 
-        app(FulfilmentService::class)->markPaid($booking->fresh(), $this->staff('finance'), 'Transfer ref 123, NGN 45,000');
+        // Finance works it like anyone else: claim it, then record the payment.
+        $finance = $this->staff('finance');
+        app(WorkItemService::class)->claim($booking->workItem()->first(), $finance);
+        app(FulfilmentService::class)->markPaid($booking->fresh(), $finance, 'Transfer ref 123, NGN 45,000');
 
         $booking->refresh();
         $this->assertSame('paid', $booking->payment_status);
@@ -263,7 +266,9 @@ class WorkflowServiceBookingsTest extends TestCase
         $this->actingAs($this->staff('operations'));
         Livewire::test(ViewCarHire::class, ['record' => $booking->getRouteKey()])->assertActionHidden('workMarkPaid');
 
-        $this->actingAs($this->staff('finance'));
+        $finance = $this->staff('finance');
+        app(WorkItemService::class)->claim($booking->workItem()->first(), $finance);
+        $this->actingAs($finance);
         Livewire::test(ViewCarHire::class, ['record' => $booking->getRouteKey()])->assertActionVisible('workMarkPaid');
     }
 
@@ -310,7 +315,7 @@ class WorkflowServiceBookingsTest extends TestCase
 
     private function staff(string $department): User
     {
-        return User::factory()->create(['department_id' => Department::query()->where('slug', $department)->value('id')]);
+        return User::factory()->create(['department_id' => Department::query()->where('slug', $department)->value('id'), 'is_department_head' => true]);
     }
 
     private function carHire(bool $paid): CarHire

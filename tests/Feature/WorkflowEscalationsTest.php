@@ -118,17 +118,19 @@ class WorkflowEscalationsTest extends TestCase
 
     // ── Who may answer ───────────────────────────────────────────────────
 
-    public function test_only_the_named_person_or_the_ceo_can_answer_a_personal_escalation(): void
+    public function test_only_the_named_person_their_head_or_the_ceo_can_answer_a_personal_escalation(): void
     {
         $ada = $this->staff('operations', 'Ada');
         $bola = $this->staff('finance', 'Bola');
-        $colleague = $this->staff('finance', 'Colleague');
+        $colleague = $this->staff('finance', 'Colleague', ['is_department_head' => false]);
+        $financeHead = $this->staff('finance', 'Head of Finance');
         $escalation = $this->escalations->raise($this->ownedBy($ada), $ada, Escalation::MODE_HELP, null, $bola, 'Bola, you handled this one before');
 
         $this->assertSame($this->department('finance')->id, $escalation->to_department_id, 'A person carries their department.');
         $this->assertSame(0, $colleague->notifications()->count());
         $this->assertFalse($escalation->canBeRespondedToBy($colleague));
         $this->assertTrue($escalation->canBeRespondedToBy($bola));
+        $this->assertTrue($escalation->canBeRespondedToBy($financeHead), 'The department head can answer too.');
         $this->assertTrue($escalation->canBeRespondedToBy(User::factory()->create(['is_admin' => true])));
 
         $this->expectException(InvalidArgumentException::class);
@@ -328,6 +330,7 @@ class WorkflowEscalationsTest extends TestCase
         return User::factory()->create([
             'name' => $name,
             'department_id' => $this->department($department)->id,
+            'is_department_head' => true,
             ...$attributes,
         ]);
     }

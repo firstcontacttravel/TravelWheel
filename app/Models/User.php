@@ -27,6 +27,7 @@ class User extends Authenticatable implements FilamentUser
         'is_admin',
         'visa_role',
         'department_id',
+        'is_department_head',
         'deactivated_at',
     ];
 
@@ -52,6 +53,7 @@ class User extends Authenticatable implements FilamentUser
             'password' => 'hashed',
             'is_admin' => 'boolean',
             'deactivated_at' => 'datetime',
+            'is_department_head' => 'boolean',
         ];
     }
 
@@ -73,6 +75,12 @@ class User extends Authenticatable implements FilamentUser
             ->map(fn (string $email): string => strtolower(trim($email)))
             ->filter()
             ->contains(strtolower((string) $this->email));
+    }
+
+    /** Escalates, reassigns and answers escalations for their department. */
+    public function isDepartmentHead(): bool
+    {
+        return $this->is_department_head && $this->department_id !== null;
     }
 
     public function isDeactivated(): bool

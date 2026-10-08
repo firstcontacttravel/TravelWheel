@@ -62,6 +62,9 @@ class EscalationService
         if ($person && $person->is($raiser)) {
             throw new InvalidArgumentException('You cannot escalate to yourself.');
         }
+        if (! WorkAccess::canManage($raiser, $item->loadMissing('owner'))) {
+            throw new InvalidArgumentException('Only a department head can escalate this.');
+        }
 
         $department ??= $person?->department;
         // IT works in Linear, so anything sent to IT always goes there.
@@ -117,7 +120,8 @@ class EscalationService
             $this->event($escalation, WorkItemEvent::ESCALATION_ACCEPTED, $responder, null, null);
 
             if ($handoff) {
-                $this->items->assign(
+                // The hand-off itself is the permission: no head check here.
+                $this->items->handOver(
                     $escalation->workItem,
                     $responder,
                     $escalation->toDepartment ?? $responder->department,
@@ -332,10 +336,15 @@ class EscalationService
             return collect([$escalation->toUser])->filter(fn (?User $user) => $user && ! $user->isDeactivated())->values();
         }
 
-        return User::query()
+        // A department's escalations go to its heads; a department with no
+        // head yet falls back to everyone in it, so nothing goes unanswered.
+        $staff = User::query()
             ->where('department_id', $escalation->to_department_id)
             ->whereNull('deactivated_at')
             ->get();
+        $heads = $staff->filter(fn (User $user) => $user->is_department_head)->values();
+
+        return $heads->isNotEmpty() ? $heads : $staff;
     }
 
     private function assertCanRespond(Escalation $escalation, User $user, array $statuses): void

@@ -5,6 +5,7 @@ namespace App\Filament\Workflow;
 use App\Models\Department;
 use App\Models\User;
 use App\Models\WorkItem;
+use App\Workflow\WorkAccess;
 use App\Workflow\WorkItemService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -17,8 +18,9 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * The Work menu on a booking's page: claim, release, reassign, note,
- * priority. Any member of staff can use all of them on any booking; the
- * history records who did what.
+ * priority. Anyone may claim an unowned booking; the owner adds notes and
+ * releases it; reassigning, taking over and priority are for department
+ * heads and the CEO (WorkAccess).
  *
  * Action names start with "work" so the activity feed on the panel can leave
  * them out — the work history already says the same thing in plainer words.
@@ -46,7 +48,7 @@ class WorkItemActions
         return Action::make('workClaim')
             ->label(fn (Model $record): string => self::item($record)?->owner_id ? 'Take over' : 'Claim')
             ->icon('heroicon-o-hand-raised')
-            ->visible(fn (Model $record): bool => self::item($record)?->owner_id !== auth()->id())
+            ->visible(fn (Model $record): bool => WorkAccess::canClaim(auth()->user(), self::item($record)))
             ->requiresConfirmation(fn (Model $record): bool => (bool) self::item($record)?->owner_id)
             ->modalDescription(fn (Model $record): ?string => ($owner = self::item($record)?->owner)
                 ? "{$owner->name} owns this. Taking over makes you the owner; they will see it in the history."
@@ -65,7 +67,7 @@ class WorkItemActions
             ->icon('heroicon-o-arrow-uturn-left')
             ->visible(fn (Model $record): bool => ($item = self::item($record)) !== null
                 && $item->owner_id !== null
-                && ($item->owner_id === auth()->id() || auth()->user()?->isAdmin()))
+                && ($item->owner_id === auth()->id() || WorkAccess::canManage(auth()->user(), $item)))
             ->requiresConfirmation()
             ->modalDescription(fn (Model $record): string => 'It goes back to the '.(self::item($record)?->department?->name ?? 'shared').' queue for anyone to claim.')
             ->action(function (Model $record): void {
@@ -78,6 +80,7 @@ class WorkItemActions
     public static function reassignAction(): Action
     {
         return Action::make('workReassign')
+            ->visible(fn (Model $record): bool => WorkAccess::canManage(auth()->user(), self::item($record)))
             ->label('Reassign')
             ->icon('heroicon-o-arrows-right-left')
             ->modalWidth('lg')
@@ -119,6 +122,7 @@ class WorkItemActions
     public static function noteAction(): Action
     {
         return Action::make('workNote')
+            ->visible(fn (Model $record): bool => WorkAccess::canWork(auth()->user(), self::item($record)))
             ->label('Add note')
             ->icon('heroicon-o-chat-bubble-left-ellipsis')
             ->modalWidth('lg')
@@ -140,6 +144,7 @@ class WorkItemActions
     public static function priorityAction(): Action
     {
         return Action::make('workPriority')
+            ->visible(fn (Model $record): bool => WorkAccess::canManage(auth()->user(), self::item($record)))
             ->label('Set priority')
             ->icon('heroicon-o-flag')
             ->modalWidth('sm')

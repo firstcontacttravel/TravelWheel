@@ -168,7 +168,7 @@ class WorkflowWorkItemsTest extends TestCase
 
         $items->claim($item, $ada);
         $items->assign($item->fresh(), $bola, null, $ada, 'Please confirm the transfer first');
-        $items->addNote($item, $bola, 'Transfer confirmed with the bank');
+        $items->addNote($item->fresh(), $bola, 'Transfer confirmed with the bank');
         $items->setPriority($item->fresh(), 'urgent', $bola);
         $items->release($item->fresh(), $bola);
 
@@ -327,7 +327,7 @@ class WorkflowWorkItemsTest extends TestCase
 
     private function staff(string $department, array $attributes = []): User
     {
-        return User::factory()->create(['department_id' => $this->department($department), ...$attributes]);
+        return User::factory()->create(['department_id' => $this->department($department), 'is_department_head' => true, ...$attributes]);
     }
 
     private function booking(array $overrides = []): FlightBooking

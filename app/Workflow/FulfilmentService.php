@@ -25,6 +25,7 @@ class FulfilmentService
 
     public function advance(Model $subject, string $step, User $actor, ?string $note = null): void
     {
+        $this->assertCanWork($subject, $actor);
         $workflow = $this->workflow($subject);
         $allowed = $workflow->nextSteps($subject);
 
@@ -38,6 +39,7 @@ class FulfilmentService
 
     public function cancel(Model $subject, User $actor, string $reason): void
     {
+        $this->assertCanWork($subject, $actor);
         $reason = trim($reason);
         if ($reason === '') {
             throw new InvalidArgumentException('Say why it is being cancelled.');
@@ -55,6 +57,7 @@ class FulfilmentService
         if (! $actor->canHandleMoney()) {
             throw new InvalidArgumentException('Only Finance can mark a payment as received.');
         }
+        $this->assertCanWork($subject, $actor);
 
         $workflow = $this->workflow($subject);
         if ($workflow->isPaid($subject)) {
@@ -83,6 +86,13 @@ class FulfilmentService
     {
         $item = $this->items->for($subject) ?? $this->items->sync($subject, $actor);
         $this->items->addNote($item, $actor, $body);
+    }
+
+    private function assertCanWork(Model $subject, User $actor): void
+    {
+        if (! WorkAccess::canWork($actor, WorkAccess::itemFor($subject))) {
+            throw new InvalidArgumentException('Claim it first: only the owner or a department head can work this booking.');
+        }
     }
 
     private function workflow(Model $subject): ServiceWorkflow

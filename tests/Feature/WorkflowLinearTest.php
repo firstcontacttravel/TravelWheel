@@ -354,7 +354,7 @@ class WorkflowLinearTest extends TestCase
 
     private function staff(string $department, string $name, array $attributes = []): User
     {
-        return User::factory()->create(['name' => $name, 'department_id' => $this->department($department)->id, ...$attributes]);
+        return User::factory()->create(['name' => $name, 'department_id' => $this->department($department)->id, 'is_department_head' => true, ...$attributes]);
     }
 
     private function ownedBy(User $owner): WorkItem

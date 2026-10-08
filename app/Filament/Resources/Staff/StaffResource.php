@@ -11,8 +11,10 @@ use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -63,7 +65,12 @@ class StaffResource extends Resource
                 ->relationship('department', 'name')
                 ->preload()
                 ->required(fn (?User $record): bool => ! $record?->isAdmin())
-                ->helperText('Staff can claim and escalate work in any department; this is the team they belong to.'),
+                ->live()
+                ->helperText('The team they belong to. Staff claim bookings and work the ones they own.'),
+            Toggle::make('is_department_head')
+                ->label('Head of department')
+                ->helperText('Heads escalate and reassign bookings, take work over, set priority, and answer escalations sent to their department. A department can have more than one.')
+                ->visible(fn (Get $get): bool => filled($get('department_id'))),
             TextInput::make('password')
                 ->password()
                 ->revealable()
@@ -92,9 +99,17 @@ class StaffResource extends Resource
                     ->placeholder('None'),
                 TextColumn::make('role')
                     ->label('Role')
-                    ->state(fn (User $record): string => $record->isAdmin() ? 'Admin' : 'Staff')
+                    ->state(fn (User $record): string => match (true) {
+                        $record->isAdmin() => 'Admin',
+                        $record->isDepartmentHead() => 'Head',
+                        default => 'Staff',
+                    })
                     ->badge()
-                    ->color(fn (string $state): string => $state === 'Admin' ? 'primary' : 'gray'),
+                    ->color(fn (string $state): string => match ($state) {
+                        'Admin' => 'primary',
+                        'Head' => 'info',
+                        default => 'gray',
+                    }),
                 TextColumn::make('status')
                     ->state(fn (User $record): string => $record->isDeactivated() ? 'Deactivated' : 'Active')
                     ->badge()
