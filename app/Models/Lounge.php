@@ -63,6 +63,57 @@ class Lounge extends Model
         ];
     }
 
+    /**
+     * The airports our own (non-LoungePair) lounges are in, keyed by the
+     * lounge's `location`. Also used by the local lounge search to resolve
+     * a state to its IATA code.
+     */
+    public const LOCAL_AIRPORTS = [
+        'Abuja' => ['iata' => 'ABV', 'name' => 'Nnamdi Azikiwe International Airport'],
+        'Lagos' => ['iata' => 'LOS', 'name' => 'Murtala Muhammed International Airport'],
+        'Kano' => ['iata' => 'KAN', 'name' => 'Mallam Aminu Kano International Airport'],
+    ];
+
+    /**
+     * Where this lounge is — airport, IATA, city, country, terminal and (for
+     * our own lounges) International/Local access — for the lounge pass, so
+     * a customer or the team can rebook the same lounge easily.
+     *
+     * @return array{airport: ?string, iata: ?string, city: ?string, country: ?string, terminal: ?string, access: ?string}
+     */
+    public function locationDetails(): array
+    {
+        if ($this->provider === 'loungepair') {
+            $airport = (array) data_get($this->provider_payload, 'airport', []);
+            $iata = $airport['iata'] ?? $this->provider_airport_iata;
+
+            return [
+                'airport' => $airport['name'] ?? null,
+                'iata' => $iata,
+                'city' => $airport['city'] ?? $this->location,
+                'country' => $airport['country'] ?? null,
+                // The LoungePair sync stores the IATA code in `terminal`; that's not a terminal
+                'terminal' => strcasecmp((string) $this->terminal, (string) $iata) === 0 ? null : $this->terminal,
+                'access' => null,
+            ];
+        }
+
+        $airport = self::LOCAL_AIRPORTS[$this->location] ?? null;
+
+        return [
+            'airport' => $airport['name'] ?? null,
+            'iata' => $airport['iata'] ?? null,
+            'city' => $this->location,
+            'country' => 'Nigeria',
+            'terminal' => $this->terminal,
+            'access' => match ((string) $this->airport) {
+                '1' => 'International',
+                '2' => 'Local',
+                default => null,
+            },
+        ];
+    }
+
     /** Lounges admin hasn't disabled — the only ones customers can see or book. */
     public function scopeActive($query)
     {

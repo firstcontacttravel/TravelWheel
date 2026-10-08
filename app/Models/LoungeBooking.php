@@ -43,6 +43,11 @@ class LoungeBooking extends Model
         'fulfilment_status',
     ];
 
+    public function lounge()
+    {
+        return $this->belongsTo(Lounge::class, 'lounge_id');
+    }
+
     public function requiresManualProviderBooking(): bool
     {
         return $this->provider === 'loungepair' && filled($this->provider_url);

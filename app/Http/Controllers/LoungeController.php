@@ -15,17 +15,6 @@ use Illuminate\Support\Facades\Session;
 
 class LoungeController extends Controller
 {
-    /**
-     * Maps the local search's State dropdown to the airport's real IATA
-     * code. "International"/"Local" only distinguishes a lounge access
-     * category within the same physical airport here, not a different
-     * airport, so both airport-type options share one code per state.
-     */
-    private const STATE_IATA = [
-        'Abuja' => 'ABV',
-        'Lagos' => 'LOS',
-        'Kano' => 'KAN',
-    ];
 
     public function lounges(Request $request)
     {
@@ -59,7 +48,9 @@ class LoungeController extends Controller
             'state'   => $location,
             'airport' => $airportType,
             'service' => $service,
-            'iata'    => self::STATE_IATA[$location] ?? null,
+            // "International"/"Local" is a lounge access category within the
+            // same airport, so both airport-type options share one IATA code
+            'iata'    => Lounge::LOCAL_AIRPORTS[$location]['iata'] ?? null,
         ]);
     }
 

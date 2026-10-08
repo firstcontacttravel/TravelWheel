@@ -58,11 +58,51 @@
                 </div>
                 <div class="grid-cell">
                     <div class="label">Amount Paid</div>
-                    <div class="value">₦{{ number_format($booking->amount, 2) }}</div>
+                    {{-- Arial has no ₦ in dompdf (it printed "?"); DejaVu Sans, bundled with dompdf, does --}}
+                    <div class="value"><span style="font-family: 'DejaVu Sans', sans-serif;">&#8358;</span>{{ number_format($booking->amount, 2) }}</div>
                 </div>
             </div>
         </div>
     </div>
+
+    {{-- Where the lounge is, so the customer or the team can rebook it easily --}}
+    @php $where = $booking->lounge?->locationDetails(); @endphp
+    @if ($where && array_filter($where))
+    <div class="card">
+        <h4 style="color:#0d1883; margin-top:0;">Airport &amp; Location</h4>
+        <div class="grid">
+            <div class="grid-row">
+                <div class="grid-cell">
+                    <div class="label">Airport</div>
+                    <div class="value">{{ $where['airport'] ?? '—' }}@if ($where['iata']) ({{ $where['iata'] }})@endif</div>
+                </div>
+                <div class="grid-cell">
+                    <div class="label">Country</div>
+                    <div class="value">{{ $where['country'] ?? '—' }}</div>
+                </div>
+            </div>
+            <div class="grid-row">
+                <div class="grid-cell">
+                    <div class="label">City</div>
+                    <div class="value">{{ $where['city'] ?? '—' }}</div>
+                </div>
+                <div class="grid-cell">
+                    <div class="label">Terminal</div>
+                    <div class="value">{{ $where['terminal'] ?: '—' }}</div>
+                </div>
+            </div>
+            @if ($where['access'])
+            <div class="grid-row">
+                <div class="grid-cell">
+                    <div class="label">Lounge Access</div>
+                    <div class="value">{{ $where['access'] }}</div>
+                </div>
+                <div class="grid-cell"></div>
+            </div>
+            @endif
+        </div>
+    </div>
+    @endif
 
     <div class="pass-divider"></div>
 
