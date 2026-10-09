@@ -1,6 +1,6 @@
 @component('layouts.app', ['title' => 'Application Received - TravelWheel'])
 
-<div style="padding: 130px 16px 70px; background: #f5f7fb;">
+<div style="padding: 170px 16px 70px; background: #f5f7fb;">
     <div style="max-width: 640px; margin: 0 auto; background: #fff; border-radius: 14px; box-shadow: 0 4px 18px rgba(13, 24, 131, .07); padding: 36px 28px; text-align: center;">
         <div style="width: 64px; height: 64px; border-radius: 50%; background: #e7f6ee; color: #0d9c53; font-size: 32px; line-height: 64px; margin: 0 auto 18px;">&#10003;</div>
         <h1 style="color: rgba(13, 24, 131, 1); font-size: 1.6rem; font-weight: 800;">Application received</h1>
