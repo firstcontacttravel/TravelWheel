@@ -109,6 +109,7 @@ class WorkItemService
             }
 
             $item->save();
+            WorkAccess::forget();
 
             return $item;
         });
@@ -116,19 +117,44 @@ class WorkItemService
 
     public function claim(WorkItem $item, User $actor): WorkItem
     {
-        return $this->assign($item, $actor, null, $actor);
+        if (! WorkAccess::canClaim($actor, $item->loadMissing('owner'))) {
+            throw new InvalidArgumentException($item->owner_id
+                ? "{$item->owner?->name} owns this. Only a department head can take it over."
+                : 'You cannot claim this.');
+        }
+
+        return $this->handOver($item, $actor, null, $actor);
     }
 
     public function release(WorkItem $item, User $actor): WorkItem
     {
-        return $this->assign($item, null, null, $actor);
+        if ($item->owner_id !== $actor->getKey() && ! WorkAccess::canManage($actor, $item->loadMissing('owner'))) {
+            throw new InvalidArgumentException('Only the owner or a department head can release this.');
+        }
+
+        return $this->handOver($item, null, null, $actor);
     }
 
     /**
-     * Hands the item to a person, a department's queue, or both. Naming only
-     * a department returns the item to that queue for anyone in it to claim.
+     * Reassigning: hands the item to a person, a department's queue, or both.
+     * Naming only a department returns it to that queue for anyone to claim.
+     * Department heads and the CEO only.
      */
     public function assign(WorkItem $item, ?User $owner, ?Department $department, User $actor, ?string $note = null): WorkItem
+    {
+        if (! WorkAccess::canManage($actor, $item->loadMissing('owner'))) {
+            throw new InvalidArgumentException('Only a department head can reassign this.');
+        }
+
+        return $this->handOver($item, $owner, $department, $actor, $note);
+    }
+
+    /**
+     * Moves ownership and queue with no permission check. For callers that
+     * have already decided the move is allowed: claim and release above, and
+     * an accepted hand-off, where the escalation itself was the permission.
+     */
+    public function handOver(WorkItem $item, ?User $owner, ?Department $department, User $actor, ?string $note = null): WorkItem
     {
         if ($owner?->isDeactivated()) {
             throw new InvalidArgumentException("{$owner->name} is deactivated.");
@@ -150,8 +176,13 @@ class WorkItemService
 
             $item->save();
 
+            // The permission check may have loaded the previous owner; the
+            // booking must be told about the new one.
+            $item->unsetRelation('owner');
             $item->workflow()->applyOwner($item->subject, $item->owner, $actor);
         });
+
+        WorkAccess::forget();
 
         return $item->fresh();
     }
@@ -161,6 +192,9 @@ class WorkItemService
         $body = trim($body);
         if ($body === '') {
             throw new InvalidArgumentException('A note cannot be empty.');
+        }
+        if (! WorkAccess::canWork($actor, $item->loadMissing('owner'))) {
+            throw new InvalidArgumentException('Claim it first: only the owner or a department head can add notes.');
         }
 
         $item->touch();
@@ -172,6 +206,9 @@ class WorkItemService
     {
         if (! array_key_exists($priority, WorkItem::PRIORITIES)) {
             throw new InvalidArgumentException("Unknown priority [{$priority}].");
+        }
+        if (! WorkAccess::canManage($actor, $item->loadMissing('owner'))) {
+            throw new InvalidArgumentException('Only a department head can set priority.');
         }
 
         if ($item->priority !== $priority) {

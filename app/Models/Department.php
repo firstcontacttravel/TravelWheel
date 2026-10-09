@@ -13,7 +13,8 @@ class Department extends Model
 {
     public const FINANCE = 'finance';
 
-    public const VISAS = 'visas';
+    /** Flights, visas and ground & airport services: every booking from payment to delivery. */
+    public const OPERATIONS = 'operations';
 
     public const CUSTOMER_SUPPORT = 'customer-support';
 

@@ -25,7 +25,7 @@ class VisaCommunicationService
     {
         [$subject, $heading, $message] = match ($status) {
             'submitted' => ['Visa application submitted', 'Application submitted', 'We have received your visa application and will begin our checks.'],
-            'in_review', 'processing' => ['Visa application update', 'Application in progress', 'Your visa application is currently being reviewed.'],
+            'processing' => ['Visa application update', 'Application in progress', 'Your visa application is currently being reviewed.'],
             'under_review' => ['Visa application update', 'Application in review', 'A visa officer is reviewing your application.'],
             'action_required' => ['Action required for your visa application', 'Action required', 'Please open the secure customer portal and complete the outstanding request.'],
             'approved' => ['Visa application approved', 'Application approved', 'Your visa application has been approved. We will notify you when the issued document is available.'],

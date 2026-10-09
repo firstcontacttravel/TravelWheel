@@ -15,14 +15,14 @@
     $intro = $isTicketed
         ? 'Your ticket has been issued and a PDF copy is attached to this email.'
         : ($awaiting
-            ? 'Your seat is reserved and your payment is complete. The airline issues the ticket separately — we will email it the moment it comes through.'
-            : 'Your seat is reserved and ticketing is in progress. We will email your ticket shortly.');
+            ? 'Your seat is reserved and your payment is complete. The airline issues the ticket separately, and we will email it the moment it comes through. Your booking itinerary is attached.'
+            : 'Your seat is reserved and ticketing is in progress. We will email your ticket shortly. Your booking itinerary is attached.');
 @endphp
 
 <x-mail.layout
-    :title="'Your e-ticket — '.$bookingRef"
+    :title="($isTicketed ? 'Your e-ticket - ' : 'Booking confirmed - ').$bookingRef"
     :preheader="($isTicketed ? 'Ticket issued' : 'Booking confirmed').' · '.($routeText ?: 'Your trip').' · '.$bookingRef"
-    eyebrow="Electronic ticket"
+    :eyebrow="$isTicketed ? 'Electronic ticket' : 'Booking confirmation'"
     :heading="$isTicketed ? 'Your e-ticket is ready' : 'Your booking is confirmed'"
     :intro="'Hi '.$firstName.', '.lcfirst($intro)"
     :badge="$isTicketed ? 'Ticketed' : 'Confirmed'"

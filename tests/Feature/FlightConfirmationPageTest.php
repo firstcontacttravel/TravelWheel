@@ -131,4 +131,23 @@ class FlightConfirmationPageTest extends TestCase
         // "Ticket references for your passengers" heading further down.
         $this->assertStringNotContainsString('<span>Ticket ref</span>', $html);
     }
+
+    /**
+     * A paid booking whose SkyLink reserve failed still lands here from the
+     * SeerBit callback, and the page told the customer "Booking confirmed".
+     */
+    public function test_a_paid_booking_that_failed_is_not_shown_as_confirmed(): void
+    {
+        $this->seedTicketedBooking([
+            'bookingUniqueId' => '',
+            'bookingStatus' => 'FAILED',
+            'ticketSuccess' => false,
+        ]);
+
+        $html = $this->get(route('flights.confirmation'))->getContent();
+
+        $this->assertStringContainsString('Payment received, booking needs attention', $html);
+        $this->assertStringNotContainsString('Booking confirmed', $html);
+        $this->assertStringNotContainsString('Confirmation details are being sent', $html);
+    }
 }

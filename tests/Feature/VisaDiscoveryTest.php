@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Country;
-use App\Models\VisaProduct;
-use App\Models\VisaDestination;
 use App\Models\VisaApplication;
+use App\Models\VisaDestination;
+use App\Models\VisaProduct;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -42,8 +42,28 @@ class VisaDiscoveryTest extends TestCase
             ->assertOk()
             ->assertSee('Tourist visa')
             ->assertSee('Business VOA')
-            ->assertSee('USD 250.00')
-            ->assertSee('USD 20.00');
+            ->assertSee('USD 200.00')
+            ->assertSee('USD 50.00')
+            ->assertSee('Total to pay online')
+            ->assertSee('Plus USD 20.00 paid by you directly to the embassy');
+    }
+
+    public function test_results_card_breaks_fees_down_and_totals_them_in_naira(): void
+    {
+        [$nationality, $destination] = $this->catalogueProduct('standard', 'Tourist visa');
+        \App\Models\ExchangeRate::query()->updateOrCreate(['currency' => 'USD'], ['rate' => 1500]);
+
+        $this->post(route('visa.search'), $this->validSearch($nationality, $destination, ['adults' => 2, 'children' => 1]));
+        $this->get(route('visa.search.run'));
+
+        $this->get(route('visa.results'))
+            ->assertOk()
+            ->assertDontSee('Estimated pay now')
+            ->assertSeeInOrder(['What you’ll pay', '3 travelers', 'Standard processing (3–5 business days)'], false)
+            ->assertSeeInOrder(['Adult fee', 'TravelWheel service fee', 'USD 100.00 × 2 adults', 'USD 200.00', '≈ NGN 300,000.00'], false)
+            ->assertSeeInOrder(['Child fee', 'USD 50.00 × 1 child', 'USD 50.00', '≈ NGN 75,000.00'], false)
+            ->assertSeeInOrder(['Paid separately at the embassy', 'Authority fee', 'USD 20.00'], false)
+            ->assertSeeInOrder(['Total to pay online', 'NGN 375,000.00', 'USD 1 = NGN 1,500.00', 'Plus USD 20.00 paid by you directly to the embassy'], false);
     }
 
     public function test_search_validates_dates_and_infant_to_adult_ratio(): void

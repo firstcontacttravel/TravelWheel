@@ -52,7 +52,7 @@ class WorkflowLinearTest extends TestCase
 
     public function test_an_escalation_to_it_always_opens_an_issue_in_the_it_team(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $item = $this->ownedBy($ada);
 
         $escalation = app(EscalationService::class)->raise($item, $ada, Escalation::MODE_HELP, $this->department('it'), null, 'Supplier API returns 500 on reserve', 'urgent');
@@ -77,7 +77,7 @@ class WorkflowLinearTest extends TestCase
 
     public function test_other_departments_go_to_linear_only_when_asked_with_their_label(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
 
         app(EscalationService::class)->raise($this->ownedBy($ada), $ada, Escalation::MODE_HELP, $this->department('finance'), null, 'Check transfer');
         $this->assertSame([], $this->calls, 'Not asked for: Linear is not touched.');
@@ -92,7 +92,7 @@ class WorkflowLinearTest extends TestCase
 
     public function test_a_named_person_with_a_linear_seat_is_assigned_the_issue(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $dev = $this->staff('it', 'Dev', ['email' => 'dev@travelwheel.test']);
 
         app(EscalationService::class)->raise($this->ownedBy($ada), $ada, Escalation::MODE_HELP, null, $dev, 'Look at the logs');
@@ -125,7 +125,7 @@ class WorkflowLinearTest extends TestCase
     public function test_linear_being_down_never_blocks_the_escalation(): void
     {
         $this->linearDown = true;
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $item = $this->ownedBy($ada);
 
         $escalation = app(EscalationService::class)->raise($item, $ada, Escalation::MODE_HELP, $this->department('it'), null, 'Help');
@@ -138,7 +138,7 @@ class WorkflowLinearTest extends TestCase
 
     public function test_the_escalate_form_can_send_a_finance_escalation_to_linear(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $booking = $this->ownedBy($ada)->subject;
 
         $this->actingAs($ada);
@@ -185,7 +185,7 @@ class WorkflowLinearTest extends TestCase
 
     public function test_completing_a_hand_off_in_linear_makes_that_person_the_owner(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $dev = $this->staff('it', 'Dev', ['email' => 'dev@travelwheel.test']);
         $item = $this->ownedBy($ada);
         app(EscalationService::class)->raise($item, $ada, Escalation::MODE_HANDOFF, $this->department('it'), null, 'This is a system fault now');
@@ -340,7 +340,7 @@ class WorkflowLinearTest extends TestCase
     /** @return array{Escalation, User} */
     private function escalatedToIt(): array
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $dev = $this->staff('it', 'Dev', ['email' => 'dev@travelwheel.test']);
         $escalation = app(EscalationService::class)->raise($this->ownedBy($ada), $ada, Escalation::MODE_HELP, $this->department('it'), null, 'Supplier down?');
 
@@ -354,7 +354,7 @@ class WorkflowLinearTest extends TestCase
 
     private function staff(string $department, string $name, array $attributes = []): User
     {
-        return User::factory()->create(['name' => $name, 'department_id' => $this->department($department)->id, ...$attributes]);
+        return User::factory()->create(['name' => $name, 'department_id' => $this->department($department)->id, 'is_department_head' => true, ...$attributes]);
     }
 
     private function ownedBy(User $owner): WorkItem

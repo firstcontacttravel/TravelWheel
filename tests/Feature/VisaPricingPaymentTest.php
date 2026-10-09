@@ -6,6 +6,7 @@ use App\Models\Country;
 use App\Models\ExchangeRate;
 use App\Models\VisaApplication;
 use App\Models\VisaProduct;
+use App\Services\VisaFeeEstimateService;
 use App\Services\VisaPaymentService;
 use App\Services\VisaQuotationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,6 +32,27 @@ class VisaPricingPaymentTest extends TestCase
         $authority = $quote->items->firstWhere('payee', 'authority');
         $this->assertFalse($authority->pay_online);
         $this->assertSame('20000.00', $authority->checkout_total);
+    }
+
+    public function test_search_estimate_explains_each_fee_and_matches_the_checkout_quote(): void
+    {
+        $application = $this->application();
+        $product = $application->product->load(['fees', 'processingOptions']);
+
+        $estimate = app(VisaFeeEstimateService::class)->estimate($product, ['adult' => 2, 'child' => 0, 'infant' => 0]);
+        $quote = app(VisaQuotationService::class)->create($application);
+
+        $this->assertSame((float) $quote->payable_total, $estimate['checkout']['total']);
+        $this->assertSame(['USD' => 1000.0], $estimate['checkout']['rates']);
+        $visaFee = collect($estimate['lines'])->firstWhere('name', 'Adult visa fee');
+        $this->assertSame('USD 100.00 × 2 adults', $visaFee['basis_label']);
+        $this->assertSame(200000.0, $visaFee['checkout_amount']);
+        $this->assertSame('Once per application', collect($estimate['lines'])->firstWhere('name', 'Service fee')['basis_label']);
+        $this->assertStringContainsString('directly to the embassy', collect($estimate['lines'])->firstWhere('name', 'Authority fee')['explanation']);
+
+        ExchangeRate::query()->where('currency', 'USD')->delete();
+        $withoutRate = app(VisaFeeEstimateService::class)->estimate($product->fresh(['fees', 'processingOptions']), ['adult' => 2]);
+        $this->assertNull($withoutRate['checkout']['total'], 'No rate means no guessed naira total.');
     }
 
     public function test_visa_quotes_use_the_shared_exchange_rates_table_for_gbp(): void

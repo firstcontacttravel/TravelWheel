@@ -108,20 +108,30 @@ class Escalation extends Model
     }
 
     /**
-     * The people who may respond: the named person if there is one,
-     * otherwise anyone in the department. The CEO always may.
+     * Who may answer: the person it names, and the target department's heads.
+     * A department with no head yet falls back to anyone in it, so an
+     * escalation is never stranded. The CEO always may.
      */
     public function canBeRespondedToBy(User $user): bool
     {
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || ($this->to_user_id && $this->to_user_id === $user->getKey())) {
             return true;
         }
 
-        if ($this->to_user_id) {
-            return $this->to_user_id === $user->getKey();
+        if ($this->to_department_id === null || $this->to_department_id !== $user->department_id) {
+            return false;
         }
 
-        return $this->to_department_id !== null && $this->to_department_id === $user->department_id;
+        return $user->isDepartmentHead() || (! $this->to_user_id && ! self::departmentHasHead($this->to_department_id));
+    }
+
+    public static function departmentHasHead(int $departmentId): bool
+    {
+        return User::query()
+            ->where('department_id', $departmentId)
+            ->where('is_department_head', true)
+            ->whereNull('deactivated_at')
+            ->exists();
     }
 
     public function scopeActive(Builder $query): Builder
@@ -129,14 +139,24 @@ class Escalation extends Model
         return $query->whereIn('status', [self::STATUS_OPEN, self::STATUS_ACCEPTED]);
     }
 
-    /** Active escalations waiting on this person, directly or through their department. */
+    /**
+     * Active escalations this person may answer: ones naming them, and, for
+     * a department head, everything sent to their department. Mirrors
+     * canBeRespondedToBy(), including the no-head fallback.
+     */
     public function scopeAwaiting(Builder $query, User $user): Builder
     {
-        return $query->active()->where(function (Builder $query) use ($user): void {
-            $query->where('to_user_id', $user->getKey())
-                ->orWhere(fn (Builder $query) => $query
-                    ->whereNull('to_user_id')
-                    ->where('to_department_id', $user->department_id ?? 0));
+        $department = $user->department_id ?? 0;
+        $answersForDepartment = $user->isDepartmentHead() || ($department && ! self::departmentHasHead($department));
+
+        return $query->active()->where(function (Builder $query) use ($user, $department, $answersForDepartment): void {
+            $query->where('to_user_id', $user->getKey());
+
+            if ($answersForDepartment) {
+                $query->orWhere(fn (Builder $query) => $query
+                    ->where('to_department_id', $department)
+                    ->when(! $user->isDepartmentHead(), fn (Builder $query) => $query->whereNull('to_user_id')));
+            }
         });
     }
 }

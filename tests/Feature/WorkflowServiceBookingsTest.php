@@ -50,11 +50,11 @@ class WorkflowServiceBookingsTest extends TestCase
     public static function services(): array
     {
         return [
-            'car hire' => ['carHire', 'car_hire', 'ground-airport'],
-            'transfer' => ['transfer', 'transfers', 'ground-airport'],
-            'lounge' => ['lounge', 'lounge', 'ground-airport'],
-            'protocol' => ['protocol', 'protocol', 'ground-airport'],
-            'air cargo' => ['cargo', 'air_cargo', 'ground-airport'],
+            'car hire' => ['carHire', 'car_hire', 'operations'],
+            'transfer' => ['transfer', 'transfers', 'operations'],
+            'lounge' => ['lounge', 'lounge', 'operations'],
+            'protocol' => ['protocol', 'protocol', 'operations'],
+            'air cargo' => ['cargo', 'air_cargo', 'operations'],
             'yellow card' => ['yellowCard', 'yellow_card', 'customer-support'],
             'extra luggage' => ['extraLuggage', 'extra_luggage', 'customer-support'],
             'flight assist' => ['flightAssist', 'flight_assist', 'customer-support'],
@@ -88,7 +88,7 @@ class WorkflowServiceBookingsTest extends TestCase
 
     public function test_a_car_hire_moves_from_driver_to_trip_without_touching_its_payment(): void
     {
-        $staff = $this->staff('ground-airport');
+        $staff = $this->staff('operations');
         $booking = $this->carHire(paid: true);
 
         $booking->update(['driver_assigned' => true]);
@@ -111,7 +111,7 @@ class WorkflowServiceBookingsTest extends TestCase
         $booking = $this->cargo(paid: true);
 
         $this->expectException(InvalidArgumentException::class);
-        app(FulfilmentService::class)->advance($booking, 'delivered', $this->staff('ground-airport'));
+        app(FulfilmentService::class)->advance($booking, 'delivered', $this->staff('operations'));
     }
 
     public function test_an_unpaid_booking_cannot_be_moved_on(): void
@@ -145,12 +145,15 @@ class WorkflowServiceBookingsTest extends TestCase
         $booking = $this->transfer(paid: false);
 
         try {
-            app(FulfilmentService::class)->markPaid($booking, $this->staff('ground-airport'), 'Transfer ref 123');
+            app(FulfilmentService::class)->markPaid($booking, $this->staff('operations'), 'Transfer ref 123');
             $this->fail('Someone outside Finance marked it paid.');
         } catch (InvalidArgumentException) {
         }
 
-        app(FulfilmentService::class)->markPaid($booking->fresh(), $this->staff('finance'), 'Transfer ref 123, NGN 45,000');
+        // Finance works it like anyone else: claim it, then record the payment.
+        $finance = $this->staff('finance');
+        app(WorkItemService::class)->claim($booking->workItem()->first(), $finance);
+        app(FulfilmentService::class)->markPaid($booking->fresh(), $finance, 'Transfer ref 123, NGN 45,000');
 
         $booking->refresh();
         $this->assertSame('paid', $booking->payment_status);
@@ -239,7 +242,7 @@ class WorkflowServiceBookingsTest extends TestCase
     public function test_the_booking_page_shows_the_work_panel_and_moves_the_booking_on(): void
     {
         $booking = $this->carHire(paid: true);
-        $staff = $this->staff('ground-airport');
+        $staff = $this->staff('operations');
 
         $this->actingAs($staff);
         $this->get(\App\Filament\Resources\CarHires\CarHireResource::getUrl('view', ['record' => $booking]))
@@ -260,10 +263,12 @@ class WorkflowServiceBookingsTest extends TestCase
     {
         $booking = $this->carHire(paid: false);
 
-        $this->actingAs($this->staff('ground-airport'));
+        $this->actingAs($this->staff('operations'));
         Livewire::test(ViewCarHire::class, ['record' => $booking->getRouteKey()])->assertActionHidden('workMarkPaid');
 
-        $this->actingAs($this->staff('finance'));
+        $finance = $this->staff('finance');
+        app(WorkItemService::class)->claim($booking->workItem()->first(), $finance);
+        $this->actingAs($finance);
         Livewire::test(ViewCarHire::class, ['record' => $booking->getRouteKey()])->assertActionVisible('workMarkPaid');
     }
 
@@ -281,7 +286,7 @@ class WorkflowServiceBookingsTest extends TestCase
 
     public function test_the_service_list_filters_to_my_work(): void
     {
-        $me = $this->staff('ground-airport');
+        $me = $this->staff('operations');
         $mine = $this->carHire(paid: true);
         $other = $this->carHire(paid: true);
         app(WorkItemService::class)->claim($mine->workItem, $me);
@@ -310,7 +315,7 @@ class WorkflowServiceBookingsTest extends TestCase
 
     private function staff(string $department): User
     {
-        return User::factory()->create(['department_id' => Department::query()->where('slug', $department)->value('id')]);
+        return User::factory()->create(['department_id' => Department::query()->where('slug', $department)->value('id'), 'is_department_head' => true]);
     }
 
     private function carHire(bool $paid): CarHire

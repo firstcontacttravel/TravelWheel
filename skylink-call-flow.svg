@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -70 560 956" width="560" height="956" role="img" aria-label="A ten-step flow read top to bottom. The customer searches a route. Travelwheel calls POST /api/login, but only when its token cache is cold, then POST /api/flights/search. Offers are shown and the customer picks a fare, which triggers POST /api/flights/pricing. The customer enters passenger details, card payment is captured and verified, and only after that clears does Travelwheel call POST /api/flights/reserve to get the PNR. A confirmation and e-ticket are then sent.">
+  <defs>
+    <marker id="s-ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7.5" markerHeight="6.5" orient="auto">
+      <polygon points="0,0 10,4 0,8" fill="#3d4854"/>
+    </marker>
+    <marker id="s-ah-crit" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7.5" markerHeight="6.5" orient="auto">
+      <polygon points="0,0 10,4 0,8" fill="#9c5c07"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="-70" width="560" height="956" fill="#ffffff"/>
+
+  <text x="20" y="-40" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#11161b">How Travelwheel calls the SkyLink API</text>
+  <text x="20" y="-21" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#66737f">Read top to bottom. The four numbered steps are the only requests that reach SkyLink.</text>
+
+  <rect x="149" y="14" width="13" height="13" rx="3" fill="#e2eff1" stroke="#0e6b78"/>
+  <text x="169" y="25" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#0e6b78">call to SkyLink</text>
+  <rect x="311" y="14" width="13" height="13" rx="3" fill="#ffffff" stroke="#c3ccd4"/>
+  <text x="331" y="25" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#66737f">our side</text>
+
+  <rect x="70" y="60" width="420" height="54" rx="8" fill="#ffffff" stroke="#c3ccd4"/>
+  <text x="280" y="92" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="13.5" fill="#3d4854">Customer searches a route</text>
+  <line x1="280" y1="114" x2="280" y2="131" stroke="#3d4854" stroke-width="1.4" opacity="0.55" marker-end="url(#s-ah)"/>
+
+  <circle cx="44" cy="165" r="12" fill="#0e6b78"/>
+  <text x="44" y="169" text-anchor="middle" font-family="'IBM Plex Mono',Consolas,monospace" font-size="11.5" font-weight="600" fill="#ffffff">1</text>
+  <rect x="70" y="138" width="420" height="54" rx="8" fill="#e2eff1" stroke="#0e6b78" stroke-width="1.3"/>
+  <text x="280" y="161" text-anchor="middle" font-family="'IBM Plex Mono',Consolas,monospace" font-size="13.5" font-weight="600" fill="#0e6b78">POST /api/login</text>
+  <text x="280" y="179" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#0e6b78" opacity="0.85">only when the 13-minute token cache is cold</text>
+  <line x1="280" y1="192" x2="280" y2="209" stroke="#3d4854" stroke-width="1.4" opacity="0.55" marker-end="url(#s-ah)"/>
+
+  <circle cx="44" cy="243" r="12" fill="#0e6b78"/>
+  <text x="44" y="247" text-anchor="middle" font-family="'IBM Plex Mono',Consolas,monospace" font-size="11.5" font-weight="600" fill="#ffffff">2</text>
+  <rect x="70" y="216" width="420" height="54" rx="8" fill="#e2eff1" stroke="#0e6b78" stroke-width="1.3"/>
+  <text x="280" y="239" text-anchor="middle" font-family="'IBM Plex Mono',Consolas,monospace" font-size="13.5" font-weight="600" fill="#0e6b78">POST /api/flights/search</text>
+  <text x="280" y="257" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#0e6b78" opacity="0.85">returns the available offers</text>
+  <line x1="280" y1="270" x2="280" y2="287" stroke="#3d4854" stroke-width="1.4" opacity="0.55" marker-end="url(#s-ah)"/>
+
+  <rect x="70" y="294" width="420" height="54" rx="8" fill="#ffffff" stroke="#c3ccd4"/>
+  <text x="280" y="326" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="13.5" fill="#3d4854">Offers shown on the results page</text>
+  <line x1="280" y1="348" x2="280" y2="365" stroke="#3d4854" stroke-width="1.4" opacity="0.55" marker-end="url(#s-ah)"/>
+
+  <rect x="70" y="372" width="420" height="54" rx="8" fill="#ffffff" stroke="#c3ccd4"/>
+  <text x="280" y="404" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="13.5" fill="#3d4854">Customer picks a fare</text>
+  <line x1="280" y1="426" x2="280" y2="443" stroke="#3d4854" stroke-width="1.4" opacity="0.55" marker-end="url(#s-ah)"/>
+
+  <circle cx="44" cy="477" r="12" fill="#0e6b78"/>
+  <text x="44" y="481" text-anchor="middle" font-family="'IBM Plex Mono',Consolas,monospace" font-size="11.5" font-weight="600" fill="#ffffff">3</text>
+  <rect x="70" y="450" width="420" height="54" rx="8" fill="#e2eff1" stroke="#0e6b78" stroke-width="1.3"/>
+  <text x="280" y="473" text-anchor="middle" font-family="'IBM Plex Mono',Consolas,monospace" font-size="13.5" font-weight="600" fill="#0e6b78">POST /api/flights/pricing</text>
+  <text x="280" y="491" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#0e6b78" opacity="0.85">re-checks the fare, returns a fresh booking_token</text>
+  <line x1="280" y1="504" x2="280" y2="521" stroke="#3d4854" stroke-width="1.4" opacity="0.55" marker-end="url(#s-ah)"/>
+
+  <rect x="70" y="528" width="420" height="54" rx="8" fill="#ffffff" stroke="#c3ccd4"/>
+  <text x="280" y="560" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="13.5" fill="#3d4854">Customer enters passenger details</text>
+  <line x1="280" y1="582" x2="280" y2="599" stroke="#3d4854" stroke-width="1.4" opacity="0.55" marker-end="url(#s-ah)"/>
+
+  <rect x="70" y="606" width="420" height="54" rx="8" fill="#faf0de" stroke="#9c5c07" stroke-width="1.3"/>
+  <text x="280" y="638" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="13.5" font-weight="600" fill="#9c5c07">Card payment captured and verified</text>
+
+  <line x1="280" y1="660" x2="280" y2="711" stroke="#9c5c07" stroke-width="1.6" marker-end="url(#s-ah-crit)"/>
+  <rect x="152" y="676" width="256" height="24" rx="12" fill="#faf0de" stroke="#9c5c07"/>
+  <text x="280" y="692" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" font-weight="600" fill="#9c5c07">reserve runs only after this clears</text>
+
+  <circle cx="44" cy="743" r="12" fill="#0e6b78"/>
+  <text x="44" y="747" text-anchor="middle" font-family="'IBM Plex Mono',Consolas,monospace" font-size="11.5" font-weight="600" fill="#ffffff">4</text>
+  <rect x="70" y="716" width="420" height="54" rx="8" fill="#e2eff1" stroke="#0e6b78" stroke-width="1.3"/>
+  <text x="280" y="739" text-anchor="middle" font-family="'IBM Plex Mono',Consolas,monospace" font-size="13.5" font-weight="600" fill="#0e6b78">POST /api/flights/reserve</text>
+  <text x="280" y="757" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="11" fill="#0e6b78" opacity="0.85">returns the PNR and ticket deadline</text>
+  <line x1="280" y1="770" x2="280" y2="787" stroke="#3d4854" stroke-width="1.4" opacity="0.55" marker-end="url(#s-ah)"/>
+
+  <rect x="70" y="794" width="420" height="54" rx="8" fill="#ffffff" stroke="#c3ccd4"/>
+  <text x="280" y="826" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="13.5" fill="#3d4854">Confirmation and e-ticket sent</text>
+
+  <text x="280" y="872" text-anchor="middle" font-family="'IBM Plex Sans','Segoe UI',Helvetica,Arial,sans-serif" font-size="11.5" fill="#66737f">A 401 at any step triggers one re-login and one retry &#8212; never a loop.</text>
+</svg>

@@ -93,7 +93,7 @@ class WorkflowWorkloadTest extends TestCase
 
     public function test_work_is_credited_to_the_people_who_did_it(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $bola = $this->staff('finance', 'Bola');
         $booking = $this->booking(['payment_status' => 'paid', 'booking_status' => 'confirmed']);
         app(WorkItemService::class)->claim($booking->workItem, $ada);
@@ -112,7 +112,7 @@ class WorkflowWorkloadTest extends TestCase
 
     public function test_departments_show_their_queue_and_escalation_response(): void
     {
-        $ada = $this->staff('flights', 'Ada');
+        $ada = $this->staff('operations', 'Ada');
         $bola = $this->staff('finance', 'Bola');
         $this->booking(['payment_status' => 'awaiting_bank_transfer']);
         $owned = $this->booking(['payment_status' => 'paid', 'booking_status' => 'confirmed']);
@@ -125,7 +125,7 @@ class WorkflowWorkloadTest extends TestCase
         $departments = collect($this->report()['departments'])->keyBy('name');
 
         $this->assertSame([1, 1], [$departments['Finance']['open'], $departments['Finance']['unclaimed']]);
-        $this->assertSame([1, 0, 1], [$departments['Flights']['open'], $departments['Flights']['unclaimed'], $departments['Flights']['overdue']]);
+        $this->assertSame([1, 0, 1], [$departments['Operations']['open'], $departments['Operations']['unclaimed'], $departments['Operations']['overdue']]);
         $this->assertSame(1, $departments['Finance']['escalations_received']);
         $this->assertSame(3.0, $departments['Finance']['response_hours']);
     }
@@ -163,7 +163,8 @@ class WorkflowWorkloadTest extends TestCase
 
     private function staff(string $department, string $name): User
     {
-        return User::factory()->create(['name' => $name, 'department_id' => Department::query()->where('slug', $department)->value('id')]);
+        // Heads, so they may escalate; permissions are tested in WorkflowPermissionsTest.
+        return User::factory()->create(['name' => $name, 'department_id' => Department::query()->where('slug', $department)->value('id'), 'is_department_head' => true]);
     }
 
     private function booking(array $overrides = []): FlightBooking

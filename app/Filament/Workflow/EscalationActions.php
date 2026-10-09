@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\WorkItem;
 use App\Services\Linear\LinearClient;
 use App\Workflow\EscalationService;
+use App\Workflow\WorkAccess;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -47,6 +48,7 @@ class EscalationActions
     public static function escalateAction(): Action
     {
         return Action::make('workEscalate')
+            ->visible(fn (Model $record): bool => WorkAccess::canManage(auth()->user(), $record->workItem()->with('owner')->first()))
             ->label('Escalate')
             ->icon('heroicon-o-arrow-up-right')
             ->modalHeading('Escalate')

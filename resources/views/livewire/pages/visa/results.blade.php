@@ -23,7 +23,7 @@
         </aside>
 
         <main class="vr-main">
-            <div class="vr-heading"><div><h1>{{ count($results) }} visa {{ count($results) === 1 ? 'option' : 'options' }} found</h1><p>Compare eligibility, processing estimates, requirements, and fees.</p></div><span>Indicative prices</span></div>
+            <div class="vr-heading"><div><h1>{{ count($results) }} visa {{ count($results) === 1 ? 'option' : 'options' }} found</h1><p>Compare eligibility, processing estimates, requirements, and fees.</p></div><span>Every fee shown upfront</span></div>
 
             @forelse($results as $result)
                 @php
@@ -65,12 +65,27 @@
                             </section>
                         @endif
                         @foreach($result['eligibility']['messages'] as $message)<div class="vr-message">{{ $message }}</div>@endforeach
+                        @include('livewire.pages.visa.partials.fee-breakdown', ['estimate' => $result['estimate']])
                         <details class="vr-requirements"><summary>View {{ count($result['requirements']) }} requirements</summary><ul>@foreach($result['requirements'] as $requirement)<li><span>{{ $requirement['name'] }}</span><small>{{ str($requirement['state'])->headline() }}</small></li>@endforeach</ul></details>
                     </div>
                     <footer class="vr-card__footer">
+                        @php
+                            $checkout = $result['estimate']['checkout'] ?? ['currency' => 'NGN', 'total' => null, 'rates' => []];
+                            $payNow = $result['estimate']['pay_now_totals'];
+                        @endphp
                         <div class="vr-prices">
-                            @forelse($result['estimate']['pay_now_totals'] as $currency => $amount)<span>Estimated pay now <strong>{{ $currency }} {{ number_format($amount,2) }}</strong></span>@empty<span>Price confirmed before payment</span>@endforelse
-                            @foreach($result['estimate']['pay_separately_totals'] as $currency => $amount)<small>Plus {{ $currency }} {{ number_format($amount,2) }} paid directly to authority</small>@endforeach
+                            @if($payNow === [])
+                                <span>Price confirmed before payment</span>
+                            @else
+                                <span>Total to pay online</span>
+                                <strong>{{ $checkout['total'] !== null ? $checkout['currency'].' '.number_format($checkout['total'], 2) : collect($payNow)->map(fn ($amount, $currency) => $currency.' '.number_format($amount, 2))->join(' + ') }}</strong>
+                                @if($checkout['total'] !== null && $checkout['rates'] !== [])
+                                    <small class="vr-prices__note">Includes {{ collect($checkout['rates'])->keys()->join(', ', ' and ') }} fees converted at today’s rate ({{ collect($checkout['rates'])->map(fn ($rate, $currency) => $currency.' 1 = '.$checkout['currency'].' '.number_format($rate, 2))->join(', ') }}). Your exact total is fixed on your quote just before you pay.</small>
+                                @elseif($checkout['total'] === null)
+                                    <small class="vr-prices__note">You pay in naira. We convert at the day’s rate and show the exact total on your quote before you pay.</small>
+                                @endif
+                            @endif
+                            @foreach($result['estimate']['pay_separately_totals'] as $currency => $amount)<small class="vr-prices__direct">Plus {{ $currency }} {{ number_format($amount,2) }} paid by you directly to the embassy</small>@endforeach
                         </div>
                         @if($canApply)<form method="POST" action="{{ route('visa.applications.start') }}">@csrf<input type="hidden" name="visa_product_id" value="{{ $result['id'] }}"><button class="vr-apply" type="submit">Start application</button></form>@else<span class="vr-unavailable">Not available for this search</span>@endif
                     </footer>

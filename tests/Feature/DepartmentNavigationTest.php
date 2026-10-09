@@ -43,7 +43,7 @@ class DepartmentNavigationTest extends TestCase
             $this->assertSame('Customer Support', $resource::getNavigationGroup(), class_basename($resource));
         }
 
-        $labels = $this->railGroups($this->staff('flights'));
+        $labels = $this->railGroups($this->staff('operations'));
         $this->assertNotContains('Support Requests', $labels);
         $this->assertNotContains('Insurance', $labels);
     }
@@ -54,8 +54,7 @@ class DepartmentNavigationTest extends TestCase
         return [
             'finance' => ['finance', ['Finance']],
             'customer support' => ['customer-support', ['Customer Support']],
-            'ground & airport' => ['ground-airport', ['Travel Connections', 'Airport Services', 'Air Cargo']],
-            'visas' => ['visas', ['Visas']],
+            'operations' => ['operations', ['Flights', 'Visas', 'Travel Connections', 'Airport Services', 'Air Cargo']],
             'it' => ['it', ['System']],
         ];
     }

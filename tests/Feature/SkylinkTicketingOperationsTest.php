@@ -54,6 +54,9 @@ class SkylinkTicketingOperationsTest extends TestCase
                     'gatewayCode' => '00', 'gatewayMessage' => 'Successful', 'amount' => 750000, 'currency' => 'NGN',
                 ]]]),
                 str_contains($request->url(), '/api/login') => Http::response(['data' => ['access_token' => 'token']]),
+                str_contains($request->url(), '/flights/pricing') => Http::response(['success' => true, 'data' => [
+                    'booking_token' => 'btk_repriced', 'verified' => true, 'verified_price' => 650000, 'currency' => 'NGN',
+                ]]),
                 str_contains($request->url(), '/flights/reserve') => Http::response(['success' => true, 'data' => [
                     'pnr' => '9P5QB2',
                     'booking_reference' => '9P5QB2',
@@ -245,12 +248,18 @@ class SkylinkTicketingOperationsTest extends TestCase
     {
         $awaiting = $this->skylinkBooking();
         $ticketed = $this->skylinkBooking(['booking_status' => 'ticketed', 'ticket_ordered' => true]);
-        $travelNext = $this->travelNextBooking(['booking_status' => 'on_hold']);
+        $travelNext = $this->travelNextBooking(['booking_status' => 'confirmed', 'payment_status' => 'paid']);
+        $travelNextTicketed = $this->travelNextBooking(['booking_status' => 'ticketed', 'ticket_ordered' => true]);
 
         $this->assertSame('Booking confirmed - '.$awaiting->booking_ref.' | TravelWheel', (new ETicketMail($awaiting))->envelope()->subject);
         $this->assertSame('Your E-Ticket - '.$ticketed->booking_ref.' | TravelWheel', (new ETicketMail($ticketed))->envelope()->subject);
-        // TravelNext is untouched.
-        $this->assertSame('Your E-Ticket - '.$travelNext->booking_ref.' | TravelWheel', (new ETicketMail($travelNext))->envelope()->subject);
+        // A TravelNext booking made but not yet ticketed is not an e-ticket either.
+        $this->assertSame('Booking confirmed - '.$travelNext->booking_ref.' | TravelWheel', (new ETicketMail($travelNext))->envelope()->subject);
+        $this->assertSame('Your E-Ticket - '.$travelNextTicketed->booking_ref.' | TravelWheel', (new ETicketMail($travelNextTicketed))->envelope()->subject);
+
+        // The body agrees with the subject.
+        $this->assertStringContainsString('Your booking is confirmed', (new ETicketMail($travelNext))->render());
+        $this->assertStringNotContainsString('Your e-ticket is ready', (new ETicketMail($travelNext))->render());
     }
 
     public function test_customer_documents_use_skylink_wording_and_never_show_the_deadline(): void
@@ -270,6 +279,41 @@ class SkylinkTicketingOperationsTest extends TestCase
         $this->assertStringNotContainsString('Hold expires', view('pdf.itinerary', $customer)->render());
         $this->assertStringContainsString('Hold expires', view('pdf.itinerary', $internal)->render());
         $this->assertStringContainsString('The airline issues your ticket separately', view('pdf.eticket', $eticket)->render());
+    }
+
+    public function test_a_paid_customer_is_told_the_ticket_is_on_its_way_and_ops_still_see_ticketing_required(): void
+    {
+        $booking = $this->skylinkBooking();
+        $pdf = app(ItineraryPdfService::class);
+
+        // ETicketMail asks for 'ticketed'; the PDF falls back when there is no ticket yet.
+        $customer = $pdf->buildViewData($booking, [], 'ticketed', 'customer');
+        $this->assertSame('Ticket being issued', $customer['statusLabel']);
+        $this->assertSame('Booking itinerary', $customer['documentTitle']);
+        $this->assertTrue($customer['showWatermark']);
+
+        $internal = $pdf->buildViewData($booking, [], 'ticketing_required', 'internal');
+        $this->assertSame('Ticketing required', $internal['statusLabel']);
+
+        // An unpaid booking is still "payment pending", never "being issued".
+        $unpaid = $pdf->buildViewData($this->skylinkBooking(['payment_status' => 'pending']), [], 'ticketed', 'customer');
+        $this->assertSame('Payment pending', $unpaid['statusLabel']);
+    }
+
+    public function test_the_attachment_is_named_an_itinerary_until_the_ticket_exists(): void
+    {
+        $awaiting = $this->skylinkBooking();
+        $ticketed = $this->skylinkBooking(['booking_status' => 'ticketed', 'ticket_ordered' => true]);
+
+        $this->assertSame('booking-itinerary-'.$awaiting->booking_ref.'.pdf', $this->attachmentName(new ETicketMail($awaiting)));
+        $this->assertSame('eticket-'.$ticketed->booking_ref.'.pdf', $this->attachmentName(new ETicketMail($ticketed)));
+    }
+
+    private function attachmentName(ETicketMail $mail): string
+    {
+        $attachment = $mail->attachments()[0];
+
+        return (fn () => $this->as)->call($attachment);
     }
 
     public function test_the_confirmation_page_makes_no_timing_promise_for_skylink(): void

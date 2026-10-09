@@ -48,17 +48,17 @@ class FlightWorkflow extends Workflow
     public function stages(): array
     {
         return [
-            'pending_payment' => ['label' => 'Awaiting payment', 'state' => WorkItem::STATE_WAITING, 'department' => 'flights'],
+            'pending_payment' => ['label' => 'Awaiting payment', 'state' => WorkItem::STATE_WAITING, 'department' => Department::OPERATIONS],
             'awaiting_transfer' => ['label' => 'Confirm bank transfer', 'state' => WorkItem::STATE_OPEN, 'department' => Department::FINANCE],
             'travelflex_review' => ['label' => 'TravelFlex review', 'state' => WorkItem::STATE_OPEN, 'department' => Department::FINANCE],
-            'awaiting_deposit' => ['label' => 'Awaiting TravelFlex deposit', 'state' => WorkItem::STATE_WAITING, 'department' => 'flights'],
-            'hold_expired' => ['label' => 'Hold expired, rebook', 'state' => WorkItem::STATE_OPEN, 'department' => 'flights'],
-            'ready_to_ticket' => ['label' => 'Ready to ticket', 'state' => WorkItem::STATE_OPEN, 'department' => 'flights'],
-            'ticketing_in_progress' => ['label' => 'Ticketing in progress', 'state' => WorkItem::STATE_WAITING, 'department' => 'flights'],
-            'ticketing_failed' => ['label' => 'Ticketing failed', 'state' => WorkItem::STATE_OPEN, 'department' => 'flights'],
-            'post_ticketing' => ['label' => 'Change with supplier', 'state' => WorkItem::STATE_WAITING, 'department' => 'flights'],
-            'ticketed' => ['label' => 'Ticketed', 'state' => WorkItem::STATE_DONE, 'department' => 'flights'],
-            'cancelled' => ['label' => 'Cancelled', 'state' => WorkItem::STATE_CANCELLED, 'department' => 'flights'],
+            'awaiting_deposit' => ['label' => 'Awaiting TravelFlex deposit', 'state' => WorkItem::STATE_WAITING, 'department' => Department::OPERATIONS],
+            'hold_expired' => ['label' => 'Hold expired, rebook', 'state' => WorkItem::STATE_OPEN, 'department' => Department::OPERATIONS],
+            'ready_to_ticket' => ['label' => 'Ready to ticket', 'state' => WorkItem::STATE_OPEN, 'department' => Department::OPERATIONS],
+            'ticketing_in_progress' => ['label' => 'Ticketing in progress', 'state' => WorkItem::STATE_WAITING, 'department' => Department::OPERATIONS],
+            'ticketing_failed' => ['label' => 'Ticketing failed', 'state' => WorkItem::STATE_OPEN, 'department' => Department::OPERATIONS],
+            'post_ticketing' => ['label' => 'Change with supplier', 'state' => WorkItem::STATE_WAITING, 'department' => Department::OPERATIONS],
+            'ticketed' => ['label' => 'Ticketed', 'state' => WorkItem::STATE_DONE, 'department' => Department::OPERATIONS],
+            'cancelled' => ['label' => 'Cancelled', 'state' => WorkItem::STATE_CANCELLED, 'department' => Department::OPERATIONS],
         ];
     }
 

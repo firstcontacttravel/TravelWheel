@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Support\Admin\ActivityRecorder;
 use App\Workflow\SyncsWorkItems;
+use App\Workflow\WorkAccess;
 use App\Workflow\WorkflowRegistry;
+use Filament\Actions\Action;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
         ini_set('pcre.backtrack_limit', '10000000');
 
         $this->app->singleton(WorkflowRegistry::class);
+        $this->app->scoped(WorkAccess::CACHE, fn () => new \ArrayObject);
     }
 
     /**
@@ -30,5 +33,9 @@ class AppServiceProvider extends ServiceProvider
     {
         ActivityRecorder::register();
         SyncsWorkItems::register();
+
+        // Any action on a booking the signed-in person may not take is hidden,
+        // and Filament refuses a hidden action even if called directly.
+        Action::configureUsing(fn (Action $action) => $action->hidden(fn (): bool => WorkAccess::blocks($action)));
     }
 }

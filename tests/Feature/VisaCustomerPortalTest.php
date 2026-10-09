@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Mail\VisaPortalAccessCodeMail;
 use App\Models\Country;
+use App\Models\Department;
+use App\Models\User;
 use App\Models\VisaApplication;
 use App\Models\VisaProduct;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -67,6 +69,46 @@ class VisaCustomerPortalTest extends TestCase
         Storage::disk('local')->put($issuedPath, 'issued visa');
         $document = $application->documents()->create(['visa_requirement_id' => $requirement->id, 'disk' => 'local', 'path' => $issuedPath, 'original_name' => 'visa.pdf', 'mime_type' => 'application/pdf', 'size' => 11, 'status' => 'issued']);
         $this->withSession($session)->get(route('visa.portal.documents.download', [$application, $document]))->assertOk();
+    }
+
+    public function test_uploading_the_last_requested_document_returns_the_application_to_review_and_tells_the_officer(): void
+    {
+        Storage::fake('local');
+        $officer = User::factory()->create(['visa_role' => 'visa_officer']);
+        $application = $this->application();
+        $application->update(['status' => 'action_required', 'assigned_to' => $officer->id]);
+        $passport = $application->additionalDocumentRequests()->create(['title' => 'Clearer passport copy', 'status' => 'open']);
+        $bank = $application->additionalDocumentRequests()->create(['title' => 'Bank statement', 'status' => 'replacement_requested', 'review_note' => 'The last page is missing.']);
+        $session = ["visa_portal_access.{$application->reference}" => now()->addHour()->timestamp];
+
+        $this->withSession($session)->get(route('visa.portal.show', $application))
+            ->assertOk()->assertSee('Replacement needed')->assertSee('The last page is missing.');
+
+        $this->withSession($session)->post(route('visa.portal.requests.upload', [$application, $passport]), ['document' => UploadedFile::fake()->create('passport.pdf', 120, 'application/pdf')])->assertRedirect();
+        $this->assertSame('action_required', $application->fresh()->status, 'Still waiting on the bank statement.');
+
+        $this->withSession($session)->post(route('visa.portal.requests.upload', [$application, $bank]), ['document' => UploadedFile::fake()->create('bank.pdf', 120, 'application/pdf')])->assertRedirect();
+        $application->refresh();
+        $this->assertSame('under_review', $application->status);
+        $this->assertSame('applicant', $application->statusHistory()->latest('id')->first()->actor_type);
+        $this->assertSame(2, $application->auditEvents()->where('event_type', 'requested_document_uploaded')->count());
+        $this->assertSame(2, $officer->notifications()->count());
+        $this->assertSame(['Bank statement. Nothing else is outstanding; the application is back under review.', 'Clearer passport copy.'], $officer->notifications->pluck('data.body')->sort()->values()->all());
+    }
+
+    public function test_an_unowned_upload_alerts_the_operations_team(): void
+    {
+        Storage::fake('local');
+        $operations = Department::query()->firstOrCreate(['slug' => Department::OPERATIONS], ['name' => 'Operations']);
+        $member = User::factory()->create(['department_id' => $operations->id]);
+        $application = $this->application();
+        $request = $application->additionalDocumentRequests()->create(['title' => 'Hotel booking', 'status' => 'open']);
+
+        $this->withSession(["visa_portal_access.{$application->reference}" => now()->addHour()->timestamp])
+            ->post(route('visa.portal.requests.upload', [$application, $request]), ['document' => UploadedFile::fake()->create('hotel.pdf', 50, 'application/pdf')])->assertRedirect();
+
+        $this->assertSame(1, $member->notifications()->count());
+        $this->assertSame('submitted', $application->fresh()->status, 'Only action_required moves back to review.');
     }
 
     private function application(): VisaApplication

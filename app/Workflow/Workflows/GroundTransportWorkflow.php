@@ -2,6 +2,7 @@
 
 namespace App\Workflow\Workflows;
 
+use App\Models\Department;
 use App\Models\WorkItem;
 use App\Workflow\ServiceWorkflow;
 use Carbon\CarbonInterface;
@@ -25,7 +26,7 @@ abstract class GroundTransportWorkflow extends ServiceWorkflow
 
     protected function department(): string
     {
-        return 'ground-airport';
+        return Department::OPERATIONS;
     }
 
     public function referenceColumn(): string

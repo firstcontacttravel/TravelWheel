@@ -2,13 +2,19 @@
 
 namespace App\Services;
 
+use App\Filament\Resources\VisaApplications\VisaApplicationResource;
+use App\Models\Department;
 use App\Models\User;
 use App\Models\VisaAdditionalDocumentRequest;
 use App\Models\VisaApplication;
 use App\Models\VisaApplicationDocument;
 use App\Models\VisaIssuedDocument;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class VisaOperationsService
 {
@@ -19,12 +25,6 @@ class VisaOperationsService
         $before = ['assigned_to' => $application->assigned_to];
         $application->update(['assigned_to' => $assignee?->id, 'assigned_at' => $assignee ? now() : null]);
         $application->auditEvents()->create(['user_id' => $actor->id, 'event_type' => 'assignment', 'summary' => $assignee ? 'Assigned to '.$assignee->name : 'Returned to shared queue', 'before' => $before, 'after' => ['assigned_to' => $assignee?->id]]);
-    }
-
-    public function addNote(VisaApplication $application, User $actor, string $body): void
-    {
-        $application->internalNotes()->create(['user_id' => $actor->id, 'body' => $body]);
-        $application->auditEvents()->create(['user_id' => $actor->id, 'event_type' => 'internal_note', 'summary' => 'Internal note added']);
     }
 
     public function requestDocument(VisaApplication $application, User $actor, array $data): VisaAdditionalDocumentRequest
@@ -44,6 +44,24 @@ class VisaOperationsService
         $before = $document->only(['status', 'review_note']);
         $document->update(['status' => $status, 'review_note' => $note, 'reviewed_by' => $actor->id, 'reviewed_at' => now()]);
         $document->application->auditEvents()->create(['user_id' => $actor->id, 'event_type' => 'document_reviewed', 'summary' => "Document {$status}: {$document->original_name}", 'before' => $before, 'after' => $document->only(['status', 'review_note'])]);
+    }
+
+    /**
+     * The applicant uploaded a requested document from the customer portal.
+     * Recorded, flagged to the officer (or the Operations team when nobody
+     * owns it), and once nothing is left outstanding the application goes
+     * back to review.
+     */
+    public function receiveRequestedUpload(VisaAdditionalDocumentRequest $request, UploadedFile $file): void
+    {
+        $application = $request->application;
+        $wasReplacement = $request->status === 'replacement_requested';
+        $path = $file->store("visa-applications/{$application->reference}/additional-documents", 'local');
+        $request->update(['disk' => 'local', 'path' => $path, 'original_name' => $file->getClientOriginalName(), 'mime_type' => $file->getMimeType() ?: $file->getClientMimeType(), 'size' => $file->getSize(), 'status' => 'submitted', 'submitted_at' => now()]);
+        $application->auditEvents()->create(['event_type' => 'requested_document_uploaded', 'summary' => ($wasReplacement ? 'Applicant uploaded a replacement: ' : 'Applicant uploaded requested document: ').$request->title, 'after' => $request->only(['id', 'title', 'original_name'])]);
+
+        $application = $this->transitions->applicantResponded($application->fresh());
+        $this->notifyStaff($application, 'Document received: '.$application->reference, $request->title.($application->status === 'under_review' ? '. Nothing else is outstanding; the application is back under review.' : '.'));
     }
 
     public function reviewRequestedDocument(VisaAdditionalDocumentRequest $request, User $actor, string $status, ?string $note): void
@@ -66,5 +84,28 @@ class VisaOperationsService
 
             return $document;
         });
+    }
+
+    private function notifyStaff(VisaApplication $application, string $title, string $body): void
+    {
+        $officer = $application->assignee;
+        $people = $officer && ! $officer->isDeactivated()
+            ? collect([$officer])
+            : User::query()->whereHas('department', fn ($q) => $q->where('slug', Department::OPERATIONS))->whereNull('deactivated_at')->get();
+        if ($people->isEmpty()) {
+            return;
+        }
+
+        try {
+            Notification::make()
+                ->title($title)
+                ->body($body)
+                ->icon('heroicon-o-document-arrow-up')
+                ->actions([Action::make('open')->label('Open')->url(VisaApplicationResource::getUrl('view', ['record' => $application]))->markAsRead()])
+                ->sendToDatabase($people);
+        } catch (Throwable $e) {
+            // The upload is saved either way; a lost alert must not undo it.
+            report($e);
+        }
     }
 }

@@ -81,6 +81,26 @@ class VisaApplicationTransitionService
         return $application;
     }
 
+    /**
+     * The applicant has uploaded everything that was asked for, so the
+     * application goes back to the officer. No staff actor: the applicant's
+     * upload is what moves it.
+     */
+    public function applicantResponded(VisaApplication $application): VisaApplication
+    {
+        if ($application->status !== 'action_required' || $application->additionalDocumentRequests()->whereIn('status', ['open', 'replacement_requested'])->exists()) {
+            return $application;
+        }
+
+        return DB::transaction(function () use ($application): VisaApplication {
+            $application->update(['status' => 'under_review']);
+            $application->statusHistory()->create(['from_status' => 'action_required', 'to_status' => 'under_review', 'actor_type' => 'applicant', 'reason' => 'Requested documents received']);
+            $application->auditEvents()->create(['event_type' => 'status_transition', 'summary' => 'Status changed from action_required to under_review after the applicant uploaded the requested documents', 'before' => ['status' => 'action_required'], 'after' => ['status' => 'under_review']]);
+
+            return $application->fresh();
+        });
+    }
+
     private function isAdministrator(User $user): bool
     {
         return $user->isVisaAdministrator();

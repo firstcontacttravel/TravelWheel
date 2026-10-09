@@ -9,6 +9,7 @@ use App\Models\VisaIssuedDocument;
 use App\Models\VisaNotificationEvent;
 use App\Models\VisaPayment;
 use App\Services\VisaCommunicationService;
+use App\Services\VisaOperationsService;
 use App\Services\VisaPortalAccessService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,17 +64,12 @@ class VisaPortalController extends Controller
         return view('visa.portal', compact('application'));
     }
 
-    public function upload(Request $request, VisaApplication $application, VisaAdditionalDocumentRequest $documentRequest, VisaPortalAccessService $access): RedirectResponse
+    public function upload(Request $request, VisaApplication $application, VisaAdditionalDocumentRequest $documentRequest, VisaPortalAccessService $access, VisaOperationsService $operations): RedirectResponse
     {
         abort_unless($access->authorize($application) && $documentRequest->visa_application_id === $application->id && in_array($documentRequest->status, ['open', 'replacement_requested'], true), 403);
         $max = $documentRequest->requirement?->maximum_file_size_kb ?: 5120;
         $validated = $request->validate(['document' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:'.$max]]);
-        $file = $validated['document'];
-        $name = $file->getClientOriginalName();
-        $mime = $file->getMimeType() ?: $file->getClientMimeType();
-        $size = $file->getSize();
-        $path = $file->store("visa-applications/{$application->reference}/additional-documents", 'local');
-        $documentRequest->update(['disk' => 'local', 'path' => $path, 'original_name' => $name, 'mime_type' => $mime, 'size' => $size, 'status' => 'submitted', 'submitted_at' => now()]);
+        $operations->receiveRequestedUpload($documentRequest->setRelation('application', $application), $validated['document']);
 
         return back()->with('status', 'Document uploaded securely.');
     }
