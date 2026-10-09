@@ -56,6 +56,26 @@ class VendorRegistrationTest extends TestCase
         Mail::assertSent(VendorApplicationSubmittedMail::class, fn ($mail) => $mail->hasTo(config('vendor_onboarding.notify_email')));
     }
 
+    public function test_the_spam_trap_stops_bots_and_logs_them_but_is_hidden_from_autofill(): void
+    {
+        Mail::fake();
+        Storage::fake('local');
+        \Illuminate\Support\Facades\Log::spy();
+
+        // Hidden with display:none and a meaningless name, so browsers don't auto-fill it
+        $this->get(route('partners.register'))
+            ->assertSee('.vnd-hp { display: none !important; }', false)
+            ->assertDontSee('Company fax');
+
+        $this->fillForm(['car_hire'])->set('hp_check', '08011111111')->call('submit')
+            ->assertRedirect(route('partners.register.submitted'));
+
+        $this->assertSame(0, VendorApplication::count());
+        Mail::assertNothingSent();
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('warning')
+            ->withArgs(fn ($message, $context) => str_contains($message, 'spam trap') && $context['company'] === 'Ada Mobility Ltd');
+    }
+
     public function test_each_step_must_be_complete_before_moving_on(): void
     {
         Livewire::test(VendorRegistration::class)

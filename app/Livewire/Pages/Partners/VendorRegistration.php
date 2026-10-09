@@ -74,8 +74,13 @@ class VendorRegistration extends Component
 
     public bool $consent = false;
 
-    /** Honeypot: people never see this field, bots fill it */
-    public string $company_fax = '';
+    /**
+     * Honeypot: people never see this field, bots fill it. Its name and label
+     * mean nothing to browser autofill; an earlier "Company fax" label was
+     * auto-filled with the vendor's phone number, silently discarding real
+     * applications.
+     */
+    public string $hp_check = '';
 
     public function next(): void
     {
@@ -210,7 +215,15 @@ class VendorRegistration extends Component
             }
         }
 
-        if ($this->company_fax !== '') {
+        if ($this->hp_check !== '') {
+            // Logged, so a real vendor caught by this can be found and followed up
+            Log::warning('Vendor application discarded by the spam trap', [
+                'ip' => request()->ip(),
+                'company' => $this->form['registered_name'],
+                'contact_email' => $this->form['contact_email'],
+                'trap_value' => mb_substr($this->hp_check, 0, 50),
+            ]);
+
             return redirect()->route('partners.register.submitted');
         }
 

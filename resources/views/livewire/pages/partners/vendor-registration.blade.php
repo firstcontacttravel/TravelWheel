@@ -35,7 +35,8 @@
         .vnd-btn { background: var(--vnd-main); color: #fff; border: none; border-radius: 30px; padding: 10px 30px; font-weight: 600; }
         .vnd-btn:hover { background: rgba(9, 18, 100, 1); color: #fff; }
         .vnd-btn-light { background: #fff; color: var(--vnd-main); border: 1px solid var(--vnd-main); border-radius: 30px; padding: 10px 26px; font-weight: 600; }
-        .vnd-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+        /* display:none, so browsers never auto-fill it; only bots reading the HTML do */
+        .vnd-hp { display: none !important; }
 
         /* File upload: a tappable drop area instead of the browser's "Choose File" button */
         .vnd-upload { position: relative; display: flex; align-items: center; gap: 12px; border: 1.5px dashed #b9c0d8; border-radius: 10px; padding: 12px 14px; background: #fafbff; cursor: pointer; margin: 0; transition: border-color .15s, background .15s; }
@@ -126,7 +127,7 @@
 
         <form wire:submit.prevent="{{ $step === count($steps) ? 'submit' : 'next' }}" novalidate>
             <div class="vnd-hp" aria-hidden="true">
-                <label>Company fax <input type="text" wire:model="company_fax" tabindex="-1" autocomplete="off"></label>
+                <label>Leave this field empty <input type="text" name="hp_check" wire:model="hp_check" tabindex="-1" autocomplete="off"></label>
             </div>
 
             {{-- 1. Company --}}
