@@ -139,8 +139,8 @@
                                     <option value="Police Escort">Police Escort Request</option>
                                     <option value="Drop-off & Escort">Drop-off &amp; Escort</option>
                                 </select>
-                                @include('air.protocol.partials.vehicle-picker', ['suffix' => 'A'])
                             </div>
+                            @include('air.protocol.partials.vehicle-picker', ['suffix' => 'A'])
                             <div class="col-sm-6 protocol-field protocol-hide" id="departure_I">
                                 <label class="form-label">Optional Request</label>
                                 <select class="form-select" name="optinal_requestD">
@@ -149,8 +149,8 @@
                                     <option value="Police Escort">Police Escort Request</option>
                                     <option value="Pick-up & Escort">Pick-up &amp; Escort</option>
                                 </select>
-                                @include('air.protocol.partials.vehicle-picker', ['suffix' => 'D'])
                             </div>
+                            @include('air.protocol.partials.vehicle-picker', ['suffix' => 'D'])
                         </div>
 
                         <div class="protocol-subpanel mt-2">
@@ -226,8 +226,8 @@
                                     <option value="Police Escort">Police Escort Request</option>
                                     <option value="Pick-up & Escort">Pick-up &amp; Escort</option>
                                 </select>
-                                @include('air.protocol.partials.vehicle-picker', ['suffix' => 'D2'])
                             </div>
+                            @include('air.protocol.partials.vehicle-picker', ['suffix' => 'D2'])
                             <div class="col-sm-6 protocol-field protocol-hide" id="arrival_L">
                                 <label class="form-label">Optional Request</label>
                                 <select class="form-select" name="optinal_requestA2">
@@ -236,8 +236,8 @@
                                     <option value="Police Escort">Police Escort Request</option>
                                     <option value="Drop-off & Escort">Drop-off &amp; Escort</option>
                                 </select>
-                                @include('air.protocol.partials.vehicle-picker', ['suffix' => 'A2'])
                             </div>
+                            @include('air.protocol.partials.vehicle-picker', ['suffix' => 'A2'])
                         </div>
 
                         <div class="protocol-subpanel mt-2">
