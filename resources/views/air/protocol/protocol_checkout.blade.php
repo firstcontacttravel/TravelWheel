@@ -70,63 +70,24 @@
 
                     <div id="duplicate-container"></div>
 
-                    @if($dataform['airport'] == 'International Airport')
-                        @if(!empty($dataform['optinal_requestD']))
-                            <div class="protocol-subpanel">
-                                <div class="protocol-section-title"><x-ph-icon name="car" /> Pick-Up Details</div>
-                                <div class="row">
-                                    <div class="col-sm-6 protocol-field">
-                                        <label class="form-label">Pick-Up Location</label>
-                                        <input type="text" class="form-control" name="pickUpAddress" required>
-                                    </div>
-                                    <div class="col-sm-6 protocol-field">
-                                        <label class="form-label">Pick-Up Vehicle</label>
-                                        <input type="text" class="form-control" name="pickUpVehicle" value="{{ $optionalVehicle }}" required>
-                                        <input type="hidden" name="seaters" value="{{ $seaters }}">
-                                    </div>
+                    @if($vehicleDirection)
+                        @php $field = $vehicleDirection === 'Pick-Up' ? 'pickUp' : 'dropOff'; @endphp
+                        <div class="protocol-subpanel">
+                            <div class="protocol-section-title"><x-ph-icon name="{{ $vehicleDirection === 'Pick-Up' ? 'car' : 'car-profile' }}" /> {{ $vehicleDirection }} Details</div>
+                            <div class="row">
+                                <div class="col-sm-6 protocol-field">
+                                    <label class="form-label">{{ $vehicleDirection }} Location</label>
+                                    <input type="text" class="form-control" name="{{ $field }}Address" required>
+                                </div>
+                                <div class="col-sm-6 protocol-field">
+                                    <label class="form-label">{{ $vehicleDirection }} Vehicle</label>
+                                    <input type="text" class="form-control" name="{{ $field }}Vehicle" value="{{ $optionalVehicle }}" readonly>
+                                    <input type="hidden" name="seaters" value="{{ $seaters }}">
+                                    <input type="hidden" name="vehicle_price" value="{{ $vehiclePrice }}">
+                                    <small class="text-muted">{{ $seaters }} · {{ \App\Support\ProtocolVehicles::priceLabel($vehiclePrice) }} (not included in the protocol amount)</small>
                                 </div>
                             </div>
-                        @elseif(!empty($dataform['optinal_requestA']))
-                            <div class="protocol-subpanel">
-                                <div class="protocol-section-title"><x-ph-icon name="car-profile" /> Drop-Off Details</div>
-                                <div class="row">
-                                    <div class="col-sm-6 protocol-field">
-                                        <label class="form-label">Drop-Off Location</label>
-                                        <input type="text" class="form-control" name="dropOffAddress" required>
-                                    </div>
-                                    <div class="col-sm-6 protocol-field">
-                                        <label class="form-label">Drop-Off Vehicle</label>
-                                        <input type="text" class="form-control" name="dropOffVehicle" value="{{ $optionalVehicle }}" required>
-                                        <input type="hidden" name="seaters" value="{{ $seaters }}">
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-                    @elseif($dataform['airport'] == 'Local Airport')
-                        @if(!empty($dataform['optinal_requestD2']))
-                            <div class="protocol-subpanel">
-                                <div class="protocol-section-title"><x-ph-icon name="car" /> Pick-Up Details</div>
-                                <div class="row">
-                                    <div class="col-sm-6 protocol-field">
-                                        <label class="form-label">Pick-Up Location</label>
-                                        <input type="text" class="form-control" name="pickUpAddress" required>
-                                    </div>
-                                    <div class="col-sm-6 protocol-field">
-                                        <label class="form-label">Pick-Up Vehicle</label>
-                                        <input type="text" class="form-control" name="pickUpVehicle" value="{{ $optionalVehicle }}" required>
-                                        <input type="hidden" name="seaters" value="{{ $seaters }}">
-                                    </div>
-                                </div>
-                            </div>
-                        @elseif(!empty($dataform['optinal_requestA2']))
-                            <div class="protocol-subpanel">
-                                <div class="protocol-section-title"><x-ph-icon name="car-profile" /> Drop-Off Details</div>
-                                <div class="protocol-field">
-                                    <label class="form-label">Drop-Off Location</label>
-                                    <input type="text" class="form-control" name="dropOffAddress" required>
-                                </div>
-                            </div>
-                        @endif
+                        </div>
                     @endif
 
                     <div class="protocol-subpanel">
@@ -191,10 +152,11 @@
                         <input type="hidden" name="p_amount" value="{{ $total }}">
                     </div>
 
-                    @if(($dataform['optinal_requestD'] ?? false) || ($dataform['optinal_requestD2'] ?? false))
-                        <div class="protocol-note">Pick-up pricing is handled separately.</div>
-                    @elseif(($dataform['optinal_requestA'] ?? false) || ($dataform['optinal_requestA2'] ?? false))
-                        <div class="protocol-note">Drop-off pricing is handled separately.</div>
+                    @if($vehicleDirection)
+                        <div class="protocol-note">
+                            {{ $vehicleDirection === 'Pick-Up' ? 'Pick-up' : 'Drop-off' }} pricing is handled separately and is not included in the amount above:
+                            {{ $optionalVehicle }}, {{ \App\Support\ProtocolVehicles::priceLabel($vehiclePrice) }}.
+                        </div>
                     @endif
 
                     <button type="submit" class="protocol-btn w-100 mt-3">

@@ -27,6 +27,9 @@
 
 <section class="protocol-page">
     <div class="protocol-wrap">
+        @if (session('error'))
+            <div class="alert alert-danger">{{ session('error') }}</div>
+        @endif
         <div class="protocol-steps">
             <span class="protocol-step"><x-ph-icon name="map-pin" /> Select airport</span>
             <span class="protocol-step"><x-ph-icon name="tag" /> Choose plan</span>
@@ -136,6 +139,7 @@
                                     <option value="Police Escort">Police Escort Request</option>
                                     <option value="Drop-off & Escort">Drop-off &amp; Escort</option>
                                 </select>
+                                @include('air.protocol.partials.vehicle-picker', ['suffix' => 'A'])
                             </div>
                             <div class="col-sm-6 protocol-field protocol-hide" id="departure_I">
                                 <label class="form-label">Optional Request</label>
@@ -145,9 +149,8 @@
                                     <option value="Police Escort">Police Escort Request</option>
                                     <option value="Pick-up & Escort">Pick-up &amp; Escort</option>
                                 </select>
+                                @include('air.protocol.partials.vehicle-picker', ['suffix' => 'D'])
                             </div>
-                            <input type="hidden" name="optionalPriceA" id="optionalPriceA">
-                            <input type="hidden" name="optionalPriceD" id="optionalPriceD">
                         </div>
 
                         <div class="protocol-subpanel mt-2">
@@ -223,6 +226,7 @@
                                     <option value="Police Escort">Police Escort Request</option>
                                     <option value="Pick-up & Escort">Pick-up &amp; Escort</option>
                                 </select>
+                                @include('air.protocol.partials.vehicle-picker', ['suffix' => 'D2'])
                             </div>
                             <div class="col-sm-6 protocol-field protocol-hide" id="arrival_L">
                                 <label class="form-label">Optional Request</label>
@@ -232,9 +236,8 @@
                                     <option value="Police Escort">Police Escort Request</option>
                                     <option value="Drop-off & Escort">Drop-off &amp; Escort</option>
                                 </select>
+                                @include('air.protocol.partials.vehicle-picker', ['suffix' => 'A2'])
                             </div>
-                            <input type="hidden" name="optionalPriceD2" id="optionalPriceD2">
-                            <input type="hidden" name="optionalPriceA2" id="optionalPriceA2">
                         </div>
 
                         <div class="protocol-subpanel mt-2">
@@ -354,6 +357,23 @@ document.addEventListener('DOMContentLoaded', function () {
         updateAmount(numberInputL, amountprice, textValueL, selectedAmountL);
         numberInputL.addEventListener('input', () => updateAmount(numberInputL, amountprice, textValueL, selectedAmountL));
     }
+
+    // Pick-up / drop-off requests open the vehicle choice; a vehicle is then required
+    document.querySelectorAll('[data-vehicle-picker]').forEach(picker => {
+        const select = document.querySelector('select[name="optinal_request' + picker.dataset.vehiclePicker + '"]');
+        if (!select) return;
+        const radios = picker.querySelectorAll('input[type=radio]');
+        const sync = () => {
+            const show = /Pick-up|Drop-off/.test(select.value);
+            picker.classList.toggle('protocol-hide', !show);
+            radios.forEach(radio => {
+                radio.required = show;
+                if (!show) radio.checked = false;
+            });
+        };
+        select.addEventListener('change', sync);
+        sync();
+    });
 });
 </script>
 @endcomponent

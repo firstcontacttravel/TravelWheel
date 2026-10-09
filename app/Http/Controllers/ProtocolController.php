@@ -6,6 +6,7 @@ use App\Mail\ProtocolBookingMail;
 use App\Models\Protocol;
 use App\Models\ProtocolBooking;
 use App\Services\SeerbitPaymentService;
+use App\Support\ProtocolVehicles;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -95,30 +96,33 @@ class ProtocolController extends Controller
         $optinal_request  = 'None';
         $optionalVehicle  = 'None';
         $seaters          = 'None';
+        $vehiclePrice     = null;
+        $vehicleDirection = null; // 'Pick-Up' or 'Drop-Off' when the request needs a vehicle
 
-        $vehicleMap = [
-            'Up to 3 Seaters'  => 'Saloon Comfort',
-            'Up to 3  Seaters' => 'SUV Business',
-            'Up to 5 Seaters'  => 'Mini Van',
-        ];
-
-        $optionalFields = [
-            ['request' => 'optinal_requestA',  'price' => 'optionalPriceA'],
-            ['request' => 'optinal_requestD',  'price' => 'optionalPriceD'],
-            ['request' => 'optinal_requestA2', 'price' => 'optionalPriceA2'],
-            ['request' => 'optinal_requestD2', 'price' => 'optionalPriceD2'],
-        ];
-
-        foreach ($optionalFields as $field) {
-            if (! empty($dataform[$field['request']])) {
-                $optinal_request = $dataform[$field['request']];
-                $seaters         = $dataform[$field['price']] ?? 'None';
-                $optionalVehicle = $vehicleMap[$seaters] ?? 'None';
-                break;
+        // Only the select for the chosen airport type and service is filled in
+        foreach (['A', 'D', 'A2', 'D2'] as $suffix) {
+            if (empty($dataform['optinal_request'.$suffix])) {
+                continue;
             }
+
+            $optinal_request = $dataform['optinal_request'.$suffix];
+
+            if (ProtocolVehicles::needsVehicle($optinal_request)) {
+                $vehicleDirection = str_contains($optinal_request, 'Pick-up') ? 'Pick-Up' : 'Drop-Off';
+                $vehicle = ProtocolVehicles::find($dataform['optional_vehicle'.$suffix] ?? null);
+
+                if (! $vehicle) {
+                    return back()->withInput()->with('error', 'Please choose a vehicle for your '.strtolower($vehicleDirection).' request.');
+                }
+
+                $optionalVehicle = $vehicle['name'];
+                $seaters         = 'Up to '.$vehicle['seats'].' Seaters';
+                $vehiclePrice    = $vehicle['price'];
+            }
+            break;
         }
 
-        return view('air.protocol.protocol_checkout', compact('dataform', 'optinal_request', 'optionalVehicle', 'seaters'));
+        return view('air.protocol.protocol_checkout', compact('dataform', 'optinal_request', 'optionalVehicle', 'seaters', 'vehiclePrice', 'vehicleDirection'));
     }
 
     public function makePurchase(Request $request)
@@ -235,7 +239,7 @@ class ProtocolController extends Controller
             'amount'                 => (float) str_replace(',', '', (string) ($dataform['c_amount'] ?? 0)),
             'vat'                    => (float) ($dataform['vat'] ?? 0),
             'optional_request'       => $dataform['optional_request'] ?? 'None',
-            'optionalRequestOption'  => $dataform['pickUpVehicle'] ?? $dataform['dropOffVehicle'] ?? null,
+            'optionalRequestOption'  => $this->vehicleSummary($dataform),
             'optionalRequestAddress' => $dataform['pickUpAddress'] ?? $dataform['dropOffAddress'] ?? null,
             'reservationCode'        => $pnrs,
             'eTicketNo'              => $ticketNos,
@@ -278,5 +282,21 @@ class ProtocolController extends Controller
     public function protocol_success()
     {
         return view('air.protocol.protocol_success');
+    }
+
+    /** e.g. "Saloon Comfort (Up to 3 Seaters) - ₦25,000, not included in protocol amount" */
+    private function vehicleSummary(array $dataform): ?string
+    {
+        $vehicle = $dataform['pickUpVehicle'] ?? $dataform['dropOffVehicle'] ?? null;
+        if (blank($vehicle)) {
+            return null;
+        }
+
+        $seaters = $dataform['seaters'] ?? null;
+        $price = filled($dataform['vehicle_price'] ?? null) ? (float) $dataform['vehicle_price'] : null;
+
+        return $vehicle
+            .(filled($seaters) && $seaters !== 'None' ? " ($seaters)" : '')
+            .' - '.ProtocolVehicles::priceLabel($price).', not included in protocol amount';
     }
 }
