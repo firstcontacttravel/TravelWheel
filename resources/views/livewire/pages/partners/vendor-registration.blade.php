@@ -18,7 +18,8 @@
         .vnd-card h3 { color: var(--vnd-main); font-size: 1rem; font-weight: 700; margin: 1.5rem 0 .75rem; }
         .vnd-page label.form-label { font-weight: 600; font-size: .9rem; color: #222; }
         .vnd-req { color: #d33; }
-        .vnd-option { display: flex; align-items: flex-start; gap: 10px; border: 1px solid #dfe3ee; border-radius: 10px; padding: 10px 12px; cursor: pointer; height: 100%; margin: 0; }
+        .vnd-option { display: flex; align-items: flex-start; gap: 10px; border: 1px solid #dfe3ee; border-radius: 10px; padding: 10px 12px; cursor: pointer; height: 100%; margin: 0; color: #222; font-size: .92rem; background: #fff; transition: border-color .15s, background .15s; }
+        .vnd-option:hover { border-color: #b9c0d8; }
         .vnd-option input { margin-top: 3px; flex-shrink: 0; }
         .vnd-option:has(input:checked) { border-color: var(--vnd-main); background: #f1f3fc; }
         .vnd-option small { display: block; color: #6b7080; font-weight: 400; }
@@ -35,15 +36,62 @@
         .vnd-btn:hover { background: rgba(9, 18, 100, 1); color: #fff; }
         .vnd-btn-light { background: #fff; color: var(--vnd-main); border: 1px solid var(--vnd-main); border-radius: 30px; padding: 10px 26px; font-weight: 600; }
         .vnd-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+        /* File upload: a tappable drop area instead of the browser's "Choose File" button */
+        .vnd-upload { position: relative; display: flex; align-items: center; gap: 12px; border: 1.5px dashed #b9c0d8; border-radius: 10px; padding: 12px 14px; background: #fafbff; cursor: pointer; margin: 0; transition: border-color .15s, background .15s; }
+        .vnd-upload:hover, .vnd-upload:focus-within { border-color: var(--vnd-main); background: #f1f3fc; }
+        .vnd-upload.is-invalid { border-color: #dc3545; background: #fff7f7; }
+        .vnd-upload input[type=file] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        .vnd-upload-icon { width: 40px; height: 40px; flex-shrink: 0; border-radius: 10px; background: #e9ecfa; color: var(--vnd-main); display: grid; place-items: center; font-size: 18px; }
+        .vnd-upload-text { display: flex; flex-direction: column; line-height: 1.3; min-width: 0; }
+        .vnd-upload-text strong { color: var(--vnd-main); font-size: .9rem; }
+        .vnd-upload-text small { color: #6b7080; font-size: .78rem; }
+        .vnd-uploaded { display: flex; align-items: center; gap: 12px; border: 1px solid #bfe5cf; background: #f0faf4; border-radius: 10px; padding: 10px 14px; }
+        .vnd-uploaded .vnd-upload-icon { background: #d5f0e0; color: var(--vnd-green); }
+        .vnd-uploaded .vnd-file { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: normal; }
+        .vnd-replace { background: none; border: 0; color: var(--vnd-main); font-size: .82rem; font-weight: 600; padding: 4px 0; flex-shrink: 0; }
+
+        /* Phone progress: one bar and "Step x of 7" instead of seven cramped labels */
+        .vnd-progress-mobile { display: none; margin-bottom: 1rem; }
+        .vnd-progress-mobile .label { display: flex; justify-content: space-between; align-items: baseline; font-size: .82rem; color: #6b7080; margin-bottom: 6px; }
+        .vnd-progress-mobile .label strong { color: var(--vnd-main); font-size: .95rem; }
+        .vnd-progress-mobile .track { height: 6px; border-radius: 6px; background: #dfe3ee; overflow: hidden; }
+        .vnd-progress-mobile .fill { height: 100%; border-radius: 6px; background: var(--vnd-main); transition: width .3s; }
+
         /* The site menu is shorter below 768px, where it collapses to a menu button */
-        @media (max-width: 767px) { .vnd-page { padding-top: 40px; } }
-        @media (max-width: 576px) { .vnd-card { padding: 20px 16px; } .vnd-head h1 { font-size: 1.5rem; } }
+        @media (max-width: 767px) {
+            .vnd-page { padding: 28px 0 0; }
+            .vnd-steps { display: none; }
+            .vnd-progress-mobile { display: block; }
+            .vnd-head h1 { font-size: 1.4rem; line-height: 1.25; }
+            .vnd-head p { font-size: .9rem; margin-bottom: 1.1rem; }
+            .vnd-card { padding: 20px 16px; border-radius: 12px; margin-bottom: 14px; }
+            .vnd-card h2 { font-size: 1.08rem; }
+            .vnd-card h3 { font-size: .95rem; margin-top: 1.25rem; }
+            /* 16px stops iPhones zooming into a field when it is tapped */
+            .vnd-page .form-control, .vnd-page .form-select { font-size: 16px; }
+            .vnd-page .row.g-2 { --bs-gutter-y: .4rem; }
+            .vnd-option { padding: 10px 12px; }
+            .vnd-doc { padding: 12px; }
+            /* Back / Continue stay within thumb reach at the bottom of the screen */
+            .vnd-nav { position: sticky; bottom: 0; z-index: 5; margin: 0 -16px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: #fff; box-shadow: 0 -4px 16px rgba(13, 24, 131, .08); }
+            .vnd-nav > * { flex: 1; }
+            .vnd-btn, .vnd-btn-light { padding: 12px 16px; }
+            .vnd-nav > span:empty { display: none; }
+        }
     </style>
 
     <div class="vnd-wrap">
         <div class="vnd-head">
             <h1>Vendor / Partner Registration</h1>
-            <p>Thank you for your interest in partnering with TravelWheel. Complete the sections that apply to you and upload your supporting documents. It takes about 15–20 minutes; have your company documents ready before you start.</p>
+            @if ($step === 1)
+                <p>Thank you for your interest in partnering with TravelWheel. Complete the sections that apply to you and upload your supporting documents. It takes about 15–20 minutes; have your company documents ready before you start.</p>
+            @endif
+        </div>
+
+        <div class="vnd-progress-mobile" aria-hidden="true">
+            <div class="label"><strong>{{ $steps[$step] }}</strong><span>Step {{ $step }} of {{ count($steps) }}</span></div>
+            <div class="track"><div class="fill" style="width: {{ round($step / count($steps) * 100) }}%"></div></div>
         </div>
 
         <ol class="vnd-steps" aria-label="Progress">
@@ -322,13 +370,24 @@
                                 <div class="row g-2 align-items-center">
                                     <div class="{{ $doc['expires'] ? 'col-md-8' : 'col-12' }}">
                                         @if (isset($uploads[$type]) && method_exists($uploads[$type], 'getClientOriginalName'))
-                                            <div class="d-flex align-items-center gap-3">
-                                                <span class="vnd-file">&#10003; {{ $uploads[$type]->getClientOriginalName() }}</span>
-                                                <button type="button" class="btn btn-link btn-sm p-0" wire:click="removeUpload('{{ $type }}')">Replace</button>
+                                            <div class="vnd-uploaded">
+                                                <span class="vnd-upload-icon"><i class="fa-solid fa-check"></i></span>
+                                                <span class="vnd-file" title="{{ $uploads[$type]->getClientOriginalName() }}">{{ $uploads[$type]->getClientOriginalName() }}</span>
+                                                <button type="button" class="vnd-replace" wire:click="removeUpload('{{ $type }}')">Replace</button>
                                             </div>
                                         @else
-                                            <input type="file" class="form-control @error("uploads.$type") is-invalid @enderror" wire:model="uploads.{{ $type }}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">
-                                            <div wire:loading wire:target="uploads.{{ $type }}" class="small text-muted mt-1">Uploading…</div>
+                                            <label class="vnd-upload @error("uploads.$type") is-invalid @enderror">
+                                                <input type="file" wire:model="uploads.{{ $type }}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" aria-label="{{ $doc['label'] }}">
+                                                <span class="vnd-upload-icon">
+                                                    <i class="fa-solid fa-cloud-arrow-up" wire:loading.remove wire:target="uploads.{{ $type }}"></i>
+                                                    <span class="spinner-border spinner-border-sm" wire:loading wire:target="uploads.{{ $type }}"></span>
+                                                </span>
+                                                <span class="vnd-upload-text">
+                                                    <strong wire:loading.remove wire:target="uploads.{{ $type }}">Choose a file</strong>
+                                                    <strong wire:loading wire:target="uploads.{{ $type }}">Uploading…</strong>
+                                                    <small>PDF, JPG, PNG, Word or Excel · up to 10 MB</small>
+                                                </span>
+                                            </label>
                                         @endif
                                         @error("uploads.$type") <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                     </div>
