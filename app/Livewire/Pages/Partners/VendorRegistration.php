@@ -484,6 +484,12 @@ class VendorRegistration extends Component
                         continue;
                     }
 
+                    // Read everything about the upload first: storing it moves the
+                    // temporary file away, after which it has no size or type to read
+                    $originalName = $file->getClientOriginalName();
+                    $mimeType = $file->getMimeType();
+                    $size = $file->getSize();
+
                     $path = $file->storeAs(
                         "vendor-applications/$reference",
                         $type.'-'.bin2hex(random_bytes(4)).'.'.strtolower($file->getClientOriginalExtension()),
@@ -497,9 +503,9 @@ class VendorRegistration extends Component
                         'label' => $doc['label'],
                         'disk' => 'local',
                         'path' => $path,
-                        'original_name' => $file->getClientOriginalName(),
-                        'mime_type' => $file->getMimeType(),
-                        'size' => $file->getSize(),
+                        'original_name' => $originalName,
+                        'mime_type' => $mimeType,
+                        'size' => $size,
                         'expires_on' => $doc['expires'] ? ($this->expiries[$type] ?? null ?: null) : null,
                     ]);
                 }
