@@ -135,6 +135,23 @@ class SkylinkFareRefreshTest extends TestCase
             ->assertSessionHasErrors(['error' => SkylinkFareRefresh::UNCONFIRMED]);
     }
 
+    /**
+     * Pricing never sent the cabin, so SkyLink priced every fare at its
+     * default, economy: a business fare showed one price on the results card
+     * and another once selected.
+     */
+    public function test_selecting_a_fare_prices_it_in_the_cabin_that_was_searched(): void
+    {
+        $this->fakeSkylink();
+        $criteria = ['trip' => 'oneway', 'adults' => 1, 'childs' => 0, 'kids' => 0, 'flight_type' => 'C'];
+        $searched = FlightMarkup::apply(app(SkylinkFlightService::class)->mapSearchResult($this->rawFlight('btk_original', 'AT576'), $criteria));
+
+        $this->assertFalse(app(SkylinkFlightService::class)->select('btk_original', $searched, $criteria)['error']);
+
+        Http::assertSent(fn (Request $request): bool => str_ends_with($request->url(), 'flights/pricing')
+            && $request['class'] === 'business');
+    }
+
     // ── Fixtures ─────────────────────────────────────────────────────────
 
     private function booking(array $overrides = []): FlightBooking

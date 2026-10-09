@@ -186,6 +186,10 @@ class SkylinkFlightService implements FlightSupplier
         ];
 
         $priceResult = $this->price($fareSourceCode, $passengers, [
+            // The cabin searched, or price() falls back to SkyLink's default of
+            // economy and a business fare comes back priced (and possibly
+            // shifted) as economy — a different number from the results card.
+            'class' => $this->mapCabinClass((string) ($criteria['flight_type'] ?? 'Y')),
             'context' => [
                 'route' => FlightDisplay::route($searchedFlight),
                 'cabin' => FlightDisplay::cabin($searchedFlight),
