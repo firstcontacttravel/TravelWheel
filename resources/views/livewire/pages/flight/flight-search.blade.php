@@ -125,7 +125,7 @@
             <a class="tw-product-tab" href="{{ route('air.insurance') }}"><img src="{{ asset('assets/Insurance 70.png') }}" alt=""><span>Insurance</span></a>
             <a class="tw-product-tab" href="{{ route('air.visa') }}"><img src="{{ asset('assets/Visa 70.png') }}" alt=""><span>Visa</span></a>
             <a class="tw-product-tab" href="{{ route('air.cargo') }}"><img src="{{ asset('assets/Air Cargo 70.png') }}" alt=""><span>Cargo</span></a>
-            <a class="tw-product-tab" href="{{ route('air.support') }}"><img src="{{ asset('assets/Support 70.png') }}" alt=""><span>Support</span></a>
+            <a class="tw-product-tab" href="{{ route('air.support') }}"><img src="{{ asset('assets/Support 70.png') }}" alt=""><span>Travel Assist</span></a>
             <a class="tw-product-tab" href="{{ route('air.carhire') }}"><img src="{{ asset('assets/Car Hire 70.png') }}" alt=""><span>Car Hire</span></a>
 
         </div>

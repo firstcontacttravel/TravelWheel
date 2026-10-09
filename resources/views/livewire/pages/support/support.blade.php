@@ -18,12 +18,12 @@
             <a href="{{ route('air.insurance') }}"><img src="{{ asset('assets/Insurance 70.png') }}" alt=""><span>Insurance</span></a>
             <a href="{{ route('air.visa') }}"><img src="{{ asset('assets/Visa 70.png') }}" alt=""><span>Visa</span></a>
             <a href="{{ route('air.cargo') }}"><img src="{{ asset('assets/Air Cargo 70.png') }}" alt=""><span>Cargo</span></a>
-            <a class="active" href="{{ route('air.support') }}" aria-current="page"><img src="{{ asset('assets/Support 70.png') }}" alt=""><span>Support</span></a>
+            <a class="active" href="{{ route('air.support') }}" aria-current="page"><img src="{{ asset('assets/Support 70.png') }}" alt=""><span>Travel Assist</span></a>
             <a href="{{ route('air.carhire') }}"><img src="{{ asset('assets/Car Hire 70.png') }}" alt=""><span>Car Hire</span></a>  
         </nav>
 
         <div class="vw-card">
-            <h3 class="support-heading">Support Products</h3>
+            <h3 class="support-heading">Travel Assist</h3>
             <p class="support-subheading">Pick a service below to select options and fill in your details.</p>
 
             <div class="support-cards-grid">

@@ -56,8 +56,8 @@ class MainNav extends Component
             'route' => 'air.carhire'
         ],
         [
-            'name' => 'Support',
-            'subtitle' => 'Flex',
+            'name' => 'Travel',
+            'subtitle' => 'Assist',
             'icon' => 'Support 70.png',
             'route' => 'air.support'
         ],

@@ -9,6 +9,6 @@ class Support extends Component
     public function render()
     {
         return view('livewire.pages.support.support')
-            ->layout('layouts.app', ['title' => 'Support - TravelWheel']);
+            ->layout('layouts.app', ['title' => 'Travel Assist - TravelWheel']);
     }
 }

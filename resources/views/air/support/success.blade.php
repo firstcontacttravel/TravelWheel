@@ -34,7 +34,7 @@
         <p class="support-success-message mt-3">Your request has been received successfully. Our support team will be in touch shortly.</p>
 
         <div class="mt-4">
-            <a href="{{ route('air.support') }}" class="btn support-success-btn px-4 py-2 rounded-pill">Return to Support</a>
+            <a href="{{ route('air.support') }}" class="btn support-success-btn px-4 py-2 rounded-pill">Return to Travel Assist</a>
         </div>
     </div>
 </section>
