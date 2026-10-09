@@ -99,6 +99,34 @@ class VendorRegistrationTest extends TestCase
         $component->set('details.flights.cabins', ['Business'])->assertSet('details.flights.cabins', ['Business']);
     }
 
+    public function test_an_oversized_or_wrong_type_file_is_refused_as_soon_as_it_is_chosen(): void
+    {
+        Storage::fake('local');
+        $component = Livewire::test(VendorRegistration::class)->set('form.services', ['car_hire'])->set('step', 6);
+        $limitKb = VendorRegistration::maxUploadKb();
+
+        $component->set('uploads.company_profile', UploadedFile::fake()->create('profile.pdf', $limitKb + 500, 'application/pdf'))
+            ->assertHasErrors(['uploads.company_profile' => 'max'])
+            ->assertSee('The maximum is '.VendorRegistration::maxUploadLabel())
+            ->assertSet('uploads.company_profile', null);   // dropped, so the box is ready for another file
+
+        $component->set('uploads.terms', UploadedFile::fake()->create('terms.exe', 10))
+            ->assertHasErrors(['uploads.terms' => 'mimes'])
+            ->assertSee('This file type is not accepted');
+
+        $component->set('uploads.terms', UploadedFile::fake()->create('terms.pdf', 200, 'application/pdf'))
+            ->assertHasNoErrors('uploads.terms');
+    }
+
+    public function test_the_upload_limit_is_stated_and_never_above_the_servers_own_limit(): void
+    {
+        $this->assertLessThanOrEqual(10240, VendorRegistration::maxUploadKb());
+
+        Livewire::test(VendorRegistration::class)->set('form.services', ['car_hire'])->set('step', 6)
+            ->assertSee('up to '.VendorRegistration::maxUploadLabel().' each')
+            ->assertSeeHtml('data-max-bytes="'.(VendorRegistration::maxUploadKb() * 1024).'"');
+    }
+
     public function test_an_expired_document_is_refused(): void
     {
         Storage::fake('local');

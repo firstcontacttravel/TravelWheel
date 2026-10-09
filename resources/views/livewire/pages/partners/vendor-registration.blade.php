@@ -49,6 +49,7 @@
         .vnd-uploaded { display: flex; align-items: center; gap: 12px; border: 1px solid #bfe5cf; background: #f0faf4; border-radius: 10px; padding: 10px 14px; }
         .vnd-uploaded .vnd-upload-icon { background: #d5f0e0; color: var(--vnd-green); }
         .vnd-uploaded .vnd-file { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; word-break: normal; }
+        .vnd-file-size { color: #6b7080; font-weight: 400; }
         .vnd-replace { background: none; border: 0; color: var(--vnd-main); font-size: .82rem; font-weight: 600; padding: 4px 0; flex-shrink: 0; }
 
         /* Phone progress: one bar and "Step x of 7" instead of seven cramped labels */
@@ -369,7 +370,7 @@
             @if ($step === 6)
                 <div class="vnd-card">
                     <h2>6. Supporting documents</h2>
-                    <p class="vnd-sub">PDF, image, Word or Excel files, up to 10 MB each. Documents marked <span class="vnd-badge req">Required</span> must be attached; the rest are where applicable.</p>
+                    <p class="vnd-sub">Accepted files: PDF, JPG, PNG, Word or Excel, <strong>up to {{ $maxUploadLabel }} each</strong>. Scanned documents are usually well under this; if a file is larger, compress it or save it at a lower resolution first. Documents marked <span class="vnd-badge req">Required</span> must be attached; the rest are where applicable.</p>
 
                     @php $grouped = collect($documents)->groupBy(fn ($doc) => $doc['service'] ? $services[$doc['service']]['label'] : 'Company & compliance', preserveKeys: true); @endphp
                     @foreach ($grouped as $group => $docs)
@@ -384,12 +385,13 @@
                                         @if (isset($uploads[$type]) && method_exists($uploads[$type], 'getClientOriginalName'))
                                             <div class="vnd-uploaded">
                                                 <span class="vnd-upload-icon"><i class="fa-solid fa-check"></i></span>
-                                                <span class="vnd-file" title="{{ $uploads[$type]->getClientOriginalName() }}">{{ $uploads[$type]->getClientOriginalName() }}</span>
+                                                <span class="vnd-file" title="{{ $uploads[$type]->getClientOriginalName() }}">{{ $uploads[$type]->getClientOriginalName() }} <span class="vnd-file-size">({{ \Illuminate\Support\Number::fileSize($uploads[$type]->getSize(), precision: 1) }})</span></span>
                                                 <button type="button" class="vnd-replace" wire:click="removeUpload('{{ $type }}')">Replace</button>
                                             </div>
                                         @else
                                             <label class="vnd-upload @error("uploads.$type") is-invalid @enderror">
-                                                <input type="file" wire:model="uploads.{{ $type }}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx" aria-label="{{ $doc['label'] }}">
+                                                <input type="file" wire:model="uploads.{{ $type }}" accept="{{ collect($uploadExtensions)->map(fn ($ext) => '.'.$ext)->implode(',') }}" aria-label="{{ $doc['label'] }}"
+                                                       data-max-bytes="{{ $maxUploadBytes }}" data-max-label="{{ $maxUploadLabel }}" data-extensions="{{ implode(',', $uploadExtensions) }}">
                                                 <span class="vnd-upload-icon">
                                                     <i class="fa-solid fa-cloud-arrow-up" wire:loading.remove wire:target="uploads.{{ $type }}"></i>
                                                     <span class="spinner-border spinner-border-sm" wire:loading wire:target="uploads.{{ $type }}"></span>
@@ -397,10 +399,11 @@
                                                 <span class="vnd-upload-text">
                                                     <strong wire:loading.remove wire:target="uploads.{{ $type }}">Choose a file</strong>
                                                     <strong wire:loading wire:target="uploads.{{ $type }}">Uploading…</strong>
-                                                    <small>PDF, JPG, PNG, Word or Excel · up to 10 MB</small>
+                                                    <small>PDF, JPG, PNG, Word or Excel · max {{ $maxUploadLabel }}</small>
                                                 </span>
                                             </label>
                                         @endif
+                                        <div class="invalid-feedback d-block" data-upload-error hidden></div>
                                         @error("uploads.$type") <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                                     </div>
                                     @if ($doc['expires'])
@@ -461,5 +464,53 @@
         document.addEventListener('livewire:init', () => {
             Livewire.on('vendor-step-changed', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
         });
+
+        // Check each file in the browser before it uploads: an oversized or wrong-type
+        // file is refused at once with the reason, instead of failing part-way.
+        (() => {
+            const errorFor = input => input.closest('.vnd-doc')?.querySelector('[data-upload-error]');
+            const show = (input, message) => {
+                const box = errorFor(input);
+                if (box) { box.textContent = message; box.hidden = !message; }
+                input.closest('.vnd-upload')?.classList.toggle('is-invalid', !!message);
+            };
+            const mb = bytes => (bytes / 1048576).toFixed(1) + ' MB';
+
+            // Capture phase: runs before Livewire's own listener, so a refused file never uploads
+            document.addEventListener('change', e => {
+                const input = e.target;
+                if (!input.matches?.('input[type=file][data-max-bytes]')) return;
+                const file = input.files?.[0];
+                if (!file) return;
+
+                const ext = (file.name.split('.').pop() || '').toLowerCase();
+                const allowed = input.dataset.extensions.split(',');
+                let problem = '';
+                if (!allowed.includes(ext)) {
+                    problem = '"' + file.name + '" is not an accepted file type. Please upload a PDF, JPG, PNG, Word or Excel file.';
+                } else if (file.size > Number(input.dataset.maxBytes)) {
+                    problem = '"' + file.name + '" is ' + mb(file.size) + '. The maximum is ' + input.dataset.maxLabel + ' per file; please compress it or upload a smaller copy.';
+                } else if (file.size === 0) {
+                    problem = '"' + file.name + '" is empty. Please choose the file again.';
+                }
+
+                if (problem) {
+                    e.stopImmediatePropagation();
+                    input.value = '';
+                    show(input, problem);
+                } else {
+                    show(input, '');
+                }
+            }, true);
+
+            // A dropped connection or a server limit can still stop an upload; say so plainly
+            document.addEventListener('livewire-upload-error', e => {
+                const input = e.target;
+                if (input.matches?.('input[type=file][data-max-bytes]')) {
+                    input.value = '';
+                    show(input, 'The upload did not complete. Check your connection and try again; files must be ' + input.dataset.maxLabel + ' or smaller.');
+                }
+            });
+        })();
     </script>
 </div>

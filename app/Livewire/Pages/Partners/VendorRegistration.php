@@ -35,7 +35,11 @@ class VendorRegistration extends Component
         7 => 'Declaration',
     ];
 
-    private const UPLOAD_RULE = 'file|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx|max:10240';
+    /** File types vendors may upload; checked in the browser and again on the server. */
+    public const UPLOAD_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx', 'xls', 'xlsx'];
+
+    /** Our own cap per file, in KB. The server's PHP limits can lower it (see maxUploadKb). */
+    private const MAX_UPLOAD_KB = 10240;
 
     public int $step = 1;
 
@@ -118,6 +122,83 @@ class VendorRegistration extends Component
         unset($this->uploads[$type]);
     }
 
+    /**
+     * Check each file as soon as it arrives, so a vendor learns at once that
+     * a file is too big or the wrong type, rather than on "Continue". A
+     * refused file is dropped so the box is ready for another.
+     */
+    public function updatedUploads(mixed $value, string $type): void
+    {
+        $rule = $this->documentRules()[0]["uploads.$type"] ?? null;
+        if ($rule === null) {
+            return;
+        }
+
+        try {
+            $this->validateOnly("uploads.$type", ["uploads.$type" => $rule], $this->uploadMessages(), $this->documentRules()[1]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            unset($this->uploads[$type]);
+            throw $e;
+        }
+    }
+
+    /**
+     * The largest file we accept, in KB: our 10 MB cap, or less if this
+     * server's PHP upload limits are lower, so a file never gets past our
+     * check only to be cut off by the server.
+     */
+    public static function maxUploadKb(): int
+    {
+        $limits = [self::MAX_UPLOAD_KB];
+
+        foreach (['upload_max_filesize', 'post_max_size'] as $setting) {
+            $bytes = self::iniBytes((string) ini_get($setting));
+            if ($bytes > 0) {
+                $limits[] = intdiv($bytes, 1024);
+            }
+        }
+
+        return min($limits);
+    }
+
+    public static function maxUploadLabel(): string
+    {
+        $kb = self::maxUploadKb();
+
+        return $kb >= 1024 ? rtrim(rtrim(number_format($kb / 1024, 1), '0'), '.').' MB' : $kb.' KB';
+    }
+
+    private static function iniBytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '' || $value === '0' || $value === '-1') {
+            return 0;
+        }
+
+        $number = (float) $value;
+
+        return (int) match (strtolower(substr($value, -1))) {
+            'g' => $number * 1024 ** 3,
+            'm' => $number * 1024 ** 2,
+            'k' => $number * 1024,
+            default => $number,
+        };
+    }
+
+    private function uploadRule(): string
+    {
+        return 'file|mimes:'.implode(',', self::UPLOAD_EXTENSIONS).'|max:'.self::maxUploadKb();
+    }
+
+    private function uploadMessages(): array
+    {
+        return [
+            'uploads.*.max' => 'This file is too large. The maximum is '.self::maxUploadLabel().' per file; please compress it or upload a smaller copy.',
+            'uploads.*.mimes' => 'This file type is not accepted. Please upload a PDF, JPG, PNG, Word or Excel file.',
+            'uploads.*.uploaded' => 'The upload failed, usually because the file is too large (maximum '.self::maxUploadLabel().'). Please try a smaller file.',
+        ];
+    }
+
     public function submit()
     {
         foreach (array_keys(self::STEPS) as $step) {
@@ -191,6 +272,7 @@ class VendorRegistration extends Component
             'expiries.*.after' => 'This document has expired. Please upload a current one.',
             'form.services.required' => 'Choose at least one service you want to offer.',
             'form.booking_channels.required' => 'Choose at least one way to receive bookings.',
+            ...$this->uploadMessages(),
         ];
 
         $this->validate($rules, $messages, $attributes);
@@ -342,7 +424,7 @@ class VendorRegistration extends Component
         $attributes = [];
 
         foreach ($this->documentList() as $type => $doc) {
-            $rules["uploads.$type"] = ($doc['required'] ? 'required|' : 'nullable|').self::UPLOAD_RULE;
+            $rules["uploads.$type"] = ($doc['required'] ? 'required|' : 'nullable|').$this->uploadRule();
             $attributes["uploads.$type"] = strtolower($doc['label']);
 
             if ($doc['expires']) {
@@ -446,6 +528,9 @@ class VendorRegistration extends Component
             'rateModels' => config('vendor_onboarding.rate_models'),
             'currencies' => config('vendor_onboarding.settlement_currencies'),
             'documents' => $this->step === 6 ? $this->documentList() : [],
+            'maxUploadLabel' => self::maxUploadLabel(),
+            'maxUploadBytes' => self::maxUploadKb() * 1024,
+            'uploadExtensions' => self::UPLOAD_EXTENSIONS,
         ])->layout('layouts.app', ['title' => 'Partner Registration - TravelWheel']);
     }
 }
