@@ -358,11 +358,30 @@ document.addEventListener('DOMContentLoaded', function () {
         numberInputL.addEventListener('input', () => updateAmount(numberInputL, amountprice, textValueL, selectedAmountL));
     }
 
-    // Pick-up / drop-off requests open the vehicle choice; a vehicle is then required
+    // Pick-up / drop-off requests show the vehicle dropdown; a vehicle is then required
     document.querySelectorAll('[data-vehicle-picker]').forEach(picker => {
         const select = document.querySelector('select[name="optinal_request' + picker.dataset.vehiclePicker + '"]');
         if (!select) return;
         const radios = picker.querySelectorAll('input[type=radio]');
+        const toggle = picker.querySelector('[data-vehicle-toggle]');
+        const placeholder = picker.querySelector('[data-vehicle-placeholder]');
+        const chosen = picker.querySelector('[data-vehicle-chosen]');
+
+        const setOpen = open => {
+            picker.classList.toggle('is-open', open);
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        };
+        const showChoice = () => {
+            const checked = picker.querySelector('input[type=radio]:checked');
+            placeholder.classList.toggle('d-none', !!checked);
+            chosen.classList.toggle('d-none', !checked);
+            chosen.innerHTML = '';
+            if (checked) {
+                const row = checked.closest('.protocol-vehicle');
+                chosen.append(row.querySelector('img').cloneNode(), row.querySelector('[data-vehicle-summary]').cloneNode(true));
+                picker.classList.remove('is-invalid');
+            }
+        };
         const sync = () => {
             const show = /Pick-up|Drop-off/.test(select.value);
             picker.classList.toggle('protocol-hide', !show);
@@ -370,7 +389,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 radio.required = show;
                 if (!show) radio.checked = false;
             });
+            if (!show) setOpen(false);
+            showChoice();
         };
+
+        toggle.addEventListener('click', () => setOpen(!picker.classList.contains('is-open')));
+        radios.forEach(radio => {
+            radio.addEventListener('change', () => { showChoice(); setOpen(false); toggle.focus(); });
+            // Submitting without a vehicle: open the list so the browser can point at it
+            radio.addEventListener('invalid', () => { picker.classList.add('is-invalid'); setOpen(true); });
+        });
+        document.addEventListener('click', e => { if (!picker.contains(e.target)) setOpen(false); });
+        picker.addEventListener('keydown', e => { if (e.key === 'Escape') { setOpen(false); toggle.focus(); } });
+
         select.addEventListener('change', sync);
         sync();
     });
