@@ -173,6 +173,21 @@ Route::middleware('auth')->prefix('admin/visa-documents')->name('admin.visa.docu
     Route::get('/requested/{documentRequest}', [AdminVisaDocumentController::class, 'requested'])->name('requested');
     Route::get('/issued/{document}', [AdminVisaDocumentController::class, 'issued'])->name('issued');
 });
+// Vendor / partner registration: the form we send suppliers, and staff downloads of what they upload
+Route::get('/partners/register', \App\Livewire\Pages\Partners\VendorRegistration::class)->name('partners.register');
+Route::view('/partners/register/submitted', 'partners.submitted')->name('partners.register.submitted');
+Route::get('/admin/vendor-documents/{document}', function (\App\Models\VendorApplicationDocument $document) {
+    $panel = \Filament\Facades\Filament::getPanel('admin');
+    // There is no plain `login` route on this site; signing in happens on the admin panel
+    if (! auth()->check()) {
+        return redirect()->guest($panel->getLoginUrl());
+    }
+    abort_unless(auth()->user()->canAccessPanel($panel), 403);
+    abort_unless(\Illuminate\Support\Facades\Storage::disk($document->disk)->exists($document->path), 404);
+
+    return \Illuminate\Support\Facades\Storage::disk($document->disk)->response($document->path, $document->original_name);
+})->name('admin.vendor-documents.show');
+
 // Air Cargo routes
 Route::get('/air/cargo', AirCargoPage::class)->name('air.cargo');
 Route::get('/air/cargo/international', AirCargoCreate::class)->name('air.cargo.international');
