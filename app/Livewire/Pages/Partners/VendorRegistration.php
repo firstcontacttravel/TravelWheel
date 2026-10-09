@@ -77,7 +77,24 @@ class VendorRegistration extends Component
     {
         $this->validateStep($this->step);
         $this->step = min($this->step + 1, count(self::STEPS));
+        $this->prepareServiceDetails();
         $this->dispatch('vendor-step-changed');
+    }
+
+    /**
+     * Tick-box questions must start as empty lists. Bound to anything else,
+     * Livewire treats the whole group as one on/off switch, so ticking one
+     * box ticks them all.
+     */
+    private function prepareServiceDetails(): void
+    {
+        foreach ($this->selectedServices() as $service => $config) {
+            foreach ($config['fields'] as $field => $def) {
+                if ($def['type'] === 'checkboxes' && ! is_array($this->details[$service][$field] ?? null)) {
+                    $this->details[$service][$field] = [];
+                }
+            }
+        }
     }
 
     public function back(): void
@@ -91,6 +108,7 @@ class VendorRegistration extends Component
         // Only backwards: forward moves must pass each step's checks
         if ($step >= 1 && $step < $this->step) {
             $this->step = $step;
+            $this->prepareServiceDetails();
             $this->dispatch('vendor-step-changed');
         }
     }

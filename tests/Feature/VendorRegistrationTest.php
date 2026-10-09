@@ -76,6 +76,29 @@ class VendorRegistrationTest extends TestCase
         $component->set('step', 4)->call('next')->assertHasErrors(['acknowledged.visa' => 'accepted']);
     }
 
+    public function test_tick_box_questions_start_as_lists_so_boxes_tick_one_at_a_time(): void
+    {
+        // Reach step 4 the way a vendor does, choosing Flights on step 3
+        $component = Livewire::test(VendorRegistration::class)
+            ->set('step', 3)
+            ->set('form.business_types', ['travel_agency'])
+            ->set('form.services', ['flights', 'car_hire'])
+            ->set('form.works_with_other_platforms', 'no')
+            ->call('next')
+            ->assertHasNoErrors()
+            ->assertSet('step', 4)
+            ->assertSet('details.flights.cabins', [])
+            ->assertSet('details.car_hire.vehicle_types', [])
+            ->assertSet('details.car_hire.categories', []);
+
+        // Each box has its own value in the rendered page
+        foreach (['Economy', 'Premium Economy', 'Business', 'First'] as $cabin) {
+            $component->assertSeeHtml('wire:model="details.flights.cabins" value="'.$cabin.'"');
+        }
+
+        $component->set('details.flights.cabins', ['Business'])->assertSet('details.flights.cabins', ['Business']);
+    }
+
     public function test_an_expired_document_is_refused(): void
     {
         Storage::fake('local');
