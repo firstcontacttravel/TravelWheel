@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\LoungeBookingMail;
+use App\Mail\LoungeReservationNotificationMail;
 use App\Models\Lounge;
 use App\Models\LoungeBooking;
 use App\Services\LoungePairCatalogueSyncService;
@@ -177,7 +178,7 @@ class LoungeController extends Controller
         // provider fields — only the id is taken from the form.
         $lounge = filled($dataform['lounge_id'] ?? null) ? Lounge::find($dataform['lounge_id']) : null;
 
-        LoungeBooking::create([
+        $booking = LoungeBooking::create([
             'lounge_id'      => $lounge?->id,
             'lounge_name'    => $dataform['lounge'] ?? '',
             'provider'       => $lounge?->provider,
@@ -202,6 +203,13 @@ class LoungeController extends Controller
             'trans_id'       => $paymentReference,
             'ref_id'         => $paymentReference,
         ]);
+
+        // Reservations get the full booking form; sent first so a failing customer email can't stop it
+        try {
+            Mail::to(config('travelwheel.reservations_email'))->send(new LoungeReservationNotificationMail($booking, $dataform));
+        } catch (\Throwable $e) {
+            Log::error('Lounge reservation notification failed', ['reference' => $paymentReference, 'error' => $e->getMessage()]);
+        }
 
         Mail::to($dataform['email'] ?? '')->send(
             new LoungeBookingMail($fullname, $paymentReference, $lounge?->provider === 'loungepair')

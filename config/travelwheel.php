@@ -28,8 +28,10 @@ return [
         \App\Mail\CarHireNotificationMail::class => null,
         \App\Mail\TransferNotificationMail::class => null,
         \App\Mail\DriverAssignedMail::class => null,          // driver assigned (the customer's copy)
-        // Lounge, Protocol, Air Cargo (customer confirmation — no internal copy exists)
-        \App\Mail\LoungeBookingMail::class => null,
+        // Lounge: LoungeReservationNotificationMail (the full booking form) is
+        // sent straight to the reservations inbox by LoungeController, so the
+        // customer's thin confirmation isn't copied as well.
+        // Protocol, Air Cargo (customer confirmation — no internal copy exists)
         \App\Mail\ProtocolBookingMail::class => null,
         \App\Mail\ShipmentMail::class => null,
         // Support (internal notification copy)
