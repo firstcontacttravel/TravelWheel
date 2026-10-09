@@ -1,6 +1,6 @@
 <div class="vnd-page">
     <style>
-        .vnd-page { --vnd-main: rgba(13, 24, 131, 1); --vnd-green: #0d9c53; padding: 170px 0 60px; background: #f5f7fb; }
+        .vnd-page { --vnd-main: rgba(13, 24, 131, 1); --vnd-green: #0d9c53; padding: 155px 0 60px; background: #f5f7fb; }
         .vnd-wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
         .vnd-head h1 { color: var(--vnd-main); font-size: 1.9rem; font-weight: 800; margin-bottom: .35rem; }
         .vnd-head p { color: #555; margin-bottom: 1.5rem; }
@@ -58,14 +58,26 @@
         .vnd-progress-mobile .track { height: 6px; border-radius: 6px; background: #dfe3ee; overflow: hidden; }
         .vnd-progress-mobile .fill { height: 100%; border-radius: 6px; background: var(--vnd-main); transition: width .3s; }
 
-        /* The site menu is shorter below 768px, where it collapses to a menu button */
+        /* Tablets: less padding inside the cards */
+        @media (min-width: 768px) and (max-width: 991px) {
+            .vnd-page { padding-bottom: 40px; }
+            .vnd-wrap { padding: 0 20px; }
+            .vnd-card { padding: 22px; }
+        }
+
+        /*
+         * Phones. The site menu collapses to 104px here, but the layout still
+         * starts pages 128px down, leaving a white strip; pull the page up to
+         * close it.
+         */
         @media (max-width: 767px) {
-            .vnd-page { padding: 28px 0 0; }
+            .vnd-page { margin-top: -24px; padding: 18px 0 0; }
+            .vnd-wrap { padding: 0 12px; }
             .vnd-steps { display: none; }
             .vnd-progress-mobile { display: block; }
             .vnd-head h1 { font-size: 1.4rem; line-height: 1.25; }
             .vnd-head p { font-size: .9rem; margin-bottom: 1.1rem; }
-            .vnd-card { padding: 20px 16px; border-radius: 12px; margin-bottom: 14px; }
+            .vnd-card { padding: 18px 14px; border-radius: 12px; margin-bottom: 12px; }
             .vnd-card h2 { font-size: 1.08rem; }
             .vnd-card h3 { font-size: .95rem; margin-top: 1.25rem; }
             /* 16px stops iPhones zooming into a field when it is tapped */
@@ -74,7 +86,7 @@
             .vnd-option { padding: 10px 12px; }
             .vnd-doc { padding: 12px; }
             /* Back / Continue stay within thumb reach at the bottom of the screen */
-            .vnd-nav { position: sticky; bottom: 0; z-index: 5; margin: 0 -16px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: #fff; box-shadow: 0 -4px 16px rgba(13, 24, 131, .08); }
+            .vnd-nav { position: sticky; bottom: 0; z-index: 5; margin: 0 -12px; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); background: #fff; box-shadow: 0 -4px 16px rgba(13, 24, 131, .08); }
             .vnd-nav > * { flex: 1; }
             .vnd-btn, .vnd-btn-light { padding: 12px 16px; }
             .vnd-nav > span:empty { display: none; }

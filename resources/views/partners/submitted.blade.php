@@ -1,7 +1,17 @@
 @component('layouts.app', ['title' => 'Application Received - TravelWheel'])
 
-<div style="padding: 170px 16px 70px; background: #f5f7fb;">
-    <div style="max-width: 640px; margin: 0 auto; background: #fff; border-radius: 14px; box-shadow: 0 4px 18px rgba(13, 24, 131, .07); padding: 36px 28px; text-align: center;">
+<style>
+    .vnd-done { padding: 155px 16px 70px; background: #f5f7fb; }
+    .vnd-done-card { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 14px; box-shadow: 0 4px 18px rgba(13, 24, 131, .07); padding: 36px 28px; text-align: center; }
+    /* Same phone offset as the registration form */
+    @media (max-width: 767px) {
+        .vnd-done { margin-top: -24px; padding: 18px 12px 40px; }
+        .vnd-done-card { padding: 28px 18px; }
+    }
+</style>
+
+<div class="vnd-done">
+    <div class="vnd-done-card">
         <div style="width: 64px; height: 64px; border-radius: 50%; background: #e7f6ee; color: #0d9c53; font-size: 32px; line-height: 64px; margin: 0 auto 18px;">&#10003;</div>
         <h1 style="color: rgba(13, 24, 131, 1); font-size: 1.6rem; font-weight: 800;">Application received</h1>
 
