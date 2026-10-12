@@ -15,17 +15,9 @@
             </span>
         </div>
         <div class="flex flex-wrap items-center py-2 space-x-4 hidden md:flex navtop">
-            <a class="topnav" href="{{ route('aboutus') }}">
-                <b class="text-white">Company</b>
-            </a>
-            <a class="topnav" href="{{ route('faq') }}">
-                <b class="text-white">FAQ</b>
-            </a>
-            <a class="topnav" href="{{ route('help') }}">
-                <b class="text-white">Help</b>
-            </a>
+            {{-- Company (About Us), FAQ and Help live in the footer's Company column --}}
             <a class="topnav" href="{{ route('partners.register') }}" title="Become a TravelWheel partner">
-                <b class="text-white">Partners</b>
+                <b class="text-white">Partner with us</b>
             </a>
             <span class="text-white topnav">|</span>
             <a class="topnav" href="https://www.facebook.com/travelwheelng" target="_blank">

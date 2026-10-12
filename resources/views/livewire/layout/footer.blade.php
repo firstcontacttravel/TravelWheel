@@ -44,6 +44,9 @@
                     <li><a href="#" class="text-white hover:text-[var(--color-secondary)]">Media</a></li>
                     <li><a href="{{ route('legal.terms') }}" class="text-white hover:text-[var(--color-secondary)]">Terms & Condition</a></li>
                     <li><a href="/blog" target="_blank" class="text-white hover:text-[var(--color-secondary)]">Blog</a></li>
+                    <li><a href="{{ route('faq') }}" class="text-white hover:text-[var(--color-secondary)]">FAQ</a></li>
+                    <li><a href="{{ route('help') }}" class="text-white hover:text-[var(--color-secondary)]">Help</a></li>
+                    <li><a href="{{ route('partners.register') }}" class="text-white hover:text-[var(--color-secondary)]">Partner with us</a></li>
                 </ul>
             </div>
 
