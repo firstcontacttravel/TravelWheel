@@ -24,6 +24,9 @@
             <a class="topnav" href="{{ route('help') }}">
                 <b class="text-white">Help</b>
             </a>
+            <a class="topnav" href="{{ route('partners.register') }}" title="Become a TravelWheel partner">
+                <b class="text-white">Partners</b>
+            </a>
             <span class="text-white topnav">|</span>
             <a class="topnav" href="https://www.facebook.com/travelwheelng" target="_blank">
                 <i class="ph ph-facebook-logo text-white"></i>
