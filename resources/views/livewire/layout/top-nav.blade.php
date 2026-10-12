@@ -1,9 +1,9 @@
 {{-- Own rules rather than Tailwind utilities, which only work if the stylesheet is rebuilt --}}
 <style>
     .tw-topbar-partner-mobile { display: none; }
-    /* Below desktop width the full address doesn't fit beside everything else */
+    /* Phones and tablets: no room for the email beside everything else */
     @media (max-width: 1023.98px) {
-        .tw-topbar-email-text { display: none; }
+        .tw-topbar-email { display: none !important; }
     }
     @media (max-width: 767.98px) {
         .tw-topbar-contact { width: 100%; }
@@ -21,10 +21,10 @@
                 <i class="ph ph-whatsapp-logo text-white"></i>
                 <b class="text-white">+2348032705319</b>
             </span>
-            {{-- On phones the address shrinks to a tappable icon to make room for "Partner with us" --}}
-            <a class="tw-topbar-contact-item flex items-center gap-2" href="mailto:support@travelwheel.ng" aria-label="Email support@travelwheel.ng">
+            {{-- Desktop only; on phones and tablets it makes room for "Partner with us" --}}
+            <a class="tw-topbar-contact-item tw-topbar-email flex items-center gap-2" href="mailto:support@travelwheel.ng">
                 <i class="ph-fill ph-envelope-simple text-white"></i>
-                <b class="text-white tw-topbar-email-text">support@travelwheel.ng</b>
+                <b class="text-white">support@travelwheel.ng</b>
             </a>
             {{-- Phones: the right-hand links are hidden, so the partner link sits in this row instead --}}
             <a class="tw-topbar-contact-item tw-topbar-partner-mobile" href="{{ route('partners.register') }}" title="Become a TravelWheel partner">
