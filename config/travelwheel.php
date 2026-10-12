@@ -45,6 +45,44 @@ return [
         \App\Mail\VisaApplicationUpdateMail::class => 'Visa application submitted',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Thank-you email after every booking
+    |--------------------------------------------------------------------------
+    | After a customer's booking confirmation goes out, App\Listeners\
+    | SendBookingThankYou sends them a thank-you from the reservations inbox
+    | that suggests our other products. "thank_you_triggers" names the
+    | customer confirmation email per product (a [product, subject prefix]
+    | pair when the mail class sends many kinds of update); "products" is
+    | what the email suggests, in this order. Insurance sends the customer
+    | no confirmation, so InsuranceController sends its thank-you directly.
+    */
+    'thank_you_triggers' => [
+        \App\Mail\PaymentReceiptMail::class => 'flights',            // paid flight booking
+        \App\Mail\ETicketMail::class => 'flights',                   // ticketed straight after payment
+        \App\Mail\TravelFlexTicketBookedMail::class => 'flights',
+        \App\Mail\LoungeBookingMail::class => 'lounge',
+        \App\Mail\ProtocolBookingMail::class => 'protocol',
+        \App\Mail\ShipmentMail::class => 'air_cargo',
+        \App\Mail\CarHireSuccessMail::class => 'travel_connections',
+        \App\Mail\TransferSuccessMail::class => 'travel_connections',
+        \App\Mail\SupportFlightAssistSuccessMail::class => 'travel_assist',
+        \App\Mail\SupportExtraLuggageSuccessMail::class => 'travel_assist',
+        \App\Mail\SupportVisaConfirmationSuccessMail::class => 'travel_assist',
+        \App\Mail\SupportYellowCardSuccessMail::class => 'travel_assist',
+        \App\Mail\VisaApplicationUpdateMail::class => ['visa', 'Visa application submitted'],
+    ],
+    'products' => [
+        'flights' => ['name' => 'Flights', 'pitch' => 'Book local and international flights at great fares, with flexible payment through TravelFlex.', 'url' => '/', 'icon' => 'assets/Flight 70.png'],
+        'protocol' => ['name' => 'Airport Protocol', 'pitch' => 'Meet & greet, fast-track and escort through the airport.', 'route' => 'air.protocol', 'icon' => 'assets/Protocol 70.png'],
+        'lounge' => ['name' => 'Airport Lounge', 'pitch' => 'Relax before your flight in comfortable airport lounges.', 'route' => 'air.lounge', 'icon' => 'assets/Lounge 70.png'],
+        'insurance' => ['name' => 'Travel Insurance', 'pitch' => 'Travel with peace of mind: medical, baggage and trip cover.', 'route' => 'air.insurance', 'icon' => 'assets/Insurance 70.png'],
+        'visa' => ['name' => 'Visa Assistance', 'pitch' => 'Expert help with your visa application, from documents to appointment.', 'route' => 'air.visa', 'icon' => 'assets/Visa 70.png'],
+        'air_cargo' => ['name' => 'Air Cargo', 'pitch' => 'Send documents and parcels locally and abroad.', 'route' => 'air.cargo', 'icon' => 'assets/Air Cargo 70.png'],
+        'travel_connections' => ['name' => 'Car Hire & Pick up \'n\' Drop off', 'pitch' => 'Chauffeur-driven cars by the hour, and rides between airports, cities and towns.', 'route' => 'air.carhire', 'icon' => 'assets/Car Hire 70.png'],
+        'travel_assist' => ['name' => 'Travel Assist', 'pitch' => 'Yellow Card, extra luggage, flight assist and visa confirmation.', 'route' => 'air.support', 'icon' => 'assets/Support 70.png'],
+    ],
+
     'admin_emails' => array_values(array_filter(array_map(
         static fn (string $email): string => strtolower(trim($email)),
         explode(',', (string) env('ADMIN_EMAILS', '')),

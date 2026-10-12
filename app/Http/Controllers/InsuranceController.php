@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\InsurancePurchaseNotificationMail;
 use App\Models\InsurancePurchase;
 use App\Models\InsuranceQuote;
+use App\Services\BookingThankYou;
 use App\Services\SeerbitPaymentService;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
@@ -202,6 +203,9 @@ class InsuranceController extends Controller
                 $dataform, $dataform2, $paymentReference, $bookingTypeId, $coverId, 'Successful',
             ));
             $this->notifyReservations($purchase);
+            // Insurance sends the customer no confirmation email, so the thank-you isn't
+            // triggered automatically like the other products (see SendBookingThankYou)
+            app(BookingThankYou::class)->send($purchase->email, $purchase->firstname, 'insurance');
 
             Session::forget(['insurance_data_form', 'insurance_data_form2']);
             return redirect()->route('air.insurance.success');
