@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\FlightBooking;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -224,20 +225,20 @@ class AdminTicketingService
 
     public function failureAlertData(FlightBooking $booking, string $message): array
     {
-        $flight = $booking->flight_snapshot ?? [];
-        $segments = $flight['segments'] ?? [];
-        $firstSegment = $segments[0] ?? [];
-        $lastSegment = ! empty($segments) ? end($segments) : [];
+        $legs = $this->alertLegs($booking->flight_snapshot ?? []);
+        $isMultiCity = ! empty($booking->flight_snapshot['multiLegs'] ?? []);
 
         return [
             'uniqueId' => $booking->unique_id,
             'bookingStatus' => 'PAID_UNTICKETED',
             'ticketStatus' => 'TICKETING_FAILED',
-            'origin' => $firstSegment['from'] ?? '',
-            'destination' => $lastSegment['to'] ?? '',
+            // A return trip's route is where it goes, not where it ends.
+            'origin' => $legs[0]['from'] ?? '',
+            'destination' => $isMultiCity ? (end($legs)['to'] ?? '') : ($legs[0]['to'] ?? ''),
+            'tripType' => $isMultiCity ? 'Multi-city' : (count($legs) > 1 ? 'Return' : 'One way'),
             'fareType' => $booking->fare_type ?? '',
             'passengers' => $booking->passengers_snapshot ?? [],
-            'flights' => [],
+            'legs' => $legs,
             'pricing' => [
                 'booking_ref' => $booking->booking_ref,
                 'amount_paid' => $booking->payment_charged_amount ?? $booking->payment_amount,
@@ -247,6 +248,42 @@ class AdminTicketingService
             ],
             'timestamp' => now(),
         ];
+    }
+
+    /**
+     * Each journey the passengers fly, for the alert: every multi-city leg,
+     * or outbound and return. Reading only flight_snapshot.segments left a
+     * SkyLink multi-city alert with no route at all (its segments are empty)
+     * and a TravelNext one with leg 1 only.
+     *
+     * @return list<array{label: string, from: string, to: string, date: string, flights: string}>
+     */
+    private function alertLegs(array $flight): array
+    {
+        $multiLegs = array_values(array_filter((array) ($flight['multiLegs'] ?? []), fn ($leg) => ! empty($leg['segments'])));
+
+        $groups = $multiLegs !== []
+            ? array_map(fn (array $leg, int $i) => ['Leg '.($i + 1), $leg['segments']], $multiLegs, array_keys($multiLegs))
+            : array_values(array_filter([
+                ['Outbound', (array) ($flight['segments'] ?? [])],
+                ['Return', (array) ($flight['returnSegments'] ?? [])],
+            ], fn (array $group) => $group[1] !== []));
+
+        return array_map(function (array $group): array {
+            [$label, $segments] = $group;
+            $segments = array_values(array_filter($segments, 'is_array'));
+            $first = $segments[0] ?? [];
+            $last = end($segments) ?: [];
+            $departs = $first['departDT'] ?? null;
+
+            return [
+                'label' => $label,
+                'from' => (string) ($first['from'] ?? ''),
+                'to' => (string) ($last['to'] ?? ''),
+                'date' => $departs ? Carbon::parse($departs)->format('D, d M Y') : (string) ($first['departDate'] ?? ''),
+                'flights' => implode(', ', array_filter(array_map(fn (array $segment) => trim((string) ($segment['flightNo'] ?? '')), $segments))),
+            ];
+        }, $groups);
     }
 
     public function extractAirlinePnr(array $tripDetails): ?string

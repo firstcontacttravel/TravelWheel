@@ -27,7 +27,19 @@
 
     <x-mail.heading>Flight</x-mail.heading>
     <x-mail.rows>
-        <x-mail.row label="Route">{{ $data['origin'] }} &rarr; {{ $data['destination'] }}</x-mail.row>
+        @if (($data['tripType'] ?? '') === 'Multi-city')
+            <x-mail.row label="Route">{{ collect($data['legs'])->pluck('from')->push(collect($data['legs'])->last()['to'] ?? '')->filter()->implode(' → ') }}</x-mail.row>
+        @else
+            <x-mail.row label="Route">{{ $data['origin'] }} &rarr; {{ $data['destination'] }}</x-mail.row>
+        @endif
+        @if (! empty($data['tripType']))
+            <x-mail.row label="Trip">{{ $data['tripType'] }}</x-mail.row>
+        @endif
+        @foreach ($data['legs'] ?? [] as $leg)
+            <x-mail.row :label="$leg['label']">
+                {{ $leg['from'] }} &rarr; {{ $leg['to'] }}@if ($leg['date']) &nbsp;·&nbsp; {{ $leg['date'] }}@endif @if ($leg['flights']) &nbsp;·&nbsp; {{ $leg['flights'] }}@endif
+            </x-mail.row>
+        @endforeach
         <x-mail.row label="Fare type">{{ $data['fareType'] }}</x-mail.row>
         <x-mail.row label="Detected at">{{ $data['timestamp']->timezone('Africa/Lagos')->format('D, d M Y \a\t H:i') }}</x-mail.row>
     </x-mail.rows>
