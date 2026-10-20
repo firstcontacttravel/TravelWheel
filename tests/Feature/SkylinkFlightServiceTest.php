@@ -371,6 +371,45 @@ class SkylinkFlightServiceTest extends TestCase
         $this->assertSame(3, $marked['markupPassengerCount']);
     }
 
+    public function test_layovers_are_labelled_for_both_directions(): void
+    {
+        // Result cards printed "800 layover in Nairobi (NBO)" (raw minutes)
+        // outbound and no duration at all inbound, since
+        // returnLayoverDurations was never set.
+        $this->configureSkylink();
+
+        $leg = fn (string $from, string $to, string $depDate, string $dep, string $arrDate, string $arr) => array_merge(
+            $this->searchResponse()['data']['flights'][0]['segments'][0][0],
+            [
+                'departure_code' => $from, 'arrival_code' => $to,
+                'departure_date' => $depDate, 'departure_time' => $dep,
+                'arrival_date' => $arrDate, 'arrival_time' => $arr,
+            ],
+        );
+
+        $response = $this->searchResponse();
+        $response['data']['flights'][0]['segments'] = [
+            [
+                $leg('LOS', 'NBO', '26-10-2026', '12:30 pm', '26-10-2026', '07:50 pm'),
+                $leg('NBO', 'LHR', '27-10-2026', '09:10 am', '27-10-2026', '03:30 pm'),
+            ],
+            [
+                $leg('LHR', 'NBO', '02-11-2026', '05:25 pm', '03-11-2026', '05:00 am'),
+                $leg('NBO', 'LOS', '03-11-2026', '08:15 am', '03-11-2026', '11:30 am'),
+            ],
+        ];
+
+        Http::fake([
+            '*/api/login' => Http::response($this->loginResponse()),
+            '*/api/flights/search' => Http::response($response),
+        ]);
+
+        $flight = app(SkylinkFlightService::class)->search($this->searchCriteria())['data']['flights'][0];
+
+        $this->assertSame(['13h 20m'], $flight['layoverDurations']);
+        $this->assertSame(['3h 15m'], $flight['returnLayoverDurations']);
+    }
+
     private function searchCriteria(): array
     {
         return [

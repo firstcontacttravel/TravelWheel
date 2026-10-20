@@ -486,6 +486,7 @@ class SkylinkFlightService implements FlightSupplier
             'totalTimeMins' => $this->directionTotalMinutes($outboundLegs),
             'totalTimeLabel' => (string) ($firstRawLeg['duration_time'] ?? ''),
             'returnSegments' => $returnSegments,
+            'returnLayoverDurations' => $this->layoverDurations($returnSegments),
             'multiLegs' => [],
             'fareBreakdown' => $this->buildFareBreakdown($raw, $criteria, (bool) ($firstLeg['refundable'] ?? false)),
             'seatsLeft' => (int) ($raw['seats_left'] ?? $firstLeg['seatsLeft'] ?? 9),
@@ -730,9 +731,13 @@ class SkylinkFlightService implements FlightSupplier
             $arrive = $mappedSegments[$i]['arriveDT'] ?? null;
             $depart = $mappedSegments[$i + 1]['departDT'] ?? null;
 
+            // Views print these as-is, so they must be "13h 20m" labels like
+            // TravelNext's — raw minutes rendered as "800 layover in ...".
             if ($arrive && $depart) {
-                $minutes = (int) round((Carbon::parse($depart)->getTimestamp() - Carbon::parse($arrive)->getTimestamp()) / 60);
-                $layovers[] = max(0, $minutes);
+                $minutes = max(0, (int) round((Carbon::parse($depart)->getTimestamp() - Carbon::parse($arrive)->getTimestamp()) / 60));
+                $layovers[] = intdiv($minutes, 60).'h '.($minutes % 60).'m';
+            } else {
+                $layovers[] = '';
             }
         }
 
