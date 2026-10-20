@@ -499,26 +499,24 @@ class SkylinkFlightServiceTest extends TestCase
         $this->assertSame([1, 0, 0], array_column($flight['multiLegs'], 'stops'));
     }
 
-    public function test_a_multi_city_search_gets_the_longer_timeout(): void
+    public function test_a_timeout_the_caller_will_retry_is_flagged_and_logged_apart(): void
     {
         $this->configureSkylink();
-        config(['services.skylink.search_timeout' => 20, 'services.skylink.multicity_search_timeout' => 40]);
 
-        $timeouts = [];
-        Http::fake(function ($request, $options) use (&$timeouts) {
-            if (str_ends_with($request->url(), '/api/login')) {
-                return Http::response($this->loginResponse());
-            }
+        Http::fake([
+            '*/api/login' => Http::response($this->loginResponse()),
+            '*/api/flights/search' => Http::failedConnection('cURL error 28: Operation timed out after 20001 milliseconds with 0 bytes received'),
+        ]);
 
-            $timeouts[] = $options['timeout'] ?? null;
+        $retried = app(SkylinkFlightService::class)->search($this->multiCityCriteria(), ['final_attempt' => false]);
+        $this->assertTrue($retried['retry'] ?? false);
+        $this->assertDatabaseHas('flight_supplier_calls', ['call_type' => 'search_retry', 'trip_type' => 'multi']);
 
-            return Http::response($this->multiCityResponse());
-        });
-
-        app(SkylinkFlightService::class)->search($this->multiCityCriteria());
-        app(SkylinkFlightService::class)->search($this->searchCriteria());
-
-        $this->assertSame([40, 20], $timeouts);
+        // Callers that never retry (the loading page) see an ordinary failure.
+        $final = app(SkylinkFlightService::class)->search($this->multiCityCriteria());
+        $this->assertTrue($final['error']);
+        $this->assertArrayNotHasKey('retry', $final);
+        $this->assertDatabaseHas('flight_supplier_calls', ['call_type' => 'search', 'trip_type' => 'multi', 'success' => false]);
     }
 
     private function multiCityCriteria(): array

@@ -7,6 +7,7 @@ use App\Models\ExchangeRate;
 use App\Models\FlightSupplierCall;
 use App\Support\FlightDisplay;
 use Carbon\Carbon;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Collection;
@@ -70,13 +71,19 @@ class SkylinkFlightService implements FlightSupplier
         $startedAt = microtime(true);
 
         try {
-            // A multi-city search took SkyLink 33s uncached on 2026-10-20, so
-            // the 20s one-way/return limit failed every one.
-            $timeout = $this->timeoutFor(($payload['flight_type'] ?? '') === 'multicity' ? 'multicity_search' : 'search');
-            $response = $this->request(fn ($client) => $client->post('flights/search', $payload), $timeout);
+            $response = $this->request(fn ($client) => $client->post('flights/search', $payload), $this->timeoutFor('search'));
         } catch (\Throwable $exception) {
+            // SkyLink keeps searching after we hang up and caches the answer:
+            // an uncached LOS-CDG return, cut short at 8s and again at 25s,
+            // came back in 3.4s on the next try (2026-10-21). Round trips and
+            // multi-city routinely take longer than the host's ~30s gateway
+            // allows, so the results page asks again instead. A timeout it
+            // will retry is logged as search_retry, which the automatic
+            // cut-off doesn't watch; only the last attempt counts as a search.
+            $retry = ($context['final_attempt'] ?? true) === false && $this->isTimeout($exception);
+
             $this->logCall([
-                'call_type' => 'search',
+                'call_type' => $retry ? 'search_retry' : 'search',
                 'route' => $this->routeLabelFromCriteria($criteria),
                 'cabin' => $payload['class'] ?? null,
                 'trip_type' => $criteria['trip'] ?? null,
@@ -86,6 +93,10 @@ class SkylinkFlightService implements FlightSupplier
                 'success' => false,
                 'error_message' => $exception->getMessage(),
             ]);
+
+            if ($retry) {
+                return $this->errorResult('SkyLink is still searching.') + ['retry' => true];
+            }
 
             return $this->errorResult('SkyLink flight search is temporarily unavailable. Please try again shortly.');
         }
@@ -889,6 +900,13 @@ class SkylinkFlightService implements FlightSupplier
     private function timeoutFor(string $endpoint): int
     {
         return max(1, (int) config('services.skylink.'.$endpoint.'_timeout', 20));
+    }
+
+    /** cURL error 28: we stopped waiting, SkyLink didn't refuse. */
+    private function isTimeout(\Throwable $exception): bool
+    {
+        return $exception instanceof ConnectionException
+            && (str_contains($exception->getMessage(), 'cURL error 28') || stripos($exception->getMessage(), 'timed out') !== false);
     }
 
     /**

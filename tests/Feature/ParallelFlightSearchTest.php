@@ -144,6 +144,47 @@ class ParallelFlightSearchTest extends TestCase
         $this->assertDatabaseCount('flight_search_results', 0);
     }
 
+    /**
+     * Uncached SkyLink round trips and multi-city outlast the host's gateway,
+     * but SkyLink finishes and caches them after we hang up, so the page asks
+     * again. Those cut-short attempts must not count towards the automatic
+     * cut-off: with SkyLink the only API, pausing it emptied every search.
+     */
+    public function test_an_api_still_searching_is_asked_again_and_not_counted_as_failing(): void
+    {
+        $searchId = $this->startSearch();
+        app(FlightSupplierControl::class)->disable('travelnext', 'Off', null);
+        $this->fakeSkylink(Http::failedConnection('cURL error 28: Operation timed out after 20001 milliseconds with 0 bytes received'));
+
+        foreach (range(1, 12) as $ignored) {
+            $this->getJson($this->endpoint($searchId, 'skylink').'?attempt=1')->assertOk()->assertJson(['status' => 'retry', 'flights' => []]);
+        }
+
+        $this->assertDatabaseCount('flight_supplier_calls', 12);
+        $this->assertDatabaseMissing('flight_supplier_calls', ['call_type' => 'search']);
+        $this->assertTrue(app(FlightSupplierControl::class)->isEnabled('skylink'), 'Retried timeouts paused SkyLink.');
+    }
+
+    public function test_the_last_attempt_timing_out_is_a_failure(): void
+    {
+        $searchId = $this->startSearch();
+        $this->fakeSkylink(Http::failedConnection('cURL error 28: Operation timed out after 20001 milliseconds with 0 bytes received'));
+
+        $last = \App\Http\Controllers\FlightSupplierSearchController::MAX_ATTEMPTS;
+        $this->getJson($this->endpoint($searchId, 'skylink').'?attempt='.$last)->assertOk()->assertJson(['status' => 'error']);
+
+        $this->assertDatabaseHas('flight_supplier_calls', ['supplier' => 'skylink', 'call_type' => 'search', 'success' => false]);
+    }
+
+    public function test_only_a_timeout_is_retried(): void
+    {
+        $searchId = $this->startSearch();
+        $this->fakeSkylink(Http::failedConnection());
+
+        $this->getJson($this->endpoint($searchId, 'skylink').'?attempt=1')->assertOk()->assertJson(['status' => 'error']);
+        $this->assertDatabaseHas('flight_supplier_calls', ['supplier' => 'skylink', 'call_type' => 'search']);
+    }
+
     public function test_unknown_apis_and_expired_searches_are_refused(): void
     {
         $searchId = $this->startSearch();
@@ -239,6 +280,14 @@ class ParallelFlightSearchTest extends TestCase
             'kids' => 0,
             'flight_type' => 'Y',
         ];
+    }
+
+    private function fakeSkylink(\Closure $search): void
+    {
+        Http::fake([
+            '247travels.test/api/login' => Http::response(['status' => 'success', 'data' => ['access_token' => 'token', 'refresh_token' => 'refresh', 'expires_in' => 900]]),
+            '247travels.test/api/flights/search' => $search,
+        ]);
     }
 
     private function fakeTravelnext(): void

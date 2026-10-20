@@ -8,6 +8,7 @@ use App\Services\Flights\FlightSupplierRegistry;
 use App\Support\FlightMarkup;
 use App\Support\FlightMatch;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -27,7 +28,15 @@ use Throwable;
  */
 class FlightSupplierSearchController extends Controller
 {
+    /**
+     * An API still searching when we stop waiting answers 'retry', and the
+     * page asks again (?attempt=2, 3, ...). This attempt is the last: a
+     * timeout on it is a failure like any other.
+     */
+    public const MAX_ATTEMPTS = 4;
+
     public function __invoke(
+        Request $request,
         string $search,
         string $supplier,
         FlightSearchStore $store,
@@ -62,7 +71,12 @@ class FlightSupplierSearchController extends Controller
             $result = $registry->get($supplier)->search($criteria, [
                 'search_id' => $search,
                 'started_at' => microtime(true),
+                'final_attempt' => (int) $request->query('attempt', 1) >= self::MAX_ATTEMPTS,
             ]);
+
+            if ($result['retry'] ?? false) {
+                return $this->answer('retry');
+            }
 
             if ($result['error'] ?? true) {
                 return $this->answer('error');

@@ -76,12 +76,12 @@ return [
         //  reserve — payment has ALREADY been captured and this creates a live
         //            PNR. Timing out here means we don't know whether a ticket
         //            was issued, so it gets the most room, never less.
+        //            Uncached round trips and multi-city take 21-33s or more
+        //            (2026-10-21), past both this cap and the gateway. Rather
+        //            than wait longer, the results page asks again: SkyLink
+        //            finishes and caches the search after we hang up (see
+        //            SkylinkFlightService::search()).
         'search_timeout' => (int) env('SKYLINK_SEARCH_TIMEOUT', 20),
-        //  multicity_search — an uncached 3-route sandbox search took SkyLink
-        //            33s on 2026-10-20, so the 20s cap failed every one. Kept
-        //            under the results page's 45s wait per API, which would
-        //            abandon the call anyway.
-        'multicity_search_timeout' => (int) env('SKYLINK_MULTICITY_SEARCH_TIMEOUT', 40),
         'pricing_timeout' => (int) env('SKYLINK_PRICING_TIMEOUT', 30),
         'reserve_timeout' => (int) env('SKYLINK_RESERVE_TIMEOUT', 90),
         // A credential POST that should answer in well under a second. Kept

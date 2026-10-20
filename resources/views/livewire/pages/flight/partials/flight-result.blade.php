@@ -2176,8 +2176,20 @@
                 </div>
             </template>
 
+            {{-- Every API failed: not the same as there being no flights. --}}
+            <template x-if="searchFailed">
+                <div class="sr-empty-results" style="text-align:center;padding:48px 24px;background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);">
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:12px;background:var(--blue-lt);color:var(--blue);margin-bottom:14px;">
+                        <span class="sr-ic sr-ic-search" style="width:22px;height:22px;flex-basis:22px;" aria-hidden="true"></span>
+                    </span>
+                    <div style="font-size:16px;font-weight:700;color:var(--gray-900);margin-bottom:6px;">We couldn't finish this search</div>
+                    <div style="font-size:13px;color:var(--gray-500);">The airlines took too long to answer. Trying again usually works.</div>
+                    <button type="button" class="sr-book-btn" style="display:inline-flex;align-items:center;width:auto;margin-top:18px;" @click="window.location.reload()">Try again</button>
+                </div>
+            </template>
+
             {{-- Every API has answered and none had a flight. --}}
-            <template x-if="allFlights.length === 0 && !searchingMore">
+            <template x-if="allFlights.length === 0 && !searchingMore && !searchFailed">
                 <div class="sr-empty-results" style="text-align:center;padding:48px 24px;background:#fff;border-radius:var(--radius);border:1px solid var(--gray-200);">
                     <span style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:12px;background:var(--blue-lt);color:var(--blue);margin-bottom:14px;">
                         <span class="sr-ic sr-ic-search" style="width:22px;height:22px;flex-basis:22px;" aria-hidden="true"></span>
@@ -2283,6 +2295,9 @@
             parallel: @js($parallel ?? null),
             supplierOrder: @js($supplierOrder ?? []),
             pendingSuppliers: 0,
+            // APIs that errored or never answered, as opposed to answering
+            // with no flights.
+            failedSuppliers: 0,
 
             // Ids of flights merged in from the supplement, for the brief
             // highlight animation and the "+N more offers found" message.
@@ -2389,6 +2404,13 @@
             matrixRows: [],
             cheapestPrice: '',
 
+            // Every API errored or never answered, so "no flights" would be a lie.
+            get searchFailed() {
+                const apis = Object.keys(this.parallel?.endpoints || {}).length;
+
+                return !this.searchingMore && this.allFlights.length === 0 && apis > 0 && this.failedSuppliers >= apis;
+            },
+
             get activeFilterCount() {
                 return this.selectedAirlines.length
                     + (this.selectedStop !== null ? 1 : 0)
@@ -2470,31 +2492,55 @@
             // times out or has been switched off simply contributes nothing.
             // 45s is the most any API is waited for, so the page can never
             // spin for good on one that hangs.
+            //
+            // An API still searching when the server stops waiting answers
+            // 'retry' (SkyLink round trips and multi-city routinely outlast
+            // the host's gateway), and is asked again: it finishes and caches
+            // the search meanwhile, so a later attempt comes back in seconds.
+            // The server decides which attempt is the last.
             _searchSuppliers() {
                 const endpoints = Object.values(this.parallel.endpoints || {});
                 this.pendingSuppliers = endpoints.length;
+                this.failedSuppliers = 0;
                 this.searchingMore = endpoints.length > 0;
 
-                endpoints.forEach(url => {
-                    const controller = new AbortController();
-                    const timer = setTimeout(() => controller.abort(), 45000);
+                endpoints.forEach(url => this._fetchSupplier(url, 1));
+            },
 
-                    fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: controller.signal })
-                        .then(response => response.ok ? response.json() : null)
-                        .then(body => {
-                            if (body && Array.isArray(body.flights) && body.flights.length > 0) {
-                                // The first answer fills the page; later ones
-                                // are highlighted as new arrivals.
-                                this._mergeBatch(body.flights, this.allFlights.length > 0);
-                            }
-                        })
-                        .catch(() => {})
-                        .finally(() => {
-                            clearTimeout(timer);
-                            this.pendingSuppliers--;
-                            if (this.pendingSuppliers <= 0) this.searchingMore = false;
-                        });
-                });
+            _fetchSupplier(url, attempt) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 45000);
+                let retrying = false;
+
+                fetch(url + (url.includes('?') ? '&' : '?') + 'attempt=' + attempt, { headers: { Accept: 'application/json' }, credentials: 'same-origin', signal: controller.signal })
+                    .then(response => response.ok ? response.json() : null)
+                    .then(body => {
+                        if (body && body.status === 'retry' && attempt < 8) {
+                            retrying = true;
+                            setTimeout(() => this._fetchSupplier(url, attempt + 1), 1500);
+
+                            return;
+                        }
+
+                        if (!body || body.status === 'error' || body.status === 'retry') {
+                            this.failedSuppliers++;
+
+                            return;
+                        }
+
+                        if (Array.isArray(body.flights) && body.flights.length > 0) {
+                            // The first answer fills the page; later ones
+                            // are highlighted as new arrivals.
+                            this._mergeBatch(body.flights, this.allFlights.length > 0);
+                        }
+                    })
+                    .catch(() => { this.failedSuppliers++; })
+                    .finally(() => {
+                        clearTimeout(timer);
+                        if (retrying) return;
+                        this.pendingSuppliers--;
+                        if (this.pendingSuppliers <= 0) this.searchingMore = false;
+                    });
             },
 
             _mergeBatch(flights, highlight) {
