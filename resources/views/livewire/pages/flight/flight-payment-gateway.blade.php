@@ -33,11 +33,18 @@
         return str_pad((string) $hour, 2, '0', STR_PAD_LEFT).':'.$m[2];
     };
 
+    // Each leg names its own airline and flights. Every leg used to print the
+    // outbound's first flight number, so a return read "AT554" for AT801.
+    $pgFlights = fn (array $segs): string => implode(', ', array_filter(array_map(fn ($s) => trim((string) ($s['flightNo'] ?? '')), $segs)));
+    $pgAirline = fn (array $segs): string => (string) ($segs[0]['airline'] ?? $flight['airline'] ?? '');
+
     $legs = [];
     if ($isMulti) {
         foreach ($multiLegs as $li => $leg) {
             $ls = $leg['segments'] ?? [];
             $legs[] = [
+                'airline' => $pgAirline($ls),
+                'flights' => $pgFlights($ls),
                 'label' => 'Leg '.($li + 1),
                 'from'  => $ls[0]['fromCity'] ?? $ls[0]['from'] ?? ($leg['from'] ?? ''),
                 'to'    => count($ls) ? ($ls[count($ls)-1]['toCity'] ?? $ls[count($ls)-1]['to'] ?? '') : ($leg['to'] ?? ''),
@@ -49,6 +56,8 @@
         }
     } else {
         $legs[] = [
+            'airline' => $pgAirline($segments),
+            'flights' => $pgFlights($segments),
             'label' => count($retSegs) ? 'Outbound' : '',
             'from'  => $firstSeg['fromCity'] ?? $firstSeg['from'] ?? '',
             'to'    => $lastSeg['toCity'] ?? $lastSeg['to'] ?? '',
@@ -60,6 +69,8 @@
         if (count($retSegs)) {
             $rl = $retSegs[count($retSegs) - 1];
             $legs[] = [
+                'airline' => $pgAirline($retSegs),
+                'flights' => $pgFlights($retSegs),
                 'label' => 'Return',
                 'from'  => $retSegs[0]['fromCity'] ?? $retSegs[0]['from'] ?? '',
                 'to'    => $rl['toCity'] ?? $rl['to'] ?? '',
@@ -82,9 +93,22 @@
     // for the first case, meaningless for the second — so the copy describes
     // the actual mechanic instead of a fare-type label that fits only one.
     $isSkylink = ($flight['source'] ?? null) === 'skylink';
+
+    // SkyLink reserves the seat once payment clears but issues the ticket
+    // outside its API, so "issued automatically the moment payment is
+    // confirmed" promised SkyLink customers something that doesn't happen.
+    $pgCopy = $isSkylink ? [
+        'intro'  => 'Your seat is reserved with the airline the moment payment is confirmed.',
+        'pay'    => 'You will be taken to our payment partner to complete this payment, then brought straight back. Your seat is reserved as soon as the payment is confirmed, and your e-ticket is emailed to you once the airline issues it.',
+        'button' => 'Seat reserved as soon as payment clears',
+    ] : [
+        'intro'  => 'Your ticket is issued automatically the moment payment is confirmed.',
+        'pay'    => 'You will be taken to our payment partner to complete this payment, then brought straight back. Your ticket is issued automatically once the payment is confirmed — there is no separate confirmation step to wait for.',
+        'button' => 'Ticket issued as soon as payment clears',
+    ];
 @endphp
 
-<link rel="stylesheet" href="{{ asset('css/travelwheel-ui.css') }}">
+<link rel="stylesheet" href="{{ asset('css/travelwheel-ui.css') }}?v={{ filemtime(public_path('css/travelwheel-ui.css')) }}">
 <style>
     /* The site chrome is two stacked fixed bars (topbar 0-51px, nav 48-128px),
        so the page needs 128px of clearance plus breathing room. Without any
@@ -131,7 +155,7 @@
 <x-ui.page-shell
     eyebrow="Secure checkout"
     title="Pay for your booking"
-    copy="Your ticket is issued automatically the moment payment is confirmed.">
+    :copy="$pgCopy['intro']">
 
     <a href="{{ route('flights.booking') }}" class="fpg-back">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
@@ -158,7 +182,7 @@
                         @if($leg['label'])<span class="fpg-leg-tag">{{ $leg['label'] }}</span>@endif
                     </span>
                     <span class="fpg-leg-meta">
-                        {{ $flight['airline'] ?? '' }}@if(!empty($firstSeg['flightNo'])) {{ $firstSeg['flightNo'] }}@endif
+                        {{ $leg['airline'] }}@if($leg['flights']) {{ $leg['flights'] }}@endif
                         @if($leg['date']) &middot; {{ $leg['date'] }} @endif
                         &middot; {{ $cabinLabel }}
                     </span>
@@ -194,11 +218,7 @@
 
     <x-ui.card title="Pay">
         <div class="fpg-pay">
-            <p class="fpg-pay-copy">
-                You will be taken to our payment partner to complete this payment, then brought straight back.
-                Your ticket is issued automatically once the payment is confirmed &mdash; there is no separate
-                confirmation step to wait for.
-            </p>
+            <p class="fpg-pay-copy">{{ $pgCopy['pay'] }}</p>
 
             <form method="POST" action="{{ route('flights.payment.gateway.process') }}" id="gw-form">
                 @csrf
@@ -207,7 +227,7 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
                         Pay {{ $fmt($total) }}
                     </span>
-                    <small>Ticket issued as soon as payment clears</small>
+                    <small>{{ $pgCopy['button'] }}</small>
                 </x-ui.button>
             </form>
 

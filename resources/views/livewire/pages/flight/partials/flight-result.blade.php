@@ -199,7 +199,7 @@
     .sr-stop-pill.active .sr-pill-sub, .sr-time-pill.active .sr-pill-sub { color: var(--blue); opacity: .75; }
 
     /* ── Main Content ── */
-    .sr-main { display: flex; flex-direction: column; gap: 14px; }
+    .sr-main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 
     /*
      * ── Fare Matrix ──
@@ -1099,15 +1099,19 @@
         box-shadow: 0 0 0 3px rgba(48,49,145,.08);
     }
 
+    /* minmax(0, …), never a bare 1fr: a 1fr track can't shrink below its
+       widest content, so the airline matrix (its own scroller) stretched the
+       results column to ~1480px and the whole page scrolled sideways on
+       phones. Same reason the desktop track is minmax(0, 835px). */
     @media (max-width: 1100px) {
-        .sr-page { grid-template-columns: 220px 1fr; gap: 14px; }
+        .sr-page { grid-template-columns: 220px minmax(0, 1fr); gap: 14px; }
         .sr-rail { display: none; }
         .sr-fare-options { gap: 10px; }
         .sr-fare-option { padding: 12px; gap: 9px; }
         .sr-fare-option-price { font-size: 18px; }
     }
     @media (max-width: 860px) {
-        .sr-page { grid-template-columns: 1fr; padding: 12px 10px 32px; gap: 12px; }
+        .sr-page { grid-template-columns: minmax(0, 1fr); padding: 12px 10px 32px; gap: 12px; }
         .sr-sidebar { display: none; }
         .sr-sidebar::-webkit-scrollbar { display: none; }
         .sr-main { order: 1; }
@@ -1116,7 +1120,8 @@
             top: 0;
             z-index: 85;
             display: flex;
-            width: calc(100vw - 20px);
+            /* Not 100vw, which counts the scrollbar and overhung the column. */
+            width: auto;
             margin: -2px 0 2px;
             padding: 8px 0;
             overflow-x: auto;
@@ -1154,6 +1159,8 @@
         .sr-tb-facts { flex-wrap: wrap; }
         .sr-tb-fact { flex: 1 1 50%; padding: 11px 16px; border-top: 1px solid var(--gray-100); border-left: 0; }
         .sr-tb-fact:nth-child(even) { border-left: 1px solid var(--gray-100); }
+        /* A return's "Tue, 24 Nov – Tue, 08 Dec" ran into the next cell on 320px screens. */
+        .sr-tb-fact-value { white-space: normal; }
         .sr-tb-action { width: 100%; padding: 12px 16px; border-top: 1px solid var(--gray-100); }
         .sr-tb-modify-btn { width: 100%; justify-content: center; }
         .sr-matrix-head { padding: 11px 14px; }

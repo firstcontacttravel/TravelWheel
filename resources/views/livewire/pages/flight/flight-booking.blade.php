@@ -336,6 +336,38 @@
     @media (max-width: 900px) { .bk-page { grid-template-columns: 1fr; } .bk-rail { position: static; } }
     @media (max-width: 580px) {
         .bk-pp-body { grid-template-columns: 1fr; }}
+    /*
+     * Phones. The three-column field grid left each field ~84px: dates read
+     * "mm/d", Nationality "Nigeri", and the Gender toggle ran out of the
+     * card. Two columns, with Gender on a row of its own; contact fields one
+     * per row; the stepper names only the current step instead of
+     * truncating all three.
+     */
+    @media (max-width: 600px) {
+        .bk-acc-body { padding: 14px; }
+        .bk-pax-body { padding: 0 12px 14px; }
+        .bk-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 10px; }
+        .bk-form-grid .bk-col-2 { grid-column: span 1; }
+        .bk-form-grid .bk-field:has(.bk-radio-group) { grid-column: 1 / -1; }
+        .bk-radio-group { display: flex; }
+        .bk-radio-opt { flex: 1; }
+        .bk-radio-opt span { width: 100%; justify-content: center; }
+        .bk-contact-grid { grid-template-columns: 1fr; }
+        .bk-pax-meta { flex-wrap: wrap; row-gap: 4px; }
+        .bk-pax-age { white-space: nowrap; }
+        .bk-steps { display: flex; gap: 10px; padding: 12px 14px 14px; }
+        .bk-step { flex: 0 0 auto; }
+        .bk-step:has(.bk-step-dot.active) { flex: 1 1 auto; }
+        .bk-step:not(:has(.bk-step-dot.active)) .bk-step-txt { display: none; }
+        /* Side by side, "Review booking" and "Traveller information" wrapped
+           to two lines each; stacked, the next step comes first. */
+        .bk-actions { flex-direction: column-reverse; align-items: stretch; gap: 10px; }
+        .bk-actions > * { width: 100%; justify-content: center; }
+    }
+    /* Two columns of ~104px still clipped dates on 320px phones. */
+    @media (max-width: 359px) {
+        .bk-form-grid { grid-template-columns: minmax(0, 1fr); }
+    }
     @media (max-width: 640px) {
         body { margin-top: 0 !important; }
         section.navbarmain {
@@ -727,6 +759,33 @@
         $lastSeg = !empty($lastMultiLeg) ? $lastMultiLeg[count($lastMultiLeg) - 1] : [];
     }
     $stopCount = $mappedFlight['stops'] ?? 0;
+
+    // Every journey the review lists: each multi-city leg, or outbound and
+    // return. It used to show the outbound only, so a round trip was
+    // "checked" without its return, and a SkyLink multi-city (top-level
+    // segments empty) showed a blank flight.
+    $rvLeg = function (array $segs, string $label, string $date, string $dur) use ($bkTime): array {
+        $first = $segs[0] ?? [];
+        $last = $segs === [] ? [] : $segs[count($segs) - 1];
+
+        return [
+            'label' => $label,
+            'from' => $first['fromCity'] ?? $first['from'] ?? '',
+            'to' => $last['toCity'] ?? $last['to'] ?? '',
+            'airline' => $first['airline'] ?? '',
+            'flights' => implode(', ', array_filter(array_map(fn ($s) => trim((string) ($s['flightNo'] ?? '')), $segs))),
+            'date' => $date !== '' ? $date : (string) ($first['departDate'] ?? ''),
+            'depart' => $bkTime($first['departTime'] ?? ''),
+            'arrive' => $bkTime($last['arriveTime'] ?? ''),
+            'dur' => $dur,
+        ];
+    };
+    $rvLegs = $isMulti
+        ? array_map(fn ($leg, $i) => $rvLeg($leg['segments'] ?? [], 'Leg '.($i + 1), (string) ($leg['departDateLabel'] ?? ''), (string) ($leg['totalTimeLabel'] ?? '')), $multiLegs, array_keys($multiLegs))
+        : array_values(array_filter([
+            $rvLeg($segments, $isReturn ? 'Outbound' : '', (string) ($flight['departDateLabel'] ?? $mappedFlight['departDateLabel'] ?? ''), (string) ($flight['totalTimeLabel'] ?? $mappedFlight['totalTimeLabel'] ?? '')),
+            $isReturn ? $rvLeg($retSegs, 'Return', (string) ($mappedFlight['returnDateLabel'] ?? ''), (string) ($mappedFlight['returnTotalTimeLabel'] ?? '')) : null,
+        ]));
 
     // Totals from revalidate
     $totalPrice = (float)($mappedFlight['price'] ?? ($itinTotals['TotalFare']['Amount'] ?? 0));
@@ -1599,31 +1658,34 @@
                                 <div class="bk-review-head">
                                     <span class="bk-review-title">Flight</span>
                                 </div>
-                                <div class="bk-review-flight">
+                                @foreach($rvLegs as $rv)
+                                <div class="bk-review-flight" @if(! $loop->first) style="margin-top:8px;" @endif>
                                     <span class="bk-review-flight-ic">
                                         <span class="bk-icon-mask bk-icon-plane" style="width:15px;height:15px;" aria-hidden="true"></span>
                                     </span>
                                     <span class="bk-review-flight-txt">
                                         <span class="bk-review-flight-route">
-                                            {{ $firstSeg['fromCity'] ?? $firstSeg['from'] ?? '' }}
+                                            {{ $rv['from'] }}
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="color:var(--gray-400);flex-shrink:0;"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
-                                            {{ $lastSeg['toCity'] ?? $lastSeg['to'] ?? '' }}
+                                            {{ $rv['to'] }}
+                                            @if($rv['label'])<span class="bk-itin-chip">{{ $rv['label'] }}</span>@endif
                                         </span>
                                         <span class="bk-review-flight-meta">
-                                            {{ $firstSeg['airline'] ?? '' }}@if(!empty($firstSeg['flightNo'])) {{ $firstSeg['flightNo'] }}@endif
+                                            {{ $rv['airline'] }}@if($rv['flights']) {{ $rv['flights'] }}@endif
                                             &middot; {{ $tripLabel }} &middot; {{ $cabin }}
-                                            @if(!empty($flight['departDateLabel'])) &middot; {{ $flight['departDateLabel'] }} @endif
+                                            @if($rv['date']) &middot; {{ $rv['date'] }} @endif
                                         </span>
                                         <span class="bk-review-flight-times">
-                                            <span>{{ $bkTime($firstSeg['departTime'] ?? '') }}</span>
+                                            <span>{{ $rv['depart'] }}</span>
                                             <span class="sep">&ndash;</span>
-                                            <span>{{ $bkTime($lastSeg['arriveTime'] ?? '') }}</span>
-                                            @if(!empty($flight['totalTimeLabel']))
-                                                <span class="bk-review-flight-dur">{{ $flight['totalTimeLabel'] }}</span>
+                                            <span>{{ $rv['arrive'] }}</span>
+                                            @if($rv['dur'])
+                                                <span class="bk-review-flight-dur">{{ $rv['dur'] }}</span>
                                             @endif
                                         </span>
                                     </span>
                                 </div>
+                                @endforeach
                             </div>
 
                             {{-- ── Travellers ── --}}

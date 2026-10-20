@@ -186,7 +186,9 @@ input[type="date"].tw-ui-control { color-scheme: light; }
 .tw-ui-page__summary { position: sticky; top: 24px; }
 
 @media (max-width: 800px) {
-    .tw-ui-layout { grid-template-columns: 1fr; }
+    /* minmax(0, …): a bare 1fr can't shrink below its content, which pushed
+       the payment page 18px past a 320px screen. */
+    .tw-ui-layout { grid-template-columns: minmax(0, 1fr); }
     .tw-ui-card__header, .tw-ui-card__body { padding: 18px; }
     .tw-ui-stepper__label { display: none; }
     .tw-ui-page { padding-top: 22px; }

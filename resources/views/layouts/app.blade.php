@@ -28,7 +28,7 @@
 
     <!-- Custom Styles -->
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/travelwheel-ui.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/travelwheel-ui.css') }}?v={{ filemtime(public_path('css/travelwheel-ui.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
     <link rel="stylesheet" href="{{ asset('css/styleslide.css') }}">
 
