@@ -24,6 +24,25 @@
         : null;
 
     $outboundStops = max(0, count($outboundSegments ?? []) - 1);
+
+    // Multi-city: first departure to last arrival spans the whole trip
+    // ("282h 30m"), the outbound stop count is leg 1's at best ("Non-stop"
+    // for SkyLink, whose segments are empty), and a circular trip reads
+    // LOS to LOS. The hero shows the leg count and the route instead.
+    $heroLegs = collect($multiLegs ?? [])
+        ->filter(fn ($leg) => is_array($leg) && ! empty($leg['segments']))
+        ->values();
+
+    if ($heroLegs->isNotEmpty()) {
+        $first = $heroLegs->first()['segments'][0];
+        $heroEnd = collect($heroLegs->last()['segments'])->last();
+        $journey = $heroLegs->count().' legs';
+        $heroRoute = $heroLegs
+            ->map(fn ($leg) => $leg['from'] ?? ($leg['segments'][0]['from'] ?? ''))
+            ->push($heroEnd['to'] ?? '')
+            ->filter()
+            ->implode(' · ');
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -61,7 +80,11 @@
             <div class="dur">{{ $journey ?: ($tripLabel ?? 'Flight') }}</div>
             <div class="rule"></div>
             <div class="stops">
+                @isset($heroRoute)
+                {{ $heroRoute }}
+                @else
                 {{ $outboundStops === 0 ? 'Non-stop' : $outboundStops.' stop'.($outboundStops === 1 ? '' : 's') }}@if (! empty($returnSegments) && ! empty($returnSegments[0]['departDT'])) &nbsp;·&nbsp; back {{ \Carbon\Carbon::parse($returnSegments[0]['departDT'])->format('d M') }}@endif
+                @endisset
             </div>
         </td>
         <td class="right" style="width:27%;">

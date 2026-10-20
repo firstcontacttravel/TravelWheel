@@ -65,6 +65,29 @@ class TravelDocumentPdfTest extends TestCase
     }
 
     /**
+     * The multi-city header measured first departure to last arrival
+     * ("282h 30m"), counted stops from the outbound segments only (leg 1's,
+     * or "Non-stop" for SkyLink, which leaves them empty), and showed a
+     * circular trip as LOS to LOS with nothing in between.
+     */
+    public function test_a_multi_city_eticket_header_shows_its_legs_and_route(): void
+    {
+        $travelnext = $this->booking(multiCity: true);
+        $skylink = $this->booking(multiCity: true);
+        $skylink->flight_snapshot = ['segments' => []] + $skylink->flight_snapshot;
+
+        foreach (['TravelNext' => $travelnext, 'SkyLink' => $skylink] as $shape => $booking) {
+            $html = $this->eticketHtml($booking);
+
+            $this->assertStringContainsString('3 legs', $html, $shape);
+            $this->assertStringContainsString('LOS · AMS · CDG · LOS', $html, $shape);
+            $this->assertStringNotContainsString('282h', $html, $shape);
+            $this->assertStringNotContainsString('Non-stop', $html, $shape);
+            $this->assertStringNotContainsString('1 stop', $html, $shape);
+        }
+    }
+
+    /**
      * The e-ticket painted its header #303191 and the itinerary painted its own
      * #39328f — two different brand blues on two PDFs attached to the same
      * email. Both now read config/brand.php through the shared stylesheet.
