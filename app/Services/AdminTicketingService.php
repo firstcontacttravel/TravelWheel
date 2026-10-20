@@ -228,10 +228,24 @@ class AdminTicketingService
         $legs = $this->alertLegs($booking->flight_snapshot ?? []);
         $isMultiCity = ! empty($booking->flight_snapshot['multiLegs'] ?? []);
 
+        // SkyLink only reserves after payment and never issues tickets
+        // through its API, so its alerts mean "paid, nothing reserved" (no
+        // PNR) or "reserved, ticket still to get from SkyLink" — not the
+        // TravelNext "confirmed without a ticket number" the email assumed.
+        $skylink = $booking->isSkylink();
+        $reserved = filled($booking->unique_id);
+
         return [
-            'uniqueId' => $booking->unique_id,
-            'bookingStatus' => 'PAID_UNTICKETED',
-            'ticketStatus' => 'TICKETING_FAILED',
+            // A booking that never got a PNR still needs something to go by.
+            'uniqueId' => $booking->unique_id ?: $booking->booking_ref,
+            'supplier' => $skylink ? 'skylink' : 'travelnext',
+            'reserved' => $reserved,
+            'reason' => $message,
+            'seatDeadline' => $skylink && $reserved && $booking->tkt_time_limit
+                ? Carbon::parse($booking->tkt_time_limit)->timezone('Africa/Lagos')->format('D, d M Y \a\t H:i')
+                : null,
+            'bookingStatus' => $skylink && ! $reserved ? 'PAID_NOT_RESERVED' : 'PAID_UNTICKETED',
+            'ticketStatus' => $skylink ? ($reserved ? 'AWAITING_SKYLINK_TICKET' : 'NOT_RESERVED') : 'TICKETING_FAILED',
             // A return trip's route is where it goes, not where it ends.
             'origin' => $legs[0]['from'] ?? '',
             'destination' => $isMultiCity ? (end($legs)['to'] ?? '') : ($legs[0]['to'] ?? ''),

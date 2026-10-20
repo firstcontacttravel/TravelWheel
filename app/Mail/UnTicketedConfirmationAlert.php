@@ -16,8 +16,14 @@ class UnTicketedConfirmationAlert extends Mailable
 
     public function envelope()
     {
+        $headline = match (true) {
+            ($this->alertData['supplier'] ?? '') === 'skylink' && ! ($this->alertData['reserved'] ?? true) => 'Paid Booking Not Reserved',
+            ($this->alertData['supplier'] ?? '') === 'skylink' => 'SkyLink Booking Needs Ticketing',
+            default => 'Booking Confirmed but Not Ticketed',
+        };
+
         return new \Illuminate\Mail\Mailables\Envelope(
-            subject: 'ALERT: Booking Confirmed but Not Ticketed - ' . $this->alertData['uniqueId'],
+            subject: 'ALERT: '.$headline.' - '.$this->alertData['uniqueId'],
         );
     }
 
@@ -33,11 +39,13 @@ class UnTicketedConfirmationAlert extends Mailable
 
     public function attachments(): array
     {
+        // By booking_ref first: uniqueId falls back to it for a booking that
+        // never got a PNR (a SkyLink reservation that failed after payment).
         $uniqueId = $this->alertData['uniqueId'] ?? null;
         $bookingRef = data_get($this->alertData, 'pricing.booking_ref');
         $booking = FlightBooking::query()
-            ->when($uniqueId, fn ($query) => $query->where('unique_id', $uniqueId))
-            ->when(! $uniqueId && $bookingRef, fn ($query) => $query->where('booking_ref', $bookingRef))
+            ->when($bookingRef, fn ($query) => $query->where('booking_ref', $bookingRef))
+            ->when(! $bookingRef && $uniqueId, fn ($query) => $query->where('unique_id', $uniqueId))
             ->latest()
             ->first();
 

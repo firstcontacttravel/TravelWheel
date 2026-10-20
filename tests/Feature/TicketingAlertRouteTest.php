@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\UnTicketedConfirmationAlert;
 use App\Models\FlightBooking;
 use App\Services\AdminTicketingService;
 use Tests\TestCase;
@@ -46,21 +47,64 @@ class TicketingAlertRouteTest extends TestCase
         $this->assertSame(['Outbound', 'Return'], array_column($data['legs'], 'label'));
     }
 
+    /**
+     * Every alert said the airline returned CONFIRMED without a ticket
+     * number. A SkyLink alert after payment means nothing was reserved, and
+     * its blank PNR left the subject and reference panel empty.
+     */
+    public function test_a_skylink_reservation_that_failed_after_payment_says_nothing_is_reserved(): void
+    {
+        $data = $this->alertData(['segments' => [], 'multiLegs' => $this->multiLegs()], [
+            'supplier' => 'skylink', 'unique_id' => null,
+        ], 'SkyLink reservation failed after payment.');
+        $html = view('emails.unticketed-confirmation-alert', ['data' => $data])->render();
+
+        $this->assertSame('TW-ALERT1', $data['uniqueId']);
+        $this->assertSame('ALERT: Paid Booking Not Reserved - TW-ALERT1', (new UnTicketedConfirmationAlert($data))->envelope()->subject);
+        $this->assertStringContainsString('Paid booking has no seat reserved', $html);
+        $this->assertStringContainsString('SkyLink reservation failed after payment.', $html);
+        $this->assertStringContainsString('Rebook the same or another fare, or refund', $html);
+        $this->assertStringNotContainsString('returned CONFIRMED', $html);
+    }
+
+    public function test_a_reserved_skylink_booking_is_flagged_as_awaiting_its_ticket(): void
+    {
+        $data = $this->alertData(['segments' => [], 'multiLegs' => $this->multiLegs()], [
+            'supplier' => 'skylink', 'tkt_time_limit' => '2026-11-18 16:00:00',
+        ], 'Payment received, but ticket issuance needs manual processing.');
+        $html = view('emails.unticketed-confirmation-alert', ['data' => $data])->render();
+
+        $this->assertSame('ALERT: SkyLink Booking Needs Ticketing - SKY-PNR-1', (new UnTicketedConfirmationAlert($data))->envelope()->subject);
+        $this->assertStringContainsString('Paid SkyLink booking still needs its ticket', $html);
+        $this->assertStringContainsString('Seat held until', $html);
+        $this->assertStringNotContainsString('returned CONFIRMED', $html);
+    }
+
+    public function test_a_travelnext_alert_keeps_its_wording_and_now_shows_the_reason(): void
+    {
+        $data = $this->alertData(['segments' => [$this->segment('LOS', 'LHR', '2026-11-20T10:00:00', 'BA75')]], [], 'Supplier status is NOT_TICKETED while booking status is CONFIRMED.');
+        $html = view('emails.unticketed-confirmation-alert', ['data' => $data])->render();
+
+        $this->assertSame('ALERT: Booking Confirmed but Not Ticketed - SKY-PNR-1', (new UnTicketedConfirmationAlert($data))->envelope()->subject);
+        $this->assertStringContainsString('returned CONFIRMED without a ticket number', $html);
+        $this->assertStringContainsString('Supplier status is NOT_TICKETED while booking status is CONFIRMED.', $html);
+    }
+
     private function alertHtml(array $flight): string
     {
         return view('emails.unticketed-confirmation-alert', ['data' => $this->alertData($flight)])->render();
     }
 
-    private function alertData(array $flight): array
+    private function alertData(array $flight, array $booking = [], string $message = 'Ticketing requires manual review.'): array
     {
-        $booking = new FlightBooking([
+        $booking = new FlightBooking(array_merge([
             'booking_ref' => 'TW-ALERT1',
             'unique_id' => 'SKY-PNR-1',
             'flight_snapshot' => $flight,
             'passengers_snapshot' => [],
-        ]);
+        ], $booking));
 
-        return app(AdminTicketingService::class)->failureAlertData($booking, 'Ticketing requires manual review.');
+        return app(AdminTicketingService::class)->failureAlertData($booking, $message);
     }
 
     private function multiLegs(): array
