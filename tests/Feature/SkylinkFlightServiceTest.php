@@ -410,6 +410,37 @@ class SkylinkFlightServiceTest extends TestCase
         $this->assertSame(['3h 15m'], $flight['returnLayoverDurations']);
     }
 
+    public function test_the_return_leg_carries_its_own_trip_time_stops_and_date(): void
+    {
+        // The result card's Return column showed no trip time and "Non-stop"
+        // for every SkyLink return, since none of these were set.
+        $this->configureSkylink();
+
+        $leg = fn (string $from, string $to, string $depDate, string $total) => array_merge(
+            $this->searchResponse()['data']['flights'][0]['segments'][0][0],
+            ['departure_code' => $from, 'arrival_code' => $to, 'departure_date' => $depDate, 'duration_time' => $total, 'total_duration' => $total],
+        );
+
+        $response = $this->searchResponse();
+        $response['data']['flights'][0]['segments'] = [
+            [$leg('LOS', 'LHR', '26-10-2026', '16h 35m')],
+            [$leg('LHR', 'NBO', '02-11-2026', '15h 55m'), $leg('NBO', 'LOS', '03-11-2026', '15h 55m')],
+        ];
+
+        Http::fake([
+            '*/api/login' => Http::response($this->loginResponse()),
+            '*/api/flights/search' => Http::response($response),
+        ]);
+
+        $flight = app(SkylinkFlightService::class)->search($this->searchCriteria())['data']['flights'][0];
+
+        $this->assertSame('16h 35m', $flight['totalTimeLabel']);
+        $this->assertSame('15h 55m', $flight['returnTotalTimeLabel']);
+        $this->assertSame(955, $flight['returnTotalTimeMins']);
+        $this->assertSame(1, $flight['returnStops']);
+        $this->assertSame('Mon, 02 Nov 2026', $flight['returnDateLabel']);
+    }
+
     private function searchCriteria(): array
     {
         return [

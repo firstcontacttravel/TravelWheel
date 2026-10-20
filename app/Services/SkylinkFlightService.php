@@ -436,9 +436,6 @@ class SkylinkFlightService implements FlightSupplier
         // The mapped (not raw) first leg — carries airlineCode/cabin/etc. under
         // their canonical key names rather than SkyLink's raw field names.
         $firstLeg = $outboundSegments[0] ?? [];
-        // The raw first leg, for fields the canonical shape doesn't rename
-        // (duration_time's whole-itinerary-total label, etc.).
-        $firstRawLeg = $outboundLegs[0] ?? [];
 
         // SkyLink always prices in NGN regardless of the requested currency —
         // convert back to USD immediately so this flight carries the same
@@ -480,12 +477,19 @@ class SkylinkFlightService implements FlightSupplier
             'departDT' => $outboundSegments[0]['departDT'] ?? null,
             'arriveDT' => end($outboundSegments)['arriveDT'] ?? null,
             'totalDuration' => $this->directionTotalMinutes($outboundLegs),
-            'durationLabel' => (string) ($firstRawLeg['duration_time'] ?? ''),
+            'durationLabel' => $this->directionTotalLabel($outboundLegs),
             'layoverDurations' => $this->layoverDurations($outboundSegments),
             'departDateLabel' => $outboundSegments[0]['departDate'] ?? '',
             'totalTimeMins' => $this->directionTotalMinutes($outboundLegs),
-            'totalTimeLabel' => (string) ($firstRawLeg['duration_time'] ?? ''),
+            'totalTimeLabel' => $this->directionTotalLabel($outboundLegs),
             'returnSegments' => $returnSegments,
+            // The result card's Return column reads these; without them it
+            // showed no trip time, no date and "Non-stop" for every return.
+            'returnStops' => max(count($returnLegs) - 1, 0),
+            'returnDateLabel' => $returnSegments[0]['departDate'] ?? '',
+            'returnTotalTimeMins' => $this->directionTotalMinutes($returnLegs),
+            'returnTotalTimeLabel' => $this->directionTotalLabel($returnLegs),
+            'returnDurationLabel' => $this->directionTotalLabel($returnLegs),
             'returnLayoverDurations' => $this->layoverDurations($returnSegments),
             'multiLegs' => [],
             'fareBreakdown' => $this->buildFareBreakdown($raw, $criteria, (bool) ($firstLeg['refundable'] ?? false)),
@@ -721,6 +725,23 @@ class SkylinkFlightService implements FlightSupplier
         // Fallback if the whole-itinerary total is missing: sum each leg's
         // own flight time (this undercounts layovers, but never overcounts).
         return collect($legs)->sum(fn (array $leg) => $this->durationToMinutes($leg['seg_duration'] ?? $leg['duration_time'] ?? 0));
+    }
+
+    /**
+     * SkyLink's own label for the direction's total (duration_time), or the
+     * total minutes formatted the same way when that label is missing.
+     */
+    private function directionTotalLabel(array $legs): string
+    {
+        $label = trim((string) ($legs[0]['duration_time'] ?? ''));
+
+        if ($label !== '' || $legs === []) {
+            return $label;
+        }
+
+        $minutes = $this->directionTotalMinutes($legs);
+
+        return $minutes > 0 ? intdiv($minutes, 60).'h '.($minutes % 60).'m' : '';
     }
 
     private function layoverDurations(array $mappedSegments): array
