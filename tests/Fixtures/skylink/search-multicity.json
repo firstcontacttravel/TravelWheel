@@ -1,0 +1,590 @@
+{
+    "success": true,
+    "data": {
+        "meta": {
+            "search_id": "debd50cd",
+            "searched_at": "2026-10-20 21:58:26",
+            "response_time_ms": 33138,
+            "origin": "LOS",
+            "origin_name": "Murtala Muhammed International Airport",
+            "origin_city": "Lagos",
+            "destination": "LOS",
+            "destination_name": "Murtala Muhammed International Airport",
+            "destination_city": "Lagos",
+            "type": "multicity",
+            "class": "economy",
+            "departure_date": "2026-11-20",
+            "return_date": "",
+            "passengers": {
+                "adults": 1,
+                "children": 0,
+                "infants": 0,
+                "total": 1
+            },
+            "currency": "NGN",
+            "limit": 100,
+            "max_limit": 200,
+            "per_office_quota": 10,
+            "total_flights": 2,
+            "suppliers_searched": 4,
+            "offices_searched": 10,
+            "offices_with_results": 7,
+            "offices_with_errors": 2,
+            "cached": true,
+            "routes": [
+                {
+                    "from": "LOS",
+                    "to": "LHR",
+                    "date": "2026-11-20"
+                },
+                {
+                    "from": "LHR",
+                    "to": "DXB",
+                    "date": "2026-11-27"
+                },
+                {
+                    "from": "DXB",
+                    "to": "LOS",
+                    "date": "2026-12-05"
+                }
+            ]
+        },
+        "flights": [
+            {
+                "segments": [
+                    [
+                        {
+                            "img": "MS",
+                            "flight_no": "MS876",
+                            "airline": "Egyptair",
+                            "class": "Economy",
+                            "class_letter": "T",
+                            "baggage": "1 PC",
+                            "cabin_baggage": "7 kg",
+                            "departure_airport": "Murtala Muhammed International Airport",
+                            "departure_city": "Lagos",
+                            "departure_time": "02:45 pm",
+                            "departure_date": "20-11-2026",
+                            "departure_code": "LOS",
+                            "arrival_airport": "Cairo International Airport",
+                            "arrival_city": "Cairo",
+                            "arrival_time": "08:50 pm",
+                            "arrival_date": "20-11-2026",
+                            "arrival_code": "CAI",
+                            "duration_time": "22h 50m",
+                            "seg_duration": "5h 5m",
+                            "total_duration": "22h 50m",
+                            "currency": "NGN",
+                            "branded_fare": "",
+                            "seats_left": 9,
+                            "last_ticketing_date": "2026-11-20",
+                            "equipment": "789",
+                            "departure_terminal": "2I",
+                            "arrival_terminal": "3",
+                            "amenities": [],
+                            "refundable": 0,
+                            "type": "multicity"
+                        },
+                        {
+                            "img": "MS",
+                            "flight_no": "MS777",
+                            "airline": "Egyptair",
+                            "class": "Economy",
+                            "class_letter": "T",
+                            "baggage": "1 PC",
+                            "cabin_baggage": "7 kg",
+                            "departure_airport": "Cairo International Airport",
+                            "departure_city": "Cairo",
+                            "departure_time": "09:20 am",
+                            "departure_date": "21-11-2026",
+                            "departure_code": "CAI",
+                            "arrival_airport": "London Heathrow Airport",
+                            "arrival_city": "London",
+                            "arrival_time": "12:35 pm",
+                            "arrival_date": "21-11-2026",
+                            "arrival_code": "LHR",
+                            "duration_time": "22h 50m",
+                            "seg_duration": "5h 15m",
+                            "total_duration": "22h 50m",
+                            "currency": "NGN",
+                            "branded_fare": "",
+                            "seats_left": 9,
+                            "last_ticketing_date": "2026-11-20",
+                            "equipment": "773",
+                            "departure_terminal": "3",
+                            "arrival_terminal": "2",
+                            "amenities": [],
+                            "refundable": 0,
+                            "type": "multicity"
+                        }
+                    ],
+                    [
+                        {
+                            "img": "MS",
+                            "flight_no": "MS778",
+                            "airline": "Egyptair",
+                            "class": "Economy",
+                            "class_letter": "T",
+                            "baggage": "1 PC",
+                            "cabin_baggage": "7 kg",
+                            "departure_airport": "London Heathrow Airport",
+                            "departure_city": "London",
+                            "departure_time": "02:00 pm",
+                            "departure_date": "27-11-2026",
+                            "departure_code": "LHR",
+                            "arrival_airport": "Cairo International Airport",
+                            "arrival_city": "Cairo",
+                            "arrival_time": "08:40 pm",
+                            "arrival_date": "27-11-2026",
+                            "arrival_code": "CAI",
+                            "duration_time": "15h 40m",
+                            "seg_duration": "4h 40m",
+                            "total_duration": "15h 40m",
+                            "currency": "NGN",
+                            "branded_fare": "",
+                            "seats_left": 9,
+                            "last_ticketing_date": "2026-11-20",
+                            "equipment": "773",
+                            "departure_terminal": "2",
+                            "arrival_terminal": "3",
+                            "amenities": [],
+                            "refundable": 0,
+                            "type": "multicity"
+                        },
+                        {
+                            "img": "MS",
+                            "flight_no": "MS901",
+                            "airline": "Egyptair",
+                            "class": "Economy",
+                            "class_letter": "T",
+                            "baggage": "1 PC",
+                            "cabin_baggage": "7 kg",
+                            "departure_airport": "Cairo International Airport",
+                            "departure_city": "Cairo",
+                            "departure_time": "04:25 am",
+                            "departure_date": "28-11-2026",
+                            "departure_code": "CAI",
+                            "arrival_airport": "Dubai International Airport",
+                            "arrival_city": "Dubai",
+                            "arrival_time": "09:40 am",
+                            "arrival_date": "28-11-2026",
+                            "arrival_code": "DXB",
+                            "duration_time": "15h 40m",
+                            "seg_duration": "3h 15m",
+                            "total_duration": "15h 40m",
+                            "currency": "NGN",
+                            "branded_fare": "",
+                            "seats_left": 9,
+                            "last_ticketing_date": "2026-11-20",
+                            "equipment": "738",
+                            "departure_terminal": "3",
+                            "arrival_terminal": "1",
+                            "amenities": [],
+                            "refundable": 0,
+                            "type": "multicity"
+                        }
+                    ],
+                    [
+                        {
+                            "img": "MS",
+                            "flight_no": "MS906",
+                            "airline": "Egyptair",
+                            "class": "Economy",
+                            "class_letter": "T",
+                            "baggage": "1 PC",
+                            "cabin_baggage": "7 kg",
+                            "departure_airport": "Dubai International Airport",
+                            "departure_city": "Dubai",
+                            "departure_time": "08:00 pm",
+                            "departure_date": "05-12-2026",
+                            "departure_code": "DXB",
+                            "arrival_airport": "Cairo International Airport",
+                            "arrival_city": "Cairo",
+                            "arrival_time": "10:05 pm",
+                            "arrival_date": "05-12-2026",
+                            "arrival_code": "CAI",
+                            "duration_time": "20h 45m",
+                            "seg_duration": "4h 5m",
+                            "total_duration": "20h 45m",
+                            "currency": "NGN",
+                            "branded_fare": "",
+                            "seats_left": 9,
+                            "last_ticketing_date": "2026-11-20",
+                            "equipment": "738",
+                            "departure_terminal": "1",
+                            "arrival_terminal": "3",
+                            "amenities": [],
+                            "refundable": 0,
+                            "type": "multicity"
+                        },
+                        {
+                            "img": "MS",
+                            "flight_no": "MS875",
+                            "airline": "Egyptair",
+                            "class": "Economy",
+                            "class_letter": "T",
+                            "baggage": "1 PC",
+                            "cabin_baggage": "7 kg",
+                            "departure_airport": "Cairo International Airport",
+                            "departure_city": "Cairo",
+                            "departure_time": "08:55 am",
+                            "departure_date": "06-12-2026",
+                            "departure_code": "CAI",
+                            "arrival_airport": "Murtala Muhammed International Airport",
+                            "arrival_city": "Lagos",
+                            "arrival_time": "01:45 pm",
+                            "arrival_date": "06-12-2026",
+                            "arrival_code": "LOS",
+                            "duration_time": "20h 45m",
+                            "seg_duration": "5h 50m",
+                            "total_duration": "20h 45m",
+                            "currency": "NGN",
+                            "branded_fare": "",
+                            "seats_left": 9,
+                            "last_ticketing_date": "2026-11-20",
+                            "equipment": "789",
+                            "departure_terminal": "3",
+                            "arrival_terminal": "2I",
+                            "amenities": [],
+                            "refundable": 0,
+                            "type": "multicity"
+                        }
+                    ]
+                ],
+                "price": 1601159,
+                "actual_adult_base": 244303,
+                "actual_child_base": 0,
+                "actual_infant_base": 0,
+                "currency": "NGN",
+                "route_type": "SITI",
+                "seats_left": 9,
+                "last_ticketing_date": "2026-11-20",
+                "is_private_fare": true,
+                "fare_types": [
+                    "NEGOTIATED"
+                ],
+                "type": "multicity",
+                "baggage_allowance": {
+                    "checked": "1 PC",
+                    "cabin": "7 kg",
+                    "varies_by_segment": false,
+                    "by_segment": [
+                        {
+                            "from": "LOS",
+                            "to": "CAI",
+                            "checked": "1 PC",
+                            "cabin": "7 kg"
+                        },
+                        {
+                            "from": "CAI",
+                            "to": "LHR",
+                            "checked": "1 PC",
+                            "cabin": "7 kg"
+                        },
+                        {
+                            "from": "LHR",
+                            "to": "CAI",
+                            "checked": "1 PC",
+                            "cabin": "7 kg"
+                        },
+                        {
+                            "from": "CAI",
+                            "to": "DXB",
+                            "checked": "1 PC",
+                            "cabin": "7 kg"
+                        },
+                        {
+                            "from": "DXB",
+                            "to": "CAI",
+                            "checked": "1 PC",
+                            "cabin": "7 kg"
+                        },
+                        {
+                            "from": "CAI",
+                            "to": "LOS",
+                            "checked": "1 PC",
+                            "cabin": "7 kg"
+                        }
+                    ]
+                },
+                "fare_rules": {
+                    "branded_fare": null,
+                    "cabin_class": "Economy",
+                    "booking_classes": [
+                        "T"
+                    ],
+                    "seats_remaining": 9,
+                    "last_ticketing_date": "2026-11-20"
+                },
+                "flight_details": {
+                    "equipment": [
+                        "789",
+                        "773",
+                        "738"
+                    ],
+                    "connection_times": [],
+                    "terminals": [
+                        {
+                            "from": "LOS",
+                            "from_terminal": "2I",
+                            "to": "CAI",
+                            "to_terminal": "3"
+                        },
+                        {
+                            "from": "CAI",
+                            "from_terminal": "3",
+                            "to": "LHR",
+                            "to_terminal": "2"
+                        },
+                        {
+                            "from": "LHR",
+                            "from_terminal": "2",
+                            "to": "CAI",
+                            "to_terminal": "3"
+                        },
+                        {
+                            "from": "CAI",
+                            "from_terminal": "3",
+                            "to": "DXB",
+                            "to_terminal": "1"
+                        },
+                        {
+                            "from": "DXB",
+                            "from_terminal": "1",
+                            "to": "CAI",
+                            "to_terminal": "3"
+                        },
+                        {
+                            "from": "CAI",
+                            "from_terminal": "3",
+                            "to": "LOS",
+                            "to_terminal": "2I"
+                        }
+                    ]
+                },
+                "booking_token": "btk_multicity_1"
+            },
+            {
+                "segments": [
+                    [
+                        {
+                            "img": "EK",
+                            "flight_no": "EK784",
+                            "airline": "Emirates",
+                            "route_type": "SITI",
+                            "class": "Economy",
+                            "class_letter": "T",
+                            "baggage": "2 PC",
+                            "cabin_baggage": "",
+                            "departure_airport": "Murtala Muhammed International Airport",
+                            "departure_city": "Lagos",
+                            "departure_time": "05:55 pm",
+                            "departure_date": "20-11-2026",
+                            "departure_code": "LOS",
+                            "arrival_airport": "Dubai International Airport",
+                            "arrival_city": "Dubai",
+                            "arrival_time": "04:10 am",
+                            "arrival_date": "21-11-2026",
+                            "arrival_code": "DXB",
+                            "duration_time": "24h",
+                            "seg_duration": "7h 15m",
+                            "total_duration": "24h",
+                            "branded_fare": "ECONOMY-ECONOMY",
+                            "seats_left": null,
+                            "equipment": "77W",
+                            "departure_terminal": "2I",
+                            "arrival_terminal": "3",
+                            "currency": "NGN",
+                            "refundable": 0,
+                            "type": "multicity"
+                        },
+                        {
+                            "img": "EK",
+                            "flight_no": "EK29",
+                            "airline": "Emirates",
+                            "route_type": "SITI",
+                            "class": "Economy",
+                            "class_letter": "T",
+                            "baggage": "2 PC",
+                            "cabin_baggage": "",
+                            "departure_airport": "Dubai International Airport",
+                            "departure_city": "Dubai",
+                            "departure_time": "09:40 am",
+                            "departure_date": "21-11-2026",
+                            "departure_code": "DXB",
+                            "arrival_airport": "London Heathrow Airport",
+                            "arrival_city": "London",
+                            "arrival_time": "01:50 pm",
+                            "arrival_date": "21-11-2026",
+                            "arrival_code": "LHR",
+                            "duration_time": "24h",
+                            "seg_duration": "8h 10m",
+                            "total_duration": "24h",
+                            "branded_fare": "ECONOMY-ECONOMY",
+                            "seats_left": null,
+                            "equipment": "388",
+                            "departure_terminal": "3",
+                            "arrival_terminal": "3",
+                            "currency": "NGN",
+                            "refundable": 0,
+                            "type": "multicity"
+                        }
+                    ],
+                    [
+                        {
+                            "img": "EK",
+                            "flight_no": "EK8",
+                            "airline": "Emirates",
+                            "route_type": "SITI",
+                            "class": "Economy",
+                            "class_letter": "T",
+                            "baggage": "2 PC",
+                            "cabin_baggage": "",
+                            "departure_airport": "London Heathrow Airport",
+                            "departure_city": "London",
+                            "departure_time": "09:10 am",
+                            "departure_date": "27-11-2026",
+                            "departure_code": "LHR",
+                            "arrival_airport": "Dubai International Airport",
+                            "arrival_city": "Dubai",
+                            "arrival_time": "08:00 pm",
+                            "arrival_date": "27-11-2026",
+                            "arrival_code": "DXB",
+                            "duration_time": "",
+                            "seg_duration": "6h 50m",
+                            "total_duration": "",
+                            "branded_fare": "ECONOMY-ECONOMY",
+                            "seats_left": null,
+                            "equipment": "388",
+                            "departure_terminal": "3",
+                            "arrival_terminal": "3",
+                            "currency": "NGN",
+                            "refundable": 0,
+                            "type": "multicity"
+                        }
+                    ],
+                    [
+                        {
+                            "img": "EK",
+                            "flight_no": "EK783",
+                            "airline": "Emirates",
+                            "route_type": "SITI",
+                            "class": "Economy",
+                            "class_letter": "T",
+                            "baggage": "2 PC",
+                            "cabin_baggage": "",
+                            "departure_airport": "Dubai International Airport",
+                            "departure_city": "Dubai",
+                            "departure_time": "10:30 am",
+                            "departure_date": "05-12-2026",
+                            "departure_code": "DXB",
+                            "arrival_airport": "Murtala Muhammed International Airport",
+                            "arrival_city": "Lagos",
+                            "arrival_time": "04:10 pm",
+                            "arrival_date": "05-12-2026",
+                            "arrival_code": "LOS",
+                            "duration_time": "",
+                            "seg_duration": "8h 40m",
+                            "total_duration": "",
+                            "branded_fare": "ECONOMY-ECONOMY",
+                            "seats_left": null,
+                            "equipment": "77W",
+                            "departure_terminal": "3",
+                            "arrival_terminal": "1I",
+                            "currency": "NGN",
+                            "refundable": 0,
+                            "type": "multicity"
+                        }
+                    ]
+                ],
+                "route_type": "SITI",
+                "first_carrier": "EK",
+                "price": 1640941.18,
+                "actual_adult_base": 565294.12,
+                "actual_child_base": 0,
+                "actual_infant_base": 0,
+                "currency": "NGN",
+                "fare_basis": "TLEEPNG1",
+                "branded_fare": "ECONOMY-ECONOMY",
+                "fare_features": [],
+                "seats_left": null,
+                "is_private_fare": false,
+                "type": "multicity",
+                "baggage_allowance": {
+                    "checked": "2 PC",
+                    "cabin": null,
+                    "varies_by_segment": false,
+                    "by_segment": [
+                        {
+                            "from": "LOS",
+                            "to": "DXB",
+                            "checked": "2 PC",
+                            "cabin": null
+                        },
+                        {
+                            "from": "DXB",
+                            "to": "LHR",
+                            "checked": "2 PC",
+                            "cabin": null
+                        },
+                        {
+                            "from": "LHR",
+                            "to": "DXB",
+                            "checked": "2 PC",
+                            "cabin": null
+                        },
+                        {
+                            "from": "DXB",
+                            "to": "LOS",
+                            "checked": "2 PC",
+                            "cabin": null
+                        }
+                    ]
+                },
+                "fare_rules": {
+                    "branded_fare": "ECONOMY-ECONOMY",
+                    "cabin_class": "Economy",
+                    "booking_classes": [
+                        "T"
+                    ],
+                    "seats_remaining": null,
+                    "last_ticketing_date": null
+                },
+                "flight_details": {
+                    "equipment": [
+                        "77W",
+                        "388"
+                    ],
+                    "connection_times": [],
+                    "terminals": [
+                        {
+                            "from": "LOS",
+                            "from_terminal": "2I",
+                            "to": "DXB",
+                            "to_terminal": "3"
+                        },
+                        {
+                            "from": "DXB",
+                            "from_terminal": "3",
+                            "to": "LHR",
+                            "to_terminal": "3"
+                        },
+                        {
+                            "from": "LHR",
+                            "from_terminal": "3",
+                            "to": "DXB",
+                            "to_terminal": "3"
+                        },
+                        {
+                            "from": "DXB",
+                            "from_terminal": "3",
+                            "to": "LOS",
+                            "to_terminal": "1I"
+                        }
+                    ]
+                },
+                "booking_token": "btk_multicity_2"
+            }
+        ]
+    }
+}

@@ -70,7 +70,10 @@ class SkylinkFlightService implements FlightSupplier
         $startedAt = microtime(true);
 
         try {
-            $response = $this->request(fn ($client) => $client->post('flights/search', $payload), $this->timeoutFor('search'));
+            // A multi-city search took SkyLink 33s uncached on 2026-10-20, so
+            // the 20s one-way/return limit failed every one.
+            $timeout = $this->timeoutFor(($payload['flight_type'] ?? '') === 'multicity' ? 'multicity_search' : 'search');
+            $response = $this->request(fn ($client) => $client->post('flights/search', $payload), $timeout);
         } catch (\Throwable $exception) {
             $this->logCall([
                 'call_type' => 'search',
@@ -447,7 +450,7 @@ class SkylinkFlightService implements FlightSupplier
         $price = $this->ngnToUsd($priceNgn);
         $baseFare = $this->ngnToUsd($baseFareNgn);
 
-        return [
+        $flight = [
             // fareSourceCode kept for compatibility with the existing
             // `fare_source_code` session/validation contract shared by both
             // suppliers — for SkyLink flights it IS the booking_token.
@@ -495,6 +498,81 @@ class SkylinkFlightService implements FlightSupplier
             'fareBreakdown' => $this->buildFareBreakdown($raw, $criteria, (bool) ($firstLeg['refundable'] ?? false)),
             'seatsLeft' => (int) ($raw['seats_left'] ?? $firstLeg['seatsLeft'] ?? 9),
             'lastTicketingDate' => $raw['last_ticketing_date'] ?? null,
+        ];
+
+        $isMultiCity = strtolower((string) ($criteria['trip'] ?? '')) === 'multi'
+            || strtolower((string) ($raw['type'] ?? '')) === 'multicity';
+
+        return $isMultiCity ? array_merge($flight, $this->multiCityFields($directions)) : $flight;
+    }
+
+    /**
+     * A multi-city offer carries one direction per searched route
+     * (segments[route][leg], confirmed by a live sandbox search on
+     * 2026-10-20). Mapped as outbound + return, route 2 showed as "Return"
+     * and route 3 onwards was dropped. Like TravelNext's multi-city flights,
+     * every route goes in multiLegs and the top-level segments stay empty,
+     * since FlightMarkup and FlightMatch read both and would count a leg twice.
+     */
+    private function multiCityFields(array $directions): array
+    {
+        $legs = [];
+
+        foreach ($directions as $rawLegs) {
+            $segments = array_values(array_map(fn (array $leg) => $this->mapLegSegment($leg), $rawLegs));
+
+            if ($segments === []) {
+                continue;
+            }
+
+            $first = $segments[0];
+            $last = end($segments);
+
+            $legs[] = [
+                'segments' => $segments,
+                'stops' => max(count($segments) - 1, 0),
+                'durationLabel' => $this->directionTotalLabel($rawLegs),
+                'layoverDurations' => $this->layoverDurations($segments),
+                'totalTimeMins' => $this->directionTotalMinutes($rawLegs),
+                'totalTimeLabel' => $this->directionTotalLabel($rawLegs),
+                'departDateLabel' => $first['departDate'],
+                'from' => $first['from'],
+                'to' => $last['to'],
+                'fromCity' => $first['fromCity'],
+                'toCity' => $last['toCity'],
+                'departTime' => $first['departTime'],
+                'arriveTime' => $last['arriveTime'],
+                'departDT' => $first['departDT'],
+                'arriveDT' => $last['arriveDT'],
+            ];
+        }
+
+        $firstLeg = $legs[0] ?? [];
+        $lastLeg = $legs === [] ? [] : end($legs);
+        $totalMinutes = array_sum(array_column($legs, 'totalTimeMins'));
+        $totalLabel = $totalMinutes > 0 ? $this->minutesLabel($totalMinutes) : '';
+
+        return [
+            'stops' => array_sum(array_column($legs, 'stops')),
+            'segments' => [],
+            'departTime' => $firstLeg['departTime'] ?? '',
+            'arriveTime' => $lastLeg['arriveTime'] ?? '',
+            'departDT' => $firstLeg['departDT'] ?? null,
+            'arriveDT' => $lastLeg['arriveDT'] ?? null,
+            'totalDuration' => $totalMinutes,
+            'durationLabel' => $totalLabel,
+            'layoverDurations' => [],
+            'departDateLabel' => $firstLeg['departDateLabel'] ?? '',
+            'totalTimeMins' => $totalMinutes,
+            'totalTimeLabel' => $totalLabel,
+            'returnSegments' => [],
+            'returnStops' => 0,
+            'returnDateLabel' => '',
+            'returnTotalTimeMins' => 0,
+            'returnTotalTimeLabel' => '',
+            'returnDurationLabel' => '',
+            'returnLayoverDurations' => [],
+            'multiLegs' => $legs,
         ];
     }
 
@@ -741,7 +819,12 @@ class SkylinkFlightService implements FlightSupplier
 
         $minutes = $this->directionTotalMinutes($legs);
 
-        return $minutes > 0 ? intdiv($minutes, 60).'h '.($minutes % 60).'m' : '';
+        return $minutes > 0 ? $this->minutesLabel($minutes) : '';
+    }
+
+    private function minutesLabel(int $minutes): string
+    {
+        return intdiv($minutes, 60).'h '.($minutes % 60).'m';
     }
 
     private function layoverDurations(array $mappedSegments): array
@@ -756,7 +839,7 @@ class SkylinkFlightService implements FlightSupplier
             // TravelNext's — raw minutes rendered as "800 layover in ...".
             if ($arrive && $depart) {
                 $minutes = max(0, (int) round((Carbon::parse($depart)->getTimestamp() - Carbon::parse($arrive)->getTimestamp()) / 60));
-                $layovers[] = intdiv($minutes, 60).'h '.($minutes % 60).'m';
+                $layovers[] = $this->minutesLabel($minutes);
             } else {
                 $layovers[] = '';
             }

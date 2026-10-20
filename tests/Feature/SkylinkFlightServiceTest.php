@@ -441,6 +441,103 @@ class SkylinkFlightServiceTest extends TestCase
         $this->assertSame('Mon, 02 Nov 2026', $flight['returnDateLabel']);
     }
 
+    public function test_a_multi_city_offer_maps_every_route_into_multi_legs(): void
+    {
+        // Mapped as outbound + return, route 2 showed as "Return" and route 3
+        // was dropped. The fixture is a trimmed live sandbox response
+        // (LOS-LHR, LHR-DXB, DXB-LOS) from 2026-10-20.
+        $this->configureSkylink();
+
+        Http::fake([
+            '*/api/login' => Http::response($this->loginResponse()),
+            '*/api/flights/search' => Http::response($this->multiCityResponse()),
+        ]);
+
+        $result = app(SkylinkFlightService::class)->search($this->multiCityCriteria());
+        $flight = $result['data']['flights'][0];
+
+        $this->assertSame([], $flight['segments']);
+        $this->assertSame([], $flight['returnSegments']);
+        $this->assertCount(3, $flight['multiLegs']);
+        $this->assertSame(
+            [['LOS', 'LHR'], ['LHR', 'DXB'], ['DXB', 'LOS']],
+            array_map(fn (array $leg) => [$leg['from'], $leg['to']], $flight['multiLegs']),
+        );
+
+        $second = $flight['multiLegs'][1];
+        $this->assertSame(['MS778', 'MS901'], array_column($second['segments'], 'flightNo'));
+        $this->assertSame(1, $second['stops']);
+        $this->assertSame('15h 40m', $second['totalTimeLabel']);
+        $this->assertSame(['7h 45m'], $second['layoverDurations']);
+        $this->assertSame('Fri, 27 Nov 2026', $second['departDateLabel']);
+
+        // Top-level fields span the whole trip, first departure to last arrival.
+        $this->assertSame(3, $flight['stops']);
+        $this->assertSame('02:45 pm', $flight['departTime']);
+        $this->assertSame('01:45 pm', $flight['arriveTime']);
+        $this->assertSame((22 * 60 + 50) + (15 * 60 + 40) + (20 * 60 + 45), $flight['totalTimeMins']);
+        $this->assertSame('MS', $flight['airlineCode']);
+
+        // Each physical flight counted once — FlightMarkup and FlightMatch
+        // read segments, returnSegments and multiLegs together.
+        $this->assertCount(6, array_merge(...array_column($flight['multiLegs'], 'segments')));
+    }
+
+    public function test_a_direct_multi_city_route_without_a_total_uses_its_flight_time(): void
+    {
+        // SkyLink sent duration_time "" on the direct Emirates routes.
+        $this->configureSkylink();
+
+        Http::fake([
+            '*/api/login' => Http::response($this->loginResponse()),
+            '*/api/flights/search' => Http::response($this->multiCityResponse()),
+        ]);
+
+        $flight = app(SkylinkFlightService::class)->search($this->multiCityCriteria())['data']['flights'][1];
+
+        $this->assertSame(['24h', '6h 50m', '8h 40m'], array_column($flight['multiLegs'], 'totalTimeLabel'));
+        $this->assertSame([1, 0, 0], array_column($flight['multiLegs'], 'stops'));
+    }
+
+    public function test_a_multi_city_search_gets_the_longer_timeout(): void
+    {
+        $this->configureSkylink();
+        config(['services.skylink.search_timeout' => 20, 'services.skylink.multicity_search_timeout' => 40]);
+
+        $timeouts = [];
+        Http::fake(function ($request, $options) use (&$timeouts) {
+            if (str_ends_with($request->url(), '/api/login')) {
+                return Http::response($this->loginResponse());
+            }
+
+            $timeouts[] = $options['timeout'] ?? null;
+
+            return Http::response($this->multiCityResponse());
+        });
+
+        app(SkylinkFlightService::class)->search($this->multiCityCriteria());
+        app(SkylinkFlightService::class)->search($this->searchCriteria());
+
+        $this->assertSame([40, 20], $timeouts);
+    }
+
+    private function multiCityCriteria(): array
+    {
+        return array_merge($this->searchCriteria(), [
+            'trip' => 'multi',
+            'multi_legs' => [
+                ['from' => 'Lagos (LOS)', 'to' => 'London (LHR)', 'depart' => '20/11/2026'],
+                ['from' => 'London (LHR)', 'to' => 'Dubai (DXB)', 'depart' => '27/11/2026'],
+                ['from' => 'Dubai (DXB)', 'to' => 'Lagos (LOS)', 'depart' => '05/12/2026'],
+            ],
+        ]);
+    }
+
+    private function multiCityResponse(): array
+    {
+        return json_decode(file_get_contents(base_path('tests/Fixtures/skylink/search-multicity.json')), true);
+    }
+
     private function searchCriteria(): array
     {
         return [
