@@ -74,10 +74,19 @@ class FleetCar extends Model
         'year',
         'category',
         'car_name',
+        'colour',
         'passengers',
         'features',
         'images',
         'is_active',
+        'vendor_application_id',
+        'vendor_name',
+        'vendor_contact_name',
+        'vendor_phone',
+        'vendor_email',
+        'vendor_hourly_rates',
+        'vendor_trip_rates',
+        'vendor_notes',
     ];
 
     protected $casts = [
@@ -85,7 +94,15 @@ class FleetCar extends Model
         'features' => 'array',
         'images' => 'array',
         'is_active' => 'boolean',
+        'vendor_hourly_rates' => 'array',
+        'vendor_trip_rates' => 'array',
     ];
+
+    /** The approved partner supplying this car, when they registered through the partner form. */
+    public function vendor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(VendorApplication::class, 'vendor_application_id');
+    }
 
     protected static function booted(): void
     {
