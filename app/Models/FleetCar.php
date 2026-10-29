@@ -69,6 +69,7 @@ class FleetCar extends Model
 
     protected $fillable = [
         'service_type',
+        'state',
         'vehicle_type',
         'year',
         'category',
@@ -123,6 +124,11 @@ class FleetCar extends Model
     public function scopeForTransfer($query)
     {
         return $query->where('service_type', 'transfer');
+    }
+
+    public function scopeInState($query, string $state)
+    {
+        return $query->where('state', $state);
     }
 
     public function imageUrls(): array

@@ -15,6 +15,7 @@ class CarHire extends Model
     protected $fillable = [
         'car_type',
         'category',
+        'state',
         'car_model',
         'full_name',
         'email',

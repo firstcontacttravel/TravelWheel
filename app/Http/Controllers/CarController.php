@@ -8,6 +8,7 @@ use App\Services\BudPayPaymentService;
 use App\Services\CarFleetCatalogService;
 use App\Services\SeerbitPaymentService;
 use App\Services\TransferPricingService;
+use App\Support\GroundStates;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Http;
@@ -98,6 +99,7 @@ class CarController extends Controller
     public function submitCarHire(Request $request)
     {
         $data = $request->validate([
+            'state' => ['required', 'string', Rule::in(GroundStates::open('car_hire'))],
             'car_type' => ['required', 'string', Rule::in(CarFleetCatalogService::bookableVehicleTypes())],
             'category' => 'required|in:Regular,Standard,Executive',
             'rental_hours' => 'required|numeric|min:1',
@@ -110,6 +112,10 @@ class CarController extends Controller
             'pickup_time' => 'required',
             'payment_option' => 'required|in:budpay,seerbit',
         ]);
+
+        if (! $this->catalog->carHireCategoryAvailable($data['car_type'], $data['category'], $data['state'])) {
+            return back()->with('error', 'That vehicle category is no longer available. Please choose another.');
+        }
 
         $allCats = $this->catalog->categoriesData();
         $typeData = $allCats[$data['car_type']] ?? null;
@@ -125,6 +131,7 @@ class CarController extends Controller
         CarHire::create([
             'car_type' => $data['car_type'],
             'category' => $data['category'],
+            'state' => $data['state'],
             // Customers book a category; the actual car is chosen from what's
             // available on ground and recorded when a driver is assigned.
             'car_model' => null,
@@ -154,10 +161,11 @@ class CarController extends Controller
             phone: $data['phone_number'],
             customerName: $data['full_name'],
             reference: $reference,
-            product_title: 'Car Hire - ' . $data['category'] . ' ' . ucfirst($data['car_type']),
+            product_title: 'Car Hire - ' . $data['category'] . ' ' . ucfirst($data['car_type']) . ' (' . GroundStates::name($data['state']) . ')',
             callback_route: 'air.carhire.budpay.callback',
             cancel_route: 'air.carhire',
             seerbit_route: 'air.carhire.seerbit.callback',
+            state: $data['state'],
         );
     }
 
@@ -199,6 +207,7 @@ class CarController extends Controller
     public function submitTransfer(Request $request)
     {
         $data = $request->validate([
+            'state' => ['required', 'string', Rule::in(GroundStates::open('transfer'))],
             'vehicle_type' => ['required', 'string', Rule::in(CarFleetCatalogService::bookableVehicleTypes())],
             'category' => 'required|string|in:Regular,Standard,Executive',
             'distance_km' => 'required|numeric|min:0.1',
@@ -216,7 +225,7 @@ class CarController extends Controller
             'payment_option' => 'required|in:budpay,seerbit',
         ]);
 
-        if (! $this->catalog->transferCategoryAvailable($data['vehicle_type'], $data['category'])) {
+        if (! $this->catalog->transferCategoryAvailable($data['vehicle_type'], $data['category'], $data['state'])) {
             return back()->with('error', 'That vehicle category is no longer available. Please choose another.');
         }
 
@@ -237,6 +246,7 @@ class CarController extends Controller
             'vehicle_type' => $data['vehicle_type'],
             'vehicle_name' => $data['vehicle_name'],
             'category' => $data['category'],
+            'state' => $data['state'],
             'amount' => $verifiedPrice,
             'distance_km' => $data['distance_km'],
             'duration_mins' => $data['duration_mins'],
@@ -270,6 +280,7 @@ class CarController extends Controller
             callback_route: 'air.transfer.budpay.callback',
             cancel_route: 'air.carhire',
             seerbit_route: 'air.transfer.seerbit.callback',
+            state: $data['state'],
         );
     }
 
@@ -332,7 +343,8 @@ class CarController extends Controller
         string $product_title,
         string $callback_route,
         string $cancel_route,
-        string $seerbit_route
+        string $seerbit_route,
+        ?string $state = null
     ) {
         if ($payment_option === 'seerbit') {
             return $this->launchSeerbitPayment(
@@ -349,7 +361,7 @@ class CarController extends Controller
         $budpay = app(BudPayPaymentService::class);
         $publicKey = $budpay->publicKey();
         $callbackUrl = route($callback_route);
-        $cancelUrl = route($cancel_route);
+        $cancelUrl = route($cancel_route, array_filter(['state' => $state]));
         $firstName = explode(' ', $customerName)[0];
         $lastName = explode(' ', $customerName)[1] ?? '';
 

@@ -8,6 +8,7 @@ use App\Models\CarHire;
 use App\Models\Driver;
 use App\Models\DriverAssignment;
 use App\Services\DriverAssignmentNotifier;
+use App\Support\GroundStates;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\FileUpload;
@@ -35,6 +36,7 @@ class CarHiresTable
                 TextColumn::make('phone_number')->copyable(),
                 TextColumn::make('car_type')->badge()->description(fn (CarHire $record): string => $record->category . ' · ' . ($record->car_model ?: 'Any available')),
                 TextColumn::make('pickup_location')->label('Pick-up')->description(fn (CarHire $record): string => filled($record->dropoff_location) ? '-> ' . $record->dropoff_location : (($record->duration_mins ?? $record->rental_hours * 60) ? round(($record->duration_mins ?? $record->rental_hours * 60) / 60, 1) . 'h rental' : ''))->wrap(),
+                TextColumn::make('state')->formatStateUsing(fn (?string $state): string => GroundStates::name($state))->badge()->color('info')->placeholder('-')->toggleable(),
                 TextColumn::make('pickup_date')->label('Pickup')->description(fn (CarHire $record): string => (string) $record->pickup_time)->sortable(),
                 TextColumn::make('amount')->money('NGN')->sortable(),
                 TextColumn::make('payment_status')->badge()->color(fn (string $state): string => match ($state) {
@@ -47,6 +49,7 @@ class CarHiresTable
             ])
             ->filters([
                 WorkItemTable::filter(),
+                SelectFilter::make('state')->options(fn (): array => GroundStates::all())->searchable(),
                 SelectFilter::make('payment_status')->options([
                     'pending' => 'Pending',
                     'paid' => 'Paid',

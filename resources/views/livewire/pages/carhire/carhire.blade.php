@@ -42,7 +42,10 @@
     .unavail-states { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
     .unavail-states span { background: #eef1ff; color: #0d1883; font-size: 11.5px; font-weight: 600; padding: 4px 12px; border-radius: 20px; border: 1px solid #c5cef8; }
 
-    /* ── Main content (tabs + panels) — hidden until Lagos selected ── */
+    .state-none { font-size: 12.5px; color: #888; line-height: 1.6; padding: 6px 2px; }
+    .state-none a { color: #0d1883; font-weight: 600; }
+
+    /* ── Main content (tabs + panels) — hidden until an open state is selected ── */
     .main-content { display: none; }
     .main-content.show { display: block; }
 
@@ -292,57 +295,19 @@
                     <div class="state-row">
                         <select class="state-select" id="stateSelect" onchange="onStateChange(this.value)">
                             <option value="">— Choose your state —</option>
-                            <optgroup label="South West">
-                                <option value="lagos">Lagos</option>
-                                <option value="ogun">Ogun</option>
-                                <option value="oyo">Oyo</option>
-                                <option value="osun">Osun</option>
-                                <option value="ondo">Ondo</option>
-                                <option value="ekiti">Ekiti</option>
-                            </optgroup>
-                            <optgroup label="South East">
-                                <option value="anambra">Anambra</option>
-                                <option value="enugu">Enugu</option>
-                                <option value="imo">Imo</option>
-                                <option value="abia">Abia</option>
-                                <option value="ebonyi">Ebonyi</option>
-                            </optgroup>
-                            <optgroup label="South South">
-                                <option value="rivers">Rivers</option>
-                                <option value="delta">Delta</option>
-                                <option value="edo">Edo</option>
-                                <option value="cross_river">Cross River</option>
-                                <option value="akwa_ibom">Akwa Ibom</option>
-                                <option value="bayelsa">Bayelsa</option>
-                            </optgroup>
-                            <optgroup label="North West">
-                                <option value="kano">Kano</option>
-                                <option value="kaduna">Kaduna</option>
-                                <option value="sokoto">Sokoto</option>
-                                <option value="katsina">Katsina</option>
-                                <option value="zamfara">Zamfara</option>
-                                <option value="kebbi">Kebbi</option>
-                                <option value="jigawa">Jigawa</option>
-                            </optgroup>
-                            <optgroup label="North East">
-                                <option value="borno">Borno</option>
-                                <option value="yobe">Yobe</option>
-                                <option value="adamawa">Adamawa</option>
-                                <option value="taraba">Taraba</option>
-                                <option value="bauchi">Bauchi</option>
-                                <option value="gombe">Gombe</option>
-                            </optgroup>
-                            <optgroup label="North Central">
-                                <option value="abuja">FCT Abuja</option>
-                                <option value="kogi">Kogi</option>
-                                <option value="kwara">Kwara</option>
-                                <option value="benue">Benue</option>
-                                <option value="plateau">Plateau</option>
-                                <option value="nasarawa">Nasarawa</option>
-                                <option value="niger">Niger</option>
-                            </optgroup>
+                            @foreach ($stateGroups as $region => $regionStates)
+                                <optgroup label="{{ $region }}">
+                                    @foreach ($regionStates as $key => $name)
+                                        <option value="{{ $key }}" @selected($key === $state)>{{ $name }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
                         </select>
-                        <div id="stateBadge" style="display:none;"></div>
+                        @if ($stateName)
+                            <div id="stateBadge" class="state-badge available"><span class="dot"></span> Service Available</div>
+                        @else
+                            <div id="stateBadge" style="display:none;"></div>
+                        @endif
                     </div>
                 </div>
 
@@ -352,15 +317,19 @@
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     </div>
                     <h3>Service Not Available Yet</h3>
-                    <p>We currently offer ground transport services only in <strong>Lagos State</strong>. We are actively expanding to other states across Nigeria.</p>
-                    <p style="margin-top:8px;font-size:12.5px;color:#aaa;">Currently available in:</p>
-                    <div class="unavail-states">
-                        <span>🟢 Lagos State</span>
-                    </div>
+                    <p>We don't offer ground transport services in this state yet. We are actively expanding to other states across Nigeria.</p>
+                    @if ($openStateNames)
+                        <p style="margin-top:8px;font-size:12.5px;color:#aaa;">Currently available in:</p>
+                        <div class="unavail-states">
+                            @foreach ($openStateNames as $openName)
+                                <span>🟢 {{ $openName }}</span>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
 
-                {{-- Main booking content — only shown for Lagos --}}
-                <div class="main-content" id="mainContent">
+                {{-- Main booking content — only shown for a state with fleet cars --}}
+                <div class="main-content{{ $stateName ? ' show' : '' }}" id="mainContent">
                     <div class="tab-bar">
                         <button class="tab-btn active" id="tab-ch" onclick="switchTab('ch')">
                             <svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/></svg>
@@ -379,7 +348,10 @@
 
                                 <div class="sidebar">
                                     <div class="section-label">1 · Vehicle type</div>
-                                    @foreach($vehicleTypes as $vtype)
+                                    @if (! $hireTypes)
+                                        <p class="state-none">Car rental isn't available in {{ $stateName }} yet. Try <a href="#" onclick="switchTab('tr');return false;">Pick up 'n' Drop off</a>.</p>
+                                    @endif
+                                    @foreach($hireTypes as $vtype)
                                     <div class="type-card" onclick="ch_setType('{{ $vtype }}',this)">
                                         <div class="type-thumb">
                                             <img src="{{ $typeThumbs[$vtype] }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" alt="{{ ucfirst($vtype) }}">
@@ -414,7 +386,7 @@
                                         <div id="ch_alertA" class="alert-box"></div>
                                         <div class="form-group" style="margin-bottom:10px;">
                                             <label>Pick-up Location</label>
-                                            <input type="text" id="ch_pickup" placeholder="e.g. Victoria Island, Lagos">
+                                            <input type="text" id="ch_pickup" placeholder="{{ $addressExample }}">
                                         </div>
                                         <div class="form-group" style="margin-bottom:10px;">
                                             <label>Rental Duration</label>
@@ -498,6 +470,11 @@
                         <div class="outer-card">
                             {{-- No sidebar for transfer — single column content area --}}
                             <div class="content-area" style="padding:22px 24px;">
+                                @if (! $transferTypes)
+                                    <p class="state-none">Pick up 'n' Drop off isn't available in {{ $stateName }} yet. Try <a href="#" onclick="switchTab('ch');return false;">Car Rental</a>.</p>
+                                @endif
+                                {{-- Kept in the page (hidden) when the state has no transfer cars, since the scripts expect these fields --}}
+                                <div @if (! $transferTypes) style="display:none" @endif>
 
                                 {{-- Step 1: Route --}}
                                 <div class="inner-card tinted">
@@ -506,12 +483,12 @@
                                     <div class="tr-loc-grid">
                                         <div class="form-group">
                                             <label>Pick-up Location</label>
-                                            <input type="text" id="tr_from" placeholder="e.g. Murtala Muhammed Airport">
+                                            <input type="text" id="tr_from" placeholder="{{ $airportExample }}">
                                         </div>
                                         <div class="tr-arrow"><svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg></div>
                                         <div class="form-group">
                                             <label>Drop-off Location</label>
-                                            <input type="text" id="tr_to" placeholder="e.g. Victoria Island, Lagos">
+                                            <input type="text" id="tr_to" placeholder="{{ $addressExample }}">
                                         </div>
                                     </div>
                                     <button class="btn-calc" onclick="tr_calcDist()">📍 Get Final Quote</button>
@@ -531,7 +508,7 @@
                                     <div class="section-label">2 · Vehicle type</div>
                                     <p style="font-size:12.5px;color:#888;margin-bottom:14px;">Select the type of vehicle you need.</p>
                                     <div id="tr_typeCards" style="display:flex;gap:10px;flex-wrap:wrap;">
-                                        @foreach($vehicleTypes as $vtype)
+                                        @foreach($transferTypes as $vtype)
                                         <div class="type-card" onclick="tr_setType('{{ $vtype }}',this)" style="flex:1;min-width:130px;max-width:200px;margin-bottom:0;">
                                             <div class="type-thumb">
                                                 <img src="{{ $transferVehicles[$vtype]['items'][0]['images'][0] ?? '' }}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" alt="{{ ucfirst($vtype) }}">
@@ -612,6 +589,7 @@
                                     <div class="secure-note"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Secured payment · Your data is protected</div>
                                 </div>
 
+                                </div>{{-- /transfer steps --}}
                             </div>
                         </div>
                     </div>
@@ -623,6 +601,7 @@
             {{-- Hidden submit forms --}}
             <form id="ch_form" method="POST" action="{{ route('air.carhire.submit') }}" style="display:none">
                 @csrf
+                <input type="hidden" name="state"            value="{{ $state }}">
                 <input type="hidden" name="car_type"         id="h_ch_type">
                 <input type="hidden" name="category"          id="h_ch_cat">
                 <input type="hidden" name="rental_hours"      id="h_ch_hours">
@@ -637,6 +616,7 @@
             </form>
             <form id="tr_form" method="POST" action="{{ route('air.transfer.submit') }}" style="display:none">
                 @csrf
+                <input type="hidden" name="state"             value="{{ $state }}">
                 <input type="hidden" name="vehicle_type"      id="h_tr_type">
                 <input type="hidden" name="category"          id="h_tr_cat">
                 <input type="hidden" name="price"             id="h_tr_price">
@@ -665,6 +645,13 @@
 <script>
 /* ══ ALL DATA FROM BACKEND ══ */
 const CH_DATA     = @json($categories);
+// States with fleet cars, and the one this page was loaded for
+const OPEN_STATES   = @json($openStates);
+const CURRENT_STATE = @json($state);
+// A state can have Pick up 'n' Drop off cars but no rental cars: open on that tab
+document.addEventListener('DOMContentLoaded', () => {
+    if (CURRENT_STATE && @json(! $hireTypes) && @json((bool) $transferTypes)) switchTab('tr');
+});
 const TR_VEHICLES = @json($transferVehicles);
 const CSRF_TOKEN  = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 const DIST_URL    = '{{ route("air.carhire.distance") }}';
@@ -731,7 +718,18 @@ function onStateChange(val) {
 
     badge.style.display = 'inline-flex';
 
-    if (val === 'lagos') {
+    // Each state has its own fleet, so an open state other than the one
+    // loaded reloads the page with that state's vehicles
+    if (OPEN_STATES.includes(val) && val !== CURRENT_STATE) {
+        badge.className = 'state-badge available';
+        badge.innerHTML = `<span class="dot"></span> Loading vehicles…`;
+        const url = new URL(window.location.href);
+        url.searchParams.set('state', val);
+        window.location.href = url.toString();
+        return;
+    }
+
+    if (val === CURRENT_STATE) {
         badge.className = 'state-badge available';
         badge.innerHTML = `<span class="dot"></span> Service Available`;
         unavail.classList.remove('show');

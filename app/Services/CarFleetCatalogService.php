@@ -27,12 +27,14 @@ class CarFleetCatalogService
 
     /**
      * Car-hire categories (Regular/Standard/Executive) per vehicle type, with
-     * priced fleet models — used to render the public booking page.
+     * priced fleet models — used to render the public booking page. Only
+     * categories with an active car in $state are listed, so a type with no
+     * cars there has no items and isn't offered.
      */
-    public function categories(): array
+    public function categories(string $state): array
     {
         $ratesData = $this->transferPricing->ratesData();
-        $fleetCars = FleetCar::active()->forHire()->get()->groupBy('vehicle_type');
+        $fleetCars = FleetCar::active()->forHire()->inState($state)->get()->groupBy('vehicle_type');
 
         $categories = [];
 
@@ -45,6 +47,9 @@ class CarFleetCatalogService
 
             foreach (['Regular', 'Standard', 'Executive'] as $catName) {
                 $modelsInCat = $carsForType->where('category', $catName);
+                if ($modelsInCat->isEmpty()) {
+                    continue;
+                }
                 $passengers = $modelsInCat->first()->passengers ?? $this->defaultPassengerLabel($vtype);
 
                 $models = $modelsInCat->map(function ($car) use ($vtype) {
@@ -92,12 +97,13 @@ class CarFleetCatalogService
      * Transfer vehicles per vehicle type, grouped by category
      * (Regular/Standard/Executive) with the rate data needed to compute the
      * Base Fare + Tear & Wear + Fuel + Admin Fee formula — used to render
-     * the public booking page.
+     * the public booking page. Only categories with an active car in $state
+     * are listed.
      */
-    public function transferVehicles(): array
+    public function transferVehicles(string $state): array
     {
         $ratesData = $this->transferPricing->ratesData();
-        $fleetCars = FleetCar::active()->forTransfer()->get()->groupBy('vehicle_type');
+        $fleetCars = FleetCar::active()->forTransfer()->inState($state)->get()->groupBy('vehicle_type');
 
         $transferVehicles = [];
 
@@ -108,6 +114,9 @@ class CarFleetCatalogService
             $items = [];
             foreach (['Regular', 'Standard', 'Executive'] as $catName) {
                 $modelsInCat = $carsForType->where('category', $catName);
+                if ($modelsInCat->isEmpty()) {
+                    continue;
+                }
                 $passengers = $modelsInCat->first()->passengers ?? $this->defaultPassengerLabel($vtype);
 
                 $models = $modelsInCat->map(function ($car) use ($vtype) {
@@ -183,12 +192,21 @@ class CarFleetCatalogService
 
     /**
      * Whether any active Transfer fleet car exists in the given vehicle type
-     * + category — customers book a category, not a specific car, so this
-     * guards a Transfer submission against an empty category.
+     * + category in $state — customers book a category, not a specific car,
+     * so this guards a Transfer submission against an empty category.
      */
-    public function transferCategoryAvailable(string $vehicleType, string $category): bool
+    public function transferCategoryAvailable(string $vehicleType, string $category, string $state): bool
     {
-        return FleetCar::active()->forTransfer()
+        return FleetCar::active()->forTransfer()->inState($state)
+            ->where('vehicle_type', $vehicleType)
+            ->where('category', $category)
+            ->exists();
+    }
+
+    /** The Car Hire equivalent of transferCategoryAvailable(). */
+    public function carHireCategoryAvailable(string $vehicleType, string $category, string $state): bool
+    {
+        return FleetCar::active()->forHire()->inState($state)
             ->where('vehicle_type', $vehicleType)
             ->where('category', $category)
             ->exists();

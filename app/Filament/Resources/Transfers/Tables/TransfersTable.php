@@ -9,6 +9,7 @@ use App\Models\DriverAssignment;
 use App\Models\FleetCar;
 use App\Models\Transfer;
 use App\Services\DriverAssignmentNotifier;
+use App\Support\GroundStates;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\FileUpload;
@@ -36,6 +37,7 @@ class TransfersTable
                 TextColumn::make('phone_number')->copyable(),
                 TextColumn::make('vehicle_name')->description(fn (Transfer $record): string => ucfirst($record->vehicle_type)),
                 TextColumn::make('pickup_location')->label('Route')->description(fn (Transfer $record): string => '-> ' . $record->dropoff_location)->wrap(),
+                TextColumn::make('state')->formatStateUsing(fn (?string $state): string => GroundStates::name($state))->badge()->color('info')->placeholder('-')->toggleable(),
                 TextColumn::make('pickup_date')->label('Pickup')->description(fn (Transfer $record): string => (string) $record->pickup_time)->sortable(),
                 TextColumn::make('amount')->money('NGN')->sortable(),
                 TextColumn::make('payment_status')->badge()->color(fn (string $state): string => match ($state) {
@@ -48,6 +50,7 @@ class TransfersTable
             ])
             ->filters([
                 WorkItemTable::filter(),
+                SelectFilter::make('state')->options(fn (): array => GroundStates::all())->searchable(),
                 SelectFilter::make('payment_status')->options([
                     'pending' => 'Pending',
                     'paid' => 'Paid',

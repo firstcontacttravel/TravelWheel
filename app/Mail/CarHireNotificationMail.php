@@ -34,7 +34,7 @@ class CarHireNotificationMail extends Mailable
 
         $carTypeDisplay = $carTypeMap[$this->booking->car_type] ?? ucfirst($this->booking->car_type);
 
-        return $this->subject('New Car Hire Booking — ' . ($this->booking->full_name ?? $this->booking->email))
+        return $this->subject('New Car Hire Booking' . ($this->booking->state ? ' (' . \App\Support\GroundStates::name($this->booking->state) . ')' : '') . ' — ' . ($this->booking->full_name ?? $this->booking->email))
                     ->view('emails.car_hire_notification')
                     ->with([
                         'name'             => $this->booking->full_name,
@@ -43,6 +43,7 @@ class CarHireNotificationMail extends Mailable
                         'car_type'         => $carTypeDisplay,
                         'car_model'        => $this->booking->car_model,
                         'category'         => $this->booking->category,
+                        'state_name'       => $this->booking->state ? \App\Support\GroundStates::name($this->booking->state) : null,
                         'pickup_location'  => $this->booking->pickup_location,
                         'dropoff_location' => $this->booking->dropoff_location,
                         'pickup_date'      => $this->booking->pickup_date,

@@ -6,6 +6,7 @@ use App\Filament\Resources\FleetCars\Pages\CreateFleetCar;
 use App\Filament\Resources\FleetCars\Pages\EditFleetCar;
 use App\Filament\Resources\FleetCars\Pages\ListFleetCars;
 use App\Models\FleetCar;
+use App\Support\GroundStates;
 use BackedEnum;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -46,6 +47,13 @@ class FleetCarResource extends Resource
                 ->options(['car_hire' => 'Car Hire', 'transfer' => 'Transfer'])
                 ->required()
                 ->live(),
+            Select::make('state')
+                ->options(fn (): array => GroundStates::grouped())
+                ->default(GroundStates::default())
+                ->searchable()
+                ->required()
+                ->in(fn (): array => array_keys(GroundStates::all()))
+                ->helperText('Where this car operates. Customers can book in a state as soon as it has an active car, e.g. add a car in FCT Abuja to open Abuja.'),
             Select::make('vehicle_type')
                 ->options(['saloon' => 'Saloon', 'suv' => 'SUV', 'van' => 'Van', 'bus' => 'Bus', 'luxury' => 'Luxury'])
                 ->required()
@@ -115,6 +123,7 @@ class FleetCarResource extends Resource
                 ImageColumn::make('images')->label('Photo')->getStateUsing(fn (FleetCar $record) => $record->images[0] ?? null)->disk('fleet_assets'),
                 TextColumn::make('car_name')->searchable()->sortable()->weight('bold'),
                 TextColumn::make('service_type')->badge()->sortable(),
+                TextColumn::make('state')->formatStateUsing(fn (?string $state): string => GroundStates::name($state))->badge()->color('info')->sortable(),
                 TextColumn::make('vehicle_type')->badge()->sortable(),
                 TextColumn::make('year')->sortable()->placeholder('-'),
                 TextColumn::make('category')->placeholder('-'),
@@ -123,6 +132,7 @@ class FleetCarResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('service_type')->options(['car_hire' => 'Car Hire', 'transfer' => 'Transfer']),
+                SelectFilter::make('state')->options(fn (): array => GroundStates::all())->searchable(),
                 SelectFilter::make('vehicle_type')->options(['saloon' => 'Saloon', 'suv' => 'SUV', 'van' => 'Van', 'bus' => 'Bus', 'luxury' => 'Luxury']),
             ])
             ->recordActions([EditAction::make(), DeleteAction::make()]);

@@ -74,6 +74,12 @@
 
         <div class="details-card">
             <h3>📍 Trip Details</h3>
+            @if (filled($state_name ?? null))
+            <div class="detail-row">
+                <span class="detail-label">State</span>
+                <span class="detail-value">{{ $state_name }}</span>
+            </div>
+            @endif
             <div class="detail-row">
                 <span class="detail-label">Pick-up Location</span>
                 <span class="detail-value">{{ $pickup_location }}</span>

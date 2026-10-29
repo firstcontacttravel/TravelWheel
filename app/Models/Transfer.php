@@ -16,6 +16,7 @@ class Transfer extends Model
         'vehicle_type',
         'vehicle_name',
         'category',
+        'state',
         'amount',
         'distance_km',
         'duration_mins',

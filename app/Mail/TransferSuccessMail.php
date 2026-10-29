@@ -41,6 +41,7 @@ class TransferSuccessMail extends Mailable
                         'vehicle_type'     => $vehicleTypeDisplay,
                         'vehicle_name'     => $this->booking->vehicle_name,
                         'category'         => $this->booking->category,
+                        'state_name'       => $this->booking->state ? \App\Support\GroundStates::name($this->booking->state) : null,
                         'pickup_location'  => $this->booking->pickup_location,
                         'dropoff_location' => $this->booking->dropoff_location,
                         'pickup_date'      => $this->booking->pickup_date,

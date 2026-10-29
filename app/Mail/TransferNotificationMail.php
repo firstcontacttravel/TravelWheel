@@ -34,7 +34,7 @@ class TransferNotificationMail extends Mailable
 
         $vehicleTypeDisplay = $vehicleTypeMap[$this->booking->vehicle_type] ?? ucfirst($this->booking->vehicle_type);
 
-        return $this->subject('New Transfer Booking — ' . ($this->booking->full_name ?? $this->booking->email))
+        return $this->subject('New Transfer Booking' . ($this->booking->state ? ' (' . \App\Support\GroundStates::name($this->booking->state) . ')' : '') . ' — ' . ($this->booking->full_name ?? $this->booking->email))
                     ->view('emails.transfer_notification')
                     ->with([
                         'name'             => $this->booking->full_name,
@@ -43,6 +43,7 @@ class TransferNotificationMail extends Mailable
                         'vehicle_type'     => $vehicleTypeDisplay,
                         'vehicle_name'     => $this->booking->vehicle_name,
                         'category'         => $this->booking->category,
+                        'state_name'       => $this->booking->state ? \App\Support\GroundStates::name($this->booking->state) : null,
                         'pickup_location'  => $this->booking->pickup_location,
                         'dropoff_location' => $this->booking->dropoff_location,
                         'pickup_date'      => $this->booking->pickup_date,

@@ -45,4 +45,72 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | States
+    |--------------------------------------------------------------------------
+    |
+    | Every state, by region, for the "Select your state" picker on the
+    | booking page and the State field on each fleet car in admin. Service
+    | opens in a state as soon as admin adds an active fleet car there, so
+    | nothing here needs to change to launch a new state. "example" is the
+    | address hint shown in that state's location fields, and "airport" the
+    | hint in the Pick up 'n' Drop off pick-up field.
+    |
+    */
+
+    'default_state' => 'lagos',
+
+    'states' => [
+        'South West' => [
+            'lagos' => ['name' => 'Lagos', 'example' => 'e.g. Victoria Island, Lagos', 'airport' => 'e.g. Murtala Muhammed Airport'],
+            'ogun' => ['name' => 'Ogun'],
+            'oyo' => ['name' => 'Oyo'],
+            'osun' => ['name' => 'Osun'],
+            'ondo' => ['name' => 'Ondo'],
+            'ekiti' => ['name' => 'Ekiti'],
+        ],
+        'South East' => [
+            'anambra' => ['name' => 'Anambra'],
+            'enugu' => ['name' => 'Enugu'],
+            'imo' => ['name' => 'Imo'],
+            'abia' => ['name' => 'Abia'],
+            'ebonyi' => ['name' => 'Ebonyi'],
+        ],
+        'South South' => [
+            'rivers' => ['name' => 'Rivers', 'example' => 'e.g. GRA Phase 2, Port Harcourt', 'airport' => 'e.g. Port Harcourt International Airport'],
+            'delta' => ['name' => 'Delta'],
+            'edo' => ['name' => 'Edo'],
+            'cross_river' => ['name' => 'Cross River'],
+            'akwa_ibom' => ['name' => 'Akwa Ibom'],
+            'bayelsa' => ['name' => 'Bayelsa'],
+        ],
+        'North West' => [
+            'kano' => ['name' => 'Kano'],
+            'kaduna' => ['name' => 'Kaduna'],
+            'sokoto' => ['name' => 'Sokoto'],
+            'katsina' => ['name' => 'Katsina'],
+            'zamfara' => ['name' => 'Zamfara'],
+            'kebbi' => ['name' => 'Kebbi'],
+            'jigawa' => ['name' => 'Jigawa'],
+        ],
+        'North East' => [
+            'borno' => ['name' => 'Borno'],
+            'yobe' => ['name' => 'Yobe'],
+            'adamawa' => ['name' => 'Adamawa'],
+            'taraba' => ['name' => 'Taraba'],
+            'bauchi' => ['name' => 'Bauchi'],
+            'gombe' => ['name' => 'Gombe'],
+        ],
+        'North Central' => [
+            'abuja' => ['name' => 'FCT Abuja', 'example' => 'e.g. Wuse 2, Abuja', 'airport' => 'e.g. Nnamdi Azikiwe International Airport'],
+            'kogi' => ['name' => 'Kogi'],
+            'kwara' => ['name' => 'Kwara'],
+            'benue' => ['name' => 'Benue'],
+            'plateau' => ['name' => 'Plateau'],
+            'nasarawa' => ['name' => 'Nasarawa'],
+            'niger' => ['name' => 'Niger'],
+        ],
+    ],
+
 ];
