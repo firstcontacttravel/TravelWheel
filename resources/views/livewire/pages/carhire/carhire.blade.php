@@ -665,8 +665,8 @@ let trSelType=null, trSelCat=null, trDistKm=0, trDurationMins=0, trFinalPrice=0,
 let activeModal=null;
 
 /* ══ FARE RULES MODAL ══ */
-// Fare rules live in config/carhire.php, shared with the confirmation email
-const FARE_RULES_HTML = @json(config('carhire.fare_rules')).map(sec => `
+// Fare rules live in config/carhire.php (plus the chosen state's own), shared with the confirmation email
+const FARE_RULES_HTML = @json($fareRules).map(sec => `
     <div class="fr-section">
         <h6>${esc(sec.title)}</h6>
         <ul>${sec.items.map(item => `<li>${esc(item)}</li>`).join('')}</ul>

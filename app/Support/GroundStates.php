@@ -54,6 +54,22 @@ class GroundStates
         return null;
     }
 
+    /**
+     * The fare rules for a booking in $state: config('carhire.fare_rules'),
+     * with that state's own sections replacing any of the same title and the
+     * rest added after them.
+     */
+    public static function fareRules(?string $state): array
+    {
+        $rules = collect(config('carhire.fare_rules', []))->keyBy('title');
+
+        foreach (config("carhire.state_fare_rules.{$state}", []) as $section) {
+            $rules->put($section['title'], $section);
+        }
+
+        return $rules->values()->all();
+    }
+
     public static function default(): string
     {
         return (string) config('carhire.default_state', 'lagos');

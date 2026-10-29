@@ -133,10 +133,10 @@
             If you need to make changes, contact us at least 2 hours before your pick-up time.
         </div>
 
-        {{-- Same rules the customer saw in the Fare Rules popup when booking (config/carhire.php) --}}
+        {{-- Same rules the customer saw in the Fare Rules popup when booking, for the booking's state (config/carhire.php) --}}
         <div class="rules-card">
             <h3>📋 Fare Rules</h3>
-            @foreach (config('carhire.fare_rules', []) as $section)
+            @foreach ($fare_rules ?? config('carhire.fare_rules', []) as $section)
                 <h4>{{ $section['title'] }}</h4>
                 <ul>
                     @foreach ($section['items'] as $item)

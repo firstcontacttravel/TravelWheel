@@ -51,6 +51,7 @@ class CarHire extends Component
             'stateName' => $this->state ? GroundStates::name($this->state) : null,
             'addressExample' => GroundStates::example($this->state ?: GroundStates::default()),
             'airportExample' => GroundStates::airportExample($this->state ?: GroundStates::default()),
+            'fareRules' => GroundStates::fareRules($this->state),
             'openStateNames' => array_map(fn ($s) => GroundStates::name($s), $this->openStates),
         ])->layout('layouts.app', ['title' => 'Car Hire & Transfers - TravelWheel']);
     }

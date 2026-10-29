@@ -42,6 +42,7 @@ class CarHireSuccessMail extends Mailable
                         'car_model'       => $this->booking->car_model,
                         'category'        => $this->booking->category,
                         'state_name'      => $this->booking->state ? \App\Support\GroundStates::name($this->booking->state) : null,
+                        'fare_rules'      => \App\Support\GroundStates::fareRules($this->booking->state),
                         'pickup_location' => $this->booking->pickup_location,
                         'dropoff_location'=> $this->booking->dropoff_location,
                         'pickup_date'     => $this->booking->pickup_date,

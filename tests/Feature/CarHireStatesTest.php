@@ -173,4 +173,47 @@ class CarHireStatesTest extends TestCase
         $this->assertSame('abuja', FleetCar::sole()->state);
         $this->assertContains('abuja', GroundStates::open('car_hire'));
     }
+
+    public function test_abuja_shows_its_own_fare_rules_and_lagos_keeps_the_usual_ones(): void
+    {
+        $abuja = GroundStates::fareRules('abuja');
+        $titles = array_column($abuja, 'title');
+
+        // Abuja's cancellation replaces the usual one, in the same place
+        $this->assertSame('Cancellation', $titles[0]);
+        $this->assertStringContainsString('40% convenience fee', implode(' ', $abuja[0]['items']));
+        $this->assertStringNotContainsString('free of charge up to 5 hours', json_encode($abuja));
+        $this->assertContains('Airport Trips (Abuja)', $titles);
+        $this->assertContains('Baggage Allowance', $titles);                 // the usual sections stay
+        $this->assertSame(count(array_unique($titles)), count($titles));
+
+        $this->assertSame(config('carhire.fare_rules'), GroundStates::fareRules('lagos'));
+        $this->assertSame(config('carhire.fare_rules'), GroundStates::fareRules(null));
+
+        $this->car('abuja', 'car_hire', 'saloon', 2018);
+        $this->car('lagos', 'car_hire', 'saloon', 2018);
+        Livewire::withQueryParams(['state' => 'abuja'])->test(CarHirePage::class)
+            ->assertSee('Rentals below 10 hours do not include an airport pick-up or drop-off.');
+        Livewire::withQueryParams(['state' => 'lagos'])->test(CarHirePage::class)
+            ->assertDontSee('Rentals below 10 hours')
+            ->assertSee('Cancellation is free of charge up to 5 hours prior to the trip.');
+    }
+
+    public function test_the_confirmation_email_carries_the_fare_rules_of_the_booking_state(): void
+    {
+        $booking = new CarHire(['state' => 'abuja', 'car_type' => 'saloon', 'category' => 'Standard', 'full_name' => 'Ada Obi',
+            'email' => 'ada@example.com', 'pickup_location' => 'Wuse 2', 'rental_hours' => 10, 'amount' => 100000,
+            'payment_reference' => 'CARHIRETEST', 'payment_option' => 'seerbit', 'pickup_date' => now()->toDateString(), 'pickup_time' => '10:00']);
+        $html = (new \App\Mail\CarHireSuccessMail($booking))->render();
+        $this->assertStringContainsString('Ride-along airport trips are charged at 100% of the airport fee.', $html);
+        $this->assertStringNotContainsString('free of charge up to 5 hours', $html);
+
+        $transfer = new Transfer(['state' => 'lagos', 'vehicle_type' => 'saloon', 'vehicle_name' => 'Standard Saloon', 'category' => 'Standard',
+            'full_name' => 'Ada Obi', 'email' => 'ada@example.com', 'pickup_location' => 'Airport', 'dropoff_location' => 'VI',
+            'amount' => 50000, 'distance_km' => 20, 'duration_mins' => 40, 'payment_reference' => 'TRANSFERTEST',
+            'payment_option' => 'seerbit', 'pickup_date' => now()->toDateString(), 'pickup_time' => '10:00']);
+        $html = (new \App\Mail\TransferSuccessMail($transfer))->render();
+        $this->assertStringContainsString('free of charge up to 5 hours', $html);
+        $this->assertStringNotContainsString('(Abuja)', $html);
+    }
 }

@@ -47,6 +47,67 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Fare Rules per State
+    |--------------------------------------------------------------------------
+    |
+    | Extra rules for one state, on top of the fare rules above. A section
+    | with the same title as one above replaces it for that state (Abuja
+    | uses its vendor's cancellation and rescheduling charges); any other
+    | section is added after them. Shown in the popup and the confirmation
+    | email for bookings in that state.
+    |
+    */
+
+    'state_fare_rules' => [
+        'abuja' => [
+            [
+                'title' => 'Cancellation',
+                'items' => [
+                    'Bookings cancelled 72 hours or more before the trip attract a 40% convenience fee before refund.',
+                    'Bookings cancelled 24 to 48 hours before the trip attract a 50% convenience fee before refund.',
+                    'Bookings made and cancelled on the same day attract a 50% convenience fee before refund, or 20% of the fare as a rescheduling charge.',
+                    'Bookings made earlier and cancelled on the day of the trip are treated as a no-show and are non-refundable.',
+                ],
+            ],
+            [
+                'title' => 'Changing the Order',
+                'items' => [
+                    'Rescheduling 72 hours or more before the trip attracts 20% of the fare as a rescheduling charge.',
+                    'Rescheduling 24 to 48 hours before the trip attracts 30% of the fare as a rescheduling charge.',
+                    'Changes and upgrades must be finalised before the trip starts. Once the trip has started, a longer trip is billed as an extension at our standard hourly rates.',
+                ],
+            ],
+            [
+                'title' => 'Booking & What is Included (Abuja)',
+                'items' => [
+                    'A valid means of identification is needed to process a booking, and payment confirms it. Your details are handled in line with the Nigeria Data Protection Regulation (NDPR).',
+                    'All rates include fuel and a chauffeur. A priority chauffeur costs ₦10,000 extra for sedans and ₦20,000 for SUVs.',
+                    'Extra hours on a daily rental are charged extra. Unused hours are not rolled over.',
+                    'Trips starting before 7am or running past midnight attract an extra ₦10,000.',
+                ],
+            ],
+            [
+                'title' => 'Locations (Abuja)',
+                'items' => [
+                    'Rates apply to points within the city. Drop-off charges depend on the location.',
+                    'Pick-ups and drop-offs on the outskirts of town (e.g. Kugbo, Karsana, Brains and Hammers City, Life Camp, Lugbe, Kubwa, Dawaki, Dutse Alhaji, Bwari, Karu, Idu Train Station, Idu, Karmo, Kuje, Kurudu, Mararaba, Dei-Dei, Nyanya, Zuba, Gwagwalada) attract an extra ₦20,000 to ₦30,000 for sedans and ₦30,000 to ₦50,000 for SUVs, or more depending on the distance.',
+                ],
+            ],
+            [
+                'title' => 'Airport Trips (Abuja)',
+                'items' => [
+                    'A 10 or 12 hour daily rental includes one free airport pick-up or drop-off. A 24 hour rental includes two airport trips (pick-ups, drop-offs or one of each).',
+                    'Rentals below 10 hours do not include an airport pick-up or drop-off.',
+                    'More than one airport pick-up in a 12 hour rental is charged at 50% of the airport fare on top of the daily rental, or 4 hours are deducted from the rental.',
+                    'Waiting longer than 30 minutes at a domestic airport, or 1 hour at an international airport, is charged by the hour and must be paid before the trip starts.',
+                    'Airport pick-ups and drop-offs outside the main town attract extra charges. Ride-along airport trips are charged at 100% of the airport fee.',
+                ],
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | States
     |--------------------------------------------------------------------------
     |
