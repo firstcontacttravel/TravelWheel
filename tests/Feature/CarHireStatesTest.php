@@ -85,17 +85,35 @@ class CarHireStatesTest extends TestCase
             ->assertViewHas('hireTypes', ['suv']);
     }
 
-    public function test_a_state_without_cars_shows_the_not_available_message(): void
+    public function test_the_picker_lists_only_states_with_an_active_car(): void
     {
         $this->car('lagos', 'car_hire', 'saloon', 2018);
+        $this->car('abuja', 'transfer', 'suv', 2021);
+        $this->car('kano', 'car_hire', 'saloon', 2018)->update(['is_active' => false]);
 
-        $this->get(route('air.carhire', ['state' => 'kano']))
+        $this->assertSame(['South West' => ['lagos' => 'Lagos'], 'North Central' => ['abuja' => 'FCT Abuja']], GroundStates::groupedOpen());
+        $this->assertArrayHasKey('kano', GroundStates::all());       // admin can still pick any state
+
+        $this->get(route('air.carhire'))
             ->assertOk()
-            ->assertSee('<option value="kano" >Kano</option>', false)    // listed, not pre-selected
-            ->assertSee('🟢 Lagos')
-            ->assertDontSee('🟢 Kano');
+            ->assertSee('<option value="lagos" >Lagos</option>', false)
+            ->assertSee('<option value="abuja" >FCT Abuja</option>', false)
+            ->assertDontSee('<option value="kano"', false)
+            ->assertDontSee('<optgroup label="North West">', false);
 
-        Livewire::withQueryParams(['state' => 'kano'])->test(CarHirePage::class)->assertSet('state', '');
+        // An old link to a state with no cars just opens the picker
+        Livewire::withQueryParams(['state' => 'kano'])->test(CarHirePage::class)
+            ->assertSet('state', '')
+            ->assertDontSee('<option value="kano"', false);
+    }
+
+    public function test_the_page_says_so_when_no_state_has_cars(): void
+    {
+        $this->get(route('air.carhire'))
+            ->assertOk()
+            ->assertSee('unavail-box show', false)
+            ->assertSee('Ground transport', false)
+            ->assertDontSee('<option value="lagos"', false);
     }
 
     public function test_a_car_hire_booking_records_its_state(): void

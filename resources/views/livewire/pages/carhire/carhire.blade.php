@@ -25,12 +25,9 @@
     .state-badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; }
     .state-badge.available { background: #e8f8f0; color: #1a7a4e; border: 1px solid #a8e6c4; }
     .state-badge.available svg { fill: #1a7a4e; }
-    .state-badge.unavailable { background: #fff0f0; color: #c0392b; border: 1px solid #ffc5c5; }
-    .state-badge.unavailable svg { fill: #c0392b; }
     .state-badge svg { width: 13px; height: 13px; }
     .state-badge span.dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
     .state-badge.available .dot { background: #1a7a4e; }
-    .state-badge.unavailable .dot { background: #c0392b; }
 
     /* ── Unavailable message ── */
     .unavail-box { display: none; background: #fff; border-radius: 18px; border: 1.5px solid #ffc5c5; padding: 44px 28px; text-align: center; box-shadow: 0 4px 20px rgba(192,57,43,.08); }
@@ -39,8 +36,6 @@
     .unavail-icon svg { width: 30px; height: 30px; fill: #e74c3c; }
     .unavail-box h3 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; color: #c0392b; margin-bottom: 8px; }
     .unavail-box p { font-size: 13.5px; color: #777; line-height: 1.7; max-width: 440px; margin: 0 auto 18px; }
-    .unavail-states { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-    .unavail-states span { background: #eef1ff; color: #0d1883; font-size: 11.5px; font-weight: 600; padding: 4px 12px; border-radius: 20px; border: 1px solid #c5cef8; }
 
     .state-none { font-size: 12.5px; color: #888; line-height: 1.6; padding: 6px 2px; }
     .state-none a { color: #0d1883; font-weight: 600; }
@@ -287,7 +282,7 @@
                 </div>
 
                 {{-- ══ STATE SELECTOR ══ --}}
-                <div class="state-selector-wrap">
+                <div class="state-selector-wrap" @if (! $openStates) style="display:none" @endif>
                     <div class="ss-label">
                         <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
                         Select your state
@@ -311,21 +306,13 @@
                     </div>
                 </div>
 
-                {{-- Unavailable message --}}
-                <div class="unavail-box" id="unavailBox">
+                {{-- Only when no state has an active fleet car --}}
+                <div class="unavail-box{{ $openStates ? '' : ' show' }}" id="unavailBox">
                     <div class="unavail-icon">
                         <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     </div>
                     <h3>Service Not Available Yet</h3>
-                    <p>We don't offer ground transport services in this state yet. We are actively expanding to other states across Nigeria.</p>
-                    @if ($openStateNames)
-                        <p style="margin-top:8px;font-size:12.5px;color:#aaa;">Currently available in:</p>
-                        <div class="unavail-states">
-                            @foreach ($openStateNames as $openName)
-                                <span>🟢 {{ $openName }}</span>
-                            @endforeach
-                        </div>
-                    @endif
+                    <p>Ground transport isn't available right now. Please check back soon.</p>
                 </div>
 
                 {{-- Main booking content — only shown for a state with fleet cars --}}
@@ -645,8 +632,7 @@
 <script>
 /* ══ ALL DATA FROM BACKEND ══ */
 const CH_DATA     = @json($categories);
-// States with fleet cars, and the one this page was loaded for
-const OPEN_STATES   = @json($openStates);
+// The state this page was loaded for
 const CURRENT_STATE = @json($state);
 // A state can have Pick up 'n' Drop off cars but no rental cars: open on that tab
 document.addEventListener('DOMContentLoaded', () => {
@@ -705,42 +691,29 @@ function openFareRulesModal() {
 
 /* ══ STATE SELECTOR ══ */
 function onStateChange(val) {
-    const badge   = document.getElementById('stateBadge');
-    const unavail = document.getElementById('unavailBox');
-    const main    = document.getElementById('mainContent');
+    const badge = document.getElementById('stateBadge');
+    const main  = document.getElementById('mainContent');
 
     if (!val) {
         badge.style.display = 'none';
-        unavail.classList.remove('show');
         main.classList.remove('show');
         return;
     }
 
     badge.style.display = 'inline-flex';
+    badge.className = 'state-badge available';
 
-    // Each state has its own fleet, so an open state other than the one
-    // loaded reloads the page with that state's vehicles
-    if (OPEN_STATES.includes(val) && val !== CURRENT_STATE) {
-        badge.className = 'state-badge available';
-        badge.innerHTML = `<span class="dot"></span> Loading vehicles…`;
-        const url = new URL(window.location.href);
-        url.searchParams.set('state', val);
-        window.location.href = url.toString();
+    if (val === CURRENT_STATE) {
+        badge.innerHTML = `<span class="dot"></span> Service Available`;
+        main.classList.add('show');
         return;
     }
 
-    if (val === CURRENT_STATE) {
-        badge.className = 'state-badge available';
-        badge.innerHTML = `<span class="dot"></span> Service Available`;
-        unavail.classList.remove('show');
-        main.classList.add('show');
-    } else {
-        const stateLabel = document.getElementById('stateSelect').options[document.getElementById('stateSelect').selectedIndex].text;
-        badge.className = 'state-badge unavailable';
-        badge.innerHTML = `<span class="dot"></span> Not Available in ${stateLabel}`;
-        main.classList.remove('show');
-        unavail.classList.add('show');
-    }
+    // Each state has its own fleet, so another state reloads the page with its vehicles
+    badge.innerHTML = `<span class="dot"></span> Loading vehicles…`;
+    const url = new URL(window.location.href);
+    url.searchParams.set('state', val);
+    window.location.href = url.toString();
 }
 
 /* ══ TABS ══ */

@@ -20,6 +20,17 @@ class GroundStates
             ->all();
     }
 
+    /** grouped(), keeping only the states with an active fleet car. */
+    public static function groupedOpen(): array
+    {
+        $open = array_flip(self::open());
+
+        return collect(self::grouped())
+            ->map(fn (array $states): array => array_intersect_key($states, $open))
+            ->filter()
+            ->all();
+    }
+
     /** ['lagos' => 'Lagos', 'abuja' => 'FCT Abuja', ...] */
     public static function all(): array
     {

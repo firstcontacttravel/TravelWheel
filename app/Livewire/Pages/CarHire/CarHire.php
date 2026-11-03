@@ -47,12 +47,11 @@ class CarHire extends Component
             // Only the types with a car in the chosen state, per service
             'hireTypes' => array_values(array_filter($bookable, fn ($t) => ! empty($this->categories[$t]['items']))),
             'transferTypes' => array_values(array_filter($bookable, fn ($t) => ! empty($this->transferVehicles[$t]['items']))),
-            'stateGroups' => GroundStates::grouped(),
+            'stateGroups' => GroundStates::groupedOpen(),
             'stateName' => $this->state ? GroundStates::name($this->state) : null,
             'addressExample' => GroundStates::example($this->state ?: GroundStates::default()),
             'airportExample' => GroundStates::airportExample($this->state ?: GroundStates::default()),
             'fareRules' => GroundStates::fareRules($this->state),
-            'openStateNames' => array_map(fn ($s) => GroundStates::name($s), $this->openStates),
         ])->layout('layouts.app', ['title' => 'Car Hire & Transfers - TravelWheel']);
     }
 }
