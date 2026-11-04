@@ -47,7 +47,7 @@ class FlightReleaseCheck extends Command
 
         try {
             DB::connection()->getPdo();
-            foreach (['flight_bookings', 'travel_flex_applications', 'exchange_rates', 'flight_service_charges', 'jobs', 'failed_jobs', 'notification_outboxes', 'system_heartbeats'] as $table) {
+            foreach (['flight_bookings', 'travel_flex_applications', 'travel_flex_instalment_payments', 'exchange_rates', 'flight_service_charges', 'jobs', 'failed_jobs', 'notification_outboxes', 'system_heartbeats'] as $table) {
                 $this->require($errors, Schema::hasTable($table), "Required table {$table} is missing.");
             }
 

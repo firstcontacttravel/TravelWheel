@@ -112,6 +112,22 @@ class PreviewMail extends Command
                 'instalment' => ['label' => 'Instalment 2 of 4', 'amount' => 187500, 'due_date' => '05 Oct 2026'],
                 'stage' => 'overdue_final',
             ]],
+            'travelflex-instalment-paid' => ['emails.travelflex-instalment-paid', [
+                'bookingRef' => 'TW-8F3K2A', 'name' => 'Ada Okafor', 'label' => '2nd Payment', 'amount' => 187500.0,
+                'paidOn' => 'Oct 4, 2026', 'reference' => 'TRF-204481', 'remainingCount' => 2, 'remainingAmount' => 375000.0,
+                'nextLabel' => '3rd Payment', 'nextDue' => 'Nov 5, 2026',
+            ]],
+            'travelflex-instalment-paid-final' => ['emails.travelflex-instalment-paid', [
+                'bookingRef' => 'TW-8F3K2A', 'name' => 'Ada Okafor', 'label' => '4th Payment', 'amount' => 187500.0,
+                'paidOn' => 'Dec 4, 2026', 'reference' => 'TRF-208812', 'remainingCount' => 0, 'remainingAmount' => 0.0,
+                'nextLabel' => null, 'nextDue' => null,
+            ]],
+            'travelflex-overdue-alert' => ['emails.travelflex-overdue-alert', [
+                'bookingRef' => 'TW-8F3K2A', 'customerName' => 'Ada Okafor', 'customerEmail' => 'ada@example.com',
+                'customerPhone' => '+2348000000000', 'label' => '2nd Payment', 'amount' => 187500.0,
+                'dueLabel' => 'Oct 4, 2026', 'daysOverdue' => 7, 'paidCount' => 1, 'totalCount' => 4,
+                'adminUrl' => 'https://travelwheel.ng/admin/travel-flex-applications/1',
+            ]],
             'travelflex-ticket-booked' => ['emails.travelflex-ticket-booked', ['booking' => $booking]],
             'travelflex-provider-review' => ['emails.travelflex-provider-review', $this->providerReview()],
             'visa-portal-access-code' => ['emails.visa-portal-access-code', [

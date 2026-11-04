@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\EncryptedJson;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TravelFlexApplication extends Model
 {
@@ -88,5 +89,11 @@ class TravelFlexApplication extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    /** Every payment recorded against this plan, including reversed ones. */
+    public function instalmentPayments(): HasMany
+    {
+        return $this->hasMany(TravelFlexInstalmentPayment::class);
     }
 }

@@ -27,6 +27,8 @@ Artisan::command('travelflex:send-repayment-reminders {--dry-run : List what wou
 
         $this->info('Would send: '.count($preview['send']));
         $this->table($headers, $rows($preview['send']));
+        $this->info('Would alert Fast Credit and TravelWheel: '.count($preview['alerts']));
+        $this->table($headers, $rows($preview['alerts']));
         $this->info('No more reminders, already '.TravelFlexApplicationService::REMINDERS_STOP_AFTER_DAYS.'+ days overdue: '.count($preview['too_late']));
         $this->table($headers, $rows($preview['too_late']));
 
@@ -35,7 +37,7 @@ Artisan::command('travelflex:send-repayment-reminders {--dry-run : List what wou
 
     $sent = $service->sendRepaymentReminders();
 
-    $this->info("TravelFlex repayment reminders sent: {$sent}");
+    $this->info("TravelFlex repayment reminders sent: {$sent['reminders']}. Overdue alerts sent: {$sent['alerts']}.");
 })->purpose('Send TravelFlex repayment reminder emails');
 
 Schedule::command('travelflex:send-repayment-reminders')

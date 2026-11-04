@@ -2,7 +2,11 @@
 
 namespace App\Support\Admin;
 
+use App\Models\NotificationOutbox;
 use App\Models\TravelFlexApplication;
+use App\Services\DurableMailService;
+use App\Services\TravelFlexApplicationService;
+use App\Services\TravelFlexRepaymentService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 
@@ -136,26 +140,74 @@ class TravelFlexPresentation
             'Payment method' => $application->payment_method,
         ]);
 
-        $schedule = data_get($plan, 'schedule', []);
-        if (is_array($schedule) && $schedule !== []) {
+        $repayments = app(TravelFlexRepaymentService::class);
+        $application->unsetRelation('instalmentPayments');
+        $schedule = $repayments->schedule($application);
+
+        if ($schedule !== []) {
+            if ($repayments->isRepaidInFull($application)) {
+                $html .= '<div>'.self::smallState('Repayment', 'Repaid in full', true).'</div>';
+            }
+
             $html .= '<div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-white/10">';
             $html .= '<table class="min-w-full divide-y divide-gray-200 text-sm dark:divide-white/10">';
             $html .= '<thead><tr>';
-            foreach (['Due date', 'Amount', 'Label'] as $header) {
+            foreach (['Instalment', 'Due date', 'Amount', 'Status', 'Paid on', 'Reference', 'Fast Credit alerted'] as $header) {
                 $html .= '<th class="px-3 py-2 text-left text-xs font-medium uppercase text-gray-500 dark:text-gray-400">'.e($header).'</th>';
             }
             $html .= '</tr></thead><tbody class="divide-y divide-gray-100 dark:divide-white/10">';
             foreach ($schedule as $row) {
+                $status = $row['status'];
                 $html .= '<tr>';
-                $html .= '<td class="px-3 py-2">'.e(data_get($row, 'date', data_get($row, 'due_date', '-'))).'</td>';
-                $html .= '<td class="px-3 py-2">'.e(self::money(data_get($row, 'amount'))).'</td>';
-                $html .= '<td class="px-3 py-2">'.e(data_get($row, 'label', data_get($row, 'title', '-'))).'</td>';
+                $html .= '<td class="px-3 py-2">'.e($row['label']).'</td>';
+                $html .= '<td class="px-3 py-2">'.e($row['due_label']).'</td>';
+                $html .= '<td class="px-3 py-2">'.e(self::money($row['amount'])).'</td>';
+                $html .= '<td class="px-3 py-2">'.self::smallState('Status', self::label($status), $status === TravelFlexRepaymentService::STATUS_PAID, $status === TravelFlexRepaymentService::STATUS_OVERDUE).'</td>';
+                $html .= '<td class="px-3 py-2">'.e($row['payment']?->paid_on->format('M j, Y') ?? '-').'</td>';
+                $html .= '<td class="px-3 py-2">'.e($row['payment']?->payment_reference ?? '-').'</td>';
+                $html .= '<td class="px-3 py-2">'.e(self::overdueAlertState($application, $row)).'</td>';
                 $html .= '</tr>';
             }
             $html .= '</tbody></table></div>';
+
+            $html .= self::reversedPayments($application);
         }
 
         return new HtmlString($html.'</div>');
+    }
+
+    private static function overdueAlertState(TravelFlexApplication $application, array $row): string
+    {
+        if (! $row['due_date']) {
+            return '-';
+        }
+
+        $alert = NotificationOutbox::query()
+            ->where('unique_key', TravelFlexApplicationService::overdueAlertKey($application->id, $row['index'], $row['due_date']->format('Y-m-d')))
+            ->first();
+
+        return match (true) {
+            ! $alert, $alert->status === DurableMailService::STATUS_CANCELLED => '-',
+            $alert->sent_at !== null => self::watDateTime($alert->sent_at),
+            default => 'Waiting to send',
+        };
+    }
+
+    private static function reversedPayments(TravelFlexApplication $application): string
+    {
+        $reversed = $application->instalmentPayments->filter->isReversed();
+
+        if ($reversed->isEmpty()) {
+            return '';
+        }
+
+        $html = '<div class="rounded-lg border border-gray-200 p-3 text-xs text-gray-500 dark:border-white/10 dark:text-gray-400">';
+        $html .= '<div class="font-semibold text-gray-950 dark:text-white">Reversed payments</div>';
+        foreach ($reversed as $payment) {
+            $html .= '<div class="mt-1">'.e(($payment->label ?: 'Instalment').' · '.self::money($payment->amount).' · ref '.$payment->payment_reference.' · reversed '.self::watDateTime($payment->reversed_at).' · '.$payment->reversal_reason).'</div>';
+        }
+
+        return $html.'</div>';
     }
 
     public static function documents(TravelFlexApplication $application): HtmlString

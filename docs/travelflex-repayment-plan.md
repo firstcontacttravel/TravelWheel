@@ -1,6 +1,6 @@
 # TravelFlex Repayments: Implementation Plan
 
-Status as of 2026-11-04: **Phase 1 built and tested locally, not yet committed or deployed. Phases 2 and 3 not started.** Phases ship one at a time, in order. Each one is finished, tested and checked on staging before the next starts.
+Status as of 2026-11-04: **Phases 1, 2 and 3 pushed to `main`. Staging and production rollout not confirmed.** Phases 2 and 3 were committed together, so Finance needs to record repayments already received before they deploy, or as soon after as possible. Each one is finished, tested and checked on staging before the next starts.
 
 ## Why
 
@@ -26,13 +26,14 @@ Customers get a "Due soon" email every day, forever, once an instalment is overd
 | Who can mark paid or reverse | `canHandleMoney()`: Finance and the CEO | Existing money-action rule |
 | When reminders apply | Application and financing approved, deposit paid, booking still live | Proposed |
 | Which bookings count as not live | `cancelled`, `failed`, `hold_expired_review`, `ticketing_failed` | Proposed |
+| Partial payments | Full payments only. An instalment is paid or not, and a part-payment goes in as a note on the application | Agreed 2026-11-04 |
+| Payment confirmation email | Sent to the customer automatically when an instalment is marked paid | Agreed 2026-11-04 |
+| Fast Credit alert address | `MAIL_TRAVELFLEX_PROVIDER`, the same address that receives application packages | Agreed 2026-11-04 |
 
-## Open questions
+## Before Phase 3 ships
 
-1. **What is Fast Credit's real alert address?** Needed before Phase 3 ships. The alert would use `MAIL_TRAVELFLEX_PROVIDER`, the address that receives application packages. Its default in `config/mail.php` is `loans@travelwheel.com`, which isn't a Fast Credit address, so check the value on production.
-2. **Does staging point at the real Fast Credit address?** It must not when Phase 3 reaches staging, or Fast Credit will get alerts about test bookings.
-3. **Are partial payments needed?** Recommendation: not yet. An instalment is either fully paid or not, and a part-payment goes in as a note on the application.
-4. **Should customers get a payment confirmation email?** Recommendation: yes, it's small and it reassures them that the reminders will stop. It's Phase 2, step 7.
+1. **Check `MAIL_TRAVELFLEX_PROVIDER` on production.** Its default in `config/mail.php` is `loans@travelwheel.com`, which isn't a Fast Credit address.
+2. **Check it on staging.** It must not be Fast Credit's real address when Phase 3 reaches staging, or Fast Credit will get alerts about test bookings.
 
 ---
 
@@ -82,11 +83,11 @@ Small and urgent. Needs no admin screens and no new tables.
 
    This is a separate table because `repayment_plan` is encrypted JSON that gets regenerated at the deposit step (`FlightBookingController.php:3243-3250`). A table can be queried, and a payment can't be overwritten. The action is only offered once the deposit is paid, so the schedule is settled by then.
 2. **New `TravelFlexRepaymentService`** with `schedule()`, `markPaid()` and `reverse()`. `schedule()` returns each instalment with its status: paid, due, overdue or upcoming. Writes run in a transaction with a row lock, so two people can't record the same instalment twice.
-3. **"Mark instalment paid" action** on the application page and in the table's Actions menu. The form picks an unpaid instalment, with amount shown from the schedule, and takes date received (required), payment reference (required) and note. It needs `canHandleMoney()`. `ActivityRecorder` logs it automatically.
+3. **"Mark instalment paid" action** on the application page and in the table's Actions menu. The form picks an unpaid instalment, with amount shown from the schedule, and takes date received (required), payment reference (required) and note. It needs `canHandleMoney()`, and is exempt from the `WorkAccess` booking-ownership rule because repayments arrive long after ticketing, when the booking usually belongs to someone in Operations. `ActivityRecorder` logs it automatically.
 4. **"Reverse payment" action** with a required reason, for mistakes. It keeps the row and sets `reversed_at`, so the money history stays intact. Reminders resume for that instalment if it's still within a stage.
 5. **Update the Repayment Plan table:** add Status, Paid on and Reference columns, show "Repaid in full" when every instalment is paid, and fix the Amount bug.
-6. **Connect it to reminders.** Paid instalments are skipped. Marking one paid also cancels its queued reminders, so a retry can't email the customer afterwards. Drop the "ignore this if you've already paid" line only if it's no longer needed for payments not yet recorded; recommendation is to keep it.
-7. **Customer confirmation email** (if question 4 is a yes): one durable email per payment, with instalment, amount, date and what's left to pay.
+6. **Connect it to reminders.** Paid instalments are skipped. Marking one paid also cancels its queued reminders, so a retry can't email the customer afterwards. The "no action is needed if you have already paid" line stays, because Finance may not have recorded a payment yet when a reminder goes out.
+7. **Customer confirmation email:** one durable email per payment, sent automatically, with instalment, amount, date and what's left to pay.
 
 **Tests:**
 - Finance and the CEO can mark paid; other staff can't.
@@ -121,10 +122,9 @@ This comes after Phase 2 so that Fast Credit isn't told a customer is overdue wh
 - The email contains no BVN or bank details.
 
 **Ship checklist:**
-1. Answer open questions 1 and 2.
-2. Confirm staging's `MAIL_TRAVELFLEX_PROVIDER` is not Fast Credit's real address, then test there.
-3. Confirm the production address and deploy.
-4. Tell Fast Credit to expect these alerts.
+1. Confirm staging's `MAIL_TRAVELFLEX_PROVIDER` is not Fast Credit's real address, then test there.
+2. Confirm the production address and deploy.
+3. Tell Fast Credit to expect these alerts.
 
 ---
 
@@ -133,4 +133,4 @@ This comes after Phase 2 so that Fast Credit isn't told a customer is overdue wh
 - Customers paying instalments online or viewing them in their account.
 - Automatic payment matching from the gateway or bank.
 - An "all overdue repayments" admin queue. The plan is encrypted, so this would need one database row per instalment. Add it if the alerts prove too little.
-- Partial payments, unless question 3 changes.
+- Partial payments. They can be added later without losing any records.
