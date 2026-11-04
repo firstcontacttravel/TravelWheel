@@ -430,10 +430,12 @@
             </div>
 
             <div class="tw-products">
+                @unless ($corporateCompany ?? null)
                 <div class="tw-product">
                     <span class="tw-product-icon"><img src="{{ asset('assets/Support 70.png') }}" alt=""></span>
                     <div><strong>TravelFlex</strong><span>Split eligible fares into simple instalments.</span></div>
                 </div>
+                @endunless
                 <div class="tw-product">
                     <span class="tw-product-icon"><img src="{{ asset('assets/Hotel 70.png') }}" alt=""></span>
                     <div><strong>Hotels</strong><span>Add a stay after choosing your preferred flight.</span></div>

@@ -14,6 +14,7 @@ use App\Mail\TravelFlexTicketBookedMail;
 use App\Mail\UnTicketedConfirmationAlert;
 use App\Mail\WorkDeadlineMail;
 use App\Mail\WorkEscalationMail;
+use App\Models\CompanyUser;
 use App\Models\Escalation;
 use App\Models\FlightBooking;
 use App\Models\FlightSupplierEvent;
@@ -77,7 +78,7 @@ class DurableMailService
             'related_type' => $related->getMorphClass(),
             'related_id' => $related->getKey(),
             'payload' => $payload,
-            'cc' => array_values(array_filter($cc)),
+            'cc' => array_values(array_filter(array_merge($cc, $this->companyAdminCopies($kind, $recipient, $related)))),
             'status' => 'pending',
             'available_at' => now(),
         ];
@@ -97,6 +98,29 @@ class DurableMailService
         }
 
         return $this->deliver($message);
+    }
+
+    /**
+     * A company's Admins are copied on its flight booking emails. Done here
+     * because several places send them: checkout, the admin and ticketing.
+     *
+     * @return list<string>
+     */
+    private function companyAdminCopies(string $kind, string $recipient, Model $related): array
+    {
+        if (! $related instanceof FlightBooking
+            || ! $related->company_id
+            || ! in_array($kind, [self::FLIGHT_ETICKET, self::FLIGHT_RECEIPT, self::FLIGHT_PENDING], true)) {
+            return [];
+        }
+
+        return CompanyUser::query()
+            ->where('company_id', $related->company_id)
+            ->where('role', 'admin')
+            ->whereNull('deactivated_at')
+            ->where('email', '!=', strtolower(trim($recipient)))
+            ->pluck('email')
+            ->all();
     }
 
     /**

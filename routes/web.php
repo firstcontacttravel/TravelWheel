@@ -75,9 +75,9 @@ Route::get('/air/flight-s', FlightPage::class)->name('air.flight-s');
 // Route::post('/air/flight/search', [FlightPage::class, 'search'])->name('flights.search');
 // Route::post('/air/flight/select', [FlightSearchController::class, 'select'])->name('flights.select');
 
-Route::post('/flights/search', [FlightController::class, 'search'])->middleware('throttle:12,1')->name('flights.search');
+Route::post('/flights/search', [FlightController::class, 'search'])->middleware('throttle:flights-search')->name('flights.search');
 Route::get('/flights/search/loading', [FlightController::class, 'loading'])->name('flights.search.loading');
-Route::get('/flights/search/run', [FlightController::class, 'runPendingSearch'])->middleware('throttle:12,1')->name('flights.search.run');
+Route::get('/flights/search/run', [FlightController::class, 'runPendingSearch'])->middleware('throttle:flights-search')->name('flights.search.run');
 
 // Parallel search: one API's flights for one search. Runs WITHOUT a session —
 // the results page calls it once per API, concurrently, and a session saved
@@ -87,7 +87,7 @@ Route::get('/flights/search/{search}/suppliers/{supplier}', FlightSupplierSearch
     ->whereUuid('search')
     ->where('supplier', '[a-z0-9_]+')
     ->withoutMiddleware([StartSession::class, ShareErrorsFromSession::class, ValidateCsrfToken::class])
-    ->middleware('throttle:60,1')
+    ->middleware('throttle:flights-supplier')
     ->name('flights.search.supplier');
 
 // Route::post('/flights/select', [FlightController::class, 'select'])->name('flights.select');
@@ -260,14 +260,14 @@ Route::get('/admin/reports/export/{report}', AdminReportExportController::class)
 // Flight routes
 
 Route::post('/flights/select', [FlightBookingController::class, 'select'])
-    ->middleware('throttle:20,1')->name('flights.select');
+    ->middleware('throttle:flights-select')->name('flights.select');
 
 Route::get('/flights/booking', FlightBooking::class)->name('flights.booking');
 
 Route::post('/flights/book', [FlightBookingController::class, 'book'])
-    ->middleware('throttle:10,1')->name('flights.book');
+    ->middleware('throttle:flights-book')->name('flights.book');
 Route::get('/flights/payment/gateway', [FlightBookingController::class, 'paymentGateway'])->name('flights.payment.gateway');
-Route::post('/flights/payment/gateway/process', [FlightBookingController::class, 'processGatewayPayment'])->middleware('throttle:10,1')->name('flights.payment.gateway.process');
+Route::post('/flights/payment/gateway/process', [FlightBookingController::class, 'processGatewayPayment'])->middleware('throttle:flights-book')->name('flights.payment.gateway.process');
 
 // Non-LCC: 3-option payment page (booking already on hold)
 Route::get('/flights/payment/options', [FlightBookingController::class, 'paymentOptions'])->name('flights.payment.options');
@@ -278,12 +278,16 @@ Route::get('/flights/payment/options/resume/{bookingRef}', [FlightBookingControl
 Route::post('/flights/payment/bank-transfer', [FlightBookingController::class, 'bankTransferNotify'])->name('flights.payment.bank-transfer');
 
 // Non-LCC: Gateway on payment options → ticket_order
-Route::post('/flights/payment/gateway-ticket', [FlightBookingController::class, 'processTicketPayment'])->middleware('throttle:10,1')->name('flights.payment.gateway-ticket');
+Route::post('/flights/payment/gateway-ticket', [FlightBookingController::class, 'processTicketPayment'])->middleware('throttle:flights-book')->name('flights.payment.gateway-ticket');
 
 // Pending page (bank transfer awaiting verification)
 Route::get('/flights/pending', [FlightBookingController::class, 'pending'])->name('flights.pending');
 
 // Final confirmation (WebFare confirmed OR Non-LCC ticketed)
+// A company's fare rose before payment: show it and let the booker decide.
+Route::get('/flights/price-change', [FlightBookingController::class, 'priceChange'])->name('flights.price-change');
+Route::post('/flights/price-change/accept', [FlightBookingController::class, 'acceptPriceChange'])->middleware('throttle:flights-book')->name('flights.price-change.accept');
+
 Route::get('/flights/confirmation', [FlightBookingController::class, 'confirmation'])->name('flights.confirmation');
 Route::get('/payments/seerbit/callback', [FlightBookingController::class, 'seerbitCallback'])->middleware('throttle:30,1')->name('payments.seerbit.callback');
 Route::post('/payments/seerbit/webhook', [FlightBookingController::class, 'seerbitWebhook'])->middleware('throttle:60,1')->name('payments.seerbit.webhook');
@@ -331,3 +335,5 @@ Route::get('/design-system', [DesignSystemController::class, 'index'])
     ->name('design-system');
 Route::get('/design-system/responsive', [DesignSystemController::class, 'responsive'])
     ->name('design-system.responsive');
+
+require __DIR__."/business.php";

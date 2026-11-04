@@ -42,9 +42,12 @@ class SkylinkFareRefresh
      * unavailable, price_increased or unconfirmed, with the customer message
      * for before payment and a detail line for support.
      *
-     * @return array{ok: bool, researched: bool, reason?: string, message?: string, detail?: string}
+     * With $acceptedPrice, a company has agreed to a higher fare: that becomes
+     * the limit, and the booking moves to the fare just priced.
+     *
+     * @return array{ok: bool, researched: bool, reason?: string, message?: string, detail?: string, current_price?: float}
      */
-    public function refresh(FlightBooking $booking): array
+    public function refresh(FlightBooking $booking, ?float $acceptedPrice = null): array
     {
         $held = (array) ($booking->flight_snapshot ?? []);
 
@@ -59,22 +62,23 @@ class SkylinkFareRefresh
         }
 
         if (! ($selected['error'] ?? true)) {
-            $fresh = FlightMarkup::apply($selected['data']['flight']);
-            $shown = (float) ($held['price'] ?? 0);
+            $fresh = FlightMarkup::apply($selected['data']['flight'], $booking->company);
+            $shown = $acceptedPrice ?? (float) ($held['price'] ?? 0);
             $current = (float) ($fresh['price'] ?? 0);
 
             if ($current > $shown + (float) config('flights.platform_hold.price_tolerance', 50)) {
-                return $this->refuse('price_increased', $booking, "fare rose from {$shown} to {$current} on re-pricing", false);
+                return $this->refuse('price_increased', $booking, "fare rose from {$shown} to {$current} on re-pricing", false)
+                    + ['current_price' => $current];
             }
 
-            $this->hold->adopt($booking, $fresh);
+            $this->adopt($booking, $fresh, $acceptedPrice);
 
             return ['ok' => true, 'researched' => false];
         }
 
         // The token itself has expired: find the same flight again. This is
         // the slow path (a full search), taken only when re-pricing failed.
-        $reconfirmed = $this->hold->reconfirm($booking);
+        $reconfirmed = $this->hold->reconfirm($booking, $acceptedPrice);
 
         if (! $reconfirmed['ok']) {
             return $this->refuse(
@@ -82,12 +86,19 @@ class SkylinkFareRefresh
                 $booking,
                 're-pricing failed ('.($selected['message'] ?? 'no message').'), then the fresh search could not reconfirm the fare',
                 true,
-            );
+            ) + array_filter(['current_price' => $reconfirmed['current_price'] ?? null]);
         }
 
-        $this->hold->adopt($booking, $reconfirmed['flight']);
+        $this->adopt($booking, $reconfirmed['flight'], $acceptedPrice);
 
         return ['ok' => true, 'researched' => true];
+    }
+
+    private function adopt(FlightBooking $booking, array $fresh, ?float $acceptedPrice): void
+    {
+        $acceptedPrice === null
+            ? $this->hold->adopt($booking, $fresh)
+            : $this->hold->adoptAcceptedPrice($booking, $fresh);
     }
 
     private function refuse(string $reason, FlightBooking $booking, string $detail, bool $researched): array

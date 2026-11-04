@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\EncryptedJson;
 use App\Models\Concerns\HasWorkItem;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class FlightBooking extends Model
@@ -12,6 +13,8 @@ class FlightBooking extends Model
     use HasWorkItem;
 
     protected $fillable = [
+        'company_id',
+        'company_user_id',
         'booking_ref',
         'unique_id',
         'fare_source_code',
@@ -92,6 +95,16 @@ class FlightBooking extends Model
         'payment_amount' => 'decimal:2',
         'payment_charged_amount' => 'decimal:2',
     ];
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    public function companyUser(): BelongsTo
+    {
+        return $this->belongsTo(CompanyUser::class);
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 

@@ -162,6 +162,10 @@
         Back to booking
     </a>
 
+    @if(session('status'))
+        <div role="status" style="max-width:1100px;margin:0 auto 16px;padding:12px 16px;border-radius:8px;background:#e9f9f0;color:#04713f;font-weight:600;">{{ session('status') }}</div>
+    @endif
+
     @if(session('error') || $errors->has('error'))
         <x-ui.alert variant="error" role="alert">
             {{ session('error') ?? $errors->first('error') ?? 'Payment error occurred' }}

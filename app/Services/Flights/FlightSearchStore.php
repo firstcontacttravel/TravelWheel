@@ -2,6 +2,7 @@
 
 namespace App\Services\Flights;
 
+use App\Models\Company;
 use App\Models\FlightSearch;
 use App\Models\FlightSearchResult;
 use App\Services\TravelnextFlightService;
@@ -31,10 +32,11 @@ class FlightSearchStore
     //  Parallel searches
     // =========================================================================
 
-    public function start(array $criteria): string
+    public function start(array $criteria, ?Company $company = null): string
     {
         $search = FlightSearch::query()->create([
             'id' => (string) Str::uuid(),
+            'company_id' => $company?->id,
             'criteria' => $criteria,
             'created_at' => now(),
             'expires_at' => now()->addMinutes($this->searchMinutes()),
@@ -43,14 +45,27 @@ class FlightSearchStore
         return $search->id;
     }
 
-    /** The validated search form, or null once the search has expired. */
+    /**
+     * The validated search form, or null once the search has expired. A
+     * company's search also ends when the company stops being active, so it
+     * can't go on to be priced at the public rate.
+     */
     public function criteria(string $searchId): ?array
     {
         return FlightSearch::query()
             ->whereKey($searchId)
             ->where('expires_at', '>', now())
+            ->where(fn ($query) => $query
+                ->whereNull('company_id')
+                ->orWhereHas('company', fn ($company) => $company->where('status', 'active')))
             ->first()
             ?->criteria;
+    }
+
+    /** The company a search was started for, whose rate its flights are priced at. */
+    public function company(string $searchId): ?Company
+    {
+        return FlightSearch::query()->with('company')->find($searchId)?->company;
     }
 
     /**

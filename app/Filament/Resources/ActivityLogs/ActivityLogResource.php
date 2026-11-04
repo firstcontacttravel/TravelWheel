@@ -45,7 +45,7 @@ class ActivityLogResource extends Resource
     {
         return $schema->components([
             TextEntry::make('created_at')->label('When')->dateTime('d M Y, H:i:s', self::TIMEZONE),
-            TextEntry::make('user.name')->label('Who')->placeholder('System'),
+            TextEntry::make('user.name')->label('Who')->placeholder(fn (ActivityLog $record): string => $record->nonStaffActorName()),
             TextEntry::make('department.name')->label('Department')->placeholder('-'),
             TextEntry::make('action')->label('Action')->fontFamily('mono'),
             TextEntry::make('description')->columnSpanFull(),
@@ -78,7 +78,7 @@ class ActivityLogResource extends Resource
                 TextColumn::make('user.name')
                     ->label('Who')
                     ->description(fn (ActivityLog $record): ?string => $record->department?->name)
-                    ->placeholder('System')
+                    ->placeholder(fn (ActivityLog $record): string => $record->nonStaffActorName())
                     ->searchable(),
                 TextColumn::make('description')
                     ->label('What')

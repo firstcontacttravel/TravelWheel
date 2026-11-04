@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Company;
+use App\Models\CompanyServiceCharge;
 use App\Models\ExchangeRate;
 use App\Models\FlightServiceCharge;
 use Throwable;
@@ -43,7 +45,15 @@ class FlightMarkup
 
     private static ?array $cachedCharges = null;
 
-    public static function apply(array $flight): array
+    /** @var array<int|string, array<string, float>> per company id, and 'default' */
+    private static array $cachedCorporateCharges = [];
+
+    /**
+     * Whose rate applies is a required argument, with null meaning the public
+     * rate. A call that forgets it fails rather than quietly charging a company
+     * the public price. See CorporateContext for where the company comes from.
+     */
+    public static function apply(array $flight, ?Company $company): array
     {
         $rate = self::usdToNgnRate();
 
@@ -54,7 +64,7 @@ class FlightMarkup
         $category = self::routeCategory($flight);
         $cabin = self::cabinCategory($flight);
         $passengerCount = self::passengerCount($flight);
-        $chargePerPassenger = self::chargeFor($category, $cabin);
+        $chargePerPassenger = self::chargeFor($category, $cabin, $company);
         $markup = $chargePerPassenger * $passengerCount;
 
         $flight['supplierPrice'] = $supplierPrice;
@@ -101,6 +111,21 @@ class FlightMarkup
     {
         self::$cachedUsdRate = null;
         self::$cachedCharges = null;
+        self::$cachedCorporateCharges = [];
+    }
+
+    /** @return array<string, array<string, float>> route category => cabin => the public charge */
+    public static function publicCharges(): array
+    {
+        $charges = [];
+
+        foreach (self::DEFAULT_CHARGES as $category => $cabins) {
+            foreach (array_keys($cabins) as $cabin) {
+                $charges[$category][$cabin] = self::publicCharge($category, $cabin);
+            }
+        }
+
+        return $charges;
     }
 
     private static function convert(float $amount, float $rate): float
@@ -113,7 +138,31 @@ class FlightMarkup
         return self::$cachedUsdRate ??= ExchangeRate::rateFor(self::SUPPLIER_CURRENCY);
     }
 
-    private static function chargeFor(string $category, string $cabin): float
+    /**
+     * A company pays its own rate, then the default corporate rate, then the
+     * public rate. Unlike the public table this is not forgiving of a database
+     * error: a failed search is better than quietly charging the wrong price.
+     */
+    private static function chargeFor(string $category, string $cabin, ?Company $company): float
+    {
+        if ($company !== null) {
+            $key = $category.'.'.$cabin;
+            $charge = self::corporateCharges($company->id)[$key] ?? self::corporateCharges(null)[$key] ?? null;
+
+            if ($charge !== null) {
+                return $charge;
+            }
+        }
+
+        return self::publicCharge($category, $cabin);
+    }
+
+    private static function corporateCharges(?int $companyId): array
+    {
+        return self::$cachedCorporateCharges[$companyId ?? 'default'] ??= CompanyServiceCharge::keyedFor($companyId);
+    }
+
+    private static function publicCharge(string $category, string $cabin): float
     {
         if (self::$cachedCharges === null) {
             try {

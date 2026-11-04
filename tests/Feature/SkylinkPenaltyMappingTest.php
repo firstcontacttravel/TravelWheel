@@ -38,7 +38,7 @@ class SkylinkPenaltyMappingTest extends TestCase
         $this->assertSame(75.2, $adult['changePenalty']);
 
         // Back to naira once marked up, as the customer and TravelFlex see it.
-        $this->assertSame(225600.0, FlightMarkup::apply($flight)['fareBreakdown'][0]['refundPenalty']);
+        $this->assertSame(225600.0, FlightMarkup::apply($flight, null)['fareBreakdown'][0]['refundPenalty']);
     }
 
     public function test_every_passenger_type_carries_the_penalty(): void
@@ -51,7 +51,7 @@ class SkylinkPenaltyMappingTest extends TestCase
 
     public function test_a_refundable_skylink_fare_now_passes_travelflex_with_the_penalty_per_passenger(): void
     {
-        $flight = FlightMarkup::apply($this->map($this->offer(), adults: 2));
+        $flight = FlightMarkup::apply($this->map($this->offer(), adults: 2), null);
 
         $assessment = app(TravelFlexRiskAssessmentService::class)->assess($flight);
 
@@ -90,7 +90,7 @@ class SkylinkPenaltyMappingTest extends TestCase
         $offer = $this->offer();
         $offer['cancel_penalty']['currency'] = 'EUR';
 
-        $flight = FlightMarkup::apply($this->map($offer));
+        $flight = FlightMarkup::apply($this->map($offer), null);
 
         $this->assertNull($flight['fareBreakdown'][0]['refundPenalty']);
         // …so TravelFlex still refuses rather than sizing a deposit on it.

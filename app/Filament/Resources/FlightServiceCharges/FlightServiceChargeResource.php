@@ -93,7 +93,7 @@ class FlightServiceChargeResource extends Resource
         return false;
     }
 
-    private static function routeLabel(string $category): string
+    public static function routeLabel(string $category): string
     {
         return match ($category) {
             'domestic' => 'Domestic (within Nigeria)',
@@ -104,7 +104,7 @@ class FlightServiceChargeResource extends Resource
         };
     }
 
-    private static function cabinLabel(string $cabin): string
+    public static function cabinLabel(string $cabin): string
     {
         return str($cabin)->replace('_', ' ')->title()->toString();
     }

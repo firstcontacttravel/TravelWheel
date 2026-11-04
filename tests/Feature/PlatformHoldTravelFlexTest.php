@@ -244,7 +244,7 @@ class PlatformHoldTravelFlexTest extends TestCase
     private function heldBooking(array $overrides = []): FlightBooking
     {
         $criteria = ['trip' => 'oneway', 'adults' => 1, 'childs' => 0, 'kids' => 0];
-        $flight = FlightMarkup::apply(app(SkylinkFlightService::class)->mapSearchResult($this->rawFlight('btk_original', 'AT576', self::PRICE_NGN), $criteria));
+        $flight = FlightMarkup::apply(app(SkylinkFlightService::class)->mapSearchResult($this->rawFlight('btk_original', 'AT576', self::PRICE_NGN), $criteria), null);
 
         return FlightBooking::create(array_merge([
             'booking_ref' => 'TW-PLATFORM1',

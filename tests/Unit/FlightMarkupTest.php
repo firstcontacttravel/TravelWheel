@@ -32,7 +32,7 @@ class FlightMarkupTest extends TestCase
                 ['passengerType' => 'ADT', 'qty' => 2],
                 ['passengerType' => 'CHD', 'qty' => 1],
             ],
-        ]);
+        ], null);
 
         $this->assertSame(90000.0, $flight['markupAmount']);
         $this->assertSame(30000.0, $flight['markupRatePerPassenger']);
@@ -48,9 +48,9 @@ class FlightMarkupTest extends TestCase
         // Economy and Premium Economy; read as cabin codes they charged the
         // premium and first-class markup (seen live on 2026-09-29).
         $economyInW = FlightMarkup::apply(['price' => 100000, 'cabin' => 'Economy', 'cabinCode' => 'W',
-            'segments' => [['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom']]]);
+            'segments' => [['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom']]], null);
         $premiumInP = FlightMarkup::apply(['price' => 100000, 'cabin' => 'Premium Economy', 'cabinCode' => 'P',
-            'segments' => [['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom']]]);
+            'segments' => [['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom']]], null);
 
         $this->assertSame('economy', $economyInW['markupCabin']);
         $this->assertSame(30000.0, $economyInW['markupAmount']);
@@ -64,7 +64,7 @@ class FlightMarkupTest extends TestCase
             ['fromCountry' => 'Nigeria', 'toCountry' => 'Nigeria'],
             ['fromCountry' => 'Nigeria', 'toCountry' => 'Egypt'],
             ['fromCountry' => 'Egypt', 'toCountry' => 'United Arab Emirates'],
-        ]]);
+        ]], null);
 
         $this->assertSame('from_nigeria', $viaAbuja['markupCategory']);
         $this->assertSame(30000.0, $viaAbuja['markupAmount']);
@@ -87,7 +87,7 @@ class FlightMarkupTest extends TestCase
     {
         // TravelNext can leave the cabin name empty; its code is a real cabin code.
         $business = FlightMarkup::apply(['price' => 100000, 'cabin' => '', 'cabinCode' => 'C',
-            'segments' => [['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom']]]);
+            'segments' => [['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom']]], null);
 
         $this->assertSame('business', $business['markupCabin']);
         $this->assertSame(100000.0, $business['markupAmount']);
@@ -110,7 +110,7 @@ class FlightMarkupTest extends TestCase
             'fareBreakdown' => [
                 ['passengerType' => 'ADT', 'qty' => 2],
             ],
-        ]);
+        ], null);
 
         $this->assertSame(140000.0, $flight['markupAmount']);
         $this->assertSame(240000.0, $flight['price']);
@@ -124,7 +124,7 @@ class FlightMarkupTest extends TestCase
             'segments' => [
                 ['fromCountry' => 'United Kingdom', 'toCountry' => 'Nigeria'],
             ],
-        ]);
+        ], null);
 
         $this->assertSame(200000.0, $flight['markupAmount']);
         $this->assertSame(300000.0, $flight['price']);
@@ -142,7 +142,7 @@ class FlightMarkupTest extends TestCase
             'returnSegments' => [
                 ['fromCountry' => 'United Kingdom', 'toCountry' => 'Nigeria'],
             ],
-        ]);
+        ], null);
 
         $this->assertSame(30000.0, $flight['markupAmount']);
         $this->assertSame(130000.0, $flight['price']);
@@ -157,7 +157,7 @@ class FlightMarkupTest extends TestCase
             'segments' => [
                 ['fromCountry' => 'United Kingdom', 'toCountry' => 'United States'],
             ],
-        ]);
+        ], null);
 
         $this->assertSame(350000.0, $flight['markupAmount']);
         $this->assertSame(450000.0, $flight['price']);
@@ -172,7 +172,7 @@ class FlightMarkupTest extends TestCase
             'segments' => [
                 ['fromCountry' => 'Nigeria', 'toCountry' => 'Nigeria'],
             ],
-        ]);
+        ], null);
 
         $this->assertSame(20000.0, $flight['markupAmount']);
         $this->assertSame(120000.0, $flight['price']);
@@ -190,7 +190,7 @@ class FlightMarkupTest extends TestCase
             'returnSegments' => [
                 ['fromCountry' => 'Nigeria', 'toCountry' => 'Nigeria'],
             ],
-        ]);
+        ], null);
 
         $this->assertSame(20000.0, $flight['markupAmount']);
         $this->assertSame('domestic', $flight['markupCategory']);
@@ -213,7 +213,7 @@ class FlightMarkupTest extends TestCase
             'returnSegments' => [
                 ['fromCountry' => 'Nigeria', 'toCountry' => 'United Kingdom'],
             ],
-        ]);
+        ], null);
 
         $this->assertNotSame('domestic', $flight['markupCategory']);
         $this->assertSame('from_nigeria', $flight['markupCategory']);
@@ -228,7 +228,7 @@ class FlightMarkupTest extends TestCase
                 ['segments' => [['fromCountry' => 'Ghana', 'toCountry' => 'Nigeria']]],
                 ['segments' => [['fromCountry' => 'Nigeria', 'toCountry' => 'Kenya']]],
             ],
-        ]);
+        ], null);
 
         $this->assertSame(120000.0, $flight['markupAmount']);
         $this->assertSame(220000.0, $flight['price']);
@@ -256,16 +256,16 @@ class FlightMarkupTest extends TestCase
             ],
         ];
 
-        $firstPass = FlightMarkup::apply($flight);
+        $firstPass = FlightMarkup::apply($flight, null);
         $this->assertSame(750000.0, $firstPass['fareBreakdown'][0]['baseFare']);
         $this->assertSame('NGN', $firstPass['fareBreakdown'][0]['currency']);
 
         // Re-verify + re-price, same as select() does — everything else on
         // the flight changes, but fareBreakdown is carried over untouched.
-        $secondPass = FlightMarkup::apply($firstPass);
+        $secondPass = FlightMarkup::apply($firstPass, null);
         $this->assertSame(750000.0, $secondPass['fareBreakdown'][0]['baseFare']);
 
-        $thirdPass = FlightMarkup::apply($secondPass);
+        $thirdPass = FlightMarkup::apply($secondPass, null);
         $this->assertSame(750000.0, $thirdPass['fareBreakdown'][0]['baseFare']);
     }
 }

@@ -761,6 +761,7 @@
                 </article>
                 @endif
 
+                @unless ($corporateCompany ?? null)
                 <article class="pay-option" data-pay-option="flex">
                     <button class="pay-option-head" type="button" data-pay-trigger="flex">
                         <span class="pay-icon">
@@ -788,6 +789,7 @@
                         @endif
                     </div>
                 </article>
+                @endunless
             </section>
         </main>
 

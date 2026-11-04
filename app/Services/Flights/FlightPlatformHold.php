@@ -56,9 +56,12 @@ class FlightPlatformHold
      * for the supplier's next call. Otherwise reason is unavailable,
      * price_increased or unconfirmed, with the customer-facing message.
      *
+     * $acceptedPrice replaces the held price as the limit, for a company that
+     * has agreed to a higher fare.
+     *
      * @return array{ok: bool, reason?: string, message?: string, flight?: array, approved_price?: float, current_price?: float}
      */
-    public function reconfirm(FlightBooking $booking): array
+    public function reconfirm(FlightBooking $booking, ?float $acceptedPrice = null): array
     {
         $key = $booking->supplier ?: 'travelnext';
         $held = (array) ($booking->flight_snapshot ?? []);
@@ -88,7 +91,7 @@ class FlightPlatformHold
 
             $selected = $supplier->select(
                 (string) $candidate['fareSourceCode'],
-                FlightMarkup::apply($candidate),
+                FlightMarkup::apply($candidate, $booking->company),
                 $criteria,
             );
 
@@ -96,8 +99,8 @@ class FlightPlatformHold
                 return $this->refuse('unavailable', $booking, 'fare could not be verified: '.($selected['message'] ?? ''));
             }
 
-            $fresh = FlightMarkup::apply($selected['data']['flight']);
-            $approved = (float) ($held['price'] ?? 0);
+            $fresh = FlightMarkup::apply($selected['data']['flight'], $booking->company);
+            $approved = $acceptedPrice ?? (float) ($held['price'] ?? 0);
             $current = (float) ($fresh['price'] ?? 0);
             $tolerance = (float) config('flights.platform_hold.price_tolerance', 50);
 
@@ -133,6 +136,37 @@ class FlightPlatformHold
             'fare_source_code' => (string) ($fresh['fareSourceCode'] ?? $booking->fare_source_code),
             'flight_snapshot' => $snapshot,
             'supplier_price' => $fresh['supplierPrice'] ?? $booking->supplier_price,
+        ]);
+    }
+
+    /**
+     * Moves the booking to a new price the customer has agreed to. Extras are
+     * kept: only the difference in the fare changes the total.
+     */
+    public function adoptAcceptedPrice(FlightBooking $booking, array $fresh): void
+    {
+        $this->adopt($booking, $fresh);
+        $booking->refresh();
+
+        $snapshot = (array) ($booking->flight_snapshot ?? []);
+        $oldFare = (float) ($snapshot['price'] ?? 0);
+        $newFare = (float) ($fresh['price'] ?? 0);
+
+        foreach (['price', 'supplierPrice', 'markupAmount', 'markupRatePerPassenger', 'markupPassengerCount', 'baseFare', 'totalTax', 'fareBreakdown'] as $field) {
+            if (array_key_exists($field, $fresh)) {
+                $snapshot[$field] = $fresh[$field];
+            }
+        }
+
+        $booking->update([
+            'flight_snapshot' => $snapshot,
+            'markup_amount' => $fresh['markupAmount'] ?? $booking->markup_amount,
+            'markup_details' => array_merge((array) $booking->markup_details, [
+                'supplier_price' => $fresh['supplierPrice'] ?? null,
+                'markup_amount' => $fresh['markupAmount'] ?? null,
+                'customer_price' => $newFare,
+            ]),
+            'total_price' => round((float) $booking->total_price + $newFare - $oldFare, 2),
         ]);
     }
 

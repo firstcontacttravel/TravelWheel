@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\FlightBooking;
 use App\Models\TravelFlexApplication;
 use App\Services\AdminTicketingService;
@@ -10,6 +11,7 @@ use App\Services\Flights\FlightBookingGuard;
 use App\Services\Flights\FlightPlatformHold;
 use App\Services\Flights\FlightSearchStore;
 use App\Services\Flights\FlightSupplierRegistry;
+use App\Services\Corporate\CorporateContext;
 use App\Services\Flights\SkylinkFareRefresh;
 use App\Services\SeerbitPaymentService;
 use App\Services\SkylinkFlightService;
@@ -63,7 +65,8 @@ class FlightBookingController extends Controller
         ]);
         $validated['session_id'] = $validated['session_id'] ?? '';
 
-        $checkoutIntent = $validated['intent'] ?? 'booking';
+        // TravelFlex isn't offered to companies, whatever the form says.
+        $checkoutIntent = app(CorporateContext::class)->user() ? 'booking' : ($validated['intent'] ?? 'booking');
 
         $supplier = $suppliers->get($validated['source'] ?? TravelnextFlightService::KEY);
         $searchParams = session('searchParamsStore', []);
@@ -98,7 +101,7 @@ class FlightBookingController extends Controller
                 : back()->with('error', $result['message']);
         }
 
-        $mappedFlight = FlightMarkup::apply($result['data']['flight']);
+        $mappedFlight = FlightMarkup::apply($result['data']['flight'], app(CorporateContext::class)->company());
 
         session([
             'bookingFlight' => $mappedFlight,
@@ -170,6 +173,109 @@ class FlightBookingController extends Controller
         return $refusal === null
             ? null
             : redirect()->route('air.flight-s')->with('fareUnavailable', $refusal);
+    }
+
+    /**
+     * Stops payment on a booking whose company is suspended. A public booking
+     * has no company, so this never applies to one.
+     */
+    private function _refuseIfCompanyNotActive(FlightBooking $booking): ?\Illuminate\Http\RedirectResponse
+    {
+        if ($booking->company_id === null || $booking->company?->isActive()) {
+            return null;
+        }
+
+        return redirect()->route('business.login')
+            ->withErrors(['email' => 'This company account is not available, so no payment was taken. Please contact TravelWheel.']);
+    }
+
+    // =========================================================================
+    //  Corporate fare rise: show the new price and let the booker decide
+    // =========================================================================
+    private function _askToAcceptNewPrice(FlightBooking $booking, float $newFare): \Illuminate\Http\RedirectResponse
+    {
+        session(['corporatePriceChange' => ['booking_id' => $booking->id, 'new_fare' => $newFare]]);
+
+        return redirect()->route('flights.price-change');
+    }
+
+    /** The booking waiting on a decision, if it belongs to whoever is asking. */
+    private function _priceChangeBooking(): ?FlightBooking
+    {
+        $change = session('corporatePriceChange');
+        $company = app(CorporateContext::class)->company();
+
+        if (! is_array($change) || $company === null) {
+            return null;
+        }
+
+        return FlightBooking::query()
+            ->whereKey($change['booking_id'] ?? 0)
+            ->where('company_id', $company->id)
+            ->where('payment_status', 'pending')
+            ->first();
+    }
+
+    public function priceChange()
+    {
+        $booking = $this->_priceChangeBooking();
+
+        if (! $booking) {
+            return redirect()->route('air.flight-s')->withErrors(['error' => 'There is no fare change waiting for you.']);
+        }
+
+        $oldFare = (float) data_get($booking->flight_snapshot, 'price', 0);
+        $newFare = (float) session('corporatePriceChange.new_fare');
+
+        return view('livewire.pages.flight.flight-price-change', [
+            'booking' => $booking,
+            'oldFare' => $oldFare,
+            'newFare' => $newFare,
+            'newTotal' => (float) $booking->total_price + $newFare - $oldFare,
+        ]);
+    }
+
+    /**
+     * Prices the fare again, because SkyLink's token only lasts minutes. The
+     * booker agreed to a specific price, so a further rise asks them again
+     * rather than going ahead. Nothing is charged here.
+     */
+    public function acceptPriceChange(Request $request, SkylinkFareRefresh $refresh)
+    {
+        $booking = $this->_priceChangeBooking();
+
+        if (! $booking) {
+            return redirect()->route('air.flight-s')->withErrors(['error' => 'There is no fare change waiting for you.']);
+        }
+
+        $accepted = (float) session('corporatePriceChange.new_fare');
+        $result = $refresh->refresh($booking, $accepted);
+
+        if (! $result['ok']) {
+            if ($result['reason'] === 'price_increased' && isset($result['current_price'])) {
+                return $this->_askToAcceptNewPrice($booking, (float) $result['current_price'])
+                    ->with('priceRoseAgain', true);
+            }
+
+            return $result['reason'] === 'unconfirmed'
+                ? redirect()->route('flights.price-change')->withErrors(['error' => $result['message']])
+                : redirect()->route('air.flight-s')->with('fareUnavailable', ['message' => $result['message'], 'alternate' => null]);
+        }
+
+        $booking->refresh();
+
+        ActivityLog::recordForCompanyUser(
+            app(CorporateContext::class)->user(),
+            'company_fare_change_accepted',
+            'Accepted a new fare on '.$booking->booking_ref,
+            $booking,
+            ['accepted_fare' => $accepted, 'fare' => data_get($booking->flight_snapshot, 'price')],
+        );
+
+        session()->forget('corporatePriceChange');
+        session(['bookingFlight' => $booking->flight_snapshot, 'flightBookingDbId' => $booking->id]);
+
+        return redirect()->route('flights.payment.gateway')->with('status', 'The new fare has been applied. Nothing has been charged yet.');
     }
 
     // =========================================================================
@@ -516,6 +622,10 @@ class FlightBookingController extends Controller
         }
 
         if ($dbId && $dbBooking = FlightBooking::find($dbId)) {
+            if ($refused = $this->_refuseIfCompanyNotActive($dbBooking)) {
+                return $refused;
+            }
+
             $this->_assertHeldBookingPayable($dbBooking, 0);
             $dbBooking->update([
                 'payment_method' => 'bank_transfer',
@@ -1091,6 +1201,12 @@ class FlightBookingController extends Controller
 
             $booking = $this->_prepareSeerbitBooking($flow);
 
+            // A signed link can reach here with no session, so this looks at
+            // the booking's company rather than whoever is signed in.
+            if ($refused = $this->_refuseIfCompanyNotActive($booking)) {
+                return $refused;
+            }
+
             // Refresh the SkyLink fare token before the card is charged, so it
             // is still live when the customer comes back from SeerBit. Only a
             // fare that is gone or dearer stops here, before money moves.
@@ -1098,6 +1214,11 @@ class FlightBookingController extends Controller
                 $refreshed = app(SkylinkFareRefresh::class)->refresh($booking);
 
                 if (! $refreshed['ok']) {
+                    // A company decides for itself whether a higher fare is acceptable.
+                    if ($booking->company_id && $refreshed['reason'] === 'price_increased' && isset($refreshed['current_price'])) {
+                        return $this->_askToAcceptNewPrice($booking, (float) $refreshed['current_price']);
+                    }
+
                     return $refreshed['reason'] === 'unconfirmed'
                         ? redirect()->route('flights.payment.gateway')->withErrors(['error' => $refreshed['message']])
                         : redirect()->route('air.flight-s')->with('fareUnavailable', ['message' => $refreshed['message'], 'alternate' => null]);
@@ -2383,8 +2504,11 @@ class FlightBookingController extends Controller
         // unique_id from the API (hold/ticket reference) — NOT our booking ref
         // We always generate our own booking_ref for customer-facing reference.
         $bookingRef = $this->_generateBookingRef();
+        $companyUser = app(CorporateContext::class)->user();
 
         return FlightBooking::create(array_merge([
+            'company_id' => $companyUser?->company_id,
+            'company_user_id' => $companyUser?->id,
             'booking_ref' => $bookingRef,
             'fare_source_code' => $mappedFlight['fareSourceCode'] ?? '',
             'session_id' => session('bookingSessionId', ''),
@@ -2841,6 +2965,13 @@ class FlightBookingController extends Controller
      */
     private function _travelFlexEligibility(array $flight): array
     {
+        if (app(CorporateContext::class)->user()) {
+            return [
+                'eligible' => false,
+                'reason' => 'TravelFlex is not available on corporate accounts.',
+            ];
+        }
+
         if (strtolower((string) ($flight['fareType'] ?? $flight['fare_type'] ?? '')) === 'webfare') {
             return [
                 'eligible' => false,

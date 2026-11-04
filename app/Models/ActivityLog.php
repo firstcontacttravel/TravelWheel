@@ -20,6 +20,7 @@ class ActivityLog extends Model
 
     protected $fillable = [
         'user_id',
+        'company_user_id',
         'department_id',
         'action',
         'description',
@@ -50,9 +51,41 @@ class ActivityLog extends Model
         ]);
     }
 
+    /**
+     * Something a person at a company did at /business. Always names them
+     * explicitly: a member of staff can be signed in to the same browser, and
+     * this must never be put down to them.
+     */
+    public static function recordForCompanyUser(CompanyUser $companyUser, string $action, string $description, ?Model $subject = null, array $properties = []): self
+    {
+        return static::create([
+            'company_user_id' => $companyUser->getKey(),
+            'action' => Str::limit($action, 250, ''),
+            'description' => Str::limit($description, 250),
+            'subject_type' => $subject?->getMorphClass(),
+            'subject_id' => $subject?->getKey(),
+            'properties' => self::sanitize($properties) ?: null,
+        ]);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function companyUser(): BelongsTo
+    {
+        return $this->belongsTo(CompanyUser::class);
+    }
+
+    /** The name to show when the actor wasn't staff; System when it was nobody. */
+    public function nonStaffActorName(): string
+    {
+        $companyUser = $this->companyUser;
+
+        return $companyUser
+            ? $companyUser->name.' ('.($companyUser->company?->name ?? 'company').')'
+            : 'System';
     }
 
     public function department(): BelongsTo

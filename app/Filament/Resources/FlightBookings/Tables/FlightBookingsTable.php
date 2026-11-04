@@ -62,7 +62,7 @@ class FlightBookingsTable
             ->persistFiltersInSession()
             ->striped()
             ->poll('60s')
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('workItem.owner'))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['workItem.owner', 'company']))
             ->columns([
                 TextColumn::make('attention')
                     ->label('Queue')
@@ -70,6 +70,11 @@ class FlightBookingsTable
                     ->html()
                     ->searchable(false),
                 WorkItemTable::ownerColumn(),
+                TextColumn::make('company.name')
+                    ->label('Company')
+                    ->placeholder('-')
+                    ->searchable()
+                    ->toggleable(),
                 /*
                  * The reference alone. What used to be its description — the
                  * UniqueID and the fare type — are columns in their own right
@@ -264,6 +269,11 @@ class FlightBookingsTable
                         'Public' => 'Public',
                         'Private' => 'Private',
                     ]),
+                SelectFilter::make('company_id')
+                    ->label('Company')
+                    ->relationship('company', 'name')
+                    ->searchable()
+                    ->preload(),
                 SelectFilter::make('supplier')
                     ->options([
                         'travelnext' => 'TravelNext',

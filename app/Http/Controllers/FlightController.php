@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Corporate\CorporateContext;
 use App\Services\Flights\FlightSearchStore;
 use App\Services\Flights\FlightSupplierControl;
 use App\Support\FlightMarkup;
@@ -105,7 +106,7 @@ class FlightController extends Controller
      */
     private function startParallelSearch(array $validated)
     {
-        $searchId = app(FlightSearchStore::class)->start($validated);
+        $searchId = app(FlightSearchStore::class)->start($validated, app(CorporateContext::class)->company());
 
         session()->forget([
             'pendingFlightSearch',
@@ -308,8 +309,9 @@ class FlightController extends Controller
             return redirect()->route('air')->withErrors(['error' => $firstError ?? self::UNAVAILABLE]);
         }
 
+        $company = app(CorporateContext::class)->company();
         $flights = FlightMatch::tag(array_map(
-            fn (array $flight): array => FlightMarkup::apply($flight),
+            fn (array $flight): array => FlightMarkup::apply($flight, $company),
             $primary['flights'],
         ));
 

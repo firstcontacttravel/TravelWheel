@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'visas/payments/seerbit/webhook',
             'webhooks/linear',
         ]);
+
+        $middleware->web(append: [
+            \App\Http\Middleware\CorporateFlightSession::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

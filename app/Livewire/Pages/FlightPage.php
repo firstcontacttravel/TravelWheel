@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages;
 
+use App\Services\Corporate\CorporateContext;
 use App\Services\Flights\FlightSearchStore;
 use App\Services\Flights\FlightSupplierControl;
 use App\Services\Flights\FlightSupplierRegistry;
@@ -132,6 +133,8 @@ class FlightPage extends Component
         $stores = [];
         $meta = session('supplierSearchMeta', []);
 
+        $company = app(CorporateContext::class)->company();
+
         foreach ($this->supplementKeys($control) as $key) {
             // Checked again here: an admin may have switched it off since the
             // search began.
@@ -147,7 +150,7 @@ class FlightPage extends Component
                 }
 
                 $mapped = FlightMatch::tag(array_values(array_map(
-                    fn (array $flight): array => FlightMarkup::apply($flight),
+                    fn (array $flight): array => FlightMarkup::apply($flight, $company),
                     (array) data_get($result, 'data.flights', [])
                 )));
 

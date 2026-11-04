@@ -142,8 +142,11 @@ class FlightBooking extends Component
         $this->fareRules            = session('fareRules', []);
         $this->tripType             = session('tripType', '');
 
-        $this->contactEmail        = $savedContact['email'] ?? '';
-        $this->contactEmailConfirm = $savedContact['email'] ?? '';
+        // A booker gets the booking emails unless they change it for this booking.
+        $defaultEmail = app(\App\Services\Corporate\CorporateContext::class)->user()?->email ?? '';
+
+        $this->contactEmail        = $savedContact['email'] ?? $defaultEmail;
+        $this->contactEmailConfirm = $savedContact['email'] ?? $defaultEmail;
         $this->contactPhone        = $savedContact['phone'] ?? '';
         $this->contactAreaCode     = $savedContact['area_code'] ?? '080';
         $this->contactCountryCode  = $savedContact['country_code'] ?? '234';

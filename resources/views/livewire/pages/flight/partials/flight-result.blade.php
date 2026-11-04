@@ -1985,6 +1985,7 @@
                         </div>
                         <div class="sr-card-actions">
                             <button class="sr-book-btn" @click="selectFlight(flight)">Book now</button>
+                            @unless ($corporateCompany ?? null)
                             <button
                                 class="sr-installment-btn"
                                 type="button"
@@ -1994,6 +1995,7 @@
                                 <span class="sr-installment-btn-price" x-show="canUseTravelFlex(flight)" x-cloak x-text="_travelFlexInstallmentPrice(flight)"></span>
                                 <span class="sr-installment-btn-label">TravelFlex</span>
                             </button>
+                            @endunless
                         </div>
                     </div>
 
@@ -2258,10 +2260,12 @@
                 <div class="sr-tip-title"><span class="sr-tip-icon"><span class="sr-ic sr-ic-refund" aria-hidden="true"></span></span> Flexible Booking</div>
                 <div class="sr-tip-body">Look for <span class="sr-tip-highlight">refundable</span> fares if your plans might change — you can cancel or move them without losing the full ticket price.</div>
             </div>
+            @unless ($corporateCompany ?? null)
             <div class="sr-tip-card">
                 <div class="sr-tip-title"><span class="sr-tip-icon"><span class="sr-ic sr-ic-card" aria-hidden="true"></span></span> Travel Flex</div>
                 <div class="sr-tip-body">Apply for <span class="sr-tip-highlight">TravelFlex financing</span> through Fast Credit and spread eligible travel costs over an approved repayment plan — available at checkout.</div>
             </div>
+            @endunless
             <div class="sr-tip-card">
                 <div class="sr-tip-title"><span class="sr-tip-icon"><span class="sr-ic sr-ic-clock" aria-hidden="true"></span></span> Best Time to Fly</div>
                 <div class="sr-tip-body">Morning departures usually have the <span class="sr-tip-highlight">lowest delay rates</span>, since delays build up across the day.</div>

@@ -367,7 +367,7 @@ class SkylinkFlightServiceTest extends TestCase
 
         // FlightMarkup::apply() should now see 3 total passengers (2 adults +
         // 1 child), not the old hardcoded floor of 1.
-        $marked = FlightMarkup::apply($flight);
+        $marked = FlightMarkup::apply($flight, null);
         $this->assertSame(3, $marked['markupPassengerCount']);
     }
 

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Prunable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -21,13 +22,18 @@ class FlightSearch extends Model
 
     protected $keyType = 'string';
 
-    protected $fillable = ['id', 'criteria', 'created_at', 'expires_at'];
+    protected $fillable = ['id', 'company_id', 'criteria', 'created_at', 'expires_at'];
 
     protected $casts = [
         'criteria' => 'array',
         'created_at' => 'datetime',
         'expires_at' => 'datetime',
     ];
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
 
     public function results(): HasMany
     {

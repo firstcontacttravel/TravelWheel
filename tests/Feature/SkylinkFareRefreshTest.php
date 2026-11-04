@@ -144,7 +144,7 @@ class SkylinkFareRefreshTest extends TestCase
     {
         $this->fakeSkylink();
         $criteria = ['trip' => 'oneway', 'adults' => 1, 'childs' => 0, 'kids' => 0, 'flight_type' => 'C'];
-        $searched = FlightMarkup::apply(app(SkylinkFlightService::class)->mapSearchResult($this->rawFlight('btk_original', 'AT576'), $criteria));
+        $searched = FlightMarkup::apply(app(SkylinkFlightService::class)->mapSearchResult($this->rawFlight('btk_original', 'AT576'), $criteria), null);
 
         $this->assertFalse(app(SkylinkFlightService::class)->select('btk_original', $searched, $criteria)['error']);
 
@@ -157,7 +157,7 @@ class SkylinkFareRefreshTest extends TestCase
     private function booking(array $overrides = []): FlightBooking
     {
         $criteria = ['trip' => 'oneway', 'adults' => 1, 'childs' => 0, 'kids' => 0];
-        $flight = FlightMarkup::apply(app(SkylinkFlightService::class)->mapSearchResult($this->rawFlight('btk_original', 'AT576'), $criteria));
+        $flight = FlightMarkup::apply(app(SkylinkFlightService::class)->mapSearchResult($this->rawFlight('btk_original', 'AT576'), $criteria), null);
 
         return FlightBooking::create(array_merge([
             'booking_ref' => 'TW-REFRESH1',

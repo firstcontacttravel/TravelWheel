@@ -40,6 +40,13 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Companies signing in at /business. Separate from `web` so a corporate
+        // login can never reach the admin panel.
+        'corporate' => [
+            'driver' => 'session',
+            'provider' => 'company_users',
+        ],
     ],
 
     /*
@@ -63,6 +70,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
+        ],
+
+        'company_users' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\CompanyUser::class,
         ],
 
         // 'users' => [
@@ -94,6 +106,13 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'company_users' => [
+            'provider' => 'company_users',
+            'table' => 'company_password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
         ],

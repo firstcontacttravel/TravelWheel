@@ -82,8 +82,10 @@ class FlightSupplierSearchController extends Controller
                 return $this->answer('error');
             }
 
+            // From the search, because this request has no session to ask.
+            $company = $store->company($search);
             $flights = FlightMatch::tag(array_values(array_map(
-                fn (array $flight): array => FlightMarkup::apply($flight),
+                fn (array $flight): array => FlightMarkup::apply($flight, $company),
                 (array) ($result['data']['flights'] ?? []),
             )));
 

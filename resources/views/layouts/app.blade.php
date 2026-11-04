@@ -103,6 +103,10 @@
         <!-- Footer -->
         <livewire:layout.footer />
     </div> 
+    @if ($corporateCompany ?? null)
+        {{-- Shared pages show company rates once a company is signed in, so say whose. --}}
+        <a href="{{ route('business.dashboard') }}" style="position:fixed;left:12px;bottom:12px;z-index:1000;max-width:calc(100vw - 24px);padding:8px 14px;border-radius:20px;background:#303191;color:#fff;font-size:13px;font-weight:600;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.25);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Booking for {{ $corporateCompany->name }} · Back to portal</a>
+    @endif
     @livewireScripts
     
     <!-- Mobile Menu Toggle Script -->
