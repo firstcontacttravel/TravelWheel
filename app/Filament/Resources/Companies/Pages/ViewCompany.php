@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Companies\Pages;
 
 use App\Filament\Resources\Companies\CompanyResource;
 use App\Filament\Resources\Companies\Schemas\CorporateRatesForm;
+use App\Models\ActivityLog;
 use App\Models\Company;
 use App\Models\CompanyInvitation;
 use App\Services\Corporate\CompanyWallet;
@@ -36,6 +37,7 @@ class ViewCompany extends ViewRecord
             $this->ratesAction(),
             $this->adjustWalletAction(),
             $this->payoutAction(),
+            $this->deleteTravellersAction(),
             $this->reactivateAction(),
             $this->suspendAction(),
         ];
@@ -192,6 +194,29 @@ class ViewCompany extends ViewRecord
 
                 Notification::make()->success()->title('Payout recorded')->send();
                 $this->record->refresh();
+            });
+    }
+
+    /**
+     * For a company that has left: its saved passports shouldn't outlive it.
+     * Bookings keep their own encrypted record of who flew.
+     */
+    private function deleteTravellersAction(): Action
+    {
+        return $this->managed('deleteTravellers')
+            ->label('Delete saved travellers')
+            ->icon('heroicon-o-trash')
+            ->color('danger')
+            ->visible(fn (): bool => $this->record->hasStatus('suspended') && $this->record->travellers()->exists())
+            ->requiresConfirmation()
+            ->modalDescription('Permanently deletes this company\'s saved travellers and their passports. This cannot be undone.')
+            ->action(function (): void {
+                $count = $this->record->travellers()->count();
+                $this->record->travellers()->delete();
+
+                ActivityLog::record('corporate.travellers_deleted', 'Deleted '.$count.' saved travellers for '.$this->record->name, $this->record);
+
+                Notification::make()->success()->title('Saved travellers deleted')->send();
             });
     }
 

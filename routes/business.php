@@ -8,6 +8,7 @@ use App\Http\Controllers\Business\DashboardController;
 use App\Http\Controllers\Business\InvitationController;
 use App\Http\Controllers\Business\PasswordResetController;
 use App\Http\Controllers\Business\TeamController;
+use App\Http\Controllers\Business\TravellerController;
 use App\Http\Controllers\Business\WalletController;
 use App\Http\Middleware\EnsureCompanyAdmin;
 use App\Http\Middleware\EnsureCompanyUser;
@@ -50,6 +51,13 @@ Route::prefix('business')->name('business.')->group(function () {
 
         Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
         Route::get('/bookings/{reference}/ticket', [BookingController::class, 'ticket'])->name('bookings.ticket');
+
+        Route::get('/travellers', [TravellerController::class, 'index'])->name('travellers.index');
+        Route::get('/travellers/create', [TravellerController::class, 'create'])->name('travellers.create');
+        Route::post('/travellers', [TravellerController::class, 'store'])->name('travellers.store');
+        Route::get('/travellers/{traveller}/edit', [TravellerController::class, 'edit'])->whereNumber('traveller')->name('travellers.edit');
+        Route::put('/travellers/{traveller}', [TravellerController::class, 'update'])->whereNumber('traveller')->name('travellers.update');
+        Route::delete('/travellers/{traveller}', [TravellerController::class, 'destroy'])->whereNumber('traveller')->name('travellers.destroy');
 
         Route::get('/account', [AccountController::class, 'show'])->name('account');
         Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password');

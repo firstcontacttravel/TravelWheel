@@ -1054,7 +1054,8 @@
                                         </div>
                                     </div>
                                     @if(! empty($passenger['passport_no']))
-                                        <span class="cf-chip">{{ $passenger['passport_no'] }}</span>
+                                        {{-- A saved traveller's passport stays masked on every page. --}}
+                                        <span class="cf-chip">{{ filled($passenger['saved_traveller_id'] ?? null) ? 'ending '.substr((string) $passenger['passport_no'], -4) : $passenger['passport_no'] }}</span>
                                     @endif
                                 </div>
                             @endforeach

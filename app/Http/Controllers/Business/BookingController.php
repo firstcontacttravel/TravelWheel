@@ -38,7 +38,8 @@ class BookingController extends Controller
             ->when($search !== '', fn (Builder $query) => $query->where(fn (Builder $inner) => $inner
                 ->where('booking_ref', 'like', '%'.$search.'%')
                 ->orWhere('route', 'like', '%'.$search.'%')
-                ->orWhere('airline', 'like', '%'.$search.'%')))
+                ->orWhere('airline', 'like', '%'.$search.'%')
+                ->orWhere('cost_code', 'like', '%'.$search.'%')))
             ->when(array_key_exists($status, self::STATUSES), fn (Builder $query) => $query->where('booking_status', $status))
             ->latest()
             ->paginate(20)

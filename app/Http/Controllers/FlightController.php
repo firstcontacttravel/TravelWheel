@@ -482,6 +482,7 @@ class FlightController extends Controller
             'bookingFlight',
             'bookingContact',
             'bookingPassengers',
+            'bookingCostCode',
             'bookingSearchParams',
             'bookingSessionId',
             'bookingUniqueId',

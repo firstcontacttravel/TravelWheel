@@ -1417,6 +1417,8 @@
                                         <div x-show="cardOpen" x-transition>
                                             <div class="bk-pax-body">
 
+                                                @include('livewire.pages.flight.partials.corporate-traveller-picker', ['i' => $i, 'pax' => $pax])
+
                                                 {{-- Identity: what the traveller copies off themselves --}}
                                                 <div class="bk-fieldset">
                                                     <div class="bk-fieldset-head">
@@ -1557,6 +1559,13 @@
                         </div>
                         <div x-show="open" x-transition>
                             <div class="bk-acc-body">
+                                @if ($this->isCompanyBooking())
+                                    <div class="bk-field" style="margin-bottom:14px;">
+                                        <label class="bk-label" for="cost-code">Cost code or project <span class="bk-optional">Optional</span></label>
+                                        <input class="bk-input" id="cost-code" type="text" maxlength="100" wire:model.blur="costCode" placeholder="Shown on your bookings and exports">
+                                        @error('costCode') <span class="bk-error">{{ $message }}</span> @enderror
+                                    </div>
+                                @endif
                                 <div class="bk-contact-grid">
                                     <div class="bk-field">
                                         <label class="bk-label">Email address</label>
@@ -1707,7 +1716,7 @@
                                                 {{ $pax['title'] }} {{ strtoupper($pax['first_name']) }} {{ strtoupper($pax['last_name']) }}
                                             </span>
                                             <span class="bk-review-pax-meta">
-                                                Born {{ $dobStr }} &middot; {{ $natName }}@if(!empty($pax['passport_no'])) &middot; Passport {{ $pax['passport_no'] }}@endif
+                                                Born {{ $dobStr }} &middot; {{ $natName }}@if(!empty($pax['passport_no'])) &middot; Passport {{ $pax['passport_no'] }}@elseif(!empty($pax['passport_masked'])) &middot; Passport {{ $pax['passport_masked'] }}@endif
                                                 @if($pax['is_primary']) &middot; main contact @endif
                                             </span>
                                         </span>
@@ -1785,11 +1794,13 @@
                         <input type="hidden" name="contact[phone]"        value="{{ $contactPhone }}">
                         <input type="hidden" name="contact[area_code]"    value="{{ $contactAreaCode }}">
                         <input type="hidden" name="contact[country_code]" value="{{ $contactCountryCode }}">
+                        <input type="hidden" name="cost_code"             value="{{ $costCode }}">
                         @foreach($this->passengers as $i => $pax)
                         @foreach([
                         'type','title','first_name','middle_name','last_name',
                         'gender','dob','nationality',
-                        'passport_no','passport_issue_country','passport_issue_date','passport_exp', 'frequent_flyer_number'
+                        'passport_no','passport_issue_country','passport_issue_date','passport_exp', 'frequent_flyer_number',
+                        'saved_traveller_id','save_traveller'
                         ] as $field)
                         <input type="hidden" name="passengers[{{ $i }}][{{ $field }}]" value="{{ $pax[$field] ?? '' }}">
                         @endforeach

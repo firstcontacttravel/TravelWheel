@@ -14,6 +14,7 @@ use App\Mail\TravelFlexTicketBookedMail;
 use App\Mail\UnTicketedConfirmationAlert;
 use App\Mail\WorkDeadlineMail;
 use App\Mail\WorkEscalationMail;
+use App\Models\CompanyTraveller;
 use App\Models\CompanyUser;
 use App\Models\Escalation;
 use App\Models\FlightBooking;
@@ -78,7 +79,7 @@ class DurableMailService
             'related_type' => $related->getMorphClass(),
             'related_id' => $related->getKey(),
             'payload' => $payload,
-            'cc' => array_values(array_filter(array_merge($cc, $this->companyAdminCopies($kind, $recipient, $related)))),
+            'cc' => array_values(array_filter(array_merge($cc, $this->companyAdminCopies($kind, $recipient, $related), $this->travellerCopies($kind, $recipient, $related)))),
             'status' => 'pending',
             'available_at' => now(),
         ];
@@ -120,6 +121,29 @@ class DurableMailService
             ->whereNull('deactivated_at')
             ->where('email', '!=', strtolower(trim($recipient)))
             ->pluck('email')
+            ->all();
+    }
+
+    /** Saved travellers with an email get a copy of their e-ticket. */
+    private function travellerCopies(string $kind, string $recipient, Model $related): array
+    {
+        if ($kind !== self::FLIGHT_ETICKET || ! $related instanceof FlightBooking || ! $related->company_id) {
+            return [];
+        }
+
+        $ids = collect((array) $related->passengers_snapshot)->pluck('saved_traveller_id')->filter()->all();
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return CompanyTraveller::query()
+            ->where('company_id', $related->company_id)
+            ->whereIn('id', $ids)
+            ->whereNotNull('email')
+            ->pluck('email')
+            ->reject(fn (string $email): bool => strtolower($email) === strtolower(trim($recipient)))
+            ->values()
             ->all();
     }
 

@@ -4,6 +4,10 @@ namespace App\Livewire\Pages;
 
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
+use App\Models\CompanyTraveller;
+use App\Services\Corporate\CompanyTravellers;
+use App\Services\Corporate\CorporateContext;
+use Carbon\CarbonInterface;
 use Livewire\Component;
 
 class FlightBooking extends Component
@@ -27,6 +31,7 @@ class FlightBooking extends Component
     public string $contactPhoneFull    = '';
     public string $contactPhone        = '';
     public string $contactAreaCode     = '';   // e.g. 080 (required by booking API)
+    public string $costCode            = '';   // Companies only: their own reference
     public string $contactCountryCode  = '';   // e.g. 234 (required by booking API)
 
     // ── Passengers ────────────────────────────────────────────────────────────
@@ -124,7 +129,11 @@ class FlightBooking extends Component
             $this->adultCount  = collect($savedPassengers)->where('type', 'ADT')->count();
             $this->childCount  = collect($savedPassengers)->where('type', 'CHD')->count();
             $this->infantCount = collect($savedPassengers)->where('type', 'INF')->count();
-            $this->passengers  = array_values($savedPassengers);
+            // A passport added from a saved profile stays on the server.
+            $this->passengers  = array_map(
+                fn (array $passenger): array => $this->withoutSavedPassport($passenger),
+                array_values($savedPassengers),
+            );
         } else {
             $this->adultCount  = $expectedAdultCount;
             $this->childCount  = $expectedChildCount;
@@ -145,6 +154,7 @@ class FlightBooking extends Component
         // A booker gets the booking emails unless they change it for this booking.
         $defaultEmail = app(\App\Services\Corporate\CorporateContext::class)->user()?->email ?? '';
 
+        $this->costCode            = (string) session('bookingCostCode', '');
         $this->contactEmail        = $savedContact['email'] ?? $defaultEmail;
         $this->contactEmailConfirm = $savedContact['email'] ?? $defaultEmail;
         $this->contactPhone        = $savedContact['phone'] ?? '';
@@ -200,6 +210,96 @@ class FlightBooking extends Component
         $this->normalizePassengerTitles();
     }
  
+    // ─────────────────────────────────────────────────────────────────────────
+    // Saved travellers (companies only)
+    // ─────────────────────────────────────────────────────────────────────────
+    public function isCompanyBooking(): bool
+    {
+        return app(CorporateContext::class)->user() !== null;
+    }
+
+    /** @return list<array{id: int, label: string}> */
+    public function savedTravellers(): array
+    {
+        $company = app(CorporateContext::class)->company();
+
+        if (! $company) {
+            return [];
+        }
+
+        return $company->travellers()->orderBy('last_name')->orderBy('first_name')->limit(500)->get()
+            ->map(fn (CompanyTraveller $traveller): array => [
+                'id' => $traveller->id,
+                'label' => $traveller->fullName().($traveller->hasPassport() ? ' (passport '.$traveller->maskedPassport().')' : ''),
+            ])
+            ->all();
+    }
+
+    public function useSavedTraveller(int $index, mixed $travellerId): void
+    {
+        if (! isset($this->passengers[$index])) {
+            return;
+        }
+
+        $base = $this->_emptyPassenger($this->passengers[$index]['type'], (bool) ($this->passengers[$index]['is_primary'] ?? false));
+
+        if (blank($travellerId)) {
+            $this->passengers[$index] = $base;
+            $this->normalizePassengerTitles();
+
+            return;
+        }
+
+        $traveller = app(CorporateContext::class)->company()?->travellers()->find((int) $travellerId);
+
+        if (! $traveller) {
+            return;
+        }
+
+        $this->passengers[$index] = array_merge($base, app(CompanyTravellers::class)->checkoutFields($traveller));
+        $this->normalizePassengerTitles();
+    }
+
+    public function passportWarningFor(mixed $travellerId): ?string
+    {
+        $traveller = app(CorporateContext::class)->company()?->travellers()->find((int) $travellerId);
+
+        return $traveller?->passportWarning($this->travelDate());
+    }
+
+    private function travelDate(): CarbonInterface
+    {
+        $flight = session('bookingFlight', []);
+        $mapped = $flight['flight'] ?? $flight;
+        $depart = $mapped['departDT'] ?? data_get($mapped, 'segments.0.departDT');
+
+        return $depart ? Carbon::parse($depart)->startOfDay() : now()->startOfDay();
+    }
+
+    private function withoutSavedPassport(array $passenger): array
+    {
+        $travellerId = $passenger['saved_traveller_id'] ?? null;
+
+        if (blank($travellerId)) {
+            return $passenger;
+        }
+
+        // Taken out first, whatever else happens: this form reaches the browser.
+        $passenger = array_merge($passenger, [
+            'passport_no' => '',
+            'passport_issue_country' => '',
+            'passport_issue_date' => '',
+            'passport_exp' => '',
+            'passport_masked' => '',
+        ]);
+
+        $traveller = app(CorporateContext::class)->company()?->travellers()->find((int) $travellerId);
+
+        return array_merge($passenger, $traveller
+            ? ['passport_masked' => (string) $traveller->maskedPassport()]
+            : ['saved_traveller_id' => null]);
+    }
+
     private function _emptyPassenger(string $type, bool $isPrimary = false): array
     {
         return [
@@ -218,6 +318,10 @@ class FlightBooking extends Component
             'passport_exp'           => '',
             // ── NEW: Frequent Flyer ───────────────────────────────────────────
             'frequent_flyer_number'  => '',   // optional — airline loyalty number
+            // Companies only. The number itself never comes to this form.
+            'saved_traveller_id'     => null,
+            'passport_masked'        => '',
+            'save_traveller'         => false,
             // UI helpers
             'is_primary'             => $isPrimary,
         ];
@@ -364,6 +468,7 @@ class FlightBooking extends Component
             'contactPhone'        => 'required|string|min:7|max:20',
             'contactAreaCode'     => 'required|string|max:10',
             'contactCountryCode'  => 'required|string|max:10',
+            'costCode'            => 'nullable|string|max:100',
         ];
  
         foreach ($this->passengers as $i => $_) {

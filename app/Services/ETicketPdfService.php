@@ -87,6 +87,11 @@ class ETicketPdfService
         $passengers = collect($passengers)->map(function (array $passenger, int $index) use ($customerInfos): array {
             $info = $customerInfos->get($index, []);
 
+            // A saved traveller's passport stays masked on the document too.
+            if (filled($passenger['saved_traveller_id'] ?? null) && filled($passenger['passport_no'] ?? null)) {
+                $passenger['passport_no'] = 'ending '.substr((string) $passenger['passport_no'], -4);
+            }
+
             return array_merge($passenger, [
                 'eticket' => $this->firstFilled($info, [
                     'eTicketNumber',

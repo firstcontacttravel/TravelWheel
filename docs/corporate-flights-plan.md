@@ -1,6 +1,6 @@
 # TravelWheel Corporate Flights: Implementation Plan
 
-Status as of 2026-11-04: **Phases 1-4 pushed to `main`, staging check not confirmed. Phases 5-7 not started.** Each phase is meant to be checked on staging before the next one starts. Phases 1-3 need that check together.
+Status as of 2026-11-04: **Phases 1-5 pushed to `main`. Phases 6-7 not started.**
 
 ## What we are building
 
@@ -263,14 +263,24 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 - **E-tickets:** also go to the traveller's email if the profile has one.
 - **Cost code:** optional free-text `cost_code` on `flight_bookings`, shown on the booking page and searchable.
 
-**Deliverables:**
-- [ ] Traveller table, management page and checkout picker
-- [ ] Full passport handled only on the server
-- [ ] Expiry warning and retention rule
-- [ ] Cost code from checkout through to the booking page
-- [ ] `CompanyTravellerTest`: no passport number in any page or snapshot, another company's traveller ID is refused, changes are logged
+**As built:**
+- A passport typed at checkout is for that trip, and replaces the saved one as a set. It is only saved if the person is new and "save for next time" is ticked. An existing profile changes only on the Travellers page.
+- Company users can edit travellers, and only Admins can delete. The CEO can delete all of a suspended company's travellers in one action.
+- A saved traveller's passport is masked on the confirmation page and the e-ticket PDF, as well as in the form.
+- Staff still see full passports on the booking in the admin, as they do for public bookings, because operations needs them. That's the booking's own encrypted record, not the profile.
 
-**Ship checklist:** complete item 2 of "Sort out before building" first, then check the rendered page source on staging for passport numbers.
+**Deliverables:**
+- [x] Traveller table, management page and checkout picker
+- [x] Full passport handled only on the server
+- [x] Expiry warning. The retention rule is a manual delete until the adviser gives a period
+- [x] Cost code from checkout through to the booking page
+- [x] `CompanyTravellerTest`: no passport number in any page or snapshot, another company's traveller ID is refused, changes are logged
+
+**Ship checklist:**
+1. Complete item 2 of "Sort out before building" before saving real passports.
+2. Run `php artisan migrate --force`.
+3. Check the rendered page source on staging for passport numbers.
+4. Run a real sandbox booking with a saved traveller on each API, to confirm the supplier receives the full passport.
 
 ---
 

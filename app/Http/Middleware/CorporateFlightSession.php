@@ -43,6 +43,7 @@ class CorporateFlightSession
         'bookingSessionId',
         'bookingContact',
         'bookingPassengers',
+        'bookingCostCode',
         'bookingUniqueId',
         'bookingRef',
         'bookingStatus',

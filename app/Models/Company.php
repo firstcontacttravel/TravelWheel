@@ -75,6 +75,11 @@ class Company extends Model
         return $this->hasMany(CompanyWalletTopUp::class);
     }
 
+    public function travellers(): HasMany
+    {
+        return $this->hasMany(CompanyTraveller::class);
+    }
+
     public function accountManager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'account_manager_id');

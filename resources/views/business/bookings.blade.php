@@ -20,7 +20,7 @@
         <div class="biz-grid">
             <div class="biz-field">
                 <label for="q">Search</label>
-                <input class="biz-input" id="q" name="q" type="search" value="{{ $search }}" placeholder="Reference, route or airline">
+                <input class="biz-input" id="q" name="q" type="search" value="{{ $search }}" placeholder="Reference, route, airline or cost code">
             </div>
             <div class="biz-field">
                 <label for="status">Status</label>
@@ -59,6 +59,9 @@
                             <td>
                                 <strong>{{ $booking->booking_ref }}</strong>
                                 <div class="biz-help">{{ $booking->created_at->timezone('Africa/Lagos')->format('j M Y') }}</div>
+                                @if ($booking->cost_code)
+                                    <div class="biz-help">Cost code: {{ $booking->cost_code }}</div>
+                                @endif
                             </td>
                             <td>
                                 {{ $booking->route }}

@@ -12,6 +12,7 @@ use App\Services\Flights\FlightBookingGuard;
 use App\Services\Flights\FlightPlatformHold;
 use App\Services\Flights\FlightSearchStore;
 use App\Services\Flights\FlightSupplierRegistry;
+use App\Services\Corporate\CompanyTravellers;
 use App\Services\Corporate\CompanyWalletTopUps;
 use App\Services\Corporate\CorporateContext;
 use App\Services\Corporate\CorporateWalletPayments;
@@ -518,13 +519,26 @@ class FlightBookingController extends Controller
             'passengers.*.passport_issue_date' => 'nullable|date',
             'passengers.*.passport_exp' => 'nullable|date|after:today',
             'passengers.*.frequent_flyer_number' => 'nullable|string|max:30',
+            'passengers.*.saved_traveller_id' => 'nullable|integer',
+            'passengers.*.save_traveller' => 'nullable',
+            'cost_code' => 'nullable|string|max:100',
             'extra_baggage' => 'nullable|array',
             'extra_meal' => 'nullable|array',
             'intent' => 'nullable|in:booking,travelflex',
         ]);
 
+        // Saved travellers' passports join the booking here, on the server.
+        $companyUser = app(CorporateContext::class)->user();
+        $travellers = app(CompanyTravellers::class);
+        $validated = $travellers->fillBooking($validated, $companyUser);
+
         $this->_validateBookingPassengers($validated);
         $this->_validatePassengerCountsAgainstSearch($validated['passengers']);
+
+        if ($companyUser) {
+            $validated = $travellers->saveTicked($validated, $companyUser);
+            session(['bookingCostCode' => filled($validated['cost_code'] ?? null) ? trim($validated['cost_code']) : null]);
+        }
 
         // Persist passenger + contact to session for downstream payment steps
         session([
@@ -2762,6 +2776,7 @@ class FlightBookingController extends Controller
         return FlightBooking::create(array_merge([
             'company_id' => $companyUser?->company_id,
             'company_user_id' => $companyUser?->id,
+            'cost_code' => $companyUser ? session('bookingCostCode') : null,
             'booking_ref' => $bookingRef,
             'fare_source_code' => $mappedFlight['fareSourceCode'] ?? '',
             'session_id' => session('bookingSessionId', ''),
@@ -3004,6 +3019,7 @@ class FlightBookingController extends Controller
             'bookingSessionId',
             'bookingContact',
             'bookingPassengers',
+            'bookingCostCode',
             'bookingUniqueId',
             'bookingRef',
             'bookingStatus',

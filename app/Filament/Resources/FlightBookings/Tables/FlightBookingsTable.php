@@ -76,6 +76,11 @@ class FlightBookingsTable
                     ->placeholder('-')
                     ->searchable()
                     ->toggleable(),
+                TextColumn::make('cost_code')
+                    ->label('Cost code')
+                    ->placeholder('-')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 /*
                  * The reference alone. What used to be its description — the
                  * UniqueID and the fare type — are columns in their own right
