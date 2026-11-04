@@ -222,6 +222,8 @@
 
     <x-ui.card title="Pay">
         <div class="fpg-pay">
+            @include('livewire.pages.flight.partials.corporate-wallet-option', ['total' => $total])
+
             <p class="fpg-pay-copy">{{ $pgCopy['pay'] }}</p>
 
             <form method="POST" action="{{ route('flights.payment.gateway.process') }}" id="gw-form">

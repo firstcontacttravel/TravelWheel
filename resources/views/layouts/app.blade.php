@@ -105,7 +105,16 @@
     </div> 
     @if ($corporateCompany ?? null)
         {{-- Shared pages show company rates once a company is signed in, so say whose. --}}
-        <a href="{{ route('business.dashboard') }}" style="position:fixed;left:12px;bottom:12px;z-index:1000;max-width:calc(100vw - 24px);padding:8px 14px;border-radius:20px;background:#303191;color:#fff;font-size:13px;font-weight:600;text-decoration:none;box-shadow:0 2px 8px rgba(0,0,0,.25);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">Booking for {{ $corporateCompany->name }} · Back to portal</a>
+        {{-- On a phone it's a bar along the bottom, with room left under the page so it can't sit on a button. --}}
+        <style>
+            .tw-company-badge { position: fixed; left: 12px; bottom: 12px; z-index: 40; max-width: calc(100vw - 24px); padding: 8px 14px; border-radius: 20px; background: #303191; color: #fff; font-size: 13px; font-weight: 600; text-decoration: none; box-shadow: 0 2px 8px rgba(0,0,0,.25); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+            .tw-company-badge:hover { color: #fff; }
+            @media (max-width: 768px) {
+                body { padding-bottom: 36px; }
+                .tw-company-badge { left: 0; right: 0; bottom: 0; max-width: none; border-radius: 0; padding: 8px 12px; text-align: center; box-shadow: none; }
+            }
+        </style>
+        <a href="{{ route('business.dashboard') }}" class="tw-company-badge">Booking for {{ $corporateCompany->name }} · Back to portal</a>
     @endif
     @livewireScripts
     

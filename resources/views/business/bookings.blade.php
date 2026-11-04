@@ -12,6 +12,10 @@
         <a class="biz-btn" href="{{ route('air') }}">Book a flight</a>
     </div>
 
+    @error('wallet')
+        <div class="biz-alert biz-alert-bad" role="alert">{{ $message }}</div>
+    @enderror
+
     <form method="GET" action="{{ route('business.bookings.index') }}" class="biz-card">
         <div class="biz-grid">
             <div class="biz-field">

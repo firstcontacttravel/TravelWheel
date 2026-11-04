@@ -40,7 +40,7 @@
     <x-mail.rows>
         <x-mail.row label="Payment reference">{{ $booking->payment_reference ?: '—' }}</x-mail.row>
         {{-- ucfirst() turned the provider's own name into "Seerbit". --}}
-        <x-mail.row label="Gateway">{{ ['seerbit' => 'SeerBit'][strtolower((string) $booking->payment_gateway)] ?? (filled($booking->payment_gateway) ? ucfirst($booking->payment_gateway) : 'SeerBit') }}</x-mail.row>
+        <x-mail.row label="Gateway">{{ ['seerbit' => 'SeerBit', 'wallet' => 'Company wallet'][strtolower((string) $booking->payment_gateway)] ?? (filled($booking->payment_gateway) ? ucfirst($booking->payment_gateway) : 'SeerBit') }}</x-mail.row>
         <x-mail.row label="Fare and taxes">{{ $sym }}{{ number_format($expectedAmount, 2) }}</x-mail.row>
         @if ($charges > 0)
             <x-mail.row label="Gateway charges">{{ $sym }}{{ number_format($charges, 2) }}</x-mail.row>

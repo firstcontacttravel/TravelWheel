@@ -1,6 +1,6 @@
 # TravelWheel Corporate Flights: Implementation Plan
 
-Status as of 2026-11-04: **Phases 1-3 pushed to `main`, staging check not confirmed. Phases 4-7 not started.** Each phase is meant to be checked on staging before the next one starts. Phases 1-3 need that check together.
+Status as of 2026-11-04: **Phases 1-4 pushed to `main`, staging check not confirmed. Phases 5-7 not started.** Each phase is meant to be checked on staging before the next one starts. Phases 1-3 need that check together.
 
 ## What we are building
 
@@ -222,18 +222,24 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 - **Payouts:** Finance records a payment to the company's bank, which debits the wallet.
 - **Existing admin actions:** hide Mark paid and Verify SeerBit on wallet bookings, and show "Wallet" wherever the payment method appears, including e-tickets and reports.
 
+**As built:**
+- Suppliers now report a failed booking as `refused` or `unclear`. A timeout, a server error, or success with no reference counts as unclear.
+- The wallet page shows Bookers whether the wallet covers a booking, but not the balance. Admins see the balance and shortfall.
+- A card attempt followed by the wallet asks SeerBit first. If the card went through, the wallet isn't charged. If SeerBit can't answer, the wallet waits. A card charge that lands after a wallet payment never books again and alerts support to refund the card.
+- Crediting a booking's full amount closes it if it was never issued, and sets its payment to `refunded`, which reports treat as uncollected. A partial refund shows on the ledger but not in reports yet.
+
 **Deliverables:**
-- [ ] Wallet payment on both APIs and all fare types
-- [ ] Low balance page
-- [ ] Automatic return and the "unclear" path
-- [ ] Credit wallet and payout actions
-- [ ] Admin, e-ticket, email and report labels
-- [ ] `CorporateWalletPaymentTest`:
+- [x] Wallet payment on both APIs and all fare types. Tested with faked supplier and SeerBit responses
+- [x] Low balance page
+- [x] Automatic return and the "unclear" path
+- [x] Credit wallet and payout actions
+- [x] Admin, e-ticket, email and report labels
+- [x] `CorporateWalletPaymentTest`:
   - A double-click debits once
   - A clear failure returns the money
   - A timeout doesn't
   - Refunds can't exceed what was paid
-  - Reports count a wallet booking once, and reflect its refund
+  - Reports count a wallet booking once, and reflect a full refund
 
 **Ship checklist:**
 1. Run sandbox wallet bookings on each API, including a forced failure.

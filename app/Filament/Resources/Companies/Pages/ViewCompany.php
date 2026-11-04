@@ -35,6 +35,7 @@ class ViewCompany extends ViewRecord
             $this->revokeInvitationAction(),
             $this->ratesAction(),
             $this->adjustWalletAction(),
+            $this->payoutAction(),
             $this->reactivateAction(),
             $this->suspendAction(),
         ];
@@ -159,6 +160,37 @@ class ViewCompany extends ViewRecord
                 }
 
                 Notification::make()->success()->title('Wallet adjusted')->send();
+                $this->record->refresh();
+            });
+    }
+
+    /** Records money sent back to the company's bank, which is done outside this system. */
+    private function payoutAction(): Action
+    {
+        return Action::make('payoutWallet')
+            ->label('Record payout')
+            ->icon('heroicon-o-building-library')
+            ->color('gray')
+            ->authorize(fn (): bool => auth()->user()?->canHandleMoney() ?? false)
+            ->visible(fn (): bool => (auth()->user()?->canHandleMoney() ?? false) && (float) $this->record->wallet_balance > 0)
+            ->modalDescription('Send the money from the bank first, then record it here. This takes it out of the wallet.')
+            ->form([
+                TextInput::make('amount')->label('Amount paid out')->numeric()->minValue(0.01)->required()->prefix('₦'),
+                TextInput::make('bank_reference')->label('Bank reference')->required()->maxLength(100),
+            ])
+            ->action(function (array $data): void {
+                try {
+                    app(CompanyWallet::class)->post($this->record, 'payout', -(float) $data['amount'], 'payout:'.Str::uuid(), [
+                        'user_id' => auth()->id(),
+                        'reason' => 'Paid to your bank, reference '.$data['bank_reference'],
+                    ]);
+                } catch (InsufficientWalletBalance) {
+                    Notification::make()->danger()->title('The balance is too low for that')->send();
+
+                    return;
+                }
+
+                Notification::make()->success()->title('Payout recorded')->send();
                 $this->record->refresh();
             });
     }

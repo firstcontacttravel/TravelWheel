@@ -1052,7 +1052,13 @@ class TravelnextFlightService implements FlightSupplier
                     'payload' => $payload,
                 ]);
 
-                return ['error' => true, 'message' => 'Booking request failed. Please try again.', 'data' => []];
+                // A server error may have happened after the seat was booked.
+                return [
+                    'error' => true,
+                    'outcome' => $response->serverError() ? 'unclear' : 'refused',
+                    'message' => 'Booking request failed. Please try again.',
+                    'data' => [],
+                ];
             }
 
             $data = $response->json();
@@ -1069,7 +1075,8 @@ class TravelnextFlightService implements FlightSupplier
         } catch (\Throwable $e) {
             Log::error('FlightBooking API error', ['message' => $e->getMessage()]);
 
-            return ['error' => true, 'message' => 'A network error occurred. Please try again.', 'data' => []];
+            // A timeout says nothing about whether the seat was booked.
+            return ['error' => true, 'outcome' => 'unclear', 'message' => 'A network error occurred. Please try again.', 'data' => []];
         }
     }
 

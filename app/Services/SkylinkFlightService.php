@@ -283,7 +283,7 @@ class SkylinkFlightService implements FlightSupplier
                 'error_message' => $blocked,
             ]));
 
-            return $this->errorResult($blocked);
+            return ['outcome' => 'refused'] + $this->errorResult($blocked);
         }
 
         if ($response->failed() || ! data_get($decoded, 'data.verified', false)) {
@@ -364,7 +364,8 @@ class SkylinkFlightService implements FlightSupplier
                 'error_message' => $exception->getMessage(),
             ]));
 
-            return $this->errorResult('SkyLink was unable to confirm this reservation. Please contact support before retrying — payment may already be captured.');
+            // A timeout says nothing about whether the seat was reserved.
+            return ['outcome' => 'unclear'] + $this->errorResult('SkyLink was unable to confirm this reservation. Please contact support before retrying — payment may already be captured.');
         }
 
         $durationMs = (int) round((microtime(true) - $startedAt) * 1000);
@@ -392,7 +393,8 @@ class SkylinkFlightService implements FlightSupplier
                 'error_message' => $message,
             ]));
 
-            return $this->errorResult($message);
+            // A server error may have happened after the seat was reserved.
+            return ['outcome' => $response->serverError() ? 'unclear' : 'refused'] + $this->errorResult($message);
         }
 
         $this->logCall(array_merge($this->contextLogAttributes($context, $passengers), [

@@ -11,6 +11,7 @@ use App\Models\TicketingRecord;
 use App\Services\AdminPostTicketingService;
 use App\Services\AdminReplacementFlightSearchService;
 use App\Services\AdminTicketingService;
+use App\Services\Corporate\CorporateWalletPayments;
 use App\Services\DurableMailService;
 use App\Services\SeerbitPaymentService;
 use App\Services\TravelFlexApplicationService;
@@ -299,6 +300,7 @@ class FlightBookingsTable
                         'gateway' => 'Gateway',
                         'bank_transfer' => 'Bank transfer',
                         'flex' => 'TravelFlex',
+                        'wallet' => 'Wallet',
                     ]),
                 TernaryFilter::make('ticket_ordered')
                     ->label('Ticket ordered'),
@@ -328,6 +330,7 @@ class FlightBookingsTable
                     self::markBankTransferPaidAction(),
                     self::markFeesTransferPaidAction(),
                     self::verifySeerbitPaymentAction(),
+                    self::creditWalletAction(),
                     self::sendPaymentReceiptAction(),
                     self::orderTicketAction(),
                     self::recordSkylinkTicketsAction(),
@@ -905,6 +908,39 @@ class FlightBookingsTable
 
             return false;
         }
+    }
+
+    /**
+     * Sends money to the company's wallet: a refund after penalties, or closing
+     * a booking that won't go ahead. It moves money here only. Any refund from
+     * the supplier is a separate step.
+     */
+    private static function creditWalletAction(): Action
+    {
+        return Action::make('creditWallet')
+            ->authorize(fn (): bool => self::canHandleMoney())
+            ->label('Credit wallet')
+            ->icon('heroicon-o-wallet')
+            ->color('warning')
+            ->visible(fn (FlightBooking $record): bool => app(CorporateWalletPayments::class)->refundable($record) > 0)
+            ->modalHeading(fn (FlightBooking $record): string => 'Credit '.($record->company?->name ?? 'company').'\'s wallet')
+            ->modalDescription(fn (FlightBooking $record): string => 'Up to NGN '.number_format(app(CorporateWalletPayments::class)->refundable($record), 2).' can go back on '.$record->booking_ref.'. Take off any penalties first. The company sees the reason. Crediting everything closes a booking that was never issued.')
+            ->fillForm(fn (FlightBooking $record): array => ['amount' => app(CorporateWalletPayments::class)->refundable($record)])
+            ->form([
+                TextInput::make('amount')->label('Amount')->numeric()->minValue(0.01)->required()->prefix('₦'),
+                Textarea::make('reason')->label('Reason (shown to the company)')->required()->maxLength(400)->rows(2),
+            ])
+            ->action(function (FlightBooking $record, array $data): void {
+                try {
+                    app(CorporateWalletPayments::class)->creditRefund($record, (float) $data['amount'], $data['reason'], auth()->user());
+                } catch (\DomainException $exception) {
+                    Notification::make()->danger()->title($exception->getMessage())->send();
+
+                    return;
+                }
+
+                Notification::make()->success()->title('Wallet credited')->send();
+            });
     }
 
     private static function canHandleMoney(): bool

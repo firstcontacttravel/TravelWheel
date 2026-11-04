@@ -3,7 +3,7 @@
 
 @section('content')
     <h1>Wallet</h1>
-    <p class="biz-sub">Add money to pay for flights. Booking from the wallet is coming soon.</p>
+    <p class="biz-sub">Add money here, then choose the company wallet when you pay for a flight.</p>
 
     @include('business.partials.status')
 

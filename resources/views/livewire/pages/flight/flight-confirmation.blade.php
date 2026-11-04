@@ -853,6 +853,7 @@
             // show a customer, the same way 'Fare type: Private' was on the payment page.
             $paidWith = match ($paymentMethod) {
                 'gateway' => 'Paid by card',
+                'wallet' => 'Paid from your company wallet',
                 'flex_gateway' => 'Paid by card via TravelFlex',
                 'bank_transfer' => 'Paid by bank transfer',
                 'travelflex' => 'TravelFlex instalments',

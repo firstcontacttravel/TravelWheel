@@ -278,6 +278,7 @@ Route::get('/flights/payment/options/resume/{bookingRef}', [FlightBookingControl
 Route::post('/flights/payment/bank-transfer', [FlightBookingController::class, 'bankTransferNotify'])->name('flights.payment.bank-transfer');
 
 // Non-LCC: Gateway on payment options → ticket_order
+Route::post('/flights/payment/wallet', [FlightBookingController::class, 'payFromWallet'])->middleware('throttle:flights-book')->name('flights.payment.wallet');
 Route::post('/flights/payment/gateway-ticket', [FlightBookingController::class, 'processTicketPayment'])->middleware('throttle:flights-book')->name('flights.payment.gateway-ticket');
 
 // Pending page (bank transfer awaiting verification)

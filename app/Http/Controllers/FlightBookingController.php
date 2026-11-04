@@ -14,6 +14,8 @@ use App\Services\Flights\FlightSearchStore;
 use App\Services\Flights\FlightSupplierRegistry;
 use App\Services\Corporate\CompanyWalletTopUps;
 use App\Services\Corporate\CorporateContext;
+use App\Services\Corporate\CorporateWalletPayments;
+use App\Services\Corporate\InsufficientWalletBalance;
 use App\Services\Flights\SkylinkFareRefresh;
 use App\Services\SeerbitPaymentService;
 use App\Services\SkylinkFlightService;
@@ -189,6 +191,195 @@ class FlightBookingController extends Controller
 
         return redirect()->route('business.login')
             ->withErrors(['email' => 'This company account is not available, so no payment was taken. Please contact TravelWheel.']);
+    }
+
+    // =========================================================================
+    //  Paying from a company's wallet
+    // =========================================================================
+
+    /**
+     * Debits the wallet and books, with no gateway in between. The order is the
+     * same as a card payment: check everything, take the money, then call the
+     * supplier. The lock and the paid check stop a double-click booking twice.
+     */
+    public function payFromWallet(Request $request, CorporateWalletPayments $payments)
+    {
+        $user = app(CorporateContext::class)->user();
+
+        if (! $user) {
+            return redirect()->route('air.flight-s')->withErrors(['error' => 'Please sign in to your company account to pay from the wallet.']);
+        }
+
+        $lock = Cache::lock('flight-wallet-payment:'.(session('flightBookingDbId') ?: session()->getId()), 180);
+
+        if (! $lock->get()) {
+            return back()->withErrors(['error' => 'This payment is already being processed. Please wait a moment.']);
+        }
+
+        try {
+            $existing = $this->_sessionBooking()?->fresh();
+
+            if ($existing && $existing->company_id !== $user->company_id) {
+                return redirect()->route('air.flight-s')->withErrors(['error' => 'This booking belongs to another account.']);
+            }
+
+            if ($existing && $existing->payment_method === 'wallet') {
+                return $this->_redirectAfterWalletAlreadyUsed($existing);
+            }
+
+            if ($existing?->payment_status === 'awaiting_bank_transfer') {
+                return back()->withErrors(['error' => 'You have already told us you paid this by bank transfer.']);
+            }
+
+            $bookingFlight = session('bookingFlight', []);
+            $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
+            $isHeld = $existing && filled($existing->unique_id) && $existing->usesTravelNextApi();
+
+            if (! $isHeld && (empty($mappedFlight) || empty(session('bookingContact')) || empty(session('bookingPassengers')))) {
+                return redirect()->route('air.flight-s')->withErrors(['error' => 'Session expired. Please start over.']);
+            }
+
+            if (! $isHeld && ($refused = $this->_refuseIfSupplierOff($mappedFlight, $existing))) {
+                return $refused;
+            }
+
+            $flow = match (true) {
+                $isHeld => 'held_ticket_full',
+                ($mappedFlight['source'] ?? null) === 'skylink' => 'skylink_reserve_full',
+                default => 'webfare_full',
+            };
+
+            $booking = $this->_prepareSeerbitBooking($flow);
+
+            // Remembered now, so turning back here (a short wallet, say) and
+            // paying by card carries on with this booking, not a second one.
+            session(['flightBookingDbId' => $booking->id, 'bookingRef' => $booking->booking_ref]);
+
+            if ($refused = $this->_refuseIfCompanyNotActive($booking)) {
+                return $refused;
+            }
+
+            if ($stopped = $this->_stopIfCardAlreadyUsed($booking)) {
+                return $stopped;
+            }
+
+            if ($flow === 'skylink_reserve_full') {
+                $refreshed = app(SkylinkFareRefresh::class)->refresh($booking);
+
+                if (! $refreshed['ok']) {
+                    if ($refreshed['reason'] === 'price_increased' && isset($refreshed['current_price'])) {
+                        return $this->_askToAcceptNewPrice($booking, (float) $refreshed['current_price']);
+                    }
+
+                    return $refreshed['reason'] === 'unconfirmed'
+                        ? redirect()->route('flights.payment.gateway')->withErrors(['error' => $refreshed['message']])
+                        : redirect()->route('air.flight-s')->with('fareUnavailable', ['message' => $refreshed['message'], 'alternate' => null]);
+                }
+
+                $booking = $booking->fresh();
+            }
+
+            $amount = $this->_fullPayableAmount($booking);
+
+            try {
+                $payments->debit($booking, $user, $amount, $flow);
+            } catch (InsufficientWalletBalance) {
+                return back()->withErrors(['error' => 'The company wallet doesn\'t have enough for this booking. Nothing has been charged.']);
+            }
+
+            $booking = $booking->fresh();
+
+            session([
+                'flightBookingDbId' => $booking->id,
+                'bookingRef' => $booking->booking_ref,
+                'paymentMethod' => 'wallet',
+            ]);
+
+            $response = match ($flow) {
+                'skylink_reserve_full' => $this->_completeSkylinkReservation($booking, fareJustRefreshed: true),
+                'webfare_full' => $this->_completeWebfarePayment($booking, $request),
+                'held_ticket_full' => $this->_completeHeldTicketPayment($booking),
+            };
+
+            $booking = $booking->fresh();
+
+            if ($booking->payment_status === 'paid') {
+                $this->_sendPaymentReceipt($booking);
+            }
+
+            return $response;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * An earlier card attempt on this booking may have gone through. Paying from
+     * the wallet as well would charge the company twice, so SeerBit is asked
+     * first, and if it can't answer the wallet waits.
+     */
+    private function _stopIfCardAlreadyUsed(FlightBooking $booking): ?\Illuminate\Http\RedirectResponse
+    {
+        if ($booking->payment_gateway !== 'seerbit' || blank($booking->payment_reference)) {
+            return null;
+        }
+
+        $verification = app(SeerbitPaymentService::class)->verifyPayment($booking->payment_reference);
+
+        if (! ($verification['query_succeeded'] ?? true)) {
+            return back()->withErrors(['error' => 'We couldn\'t check your earlier card attempt, so nothing has been charged. Please try again shortly.']);
+        }
+
+        if ($verification['ok'] ?? false) {
+            return redirect()->route('payments.seerbit.callback', ['paymentReference' => $booking->payment_reference]);
+        }
+
+        return null;
+    }
+
+    /** The wallet has already paid for this booking. Don't charge anything else. */
+    private function _redirectAfterWalletAlreadyUsed(FlightBooking $booking): \Illuminate\Http\RedirectResponse
+    {
+        return $booking->payment_status === 'paid'
+            ? redirect()->route('business.bookings.index')
+            : redirect()->route('air.flight-s')->withErrors(['error' => 'This booking is closed. Please search again.']);
+    }
+
+    /** The supplier clearly refused: the money goes back and the booker chooses again. */
+    private function _returnWalletMoney(FlightBooking $booking, string $supplierMessage): \Illuminate\Http\RedirectResponse
+    {
+        $amount = app(CorporateWalletPayments::class)->returnAfterRefusal($booking, $supplierMessage);
+
+        $this->_forgetStaleCheckoutSession();
+
+        return redirect()->route('air.flight-s')->with('fareUnavailable', [
+            'message' => 'The airline couldn\'t confirm this booking, so NGN '.number_format($amount, 2).' is back in your company wallet. Please choose another flight.',
+            'alternate' => null,
+        ]);
+    }
+
+    /** The outcome is unknown, so the money stays debited while operations finds out. */
+    private function _holdWalletMoneyForReview(FlightBooking $booking, string $message): \Illuminate\Http\RedirectResponse
+    {
+        $this->_sendTicketingFailureAlert($booking->fresh(), 'Paid from the company wallet, but the supplier gave no clear answer: '.$message.' The seat may exist. Check with the supplier, then ticket it or credit the wallet.');
+        $this->_forgetStaleCheckoutSession();
+
+        return redirect()->route('business.bookings.index')->withErrors([
+            'wallet' => 'We couldn\'t get a clear answer from the airline on '.$booking->booking_ref.'. The money is still held for this booking, and our team has been alerted. If the seat can\'t be confirmed, the money goes back to your wallet.',
+        ]);
+    }
+
+    /**
+     * A card charge landing on a booking the wallet has paid for: never book
+     * again, and tell support, because the card needs refunding.
+     */
+    private function _handleCardPaymentOnWalletBooking(FlightBooking $booking, SeerbitPaymentService $seerbit, string $reference): \Illuminate\Http\RedirectResponse
+    {
+        if ($seerbit->verifyPayment($reference)['ok'] ?? false) {
+            $this->_sendTicketingFailureAlert($booking, 'A card payment ('.$reference.') went through on a booking already paid from the company wallet. Refund the card.');
+        }
+
+        return redirect()->route('business.bookings.index');
     }
 
     // =========================================================================
@@ -628,6 +819,10 @@ class FlightBookingController extends Controller
                 return $refused;
             }
 
+            if ($dbBooking->payment_method === 'wallet') {
+                return $this->_redirectAfterWalletAlreadyUsed($dbBooking);
+            }
+
             $this->_assertHeldBookingPayable($dbBooking, 0);
             $dbBooking->update([
                 'payment_method' => 'bank_transfer',
@@ -754,6 +949,9 @@ class FlightBookingController extends Controller
         FlightBooking $booking,
         string $reference,
     ) {
+        if ($booking->payment_method === 'wallet') {
+            return $this->_handleCardPaymentOnWalletBooking($booking, $seerbit, $reference);
+        }
 
         if ($booking->payment_verified_at && in_array($booking->booking_status, ['confirmed', 'ticketed', 'ticketing_failed', 'failed'], true)) {
             $this->_sendPaymentReceipt($booking);
@@ -1198,6 +1396,12 @@ class FlightBookingController extends Controller
         }
 
         try {
+            $sessionBooking = $this->_sessionBooking();
+
+            if ($sessionBooking?->payment_method === 'wallet') {
+                return $this->_redirectAfterWalletAlreadyUsed($sessionBooking);
+            }
+
             // The last check before money moves, for the flows that start a
             // purchase. Never for a fees payment or a held ticket: by then a
             // deposit has been paid or a hold exists, and those always go on.
@@ -1396,9 +1600,19 @@ class FlightBookingController extends Controller
             'passengers' => session('bookingPassengers', []),
         ];
 
+        $paidBy = $booking->payment_method === 'wallet' ? 'wallet' : 'gateway';
+
         $result = $this->_callBookApi($validatedData, $request);
         if ($result['error']) {
+            if ($paidBy === 'wallet' && ($result['outcome'] ?? 'unclear') === 'refused') {
+                return $this->_returnWalletMoney($booking, $result['message']);
+            }
+
             $booking->update(['payment_status' => 'paid', 'booking_status' => 'failed']);
+
+            if ($paidBy === 'wallet') {
+                return $this->_holdWalletMoneyForReview($booking, $result['message']);
+            }
 
             return redirect()->route('flights.payment.gateway')->withErrors(['error' => $result['message']]);
         }
@@ -1410,7 +1624,19 @@ class FlightBookingController extends Controller
 
         if (! $success || empty($uniqueId)) {
             $errMsg = $this->_extractApiErrorMessage($bookResult, 'Booking failed after payment. Please contact support.');
+
+            // Told "no" by the supplier. A "yes" with no reference is unclear.
+            if ($paidBy === 'wallet' && ! $success) {
+                $booking->update(['booking_api_response' => $apiResponse]);
+
+                return $this->_returnWalletMoney($booking, $errMsg);
+            }
+
             $booking->update(['payment_status' => 'paid', 'booking_status' => 'failed', 'booking_api_response' => $apiResponse]);
+
+            if ($paidBy === 'wallet') {
+                return $this->_holdWalletMoneyForReview($booking, $errMsg);
+            }
 
             return redirect()->route('flights.payment.gateway')->withErrors(['error' => $errMsg]);
         }
@@ -1419,7 +1645,7 @@ class FlightBookingController extends Controller
             'unique_id' => $uniqueId,
             'booking_status' => 'confirmed',
             'payment_status' => 'paid',
-            'payment_method' => 'gateway',
+            'payment_method' => $paidBy,
             'booking_api_response' => $apiResponse,
         ]);
 
@@ -1431,7 +1657,7 @@ class FlightBookingController extends Controller
             'bookingRef' => $booking->booking_ref,
             'bookingStatus' => $bookResult['Status'] ?? 'CONFIRMED',
             'flightBookingDbId' => $booking->id,
-            'paymentMethod' => 'gateway',
+            'paymentMethod' => $paidBy,
         ]);
 
         $this->_clearCheckoutSession($booking->fresh(), [
@@ -1479,6 +1705,11 @@ class FlightBookingController extends Controller
 
         $pnr = $result['data']['pnr'] ?? $result['data']['bookingReference'] ?? '';
 
+        // The caller returns the wallet money, so there's no failure to record.
+        if ($paymentMethod === 'wallet' && $result['error'] && ($result['outcome'] ?? 'unclear') === 'refused') {
+            return ['ok' => false, 'refused' => true, 'message' => (string) $result['message'], 'pnr' => '', 'data' => []];
+        }
+
         if ($result['error'] || empty($pnr)) {
             $message = $result['error']
                 ? ($result['message'] ?: 'SkyLink reservation failed after payment.')
@@ -1489,7 +1720,10 @@ class FlightBookingController extends Controller
                 'booking_status' => 'failed',
                 'booking_api_response' => $result['data'] ?? [],
             ]);
-            $this->_sendTicketingFailureAlert($booking->fresh(), $message, $result['data'] ?? []);
+            // A wallet payment raises its own alert, with what to do about the money.
+            if ($paymentMethod !== 'wallet') {
+                $this->_sendTicketingFailureAlert($booking->fresh(), $message, $result['data'] ?? []);
+            }
 
             return ['ok' => false, 'message' => $message, 'pnr' => '', 'data' => $result['data'] ?? []];
         }
@@ -1514,13 +1748,14 @@ class FlightBookingController extends Controller
         return ['ok' => true, 'message' => '', 'pnr' => (string) $pnr, 'data' => $result['data']];
     }
 
-    private function _completeSkylinkReservation(FlightBooking $booking)
+    private function _completeSkylinkReservation(FlightBooking $booking, bool $fareJustRefreshed = false)
     {
         // SkyLink wants pricing within five minutes of reserve, with the token
         // that pricing returns. Payment has been taken by now, so a fare that
         // can't be refreshed goes to support (rebook or refund), like any
-        // reservation that fails after payment.
-        $refreshed = app(SkylinkFareRefresh::class)->refresh($booking);
+        // reservation that fails after payment. A wallet payment re-priced a
+        // moment ago, with no trip to a gateway in between.
+        $refreshed = $fareJustRefreshed ? ['ok' => true] : app(SkylinkFareRefresh::class)->refresh($booking);
 
         if (! $refreshed['ok']) {
             $booking->update(['payment_status' => 'paid', 'booking_status' => 'failed']);
@@ -1534,9 +1769,16 @@ class FlightBookingController extends Controller
             ]);
         }
 
-        $reserved = $this->_reserveSkylink($booking->fresh());
+        $paidBy = $booking->payment_method === 'wallet' ? 'wallet' : 'gateway';
+        $reserved = $this->_reserveSkylink($booking->fresh(), $paidBy);
         $result = ['data' => $reserved['data']];
         $pnr = $reserved['pnr'];
+
+        if (! $reserved['ok'] && $paidBy === 'wallet') {
+            return ($reserved['refused'] ?? false)
+                ? $this->_returnWalletMoney($booking, $reserved['message'])
+                : $this->_holdWalletMoneyForReview($booking, $reserved['message']);
+        }
 
         if (! $reserved['ok']) {
             return redirect()->route('flights.payment.gateway')->withErrors(['error' => $reserved['message']]);
@@ -1548,7 +1790,7 @@ class FlightBookingController extends Controller
             'bookingRef' => $booking->booking_ref,
             'bookingStatus' => $result['data']['status'] ?? 'CONFIRMED',
             'flightBookingDbId' => $booking->id,
-            'paymentMethod' => 'gateway',
+            'paymentMethod' => $paidBy,
         ]);
 
         $this->_clearCheckoutSession($booking->fresh(), [
@@ -1638,9 +1880,10 @@ class FlightBookingController extends Controller
         $ticketResult = app(AdminTicketingService::class)->ticketOrder($booking);
         $ticketResponse = $ticketResult['response'] ?? [];
         $ticketSuccess = (bool) ($ticketResult['ok'] ?? false);
+        $paidBy = $booking->payment_method === 'wallet' ? 'wallet' : 'gateway';
 
         $booking->update([
-            'payment_method' => 'gateway',
+            'payment_method' => $paidBy,
             'payment_status' => 'paid',
         ]);
 
@@ -1653,7 +1896,7 @@ class FlightBookingController extends Controller
         session([
             'ticketOrderResult' => $ticketResponse,
             'ticketSuccess' => $ticketSuccess,
-            'paymentMethod' => 'gateway',
+            'paymentMethod' => $paidBy,
             'bookingUniqueId' => $ticketSuccess
                 ? (data_get($ticketResponse, 'AirOrderTicketRS.TicketOrderResult.UniqueID', $booking->unique_id) ?: $booking->unique_id)
                 : $booking->unique_id,

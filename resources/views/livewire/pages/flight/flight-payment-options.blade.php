@@ -695,6 +695,8 @@
 
     <div class="pay-grid">
         <main class="pay-main">
+            @include('livewire.pages.flight.partials.corporate-wallet-option', ['total' => $total])
+
             <section class="pay-options" aria-label="Payment methods">
                 <article class="pay-option is-active" data-pay-option="gateway">
                     <button class="pay-option-head" type="button" data-pay-trigger="gateway">
