@@ -39,6 +39,7 @@ class NotificationOutboxResource extends Resource
                         'sent' => 'success',
                         'failed' => 'danger',
                         'processing' => 'info',
+                        'cancelled' => 'gray',
                         default => 'warning',
                     }),
                 TextColumn::make('attempts')->numeric(),
@@ -63,13 +64,14 @@ class NotificationOutboxResource extends Resource
                     'processing' => 'Processing',
                     'failed' => 'Failed',
                     'sent' => 'Sent',
+                    'cancelled' => 'Cancelled',
                 ]),
             ])
             ->recordActions([
                 Action::make('retry')
                     ->label('Retry now')
                     ->icon(Heroicon::OutlinedArrowPath)
-                    ->visible(fn (NotificationOutbox $record): bool => ! $record->sent_at)
+                    ->visible(fn (NotificationOutbox $record): bool => ! $record->sent_at && $record->status !== 'cancelled')
                     ->requiresConfirmation()
                     ->action(function (NotificationOutbox $record): void {
                         $sent = app(DurableMailService::class)->deliver($record);

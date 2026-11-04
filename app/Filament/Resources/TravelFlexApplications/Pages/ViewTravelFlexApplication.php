@@ -24,6 +24,14 @@ class ViewTravelFlexApplication extends ViewRecord
                 ->color('primary')
                 ->button(),
             ActionGroup::make([
+                TravelFlexApplicationsTable::markInstalmentPaidAction(),
+                TravelFlexApplicationsTable::reverseInstalmentPaymentAction(),
+            ])
+                ->label('Repayments')
+                ->icon('heroicon-o-banknotes')
+                ->color('gray')
+                ->button(),
+            ActionGroup::make([
                 TravelFlexApplicationsTable::resendProviderEmailAction(),
             ])
                 ->label('Provider')

@@ -6,6 +6,8 @@ use App\Mail\BookingPendingMail;
 use App\Mail\ETicketMail;
 use App\Mail\FlightSupplierAlertMail;
 use App\Mail\PaymentReceiptMail;
+use App\Mail\TravelFlexInstalmentPaidMail;
+use App\Mail\TravelFlexOverdueAlertMail;
 use App\Mail\TravelFlexRepaymentReminderMail;
 use App\Mail\TravelFlexStatusMail;
 use App\Mail\TravelFlexTicketBookedMail;
@@ -17,6 +19,7 @@ use App\Models\FlightBooking;
 use App\Models\FlightSupplierEvent;
 use App\Models\NotificationOutbox;
 use App\Models\TravelFlexApplication;
+use App\Models\TravelFlexInstalmentPayment;
 use App\Models\WorkItem;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Mail\Mailable;
@@ -42,6 +45,10 @@ class DurableMailService
 
     public const TRAVELFLEX_REPAYMENT = 'travelflex_repayment';
 
+    public const TRAVELFLEX_INSTALMENT_PAID = 'travelflex_instalment_paid';
+
+    public const TRAVELFLEX_OVERDUE_ALERT = 'travelflex_overdue_alert';
+
     public const TRAVELFLEX_TICKET_BOOKED = 'travelflex_ticket_booked';
 
     public const FLIGHT_SUPPLIER_ALERT = 'flight_supplier_alert';
@@ -49,6 +56,8 @@ class DurableMailService
     public const WORK_ESCALATION = 'work_escalation';
 
     public const WORK_DEADLINE = 'work_deadline';
+
+    public const STATUS_CANCELLED = 'cancelled';
 
     public function sendNowOrStore(
         string $kind,
@@ -81,7 +90,30 @@ class DurableMailService
             return true;
         }
 
+        // Asking for a cancelled email again means it is wanted after all, e.g.
+        // a reminder cancelled by a payment that has since been reversed.
+        if ($message->status === self::STATUS_CANCELLED) {
+            $message->forceFill(['status' => 'pending', 'last_error' => null])->save();
+        }
+
         return $this->deliver($message);
+    }
+
+    /**
+     * Stops unsent emails whose unique key starts with the given prefix or
+     * equals it, so a retry can't send something that no longer applies.
+     */
+    public function cancelUnsent(string $uniqueKeyPrefix): int
+    {
+        return NotificationOutbox::query()
+            ->where('unique_key', 'like', addcslashes($uniqueKeyPrefix, '\\%_').'%')
+            ->whereNull('sent_at')
+            ->update([
+                'status' => self::STATUS_CANCELLED,
+                'failed_at' => null,
+                'last_error' => null,
+                'updated_at' => now(),
+            ]);
     }
 
     /**
@@ -129,6 +161,11 @@ class DurableMailService
     {
         if ($message->sent_at) {
             return true;
+        }
+
+        // Cancelled while a retry run was already holding this row.
+        if ($message->status === self::STATUS_CANCELLED) {
+            return false;
         }
 
         $message->forceFill([
@@ -244,7 +281,12 @@ class DurableMailService
             self::TRAVELFLEX_REPAYMENT => new TravelFlexRepaymentReminderMail(
                 $this->travelFlex($related)->fresh(['booking']),
                 (array) ($payload['instalment'] ?? []),
-                (string) ($payload['timing'] ?? 'due'),
+                (string) ($payload['stage'] ?? ''),
+            ),
+            self::TRAVELFLEX_INSTALMENT_PAID => new TravelFlexInstalmentPaidMail($this->instalmentPayment($related)),
+            self::TRAVELFLEX_OVERDUE_ALERT => new TravelFlexOverdueAlertMail(
+                $this->travelFlex($related)->fresh(['booking', 'instalmentPayments']),
+                (array) ($payload['instalment'] ?? []),
             ),
             self::TRAVELFLEX_TICKET_BOOKED => new TravelFlexTicketBookedMail($this->flight($related)),
             self::FLIGHT_SUPPLIER_ALERT => new FlightSupplierAlertMail($this->supplierEvent($related)),
@@ -276,6 +318,15 @@ class DurableMailService
     {
         if (! $model instanceof TravelFlexApplication) {
             throw new \RuntimeException('Durable email requires a TravelFlex application.');
+        }
+
+        return $model;
+    }
+
+    private function instalmentPayment(Model $model): TravelFlexInstalmentPayment
+    {
+        if (! $model instanceof TravelFlexInstalmentPayment) {
+            throw new \RuntimeException('Durable email requires a TravelFlex instalment payment.');
         }
 
         return $model;

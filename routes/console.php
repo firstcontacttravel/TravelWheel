@@ -11,10 +11,33 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Artisan::command('travelflex:send-repayment-reminders', function () {
-    $sent = app(TravelFlexApplicationService::class)->sendRepaymentReminders();
+Artisan::command('travelflex:send-repayment-reminders {--dry-run : List what would send, and send nothing}', function () {
+    $service = app(TravelFlexApplicationService::class);
 
-    $this->info("TravelFlex repayment reminders sent: {$sent}");
+    if ($this->option('dry-run')) {
+        $preview = $service->previewRepaymentReminders();
+        $rows = fn (array $items): array => array_map(fn (array $row): array => [
+            $row['application']->booking_ref,
+            $row['instalment']['label'] ?? '-',
+            $row['due_date']->format('Y-m-d'),
+            $row['days_until_due'],
+            $row['stage'] ?? '-',
+        ], $items);
+        $headers = ['Booking', 'Instalment', 'Due date', 'Days until due', 'Stage'];
+
+        $this->info('Would send: '.count($preview['send']));
+        $this->table($headers, $rows($preview['send']));
+        $this->info('Would alert Fast Credit and TravelWheel: '.count($preview['alerts']));
+        $this->table($headers, $rows($preview['alerts']));
+        $this->info('No more reminders, already '.TravelFlexApplicationService::REMINDERS_STOP_AFTER_DAYS.'+ days overdue: '.count($preview['too_late']));
+        $this->table($headers, $rows($preview['too_late']));
+
+        return;
+    }
+
+    $sent = $service->sendRepaymentReminders();
+
+    $this->info("TravelFlex repayment reminders sent: {$sent['reminders']}. Overdue alerts sent: {$sent['alerts']}.");
 })->purpose('Send TravelFlex repayment reminder emails');
 
 Schedule::command('travelflex:send-repayment-reminders')

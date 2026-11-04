@@ -3,17 +3,23 @@
 namespace App\Filament\Resources\TravelFlexApplications\Tables;
 
 use App\Models\TravelFlexApplication;
+use App\Models\TravelFlexInstalmentPayment;
 use App\Services\TravelFlexApplicationService;
+use App\Services\TravelFlexRepaymentService;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Support\HtmlString;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class TravelFlexApplicationsTable
@@ -151,6 +157,8 @@ class TravelFlexApplicationsTable
                     self::approveAction(),
                     self::rejectAction(),
                     self::resendProviderEmailAction(),
+                    self::markInstalmentPaidAction(),
+                    self::reverseInstalmentPaymentAction(),
                 ])
                     ->label('Actions')
                     ->icon('heroicon-o-ellipsis-horizontal')
@@ -335,6 +343,128 @@ class TravelFlexApplicationsTable
 
                 Notification::make()->title('TravelFlex application rejected')->success()->send();
             });
+    }
+
+    public static function markInstalmentPaidAction(): Action
+    {
+        return Action::make('markInstalmentPaid')
+            ->authorize(fn (): bool => auth()->user()?->canHandleMoney() ?? false)
+            ->label('Mark instalment paid')
+            ->icon('heroicon-o-banknotes')
+            ->color('success')
+            ->visible(fn (TravelFlexApplication $record): bool => app(TravelFlexRepaymentService::class)->unpaidOptions($record) !== [])
+            ->requiresConfirmation()
+            ->modalHeading(fn (TravelFlexApplication $record): string => 'Mark instalment paid for '.($record->booking_ref ?: 'application'))
+            ->modalDescription('Use this after confirming the full instalment has been received. Reminders for it stop, and the customer is emailed a confirmation.')
+            ->modalIcon('heroicon-o-banknotes')
+            ->modalIconColor('success')
+            ->modalSubmitActionLabel('Mark paid')
+            ->form(fn (TravelFlexApplication $record): array => [
+                Placeholder::make('application_context')->hiddenLabel()->content(fn () => self::actionContext($record, 'Record repayment')),
+                Select::make('instalment_index')
+                    ->label('Instalment')
+                    ->options(fn (): array => app(TravelFlexRepaymentService::class)->unpaidOptions($record))
+                    ->required(),
+                DatePicker::make('paid_on')
+                    ->label('Date received')
+                    ->default(fn () => now('Africa/Lagos')->toDateString())
+                    ->maxDate(fn () => now('Africa/Lagos')->toDateString())
+                    ->required(),
+                TextInput::make('payment_reference')
+                    ->label('Payment reference')
+                    ->helperText('The bank narration, transfer reference or Fast Credit reference. The customer sees this in their confirmation.')
+                    ->required()
+                    ->maxLength(255),
+                Textarea::make('note')
+                    ->label('Internal note')
+                    ->helperText('Not sent to the customer. Record any part-payment here too.')
+                    ->rows(3)
+                    ->maxLength(2000),
+            ])
+            ->action(function (TravelFlexApplication $record, array $data): void {
+                try {
+                    app(TravelFlexRepaymentService::class)->markPaid(
+                        $record,
+                        (int) $data['instalment_index'],
+                        (string) $data['paid_on'],
+                        (string) $data['payment_reference'],
+                        $data['note'] ?? null,
+                        auth()->user(),
+                    );
+                } catch (ValidationException $exception) {
+                    Notification::make()->title('Payment not recorded')->body($exception->getMessage())->danger()->send();
+
+                    return;
+                }
+
+                $hasEmail = filled(app(TravelFlexApplicationService::class)->customerEmail($record));
+
+                Notification::make()
+                    ->title('Instalment marked paid')
+                    ->body($hasEmail ? null : 'No customer email address is on file, so no confirmation was sent.')
+                    ->{$hasEmail ? 'success' : 'warning'}()
+                    ->send();
+            });
+    }
+
+    public static function reverseInstalmentPaymentAction(): Action
+    {
+        return Action::make('reverseInstalmentPayment')
+            ->authorize(fn (): bool => auth()->user()?->canHandleMoney() ?? false)
+            ->label('Reverse payment')
+            ->icon('heroicon-o-arrow-uturn-left')
+            ->color('danger')
+            ->visible(fn (TravelFlexApplication $record): bool => self::reversiblePayments($record) !== [])
+            ->requiresConfirmation()
+            ->modalHeading(fn (TravelFlexApplication $record): string => 'Reverse a payment on '.($record->booking_ref ?: 'application'))
+            ->modalDescription('Use this for a payment recorded by mistake. The record is kept, and the instalment goes back to unpaid so reminders can resume. The customer is not told automatically.')
+            ->modalIcon('heroicon-o-arrow-uturn-left')
+            ->modalIconColor('danger')
+            ->modalSubmitActionLabel('Reverse payment')
+            ->form(fn (TravelFlexApplication $record): array => [
+                Placeholder::make('application_context')->hiddenLabel()->content(fn () => self::actionContext($record, 'Reverse repayment')),
+                Select::make('payment_id')
+                    ->label('Payment')
+                    ->options(fn (): array => self::reversiblePayments($record))
+                    ->required(),
+                Textarea::make('reversal_reason')
+                    ->label('Reason')
+                    ->required()
+                    ->rows(3)
+                    ->maxLength(2000),
+            ])
+            ->action(function (TravelFlexApplication $record, array $data): void {
+                try {
+                    app(TravelFlexRepaymentService::class)->reverse(
+                        $record->instalmentPayments()->findOrFail((int) $data['payment_id']),
+                        (string) $data['reversal_reason'],
+                        auth()->user(),
+                    );
+                } catch (ValidationException $exception) {
+                    Notification::make()->title('Payment not reversed')->body($exception->getMessage())->danger()->send();
+
+                    return;
+                }
+
+                $record->unsetRelation('instalmentPayments');
+
+                Notification::make()->title('Payment reversed')->success()->send();
+            });
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function reversiblePayments(TravelFlexApplication $record): array
+    {
+        return $record->instalmentPayments()
+            ->whereNull('reversed_at')
+            ->orderBy('instalment_index')
+            ->get()
+            ->mapWithKeys(fn (TravelFlexInstalmentPayment $payment): array => [
+                $payment->id => ($payment->label ?: 'Instalment').' · NGN '.number_format((float) $payment->amount, 2).' · ref '.$payment->payment_reference,
+            ])
+            ->all();
     }
 
     public static function resendProviderEmailAction(): Action

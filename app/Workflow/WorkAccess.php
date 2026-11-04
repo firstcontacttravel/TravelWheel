@@ -36,6 +36,10 @@ class WorkAccess
         'view', 'open', 'downloadDocument',
         'workClaim', 'workRelease', 'workReassign', 'workEscalate', 'workPriority', 'workNote',
         'workEscalationAccept', 'workEscalationResolve', 'workEscalationDecline', 'workEscalationWithdraw',
+        // Repayments arrive long after ticketing, when the booking usually still
+        // belongs to someone in Operations. Finance records them regardless;
+        // canHandleMoney() on the actions is the rule.
+        'markInstalmentPaid', 'reverseInstalmentPayment',
     ];
 
     /** Handing a booking to someone else is managing it, whatever the screen calls it. */
