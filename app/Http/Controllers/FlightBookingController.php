@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivityLog;
+use App\Models\CompanyWalletTopUp;
 use App\Models\FlightBooking;
 use App\Models\TravelFlexApplication;
 use App\Services\AdminTicketingService;
@@ -11,6 +12,7 @@ use App\Services\Flights\FlightBookingGuard;
 use App\Services\Flights\FlightPlatformHold;
 use App\Services\Flights\FlightSearchStore;
 use App\Services\Flights\FlightSupplierRegistry;
+use App\Services\Corporate\CompanyWalletTopUps;
 use App\Services\Corporate\CorporateContext;
 use App\Services\Flights\SkylinkFareRefresh;
 use App\Services\SeerbitPaymentService;
@@ -847,6 +849,14 @@ class FlightBookingController extends Controller
             ?? $request->input('reference');
 
         $status = 'received';
+
+        // SeerBit has one webhook address, so wallet top-ups arrive here too.
+        if ($reference && $topUp = CompanyWalletTopUp::where('reference', $reference)->first()) {
+            return response()->json([
+                'ackReference' => $request->header('ackReference', $reference),
+                'status' => app(CompanyWalletTopUps::class)->settleCard($topUp),
+            ]);
+        }
 
         if ($reference && $booking = FlightBooking::where('payment_reference', $reference)->first()) {
             $lock = Cache::lock('flight-payment-processing:'.$booking->id, 300);

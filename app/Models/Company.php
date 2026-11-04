@@ -42,6 +42,14 @@ class Company extends Model
         'account_manager_id',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'wallet_balance' => 'decimal:2',
+            'credit_limit' => 'decimal:2',
+        ];
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(CompanyUser::class);
@@ -50,6 +58,21 @@ class Company extends Model
     public function invitations(): HasMany
     {
         return $this->hasMany(CompanyInvitation::class);
+    }
+
+    public function walletEntries(): HasMany
+    {
+        return $this->hasMany(CompanyWalletEntry::class);
+    }
+
+    public function recentWalletEntries(): HasMany
+    {
+        return $this->walletEntries()->latest('id')->limit(50);
+    }
+
+    public function walletTopUps(): HasMany
+    {
+        return $this->hasMany(CompanyWalletTopUp::class);
     }
 
     public function accountManager(): BelongsTo

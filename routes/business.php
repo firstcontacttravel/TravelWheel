@@ -8,6 +8,7 @@ use App\Http\Controllers\Business\DashboardController;
 use App\Http\Controllers\Business\InvitationController;
 use App\Http\Controllers\Business\PasswordResetController;
 use App\Http\Controllers\Business\TeamController;
+use App\Http\Controllers\Business\WalletController;
 use App\Http\Middleware\EnsureCompanyAdmin;
 use App\Http\Middleware\EnsureCompanyUser;
 use Illuminate\Support\Facades\Route;
@@ -36,8 +37,16 @@ Route::prefix('business')->name('business.')->group(function () {
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'edit'])->name('password.reset');
     Route::post('/reset-password', [PasswordResetController::class, 'update'])->middleware('throttle:10,1')->name('password.update');
 
+    // SeerBit sends the browser here, and the session may have ended by then.
+    Route::get('/wallet/callback', [WalletController::class, 'callback'])->middleware('throttle:30,1')->name('wallet.callback');
+
     Route::middleware(EnsureCompanyUser::class)->group(function () {
         Route::get('/', DashboardController::class)->name('dashboard');
+
+        Route::middleware(EnsureCompanyAdmin::class)->group(function () {
+            Route::get('/wallet', [WalletController::class, 'index'])->name('wallet.index');
+            Route::post('/wallet/top-ups', [WalletController::class, 'store'])->middleware('throttle:10,1')->name('wallet.top-ups.store');
+        });
 
         Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
         Route::get('/bookings/{reference}/ticket', [BookingController::class, 'ticket'])->name('bookings.ticket');

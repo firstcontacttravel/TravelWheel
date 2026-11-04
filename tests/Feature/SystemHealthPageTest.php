@@ -18,10 +18,10 @@ class SystemHealthPageTest extends TestCase
     {
         $report = app(SystemHealthService::class)->run(includeConnectivity: false);
 
-        $this->assertSame(17, $report['total_count']);
-        $this->assertCount(17, $report['checks']);
+        $this->assertSame(18, $report['total_count']);
+        $this->assertCount(18, $report['checks']);
         $this->assertSame(
-            17,
+            18,
             $report['healthy_count'] + $report['warning_count'] + $report['failed_count'],
         );
         $this->assertArrayHasKey('Application', $report['groups']);

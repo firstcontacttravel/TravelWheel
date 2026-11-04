@@ -14,6 +14,11 @@
 
     @if ($companyUser->isCompanyAdmin())
         <div class="biz-card">
+            <h2>Wallet balance: ₦{{ number_format((float) $company->wallet_balance, 2) }}</h2>
+            <p class="biz-sub" style="margin-bottom:0"><a href="{{ route('business.wallet.index') }}">Top up and see your wallet history.</a></p>
+        </div>
+
+        <div class="biz-card">
             <h2>Your team</h2>
             <p class="biz-sub" style="margin-bottom:0"><a href="{{ route('business.team.index') }}">Invite bookers and manage who has access.</a></p>
         </div>

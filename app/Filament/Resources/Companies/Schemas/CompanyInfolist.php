@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Companies\Schemas;
 use App\Models\Company;
 use App\Models\CompanyInvitation;
 use App\Models\CompanyUser;
+use App\Models\CompanyWalletEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -30,6 +31,19 @@ class CompanyInfolist
                 TextEntry::make('contact_name')->label('Name'),
                 TextEntry::make('contact_email')->label('Email')->copyable(),
                 TextEntry::make('contact_phone')->label('Phone')->placeholder('-'),
+            ]),
+
+            Section::make('Wallet')->schema([
+                TextEntry::make('wallet_balance')->label('Balance')->money('NGN')->weight('bold'),
+                RepeatableEntry::make('recentWalletEntries')->label('Latest 50 entries')->columns(5)
+                    ->placeholder('Nothing yet.')
+                    ->schema([
+                        TextEntry::make('created_at')->label('When')->dateTime('j M Y, g:i A', 'Africa/Lagos'),
+                        TextEntry::make('type')->state(fn (CompanyWalletEntry $record): string => $record->typeLabel()),
+                        TextEntry::make('amount')->money('NGN'),
+                        TextEntry::make('balance_after')->label('Balance after')->money('NGN'),
+                        TextEntry::make('reason')->placeholder('-'),
+                    ]),
             ]),
 
             Section::make('People')->schema([

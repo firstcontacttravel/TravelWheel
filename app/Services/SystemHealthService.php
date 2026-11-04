@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Services\Corporate\CompanyWallet;
 use App\Models\SystemHeartbeat;
 use App\Models\SystemHealthRun;
 use App\Models\User;
@@ -40,6 +41,7 @@ class SystemHealthService
             $this->check('seerbit', 'Integrations', 'SeerBit payments', fn () => $this->seerbit($includeConnectivity)),
             $this->check('flight_operations', 'Operations', 'Flight payment and ticketing exceptions', fn () => $this->flightOperations()),
             $this->check('reporting', 'Operations', 'Reporting synchronization', fn () => $this->reporting()),
+            $this->check('corporate_wallets', 'Operations', 'Corporate wallet balances', fn () => $this->corporateWallets()),
         ];
 
         $counts = collect($checks)->countBy('status');
@@ -737,6 +739,31 @@ class SystemHealthService
             ],
             'action' => ($failures + $warnings) > 0 ? 'Open Flight Bookings and resolve the affected payment, hold, or ticketing records.' : null,
         ];
+    }
+
+    /** A stored balance is only a copy, so it must always match the ledger. */
+    private function corporateWallets(): array
+    {
+        if (! Schema::hasTable('company_wallet_entries')) {
+            return [
+                'status' => 'failed',
+                'summary' => 'Corporate wallet tables are missing.',
+                'action' => 'Run php artisan migrate --force.',
+            ];
+        }
+
+        $mismatched = app(CompanyWallet::class)->mismatchedCompanyIds();
+
+        if ($mismatched !== []) {
+            return [
+                'status' => 'failed',
+                'summary' => count($mismatched).' corporate wallet balance(s) do not match the ledger.',
+                'details' => ['Company IDs' => implode(', ', array_slice($mismatched, 0, 20))],
+                'action' => 'Stop confirming top-ups for these companies and investigate before any money moves.',
+            ];
+        }
+
+        return ['status' => 'healthy', 'summary' => 'Every corporate wallet balance matches its ledger.'];
     }
 
     private function reporting(): array

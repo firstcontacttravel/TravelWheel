@@ -93,6 +93,7 @@
                     <a href="{{ route('business.dashboard') }}" @if (request()->routeIs('business.dashboard')) aria-current="page" @endif>Dashboard</a>
                     <a href="{{ route('business.bookings.index') }}" @if (request()->routeIs('business.bookings.*')) aria-current="page" @endif>Bookings</a>
                     @if ($signedIn->isCompanyAdmin())
+                        <a href="{{ route('business.wallet.index') }}" @if (request()->routeIs('business.wallet.*')) aria-current="page" @endif>Wallet</a>
                         <a href="{{ route('business.team.index') }}" @if (request()->routeIs('business.team.*')) aria-current="page" @endif>Team</a>
                     @endif
                     <a href="{{ route('business.account') }}" @if (request()->routeIs('business.account')) aria-current="page" @endif>Account</a>

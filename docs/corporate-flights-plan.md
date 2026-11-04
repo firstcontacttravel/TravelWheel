@@ -1,6 +1,6 @@
 # TravelWheel Corporate Flights: Implementation Plan
 
-Status as of 2026-11-04: **Phases 1 and 2 built and tested locally, not yet committed or on staging. Phases 3-7 not started.** Each phase is meant to be checked on staging before the next one starts. Phase 2 was started before Phase 1 reached staging, so both need that check together.
+Status as of 2026-11-04: **Phases 1-3 pushed to `main`, staging check not confirmed. Phases 4-7 not started.** Each phase is meant to be checked on staging before the next one starts. Phases 1-3 need that check together.
 
 ## What we are building
 
@@ -45,7 +45,9 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 | Who runs the admin Corporate actions | CEO only: add, approve, reject, invite, revoke, suspend, reactivate. Other staff can view. One method to widen: `CompanyResource::canManageAccounts()` | Proposed, built in Phase 1 |
 | Rejected requests | No email is sent. Staff contact the company themselves if needed, and a rejected company may apply again | Proposed, built in Phase 1 |
 | Password rule | At least 10 characters, with letters and numbers | Proposed, built in Phase 1 |
-| Who can top up | Company Admins only | Proposed |
+| Card top-up fee | A percentage on top, paid by the company and never credited to the wallet. Set by the CEO on the Default Rates page. Card top-ups stay off until it is set | Agreed 2026-11-04 |
+| Who can top up | Company Admins only. Bookers don't see the wallet | Proposed, built in Phase 3 |
+| Top-up limits | ₦1,000 to ₦100,000,000 each | Proposed, built in Phase 3 |
 | Saved travellers | Shared across the company, masked for everyone | Proposed |
 | Signed-in corporate user on public pages | Always sees company rates, so one browser never shows two prices | Proposed |
 
@@ -65,7 +67,8 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 | 1 | VAT treatment of the service fee, and when an invoice should be issued | Accountant | Phase 6 |
 | 2 | Storing passport details long term, under Nigerian data protection rules | Legal or compliance adviser | Phase 5 |
 | 3 | Ticket and change turnaround you can promise on SkyLink, after confirming these are still manual | Operations | Phase 7 |
-| 4 | Whether the company or TravelWheel pays the gateway fee on card top-ups | CEO | Phase 3 |
+| 4 | ~~Who pays the gateway fee on card top-ups~~ Decided 2026-11-04: the company pays a percentage on top. The CEO still needs to set the percentage | CEO | Card top-ups |
+| 5 | Whether wallet bank transfers should go to the same accounts as TravelFlex (`TRAVELFLEX_BANK_*`), which is what the wallet page shows | Finance | Phase 3 going live |
 
 ---
 
@@ -175,17 +178,25 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 - **Admin:** per-company ledger, plus Finance adjustments that require a reason.
 - **Health check:** `SystemHealth` flags any company whose stored balance doesn't match its ledger.
 
+**As built:**
+- SeerBit has one webhook address, so top-ups arrive at `seerbitWebhook` and are recognised by reference.
+- Finance can also use "Check with SeerBit" on a card top-up whose return trip and webhook both went missing.
+- A card fee is recorded on the top-up. It isn't in the reports yet, so Phase 6 needs to invoice it and decide how it is counted.
+
 **Deliverables:**
-- [ ] Ledger, wallet service and top-up tables
-- [ ] Bank transfer and card top-ups
-- [ ] Finance queue and admin ledger
-- [ ] Company wallet page
-- [ ] Balance health check
-- [ ] `CompanyWalletTest`: concurrent spending can't overdraw, repeated callbacks credit once, only Finance can confirm, rows can't be changed
+- [x] Ledger, wallet service and top-up tables
+- [x] Bank transfer and card top-ups
+- [x] Finance queue and admin ledger
+- [x] Company wallet page
+- [x] Balance health check
+- [x] `CompanyWalletTest`: spending from stale copies can't overdraw, repeated callbacks credit once, only Finance can confirm, rows can't be changed. Tests run on SQLite, which doesn't exercise row locks, so true simultaneous spending is only covered by the design
 
 **Ship checklist:**
-1. Top up on staging by both methods.
-2. Confirm top-ups don't appear as revenue in reports.
+1. Run `php artisan migrate --force`.
+2. Set the card fee on the Default Rates page.
+3. Top up on staging by both methods, including a real SeerBit webhook. Confirm the webhook reaches `/payments/seerbit/webhook` for a top-up.
+4. Confirm top-ups don't appear as revenue in reports.
+5. Open a company page in Corporate a few times. It came up blank once in local preview and couldn't be reproduced.
 
 ---
 

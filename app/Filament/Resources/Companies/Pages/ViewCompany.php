@@ -6,8 +6,10 @@ use App\Filament\Resources\Companies\CompanyResource;
 use App\Filament\Resources\Companies\Schemas\CorporateRatesForm;
 use App\Models\Company;
 use App\Models\CompanyInvitation;
+use App\Services\Corporate\CompanyWallet;
 use App\Services\Corporate\CorporateAccounts;
 use App\Services\Corporate\CorporateRates;
+use App\Services\Corporate\InsufficientWalletBalance;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -15,6 +17,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Support\Str;
 
 /**
  * @property Company $record
@@ -31,6 +34,7 @@ class ViewCompany extends ViewRecord
             $this->inviteAction(),
             $this->revokeInvitationAction(),
             $this->ratesAction(),
+            $this->adjustWalletAction(),
             $this->reactivateAction(),
             $this->suspendAction(),
         ];
@@ -123,6 +127,39 @@ class ViewCompany extends ViewRecord
             ->form(fn (): array => CorporateRatesForm::sections($this->record))
             ->action(function (array $data): void {
                 CorporateRatesForm::notifySaved(app(CorporateRates::class)->save($this->record, $data['rates'] ?? []));
+            });
+    }
+
+    /** A correction goes on the ledger as its own entry. Finance's call, not only the CEO's. */
+    private function adjustWalletAction(): Action
+    {
+        return Action::make('adjustWallet')
+            ->label('Adjust wallet')
+            ->icon('heroicon-o-scale')
+            ->color('gray')
+            ->authorize(fn (): bool => auth()->user()?->canHandleMoney() ?? false)
+            ->visible(fn (): bool => (auth()->user()?->canHandleMoney() ?? false) && ! $this->record->hasStatus('requested', 'rejected'))
+            ->modalDescription('For correcting a mistake. The company sees this entry and its reason in its wallet history. Use a minus sign to take money out.')
+            ->form([
+                TextInput::make('amount')->label('Amount')->numeric()->required()->prefix('₦')
+                    ->notIn(['0'])
+                    ->helperText('For example 5000 to add, or -5000 to take out.'),
+                Textarea::make('reason')->label('Reason (shown to the company)')->required()->maxLength(500)->rows(2),
+            ])
+            ->action(function (array $data): void {
+                try {
+                    app(CompanyWallet::class)->post($this->record, 'adjustment', (float) $data['amount'], 'adjustment:'.Str::uuid(), [
+                        'user_id' => auth()->id(),
+                        'reason' => $data['reason'],
+                    ]);
+                } catch (InsufficientWalletBalance) {
+                    Notification::make()->danger()->title('The balance is too low for that')->send();
+
+                    return;
+                }
+
+                Notification::make()->success()->title('Wallet adjusted')->send();
+                $this->record->refresh();
             });
     }
 
