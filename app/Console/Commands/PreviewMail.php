@@ -100,7 +100,17 @@ class PreviewMail extends Command
             'travelflex-repayment-reminder' => ['emails.travelflex-repayment-reminder', [
                 'application' => $this->flexApplication(),
                 'instalment' => ['label' => 'Instalment 2 of 4', 'amount' => 187500, 'due_date' => '05 Oct 2026'],
-                'timing' => 'in 5 days',
+                'stage' => 'due_in_3_days',
+            ]],
+            'travelflex-repayment-overdue' => ['emails.travelflex-repayment-reminder', [
+                'application' => $this->flexApplication(),
+                'instalment' => ['label' => 'Instalment 2 of 4', 'amount' => 187500, 'due_date' => '05 Oct 2026'],
+                'stage' => 'overdue_first',
+            ]],
+            'travelflex-repayment-final' => ['emails.travelflex-repayment-reminder', [
+                'application' => $this->flexApplication(),
+                'instalment' => ['label' => 'Instalment 2 of 4', 'amount' => 187500, 'due_date' => '05 Oct 2026'],
+                'stage' => 'overdue_final',
             ]],
             'travelflex-ticket-booked' => ['emails.travelflex-ticket-booked', ['booking' => $booking]],
             'travelflex-provider-review' => ['emails.travelflex-provider-review', $this->providerReview()],

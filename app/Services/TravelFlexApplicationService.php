@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Mail\TravelFlexApplicationMail;
 use App\Models\FlightBooking;
+use App\Models\NotificationOutbox;
 use App\Models\TravelFlexApplication;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -11,6 +12,20 @@ use RuntimeException;
 
 class TravelFlexApplicationService
 {
+    public const STAGE_DUE_IN_3_DAYS = 'due_in_3_days';
+
+    public const STAGE_DUE_TOMORROW = 'due_tomorrow';
+
+    public const STAGE_DUE_TODAY = 'due_today';
+
+    public const STAGE_OVERDUE_FIRST = 'overdue_first';
+
+    public const STAGE_OVERDUE_FINAL = 'overdue_final';
+
+    public const REMINDERS_STOP_AFTER_DAYS = 14;
+
+    private const DEAD_BOOKING_STATUSES = ['cancelled', 'failed', 'hold_expired_review', 'ticketing_failed'];
+
     public function sendProviderEmail(TravelFlexApplication $application): void
     {
         $sent = app(DurableMailService::class)->sendNowOrStore(
@@ -108,70 +123,114 @@ class TravelFlexApplicationService
     {
         $sent = 0;
 
-        TravelFlexApplication::query()
-            ->where('payment_status', 'paid')
-            ->whereIn('application_status', ['reviewed', 'approved'])
-            ->whereNotNull('repayment_plan')
-            ->chunkById(100, function ($applications) use (&$sent): void {
-                foreach ($applications as $application) {
-                    $sent += $this->sendDueRepaymentRemindersFor($application);
-                }
-            });
-
-        return $sent;
-    }
-
-    private function sendDueRepaymentRemindersFor(TravelFlexApplication $application): int
-    {
-        $email = $this->customerEmail($application);
-        $schedule = data_get($application->repayment_plan, 'schedule', []);
-
-        if (blank($email) || ! is_array($schedule) || $schedule === []) {
-            return 0;
-        }
-
-        $sent = 0;
-
-        foreach ($schedule as $index => $instalment) {
-            $dueDate = $this->instalmentDueDate($instalment);
-
-            if (! $dueDate) {
-                continue;
-            }
-
-            $daysUntilDue = now('Africa/Lagos')->startOfDay()->diffInDays($dueDate->copy()->startOfDay(), false);
-            $timing = match (true) {
-                $daysUntilDue === 3 => 'due in 3 days',
-                $daysUntilDue === 1 => 'due tomorrow',
-                $daysUntilDue === 0 => 'due today',
-                $daysUntilDue < 0 => 'overdue',
-                default => null,
-            };
-
-            if (! $timing) {
-                continue;
-            }
-
-            $uniqueKey = implode(':', [
-                'travelflex-reminder',
-                $application->id,
-                $index,
-                $dueDate->format('Y-m-d'),
-                now('Africa/Lagos')->format('Y-m-d'),
-            ]);
-
-            if (app(DurableMailService::class)->sendNowOrStore(
+        foreach ($this->remindableInstalments() as $row) {
+            if ($row['stage'] && app(DurableMailService::class)->sendNowOrStore(
                 DurableMailService::TRAVELFLEX_REPAYMENT,
-                $email,
-                $application,
-                compact('instalment', 'timing'),
-                $uniqueKey,
+                $row['email'],
+                $row['application'],
+                ['instalment' => $row['instalment'], 'stage' => $row['stage']],
+                $row['unique_key'],
             )) {
                 $sent++;
             }
         }
 
         return $sent;
+    }
+
+    /**
+     * What a reminder run would do right now, without sending anything.
+     *
+     * @return array{send: list<array>, too_late: list<array>}
+     */
+    public function previewRepaymentReminders(): array
+    {
+        $preview = ['send' => [], 'too_late' => []];
+
+        foreach ($this->remindableInstalments() as $row) {
+            if ($row['days_until_due'] <= -self::REMINDERS_STOP_AFTER_DAYS) {
+                $preview['too_late'][] = $row;
+            } elseif ($row['stage'] && ! NotificationOutbox::query()
+                ->where('unique_key', $row['unique_key'])
+                ->whereNotNull('sent_at')
+                ->exists()) {
+                $preview['send'][] = $row;
+            }
+        }
+
+        return $preview;
+    }
+
+    /**
+     * Every instalment on a live repayment plan, with the reminder stage it is
+     * in today. A plan is live once financing is approved and the deposit is
+     * in, for as long as the booking hasn't fallen through.
+     */
+    private function remindableInstalments(): \Generator
+    {
+        $applications = TravelFlexApplication::query()
+            ->with('booking')
+            ->where('payment_status', 'paid')
+            ->where('deposit_status', 'paid')
+            ->where('application_status', 'approved')
+            ->where('financing_status', 'approved')
+            ->whereNotNull('repayment_plan')
+            ->whereHas('booking', fn ($query) => $query->whereNotIn('booking_status', self::DEAD_BOOKING_STATUSES))
+            ->lazyById(100);
+
+        foreach ($applications as $application) {
+            $email = $this->customerEmail($application);
+            $schedule = data_get($application->repayment_plan, 'schedule', []);
+
+            if (blank($email) || ! is_array($schedule)) {
+                continue;
+            }
+
+            foreach ($schedule as $index => $instalment) {
+                $dueDate = $this->instalmentDueDate($instalment);
+
+                if (! $dueDate) {
+                    continue;
+                }
+
+                // diffInDays returns a float on Carbon 3, which never matches an int with ===.
+                $daysUntilDue = (int) now('Africa/Lagos')->startOfDay()->diffInDays($dueDate->copy()->startOfDay(), false);
+                $stage = $this->reminderStage($daysUntilDue);
+
+                yield [
+                    'application' => $application,
+                    'email' => $email,
+                    'instalment' => $instalment,
+                    'due_date' => $dueDate,
+                    'days_until_due' => $daysUntilDue,
+                    'stage' => $stage,
+                    // One email per stage, so nothing here may change from day to day.
+                    'unique_key' => implode(':', [
+                        'travelflex-reminder',
+                        $application->id,
+                        $index,
+                        $dueDate->format('Y-m-d'),
+                        $stage,
+                    ]),
+                ];
+            }
+        }
+    }
+
+    /**
+     * The overdue stages are ranges so a day the scheduler misses can't lose
+     * an email: the next run still sends it, and the key allows only one.
+     */
+    private function reminderStage(int $daysUntilDue): ?string
+    {
+        return match (true) {
+            $daysUntilDue === 3 => self::STAGE_DUE_IN_3_DAYS,
+            $daysUntilDue === 1 => self::STAGE_DUE_TOMORROW,
+            $daysUntilDue === 0 => self::STAGE_DUE_TODAY,
+            $daysUntilDue >= -6 && $daysUntilDue <= -1 => self::STAGE_OVERDUE_FIRST,
+            $daysUntilDue >= -13 && $daysUntilDue <= -7 => self::STAGE_OVERDUE_FINAL,
+            default => null,
+        };
     }
 
     private function instalmentDueDate(array $instalment): ?Carbon

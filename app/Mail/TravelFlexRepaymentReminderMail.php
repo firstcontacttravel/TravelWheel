@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Mail\Concerns\AttachesItineraryPdf;
 use App\Models\TravelFlexApplication;
+use App\Services\TravelFlexApplicationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -17,13 +18,19 @@ class TravelFlexRepaymentReminderMail extends Mailable
     public function __construct(
         public readonly TravelFlexApplication $application,
         public readonly array $instalment,
-        public readonly string $timing,
+        public readonly string $stage,
     ) {}
 
     public function envelope(): Envelope
     {
+        $topic = match ($this->stage) {
+            TravelFlexApplicationService::STAGE_OVERDUE_FIRST => 'TravelFlex Repayment Overdue',
+            TravelFlexApplicationService::STAGE_OVERDUE_FINAL => 'Final Reminder: TravelFlex Repayment Overdue',
+            default => 'TravelFlex Repayment Reminder',
+        };
+
         return new Envelope(
-            subject: 'TravelFlex Repayment Reminder - ' . ($this->application->booking_ref ?: 'TravelWheel'),
+            subject: $topic.' - '.($this->application->booking_ref ?: 'TravelWheel'),
         );
     }
 
@@ -34,7 +41,7 @@ class TravelFlexRepaymentReminderMail extends Mailable
             with: [
                 'application' => $this->application,
                 'instalment' => $this->instalment,
-                'timing' => $this->timing,
+                'stage' => $this->stage,
             ],
         );
     }

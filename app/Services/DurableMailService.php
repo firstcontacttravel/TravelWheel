@@ -244,7 +244,7 @@ class DurableMailService
             self::TRAVELFLEX_REPAYMENT => new TravelFlexRepaymentReminderMail(
                 $this->travelFlex($related)->fresh(['booking']),
                 (array) ($payload['instalment'] ?? []),
-                (string) ($payload['timing'] ?? 'due'),
+                (string) ($payload['stage'] ?? ''),
             ),
             self::TRAVELFLEX_TICKET_BOOKED => new TravelFlexTicketBookedMail($this->flight($related)),
             self::FLIGHT_SUPPLIER_ALERT => new FlightSupplierAlertMail($this->supplierEvent($related)),

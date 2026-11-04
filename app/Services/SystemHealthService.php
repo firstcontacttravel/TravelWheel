@@ -534,9 +534,10 @@ class SystemHealthService
         }
 
         if (Schema::hasTable('notification_outboxes')) {
-            $pendingMail = DB::table('notification_outboxes')->whereNull('sent_at')->count();
-            $failedMail = DB::table('notification_outboxes')->whereNotNull('failed_at')->whereNull('sent_at')->count();
-            $oldestMail = DB::table('notification_outboxes')->whereNull('sent_at')->min('created_at');
+            $unsentMail = fn () => DB::table('notification_outboxes')->whereNull('sent_at')->where('status', '!=', 'cancelled');
+            $pendingMail = $unsentMail()->count();
+            $failedMail = $unsentMail()->whereNotNull('failed_at')->count();
+            $oldestMail = $unsentMail()->min('created_at');
             // Signed diff: this read as a large negative age, so neither the
             // 30-minute failure nor the 5-minute warning below could ever fire,
             // and the panel printed "Oldest pending email: -44640 minute(s)".

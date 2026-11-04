@@ -172,7 +172,7 @@ class OperationsTriage extends Widget
                 'url' => null,
             ],
             [
-                'count' => NotificationOutbox::query()->whereNull('sent_at')->whereNull('failed_at')->count(),
+                'count' => NotificationOutbox::query()->whereNull('sent_at')->whereNull('failed_at')->where('status', '!=', 'cancelled')->count(),
                 'label' => 'Email queued',
                 'url' => null,
             ],
