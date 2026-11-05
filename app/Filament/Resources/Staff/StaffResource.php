@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Staff;
 use App\Filament\Resources\Staff\Pages\CreateStaff;
 use App\Filament\Resources\Staff\Pages\EditStaff;
 use App\Filament\Resources\Staff\Pages\ListStaff;
+use App\Models\ActivityLog;
 use App\Models\User;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -110,6 +111,13 @@ class StaffResource extends Resource
                         'Head' => 'info',
                         default => 'gray',
                     }),
+                // visa_role came before departments and still grants access, so it must be visible
+                TextColumn::make('visa_role')
+                    ->label('Old role')
+                    ->formatStateUsing(fn (string $state): string => ucwords(str_replace('_', ' ', $state)))
+                    ->badge()
+                    ->color('warning')
+                    ->placeholder('-'),
                 TextColumn::make('status')
                     ->state(fn (User $record): string => $record->isDeactivated() ? 'Deactivated' : 'Active')
                     ->badge()
@@ -134,7 +142,28 @@ class StaffResource extends Resource
                 EditAction::make(),
                 self::deactivateAction(),
                 self::reactivateAction(),
+                self::removeOldRoleAction(),
             ]);
+    }
+
+    /** Not offered until they have a department, because they'd lose all access without one. */
+    public static function removeOldRoleAction(): Action
+    {
+        return Action::make('removeOldRole')
+            ->label('Remove old role')
+            ->icon('heroicon-o-x-mark')
+            ->color('warning')
+            ->visible(fn (User $record): bool => filled($record->visa_role) && ($record->department_id !== null || $record->isAdmin()))
+            ->requiresConfirmation()
+            ->modalDescription('They keep what their department allows, and lose anything only the old role allowed.')
+            ->action(function (User $record): void {
+                $role = $record->visa_role;
+                $record->update(['visa_role' => null]);
+
+                ActivityLog::record('staff.old_role_removed', "Removed the old role {$role} from {$record->name}", $record);
+
+                Notification::make()->title('Old role removed')->success()->send();
+            });
     }
 
     public static function deactivateAction(): Action

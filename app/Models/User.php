@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Filament\Auth\MultiFactor\Email\Concerns\InteractsWithEmailAuthentication;
+use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -10,10 +12,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasEmailAuthentication
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, InteractsWithEmailAuthentication, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -71,10 +73,7 @@ class User extends Authenticatable implements FilamentUser
             return true;
         }
 
-        return collect(explode(',', (string) env('ADMIN_EMAILS', '')))
-            ->map(fn (string $email): string => strtolower(trim($email)))
-            ->filter()
-            ->contains(strtolower((string) $this->email));
+        return in_array(strtolower((string) $this->email), config('travelwheel.admin_emails', []), true);
     }
 
     /** Escalates, reassigns and answers escalations for their department. */

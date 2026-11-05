@@ -4,6 +4,8 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Dashboard;
 use App\Filament\Resources\FlightBookings\FlightBookingResource;
+use App\Notifications\StaffLoginCode;
+use Filament\Auth\MultiFactor\Email\EmailAuthentication;
 use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -62,6 +64,8 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->login()
+            ->passwordReset()
+            ->multiFactorAuthentication(EmailAuthentication::make()->codeNotification(StaffLoginCode::class))
             ->brandName('TravelWheel')
             ->defaultThemeMode(ThemeMode::Light)
             // Operational tables carry ten columns; the console uses the whole
