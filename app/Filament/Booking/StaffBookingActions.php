@@ -6,40 +6,16 @@ use App\Mail\StaffBookingPaymentLinkMail;
 use App\Models\ActivityLog;
 use App\Models\StaffBooking;
 use Filament\Actions\Action;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\TimePicker;
-use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-/** What every product's booking form shares, and what can be done to a booking afterwards. */
+/** What happens to a booking staff made: recording who made it, the payment link, recording a payment. */
 class StaffBookingActions
 {
-    /** @return list<\Filament\Schemas\Components\Component> */
-    public static function customerFields(): array
-    {
-        return [
-            TextInput::make('full_name')->label('Customer name')->required()->maxLength(255),
-            TextInput::make('email')->label('Customer email')->email()->required()->maxLength(255),
-            TextInput::make('phone_number')->label('Customer phone')->tel()->required()->maxLength(20),
-            TextInput::make('passengers')->numeric()->minValue(1)->required()->default(1),
-            DatePicker::make('pickup_date')->required()->native(false)->minDate(today()),
-            TimePicker::make('pickup_time')->required()->seconds(false),
-        ];
-    }
-
-    public static function sendLinkToggle(): Toggle
-    {
-        return Toggle::make('send_link')
-            ->label('Email the customer a payment link now')
-            ->default(true)
-            ->columnSpanFull();
-    }
-
     /** Records who made the booking, and sends the link if asked. */
     public static function finish(Model $booking, array $data): void
     {

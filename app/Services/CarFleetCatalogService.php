@@ -15,6 +15,9 @@ class CarFleetCatalogService
      */
     public const DISABLED_VEHICLE_TYPES = ['bus'];
 
+    /** Most passengers each vehicle type carries, as the booking pages enforce. */
+    public const PASSENGER_LIMITS = ['saloon' => 3, 'suv' => 3, 'van' => 5, 'bus' => 12, 'luxury' => 4];
+
     /** VEHICLE_TYPES minus DISABLED_VEHICLE_TYPES, in display order. */
     public static function bookableVehicleTypes(): array
     {

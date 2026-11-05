@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\BookGroundTransport;
 use App\Filament\Pages\NewBooking;
 use App\Mail\CarHireSuccessMail;
 use App\Mail\StaffBookingPaymentLinkMail;
@@ -16,6 +17,7 @@ use App\Models\User;
 use App\Services\GroundBookingService;
 use App\Services\SeerbitPaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -48,11 +50,29 @@ class StaffBookingTest extends TestCase
         ], $overrides);
     }
 
+    /** Goes through the booking page's steps as staff would. */
+    private function carHirePage(array $overrides = [])
+    {
+        $form = $this->carHireForm($overrides);
+
+        return Livewire::withQueryParams(['tab' => 'car'])->test(BookGroundTransport::class)
+            ->set('state', $form['state'])
+            ->call('selectType', $form['car_type'])
+            ->call('selectCategory', $form['category'])
+            ->call('setHours', $form['rental_hours'])
+            ->set('pickup', $form['pickup_location'])
+            ->set('fullName', $form['full_name'])
+            ->set('email', $form['email'])
+            ->set('phone', $form['phone_number'])
+            ->set('passengers', $form['passengers'])
+            ->set('pickupDate', $form['pickup_date'])
+            ->set('pickupTime', $form['pickup_time'])
+            ->set('sendLink', $form['send_link']);
+    }
+
     private function book(array $overrides = []): StaffBooking
     {
-        Livewire::test(NewBooking::class)
-            ->callAction('bookCarHire', data: $this->carHireForm($overrides))
-            ->assertHasNoActionErrors();
+        $this->carHirePage($overrides)->call('create')->assertHasNoErrors()->assertRedirect(NewBooking::getUrl());
 
         return StaffBooking::sole();
     }
@@ -100,8 +120,7 @@ class StaffBookingTest extends TestCase
     {
         $this->actingAs($this->staff('operations'));
 
-        Livewire::test(NewBooking::class)
-            ->callAction('bookCarHire', data: $this->carHireForm(['category' => 'Executive']));
+        $this->carHirePage(['category' => 'Executive'])->call('create')->assertNoRedirect();
 
         $this->assertSame(0, CarHire::count());
         $this->assertSame(0, StaffBooking::count());
@@ -169,17 +188,32 @@ class StaffBookingTest extends TestCase
     public function test_staff_create_a_transfer_priced_from_the_route(): void
     {
         $this->actingAs($this->staff('finance'));
-        $this->mock(GroundBookingService::class, function ($mock) {
-            $mock->shouldReceive('distance')->andReturn(['distance_km' => 25, 'distance_text' => '25 km', 'duration_text' => '40 mins', 'duration_mins' => 40, 'drive_time' => '40 mins']);
-            $mock->shouldReceive('createTransfer')->andReturnUsing(fn (array $data, string $option) => (new GroundBookingService(app(\App\Services\CarFleetCatalogService::class), app(\App\Services\TransferPricingService::class)))->createTransfer($data, $option));
-        });
+        config(['services.google_maps.key' => 'test-key']);
+        Http::fake(['maps.googleapis.com/*' => Http::response(['status' => 'OK', 'rows' => [['elements' => [[
+            'status' => 'OK',
+            'distance' => ['value' => 25000, 'text' => '25 km'],
+            'duration' => ['value' => 2400, 'text' => '40 mins'],
+        ]]]]])]);
 
-        Livewire::test(NewBooking::class)->callAction('bookTransfer', data: [
-            'state' => 'abuja', 'vehicle_type' => 'saloon', 'category' => 'Standard',
-            'pickup_location' => 'Nnamdi Azikiwe Airport', 'dropoff_location' => 'Wuse 2',
-            'full_name' => 'Ada Obi', 'email' => 'ada@example.com', 'phone_number' => '08030000000', 'passengers' => 2,
-            'pickup_date' => now()->addDays(3)->toDateString(), 'pickup_time' => '10:00', 'send_link' => false,
-        ])->assertHasNoActionErrors();
+        $page = Livewire::withQueryParams(['tab' => 'transfer'])->test(BookGroundTransport::class)
+            ->set('state', 'abuja')
+            ->call('selectType', 'saloon')
+            ->call('selectCategory', 'Standard')
+            ->set('pickup', 'Nnamdi Azikiwe Airport')
+            ->set('dropoff', 'Wuse 2')
+            ->set('fullName', 'Ada Obi')
+            ->set('email', 'ada@example.com')
+            ->set('phone', '08030000000')
+            ->set('passengers', 2)
+            ->set('pickupDate', now()->addDays(3)->toDateString())
+            ->set('pickupTime', '10:00')
+            ->set('sendLink', false);
+
+        // A price is needed first, and changing an address asks for it again
+        $page->call('create')->assertHasErrors('routeMins');
+        $page->call('getRoute')->assertSet('routeKm', 25)->assertSee('25 km');
+        $page->set('dropoff', 'Maitama')->assertSet('routeKm', null);
+        $page->call('getRoute')->call('create')->assertHasNoErrors();
 
         $transfer = Transfer::sole();
         $this->assertEquals(25, $transfer->distance_km);
@@ -208,5 +242,36 @@ class StaffBookingTest extends TestCase
 
         $this->get(route('air.support.seerbit.callback', ['reference' => 'SUPPORTFAKE', 'message' => 'Successful']))
             ->assertRedirect(route('air.support'));
+    }
+
+    public function test_the_booking_page_only_offers_what_the_state_has_and_shows_the_price(): void
+    {
+        $this->actingAs($this->staff('operations'));
+        FleetCar::create(['service_type' => 'car_hire', 'state' => 'lagos', 'vehicle_type' => 'suv', 'year' => 2021, 'car_name' => 'Toyota Prado', 'is_active' => true]);
+
+        Livewire::withQueryParams(['tab' => 'car'])->test(BookGroundTransport::class)
+            ->assertSee('Choose a state first')
+            ->set('state', 'abuja')
+            ->assertSee('Saloon')
+            ->assertDontSee('SUV')
+            ->call('selectType', 'saloon')
+            ->assertSee('Standard')
+            ->assertDontSee('Executive')
+            ->call('selectCategory', 'Standard')
+            ->assertDontSee('Price breakdown')
+            ->call('setHours', 4)
+            ->assertSee('Price breakdown')
+            ->assertSee('Customer details')
+            ->set('state', 'lagos')
+            ->assertSet('vehicleType', '')
+            ->assertSee('SUV');
+    }
+
+    public function test_too_many_passengers_for_the_vehicle_are_refused(): void
+    {
+        $this->actingAs($this->staff('operations'));
+
+        $this->carHirePage(['passengers' => 4])->call('create')->assertHasErrors('passengers');
+        $this->assertSame(0, CarHire::count());
     }
 }

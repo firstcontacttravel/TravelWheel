@@ -2,11 +2,10 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Booking\CarHireBookingAction;
 use App\Filament\Booking\StaffBookingActions;
-use App\Filament\Booking\TransferBookingAction;
 use App\Models\StaffBooking;
 use BackedEnum;
+use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -46,8 +45,14 @@ class NewBooking extends Page implements HasTable
     protected function getHeaderActions(): array
     {
         return [
-            CarHireBookingAction::make(),
-            TransferBookingAction::make(),
+            Action::make('bookCarHire')
+                ->label('Car Hire')
+                ->icon('heroicon-o-truck')
+                ->url(fn (): string => BookGroundTransport::getUrl(['tab' => 'car'])),
+            Action::make('bookTransfer')
+                ->label("Pick up 'n' Drop off")
+                ->icon('heroicon-o-map-pin')
+                ->url(fn (): string => BookGroundTransport::getUrl(['tab' => 'transfer'])),
         ];
     }
 
