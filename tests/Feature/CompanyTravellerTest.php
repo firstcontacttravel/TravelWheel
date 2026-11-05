@@ -440,6 +440,90 @@ class CompanyTravellerTest extends TestCase
         $this->assertStringNotContainsString(self::PASSPORT, json_encode($component->snapshot));
     }
 
+    public function test_a_saved_passport_shows_clearly_instead_of_empty_boxes(): void
+    {
+        $company = $this->company();
+        $traveller = $this->traveller($company);
+
+        $component = $this->checkoutComponent($this->member($company))
+            ->assertSeeHtml('placeholder="A12345678"')
+            ->call('useSavedTraveller', 0, $traveller->id)
+            ->assertSee('Saved passport will be used')
+            ->assertSee('Ending 5432')
+            ->assertSee('Nigerian')
+            ->assertSee('Use a different passport for this trip')
+            ->assertSeeHtml('placeholder="BA12345678"')
+            ->assertDontSeeHtml('placeholder="A12345678"');
+
+        $this->assertStringNotContainsString(self::PASSPORT, $component->html());
+    }
+
+    public function test_a_different_passport_can_be_entered_and_the_saved_one_chosen_again(): void
+    {
+        $company = $this->company();
+        $traveller = $this->traveller($company);
+
+        $this->checkoutComponent($this->member($company))
+            ->call('useSavedTraveller', 0, $traveller->id)
+            ->call('useDifferentPassport', 0, true)
+            ->assertSeeHtml('placeholder="A12345678"')
+            ->assertSee('Use the saved passport (ending 5432)')
+            ->assertSet('passengers.0.saved_traveller_id', $traveller->id)
+            ->set('passengers.0.passport_no', 'C55556666')
+            ->call('useDifferentPassport', 0, false)
+            ->assertSet('passengers.0.passport_no', '')
+            ->assertSee('Saved passport will be used');
+    }
+
+    public function test_a_traveller_with_no_saved_passport_gets_the_normal_boxes(): void
+    {
+        $company = $this->company();
+        $traveller = $this->traveller($company, ['passport_no' => '']);
+
+        $this->checkoutComponent($this->member($company))
+            ->call('useSavedTraveller', 0, $traveller->id)
+            ->assertSee('No passport is saved')
+            ->assertDontSee('Saved passport will be used')
+            ->assertSeeHtml('placeholder="A12345678"');
+    }
+
+    public function test_a_passport_typed_for_this_trip_survives_coming_back_to_the_form(): void
+    {
+        $company = $this->company();
+        $traveller = $this->traveller($company);
+        $user = $this->member($company);
+        $this->signIn($user);
+        $this->atCheckout();
+
+        $typed = [
+            'saved_traveller_id' => $traveller->id,
+            'passport_no' => 'C55556666',
+            'passport_issue_country' => 'GB',
+            'passport_issue_date' => now()->subYear()->toDateString(),
+            'passport_exp' => now()->addYears(4)->toDateString(),
+        ];
+        $this->post(route('flights.book'), $this->bookPayload($typed))->assertSessionHasNoErrors();
+
+        $component = $this->testComponent($user)
+            ->assertSet('passengers.0.passport_no', 'C55556666')
+            ->assertSet('passengers.0.use_different_passport', true)
+            ->assertDontSee('Saved passport will be used');
+
+        // And the saved number still isn't sent to the browser.
+        $this->assertStringNotContainsString(self::PASSPORT, $component->html());
+    }
+
+    public function test_a_passport_problem_shows_even_when_the_boxes_are_hidden(): void
+    {
+        $company = $this->company();
+        $traveller = $this->traveller($company, ['passport_exp' => now()->addDays(10)->toDateString()]);
+
+        $this->checkoutComponent($this->member($company))
+            ->call('useSavedTraveller', 0, $traveller->id)
+            ->assertSee('will have expired by the travel date')
+            ->assertSee('Use a different passport for this trip');
+    }
+
     public function test_the_form_strips_a_saved_passport_even_with_no_company_to_check_against(): void
     {
         $this->atCheckout();

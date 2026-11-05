@@ -262,6 +262,45 @@ class FlightBooking extends Component
         $this->normalizePassengerTitles();
     }
 
+    /** Shows or hides the passport boxes. Hiding them goes back to the saved passport. */
+    public function useDifferentPassport(int $index, bool $different): void
+    {
+        if (! isset($this->passengers[$index])) {
+            return;
+        }
+
+        $this->passengers[$index] = array_merge($this->passengers[$index], [
+            'use_different_passport' => $different,
+            'passport_no' => '',
+            'passport_issue_country' => $different ? 'NG' : '',
+            'passport_issue_date' => '',
+            'passport_exp' => '',
+        ]);
+    }
+
+    /**
+     * What to show of a saved passport. The number itself never comes to this
+     * form: it's added on the server when the booking is submitted.
+     *
+     * @return array{ending: string, country: ?string, expires: ?string}|null
+     */
+    public function savedPassport(mixed $travellerId): ?array
+    {
+        $traveller = app(CorporateContext::class)->company()?->travellers()->find((int) $travellerId);
+
+        if (! $traveller?->hasPassport()) {
+            return null;
+        }
+
+        $country = ((array) $traveller->passport)['passport_issue_country'] ?? null;
+
+        return [
+            'ending' => (string) $traveller->passport_last4,
+            'country' => $this->nationalities[$country] ?? null,
+            'expires' => $traveller->passport_expires_on?->format('j M Y'),
+        ];
+    }
+
     public function passportWarningFor(mixed $travellerId): ?string
     {
         $traveller = app(CorporateContext::class)->company()?->travellers()->find((int) $travellerId);
@@ -286,16 +325,28 @@ class FlightBooking extends Component
             return $passenger;
         }
 
-        // Taken out first, whatever else happens: this form reaches the browser.
+        $traveller = app(CorporateContext::class)->company()?->travellers()->find((int) $travellerId);
+        $typed = (string) ($passenger['passport_no'] ?? '');
+
+        // A different passport the booker typed for this trip is theirs to see
+        // again. Without this, coming back would silently swap in the saved one.
+        if ($traveller && $typed !== '' && $typed !== (string) (((array) $traveller->passport)['passport_no'] ?? '')) {
+            return array_merge($passenger, [
+                'passport_masked' => (string) $traveller->maskedPassport(),
+                'use_different_passport' => true,
+            ]);
+        }
+
+        // The saved number comes out, whatever else happens: this form reaches
+        // the browser.
         $passenger = array_merge($passenger, [
             'passport_no' => '',
             'passport_issue_country' => '',
             'passport_issue_date' => '',
             'passport_exp' => '',
             'passport_masked' => '',
+            'use_different_passport' => false,
         ]);
-
-        $traveller = app(CorporateContext::class)->company()?->travellers()->find((int) $travellerId);
 
         return array_merge($passenger, $traveller
             ? ['passport_masked' => (string) $traveller->maskedPassport()]
@@ -323,6 +374,7 @@ class FlightBooking extends Component
             // Companies only. The number itself never comes to this form.
             'saved_traveller_id'     => null,
             'passport_masked'        => '',
+            'use_different_passport' => false,
             'save_traveller'         => false,
             // UI helpers
             'is_primary'             => $isPrimary,

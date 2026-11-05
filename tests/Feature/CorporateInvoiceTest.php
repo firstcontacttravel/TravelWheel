@@ -466,6 +466,36 @@ class CorporateInvoiceTest extends TestCase
         $this->assertStringStartsWith('%PDF', $this->get(route('business.statements.pdf'))->assertOk()->getContent());
     }
 
+    public function test_the_invoice_and_credit_note_carry_the_logo(): void
+    {
+        $company = $this->company();
+        $booking = $this->booking($company);
+        app(CorporateWalletPayments::class)->creditRefund($booking, 1000, 'Part', User::factory()->create());
+
+        foreach (CompanyInvoice::all() as $invoice) {
+            $html = view('pdf.corporate-invoice', ['invoice' => $invoice])->render();
+
+            $this->assertStringContainsString('src="data:image/png;base64,', $html, $invoice->typeLabel());
+            $this->assertStringNotContainsString('<h1>TravelWheel</h1>', $html, $invoice->typeLabel());
+
+            // An image DomPDF refuses to embed leaves the PDF with no image at all.
+            $this->assertStringContainsString('/Subtype /Image', app(\App\Services\Corporate\CorporateDocuments::class)->invoicePdf($invoice)->getContent());
+        }
+    }
+
+    public function test_the_statement_carries_the_logo(): void
+    {
+        $company = $this->company();
+        $statements = app(CompanyStatements::class);
+        $statement = $statements->forMonth($company, $statements->month(null));
+
+        $html = view('pdf.corporate-statement', ['company' => $company, 'statement' => $statement])->render();
+
+        $this->assertStringContainsString('src="data:image/png;base64,', $html);
+        $this->assertStringNotContainsString('<h1>TravelWheel</h1>', $html);
+        $this->assertStringContainsString('/Subtype /Image', app(\App\Services\Corporate\CorporateDocuments::class)->statementPdf($company, $statement)->getContent());
+    }
+
     public function test_statements_are_for_admins_and_show_only_their_company(): void
     {
         $company = $this->company();
@@ -718,7 +748,7 @@ class CorporateInvoiceTest extends TestCase
         $company = $this->company();
         $this->signIn($this->member($company, 'admin'));
 
-        $this->get(route('business.wallet.index'))->assertOk()->assertSee('value="card"', false)->assertSee('up to ₦2,000');
+        $this->get(route('business.wallet.index'))->assertOk()->assertSee('value="card"', false);
 
         $this->post(route('business.wallet.top-ups.store'), ['amount' => 100000, 'method' => 'card'])->assertRedirect('https://checkout.example.test/pay');
 

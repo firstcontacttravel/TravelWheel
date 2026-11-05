@@ -16,11 +16,7 @@
         </div>
 
         @if (filled($pax['saved_traveller_id'] ?? null))
-            @if (filled($pax['passport_masked'] ?? null))
-                <p class="bk-fieldset-note" style="margin:8px 0 0;">
-                    The saved passport {{ $pax['passport_masked'] }} will be used. Enter a passport below only if this trip needs a different one.
-                </p>
-            @else
+            @if (blank($pax['passport_masked'] ?? null))
                 <p class="bk-fieldset-note" style="margin:8px 0 0;">No passport is saved for this traveller. Enter it below if the trip needs one.</p>
             @endif
 

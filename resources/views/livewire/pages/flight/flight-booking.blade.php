@@ -1497,41 +1497,71 @@
                                                         <span class="bk-fieldset-note">The passport must stay valid for 6 months after travel.</span>
                                                     </div>
                                                     <div class="bk-form-grid">
-                                                        <div class="bk-field">
-                                                            <label class="bk-label">Passport number <span class="bk-optional">Optional</span></label>
-                                                            <input class="bk-input" type="text" placeholder="A12345678"
-                                                                   wire:model.blur="passengers.{{ $i }}.passport_no">
-                                                            @error("passengers.{$i}.passport_no") <span class="bk-error">{{ $message }}</span> @enderror
-                                                        </div>
-                                                        <div class="bk-field">
-                                                            <label class="bk-label">Issuing country <span class="bk-optional">Optional</span></label>
-                                                            <select class="bk-select" wire:model="passengers.{{ $i }}.passport_issue_country">
-                                                                @foreach($this->nationalities as $code => $name)
-                                                                    <option value="{{ $code }}">{{ $name }}</option>
+                                                        @php
+                                                            $hasSavedPassport = filled($pax['saved_traveller_id'] ?? null) && filled($pax['passport_masked'] ?? null);
+                                                            $usingSaved = $hasSavedPassport && ! ($pax['use_different_passport'] ?? false);
+                                                            $saved = $usingSaved ? $this->savedPassport($pax['saved_traveller_id']) : null;
+                                                        @endphp
+
+                                                        @if ($usingSaved)
+                                                            <div class="bk-field" style="grid-column:1 / -1;">
+                                                                <div style="border:1px solid #bfe5cf;background:#f0faf4;border-radius:8px;padding:12px 14px;">
+                                                                    <div style="font-weight:600;font-size:13.5px;color:#04713f;">Saved passport will be used</div>
+                                                                    <div style="font-size:13px;color:#1f2937;margin-top:3px;">
+                                                                        Ending {{ $saved['ending'] ?? '' }}
+                                                                        @if ($saved['country'] ?? null) &middot; {{ $saved['country'] }} @endif
+                                                                        @if ($saved['expires'] ?? null) &middot; Expires {{ $saved['expires'] }} @endif
+                                                                    </div>
+                                                                    <div style="font-size:12px;color:#667085;margin-top:3px;">The full number is kept private and added when you confirm this booking.</div>
+                                                                    <button type="button" wire:click="useDifferentPassport({{ $i }}, true)" style="all:unset;cursor:pointer;color:#303191;font-size:13px;font-weight:600;text-decoration:underline;margin-top:8px;display:inline-block;">Use a different passport for this trip</button>
+                                                                </div>
+                                                                @foreach (['passport_no', 'passport_issue_country', 'passport_issue_date', 'passport_exp'] as $passportField)
+                                                                    @error("passengers.{$i}.{$passportField}") <span class="bk-error">{{ $message }}</span> @enderror
                                                                 @endforeach
-                                                            </select>
-                                                            @error("passengers.{$i}.passport_issue_country") <span class="bk-error">{{ $message }}</span> @enderror
-                                                        </div>
+                                                            </div>
+                                                        @else
+                                                            @if ($hasSavedPassport)
+                                                                <div class="bk-field" style="grid-column:1 / -1;font-size:13px;color:#667085;">
+                                                                    This passport is for this trip only, and the saved one stays on file.
+                                                                    <button type="button" wire:click="useDifferentPassport({{ $i }}, false)" style="all:unset;cursor:pointer;color:#303191;font-weight:600;text-decoration:underline;">Use the saved passport ({{ $pax['passport_masked'] }})</button>
+                                                                </div>
+                                                            @endif
+                                                            <div class="bk-field">
+                                                                <label class="bk-label">Passport number <span class="bk-optional">Optional</span></label>
+                                                                <input class="bk-input" type="text" placeholder="A12345678"
+                                                                       wire:model.blur="passengers.{{ $i }}.passport_no">
+                                                                @error("passengers.{$i}.passport_no") <span class="bk-error">{{ $message }}</span> @enderror
+                                                            </div>
+                                                            <div class="bk-field">
+                                                                <label class="bk-label">Issuing country <span class="bk-optional">Optional</span></label>
+                                                                <select class="bk-select" wire:model="passengers.{{ $i }}.passport_issue_country">
+                                                                    @foreach($this->nationalities as $code => $name)
+                                                                        <option value="{{ $code }}">{{ $name }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                                @error("passengers.{$i}.passport_issue_country") <span class="bk-error">{{ $message }}</span> @enderror
+                                                            </div>
+                                                            <div class="bk-field">
+                                                                <label class="bk-label">Issue date <span class="bk-optional">Optional</span></label>
+                                                                <input class="bk-input" type="date"
+                                                                       wire:model.blur="passengers.{{ $i }}.passport_issue_date"
+                                                                       max="{{ now()->format('Y-m-d') }}">
+                                                                @error("passengers.{$i}.passport_issue_date") <span class="bk-error">{{ $message }}</span> @enderror
+                                                            </div>
+                                                            <div class="bk-field">
+                                                                <label class="bk-label">Expiry date <span class="bk-optional">Optional</span></label>
+                                                                <input class="bk-input" type="date"
+                                                                       wire:model.blur="passengers.{{ $i }}.passport_exp"
+                                                                       min="{{ now()->addDay()->format('Y-m-d') }}">
+                                                                @error("passengers.{$i}.passport_exp") <span class="bk-error">{{ $message }}</span> @enderror
+                                                            </div>
+                                                        @endif
+
                                                         <div class="bk-field">
                                                             <label class="bk-label">Frequent flyer <span class="bk-optional">Optional</span></label>
                                                             <input class="bk-input" type="text" placeholder="BA12345678"
                                                                    wire:model.blur="passengers.{{ $i }}.frequent_flyer_number">
                                                             @error("passengers.{$i}.frequent_flyer_number") <span class="bk-error">{{ $message }}</span> @enderror
-                                                        </div>
-
-                                                        <div class="bk-field">
-                                                            <label class="bk-label">Issue date <span class="bk-optional">Optional</span></label>
-                                                            <input class="bk-input" type="date"
-                                                                   wire:model.blur="passengers.{{ $i }}.passport_issue_date"
-                                                                   max="{{ now()->format('Y-m-d') }}">
-                                                            @error("passengers.{$i}.passport_issue_date") <span class="bk-error">{{ $message }}</span> @enderror
-                                                        </div>
-                                                        <div class="bk-field">
-                                                            <label class="bk-label">Expiry date <span class="bk-optional">Optional</span></label>
-                                                            <input class="bk-input" type="date"
-                                                                   wire:model.blur="passengers.{{ $i }}.passport_exp"
-                                                                   min="{{ now()->addDay()->format('Y-m-d') }}">
-                                                            @error("passengers.{$i}.passport_exp") <span class="bk-error">{{ $message }}</span> @enderror
                                                         </div>
                                                     </div>
                                                 </div>
