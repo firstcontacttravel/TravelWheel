@@ -7,9 +7,11 @@ use App\Filament\Resources\Companies\Schemas\CorporateRatesForm;
 use App\Models\ActivityLog;
 use App\Models\Company;
 use App\Models\CompanyInvitation;
+use App\Models\User;
 use App\Services\Corporate\CompanyStatements;
 use App\Services\Corporate\CompanyWallet;
 use App\Services\Corporate\CorporateAccounts;
+use App\Services\Corporate\CorporateContext;
 use App\Services\Corporate\CorporateRates;
 use App\Services\Corporate\InsufficientWalletBalance;
 use Closure;
@@ -31,11 +33,13 @@ class ViewCompany extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            $this->bookForCompanyAction(),
             $this->approveAction(),
             $this->rejectAction(),
             $this->inviteAction(),
             $this->revokeInvitationAction(),
             $this->ratesAction(),
+            $this->accountManagerAction(),
             $this->adjustWalletAction(),
             $this->payoutAction(),
             $this->statementAction(),
@@ -219,6 +223,50 @@ class ViewCompany extends ViewRecord
                 ActivityLog::record('corporate.travellers_deleted', 'Deleted '.$count.' saved travellers for '.$this->record->name, $this->record);
 
                 Notification::make()->success()->title('Saved travellers deleted')->send();
+            });
+    }
+
+    /** The rule is on Company, and CorporateContext checks it again on every request. */
+    private function bookForCompanyAction(): Action
+    {
+        $allowed = fn (): bool => auth()->user() instanceof User && $this->record->canBeBookedForBy(auth()->user());
+
+        return Action::make('bookForCompany')
+            ->label('Book for this company')
+            ->icon('heroicon-o-paper-airplane')
+            ->authorize($allowed)
+            ->visible($allowed)
+            ->requiresConfirmation()
+            ->modalDescription('You\'ll search and book at this company\'s rates, and can pay from its wallet. The booking and any wallet payment are recorded against your name. Choose Stop on the bar at the bottom when you\'re done.')
+            ->action(function () {
+                app(CorporateContext::class)->startActing($this->record, auth()->user());
+
+                return redirect()->route('air');
+            });
+    }
+
+    private function accountManagerAction(): Action
+    {
+        return $this->managed('accountManager')
+            ->label('Set account manager')
+            ->icon('heroicon-o-user')
+            ->color('gray')
+            ->visible(fn (): bool => CompanyResource::canManageAccounts() && ! $this->record->hasStatus('rejected'))
+            ->modalDescription('They can book for this company and are told about its bookings and problems. The company sees their name and email.')
+            ->fillForm(fn (): array => ['account_manager_id' => $this->record->account_manager_id])
+            ->form([
+                Select::make('account_manager_id')->label('Account manager')->searchable()->placeholder('None')
+                    ->options(fn (): array => User::query()
+                        ->whereNull('deactivated_at')
+                        ->where(fn ($query) => $query->whereNotNull('department_id')->orWhere('is_admin', true))
+                        ->orderBy('name')
+                        ->pluck('name', 'id')
+                        ->all()),
+            ])
+            ->action(function (array $data): void {
+                $this->record->update(['account_manager_id' => $data['account_manager_id'] ?? null]);
+                Notification::make()->success()->title('Account manager saved')->send();
+                $this->record->refresh();
             });
     }
 

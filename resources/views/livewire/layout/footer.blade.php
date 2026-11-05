@@ -46,6 +46,10 @@
                     <li><a href="/blog" target="_blank" class="text-white hover:text-[var(--color-secondary)]">Blog</a></li>
                     <li><a href="{{ route('faq') }}" class="text-white hover:text-[var(--color-secondary)]">FAQ</a></li>
                     <li><a href="{{ route('help') }}" class="text-white hover:text-[var(--color-secondary)]">Help</a></li>
+                    @if (config('corporate.public_links'))
+                        <li><a href="{{ route('business.login') }}" class="text-white hover:text-[var(--color-secondary)]">Corporate sign in</a></li>
+                        <li><a href="{{ route('business.request.create') }}" class="text-white hover:text-[var(--color-secondary)]">Request a corporate account</a></li>
+                    @endif
                     <li><a href="{{ route('partners.register') }}" class="text-white hover:text-[var(--color-secondary)]">Partner with us</a></li>
                 </ul>
             </div>

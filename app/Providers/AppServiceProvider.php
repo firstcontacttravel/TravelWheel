@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\FlightBooking;
 use App\Models\FlightSearch;
+use App\Services\Corporate\AccountManagerAlerts;
 use App\Services\Corporate\CompanyInvoices;
 use App\Services\Corporate\CorporateContext;
 use App\Support\Admin\ActivityRecorder;
@@ -64,6 +65,12 @@ class AppServiceProvider extends ServiceProvider
 
             try {
                 app(CompanyInvoices::class)->issueForBooking($booking);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+
+            try {
+                app(AccountManagerAlerts::class)->bookingSaved($booking);
             } catch (Throwable $exception) {
                 report($exception);
             }

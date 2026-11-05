@@ -15,6 +15,7 @@ class FlightBooking extends Model
     protected $fillable = [
         'company_id',
         'company_user_id',
+        'booked_by_user_id',
         'cost_code',
         'booking_ref',
         'unique_id',
@@ -105,6 +106,11 @@ class FlightBooking extends Model
     public function companyUser(): BelongsTo
     {
         return $this->belongsTo(CompanyUser::class);
+    }
+
+    public function bookedByStaff(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'booked_by_user_id');
     }
 
     public function companyInvoices(): HasMany

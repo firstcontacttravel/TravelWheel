@@ -6,6 +6,7 @@ use App\Services\Corporate\BusinessSession;
 use App\Services\Corporate\CorporateContext;
 use App\Services\Flights\FlightSearchStore;
 use Closure;
+use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
@@ -85,6 +86,7 @@ class CorporateFlightSession
 
         $user = $this->context->user();
         $cutOff = $user === null && Auth::guard('corporate')->check();
+        $actingEnded = $this->context->hasActingSession() && $this->context->actingStaff() === null;
 
         $companyId = $user ? (int) $user->company_id : null;
         $session = $request->session();
@@ -92,6 +94,15 @@ class CorporateFlightSession
         if ($session->get(self::COMPANY_KEY) !== $companyId) {
             $session->forget(self::FLIGHT_SESSION_KEYS);
             $companyId === null ? $session->forget(self::COMPANY_KEY) : $session->put(self::COMPANY_KEY, $companyId);
+        }
+
+        // A member of staff lost the permission, or the company was suspended.
+        if ($actingEnded) {
+            $this->context->stopActing();
+
+            if ($request->routeIs('flights.*', 'air.flight-s')) {
+                return redirect()->to(Filament::getPanel('admin')->getUrl());
+            }
         }
 
         // Portal pages do this themselves and say why.
@@ -110,6 +121,7 @@ class CorporateFlightSession
         }
 
         view()->share('corporateCompany', $user?->company);
+        view()->share('corporateStaffBooking', (bool) $user?->is_system);
 
         return $next($request);
     }

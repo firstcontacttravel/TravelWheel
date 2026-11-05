@@ -23,6 +23,7 @@ class CompanyInfolist
                     ->formatStateUsing(fn (string $state): string => Company::STATUSES[$state] ?? $state)
                     ->color(fn (string $state): string => Company::STATUS_COLORS[$state] ?? 'gray'),
                 TextEntry::make('created_at')->label('Added')->dateTime('j M Y, g:i A', 'Africa/Lagos'),
+                TextEntry::make('accountManager.name')->label('Account manager')->placeholder('None'),
                 TextEntry::make('status_reason')->label('Reason (internal)')->columnSpanFull()
                     ->visible(fn (Company $record): bool => filled($record->status_reason)),
             ]),

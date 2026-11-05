@@ -39,6 +39,7 @@ class CorporateWalletPayments
             $this->wallet->post($user->company, 'booking_debit', -$amount, 'booking_debit:'.$booking->id, [
                 'flight_booking_id' => $booking->id,
                 'company_user_id' => $user->id,
+                'user_id' => app(CorporateContext::class)->actingStaff()?->id,
                 'reason' => trim($booking->booking_ref.' '.$booking->route),
             ]);
 

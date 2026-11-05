@@ -25,6 +25,7 @@ class CompanyUser extends Authenticatable
         'email',
         'password',
         'role',
+        'is_system',
         'login_code_enabled',
         'login_code_hash',
         'login_code_expires_at',
@@ -45,6 +46,7 @@ class CompanyUser extends Authenticatable
         return [
             'password' => 'hashed',
             'login_code_enabled' => 'boolean',
+            'is_system' => 'boolean',
             'login_code_expires_at' => 'datetime',
             'login_code_sent_at' => 'datetime',
             'last_login_at' => 'datetime',
@@ -81,7 +83,7 @@ class CompanyUser extends Authenticatable
     /** May this person be signed in right now? */
     public function canSignIn(): bool
     {
-        return ! $this->isDeactivated() && $this->company?->isActive();
+        return ! $this->is_system && ! $this->isDeactivated() && $this->company?->isActive();
     }
 
     /**
@@ -101,6 +103,10 @@ class CompanyUser extends Authenticatable
      */
     public function sendPasswordResetNotification($token): void
     {
+        if ($this->is_system) {
+            return;
+        }
+
         Mail::to($this->email)->send(new CompanyPasswordResetMail($this, $token));
     }
 }

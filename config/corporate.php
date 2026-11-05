@@ -9,6 +9,13 @@ return [
     // Who hears about a new request from the public form.
     'notify_email' => env('CORPORATE_EMAIL', env('RESERVATIONS_EMAIL', 'reservation@travelwheel.ng')),
 
+    // Shows Corporate links on the public site. Off until the pilot is done.
+    'public_links' => (bool) env('CORPORATE_PUBLIC_LINKS', false),
+
+    // What we promise on SkyLink tickets and changes, shown in those booking
+    // emails. Nothing is shown until it's set, for example "within 4 working hours".
+    'skylink_turnaround' => env('CORPORATE_SKYLINK_TURNAROUND'),
+
     'invitation_days' => 7,
 
     // Saved travellers of a company suspended this long are deleted, if nobody

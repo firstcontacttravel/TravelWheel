@@ -73,7 +73,10 @@ class FlightBookingsTable
                 WorkItemTable::ownerColumn(),
                 TextColumn::make('company.name')
                     ->label('Company')
+                    ->badge()
+                    ->color('primary')
                     ->placeholder('-')
+                    ->description(fn (FlightBooking $record): ?string => $record->booked_by_user_id ? 'Booked by staff' : null)
                     ->searchable()
                     ->toggleable(),
                 TextColumn::make('cost_code')

@@ -23,6 +23,7 @@ class CompaniesTable
                     ->formatStateUsing(fn (string $state): string => Company::STATUSES[$state] ?? $state)
                     ->color(fn (string $state): string => Company::STATUS_COLORS[$state] ?? 'gray'),
                 TextColumn::make('users_count')->label('Users')->counts('users'),
+                TextColumn::make('accountManager.name')->label('Account manager')->placeholder('-')->toggleable(),
                 TextColumn::make('created_at')->label('Added')->dateTime('j M Y', 'Africa/Lagos')->sortable(),
             ])
             ->filters([

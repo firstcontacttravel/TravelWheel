@@ -152,7 +152,9 @@ class FlightBooking extends Component
         $this->tripType             = session('tripType', '');
 
         // A booker gets the booking emails unless they change it for this booking.
-        $defaultEmail = app(\App\Services\Corporate\CorporateContext::class)->user()?->email ?? '';
+        // Staff booking for a company start from the company's contact.
+        $companyUser = app(\App\Services\Corporate\CorporateContext::class)->user();
+        $defaultEmail = (string) ($companyUser?->is_system ? $companyUser->company->contact_email : $companyUser?->email);
 
         $this->costCode            = (string) session('bookingCostCode', '');
         $this->contactEmail        = $savedContact['email'] ?? $defaultEmail;

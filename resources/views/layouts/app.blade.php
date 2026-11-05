@@ -114,7 +114,15 @@
                 .tw-company-badge { left: 0; right: 0; bottom: 0; max-width: none; border-radius: 0; padding: 8px 12px; text-align: center; box-shadow: none; }
             }
         </style>
-        <a href="{{ route('business.dashboard') }}" class="tw-company-badge">Booking for {{ $corporateCompany->name }} · Back to portal</a>
+        @if ($corporateStaffBooking ?? false)
+            <form method="POST" action="{{ route('business.acting.stop') }}" class="tw-company-badge" style="background:#92400e;margin:0;">
+                @csrf
+                TravelWheel staff booking for {{ $corporateCompany->name }} ·
+                <button type="submit" style="all:unset;cursor:pointer;text-decoration:underline;">Stop</button>
+            </form>
+        @else
+            <a href="{{ route('business.dashboard') }}" class="tw-company-badge">Booking for {{ $corporateCompany->name }} · Back to portal</a>
+        @endif
     @endif
     @livewireScripts
     

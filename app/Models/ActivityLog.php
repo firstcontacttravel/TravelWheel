@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\Corporate\CorporateContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -58,7 +59,12 @@ class ActivityLog extends Model
      */
     public static function recordForCompanyUser(CompanyUser $companyUser, string $action, string $description, ?Model $subject = null, array $properties = []): self
     {
+        // Staff booking for a company are named too: it's their action.
+        $staff = app(CorporateContext::class)->actingStaff();
+
         return static::create([
+            'user_id' => $staff?->getKey(),
+            'department_id' => $staff?->department_id,
             'company_user_id' => $companyUser->getKey(),
             'action' => Str::limit($action, 250, ''),
             'description' => Str::limit($description, 250),

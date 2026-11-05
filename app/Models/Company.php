@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 /**
  * A company with, or asking for, a corporate account at /business.
@@ -52,9 +53,36 @@ class Company extends Model
         ];
     }
 
+    /** The company's real people. Staff's stand-in is kept apart: see systemUser(). */
     public function users(): HasMany
     {
-        return $this->hasMany(CompanyUser::class);
+        return $this->hasMany(CompanyUser::class)->where('is_system', false);
+    }
+
+    /**
+     * Who staff act as when booking for this company. Its password is random
+     * and thrown away, and CompanyUser refuses to let it sign in.
+     */
+    public function systemUser(): CompanyUser
+    {
+        $user = CompanyUser::query()->firstOrCreate(
+            ['company_id' => $this->id, 'is_system' => true],
+            [
+                'name' => 'TravelWheel staff',
+                'email' => 'travelwheel-staff-'.$this->id.'@system.invalid',
+                'password' => Str::random(64),
+                'role' => 'booker',
+            ],
+        );
+
+        return $user->setRelation('company', $this);
+    }
+
+    public function canBeBookedForBy(User $staff): bool
+    {
+        return $this->isActive()
+            && ! $staff->isDeactivated()
+            && ($staff->isAdmin() || $staff->isDepartmentHead() || (int) $this->account_manager_id === (int) $staff->id);
     }
 
     public function invitations(): HasMany

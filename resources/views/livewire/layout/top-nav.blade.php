@@ -33,6 +33,12 @@
         </div>
         <div class="flex flex-wrap items-center py-2 space-x-4 hidden md:flex navtop">
             {{-- Company (About Us), FAQ and Help live in the footer's Company column --}}
+            @if (config('corporate.public_links'))
+                <a class="topnav" href="{{ route('business.login') }}" title="Corporate travel accounts">
+                    <b class="text-white">Corporate</b>
+                </a>
+                <span class="text-white topnav">|</span>
+            @endif
             <a class="topnav" href="{{ route('partners.register') }}" title="Become a TravelWheel partner">
                 <b class="text-white">Partner with us</b>
             </a>

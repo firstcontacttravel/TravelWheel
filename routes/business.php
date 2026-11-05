@@ -4,6 +4,7 @@ use App\Http\Controllers\Business\AccountController;
 use App\Http\Controllers\Business\AuthController;
 use App\Http\Controllers\Business\BookingController;
 use App\Http\Controllers\Business\CompanyRequestController;
+use App\Http\Controllers\Business\ActingController;
 use App\Http\Controllers\Business\AdminDocumentController;
 use App\Http\Controllers\Business\DashboardController;
 use App\Http\Controllers\Business\DocumentController;
@@ -39,6 +40,8 @@ Route::prefix('business')->name('business.')->group(function () {
     Route::post('/forgot-password', [PasswordResetController::class, 'store'])->middleware('throttle:5,1')->name('password.email');
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'edit'])->name('password.reset');
     Route::post('/reset-password', [PasswordResetController::class, 'update'])->middleware('throttle:10,1')->name('password.update');
+
+    Route::post('/acting/stop', [ActingController::class, 'stop'])->name('acting.stop');
 
     // SeerBit sends the browser here, and the session may have ended by then.
     Route::get('/wallet/callback', [WalletController::class, 'callback'])->middleware('throttle:30,1')->name('wallet.callback');

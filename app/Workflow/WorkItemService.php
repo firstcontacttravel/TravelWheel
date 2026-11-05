@@ -60,6 +60,8 @@ class WorkItemService
                     'stage' => $stage,
                     'state' => $definition['state'],
                     'department_id' => $this->departmentId($definition['department']),
+                    // A company's bookings start ahead of the queue.
+                    'priority' => filled($subject->getAttribute('company_id')) ? 'high' : 'normal',
                     'stage_entered_at' => now(),
                     'owner_id' => $subjectOwner ?: null,
                     'claimed_at' => $subjectOwner ? now() : null,

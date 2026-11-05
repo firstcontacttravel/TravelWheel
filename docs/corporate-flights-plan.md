@@ -1,6 +1,6 @@
 # TravelWheel Corporate Flights: Implementation Plan
 
-Status as of 2026-11-04: **Phases 1-6 pushed to `main`, with staging confirmed by the user through Phase 5. Phase 7 not started.**
+Status as of 2026-11-04: **All seven phases pushed to `main`. Staging confirmed by the user through Phase 5. Phases 6-7, the pilot and the ship checklists are still to do.**
 
 ## What we are building
 
@@ -49,6 +49,8 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 | Who can top up | Company Admins only. Bookers don't see the wallet | Proposed, built in Phase 3 |
 | Top-up limits | ₦1,000 to ₦100,000,000 each | Agreed 2026-11-04 |
 | Saved traveller retention | Deleted 30 days after a company is suspended, if nobody has deleted them by hand. Reactivating within 30 days cancels it | Agreed 2026-11-04 |
+| Who can book for a company | The CEO, department heads and that company's account manager | Proposed, built in Phase 7 |
+| Staff bookings | Act through a stand-in record on the company that can never sign in. Staff can't open the company's portal pages | Proposed, built in Phase 7 |
 | Invoice timing | Issued once a booking is both paid and confirmed, so a refused booking never gets one | Proposed, for the accountant |
 | VAT | Off by default, switched on with a percentage on the Default Rates page. Treated as included in the service fee, so totals equal what was paid | Proposed, for the accountant |
 | Saved travellers | Shared across the company, masked for everyone | Proposed |
@@ -72,6 +74,7 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 | 3 | Ticket and change turnaround you can promise on SkyLink, after confirming these are still manual | Operations | Phase 7 |
 | 4 | ~~Who pays the gateway fee on card top-ups~~ Decided 2026-11-04: the company pays on top. SeerBit already bills its fee to the customer (`feeBearer` CUSTOMER), so TravelWheel's own percentage defaults to 0 | Done | - |
 | 5 | ~~Wallet bank accounts~~ Decided 2026-11-04: use the same accounts as TravelFlex | Done | - |
+| 7 | The SkyLink ticket and change turnaround to promise. Set `CORPORATE_SKYLINK_TURNAROUND` and it appears in those e-ticket emails | Operations | Nothing: hidden until set |
 | 6 | Confirm SeerBit's live account also has `feeBearer` CUSTOMER. Our records are from test mode | Finance | Card top-ups going live |
 
 ---
@@ -332,18 +335,25 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 - **SkyLink promise:** the agreed turnaround appears in the booking emails.
 - **Launch:** add `/business` and the request form to the public site.
 
+**As built:**
+- Account managers get a bell notification for each paid booking, and an email as well when one needs attention.
+- Public links are behind `CORPORATE_PUBLIC_LINKS`, so they appear when you switch them on rather than on deploy.
+- The workflow has no payment-verification step for wallet bookings: `paid` goes straight to ready to ticket.
+- The staff guide is `docs/corporate-staff-guide.md`.
+
 **Deliverables:**
-- [ ] Account manager assignment and alerts
-- [ ] Priority and badge in the workflow
-- [ ] Book-for-company with logging
-- [ ] Company dashboard
-- [ ] Public links, and a short staff guide
-- [ ] `CorporateSupportTest`: only permitted staff can book for a company, the staff member is recorded, and a staff session never gains company login rights
+- [x] Account manager assignment and alerts
+- [x] Priority and badge in the workflow
+- [x] Book-for-company with logging
+- [x] Company dashboard
+- [x] Public links, and a short staff guide
+- [x] `CorporateSupportTest`: only permitted staff can book for a company, the staff member is recorded, and a staff session never gains company login rights
 
 **Ship checklist:**
-1. Finish the pilot review: ledger reconciled, invoices accepted, no price mismatches.
-2. Run a full production booking on a real company account.
-3. Publish the links.
+1. Run `php artisan migrate --force`.
+2. Finish the pilot review: ledger reconciled, invoices accepted, no price mismatches.
+3. Run a full production booking on a real company account.
+4. Set `CORPORATE_PUBLIC_LINKS=true` to publish the links.
 
 ---
 

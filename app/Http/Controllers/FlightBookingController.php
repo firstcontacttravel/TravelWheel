@@ -342,8 +342,24 @@ class FlightBookingController extends Controller
     private function _redirectAfterWalletAlreadyUsed(FlightBooking $booking): \Illuminate\Http\RedirectResponse
     {
         return $booking->payment_status === 'paid'
-            ? redirect()->route('business.bookings.index')
+            ? $this->_toCompanyBookings()
             : redirect()->route('air.flight-s')->withErrors(['error' => 'This booking is closed. Please search again.']);
+    }
+
+    /** A company's people go to their bookings page. Staff booking for them have no login there. */
+    private function _toCompanyBookings(?string $problem = null): \Illuminate\Http\RedirectResponse
+    {
+        if (app(CorporateContext::class)->actingStaff()) {
+            if ($problem) {
+                \Filament\Notifications\Notification::make()->danger()->title($problem)->persistent()->send();
+            }
+
+            return redirect()->to(\App\Filament\Resources\FlightBookings\FlightBookingResource::getUrl('index', panel: 'admin'));
+        }
+
+        $redirect = redirect()->route('business.bookings.index');
+
+        return $problem ? $redirect->withErrors(['wallet' => $problem]) : $redirect;
     }
 
     /** The supplier clearly refused: the money goes back and the booker chooses again. */
@@ -365,9 +381,7 @@ class FlightBookingController extends Controller
         $this->_sendTicketingFailureAlert($booking->fresh(), 'Paid from the company wallet, but the supplier gave no clear answer: '.$message.' The seat may exist. Check with the supplier, then ticket it or credit the wallet.');
         $this->_forgetStaleCheckoutSession();
 
-        return redirect()->route('business.bookings.index')->withErrors([
-            'wallet' => 'We couldn\'t get a clear answer from the airline on '.$booking->booking_ref.'. The money is still held for this booking, and our team has been alerted. If the seat can\'t be confirmed, the money goes back to your wallet.',
-        ]);
+        return $this->_toCompanyBookings('We couldn\'t get a clear answer from the airline on '.$booking->booking_ref.'. The money is still held for this booking, and our team has been alerted. If the seat can\'t be confirmed, the money goes back to your wallet.');
     }
 
     /**
@@ -380,7 +394,7 @@ class FlightBookingController extends Controller
             $this->_sendTicketingFailureAlert($booking, 'A card payment ('.$reference.') went through on a booking already paid from the company wallet. Refund the card.');
         }
 
-        return redirect()->route('business.bookings.index');
+        return $this->_toCompanyBookings();
     }
 
     // =========================================================================
@@ -2776,6 +2790,7 @@ class FlightBookingController extends Controller
         return FlightBooking::create(array_merge([
             'company_id' => $companyUser?->company_id,
             'company_user_id' => $companyUser?->id,
+            'booked_by_user_id' => app(CorporateContext::class)->actingStaff()?->id,
             'cost_code' => $companyUser ? session('bookingCostCode') : null,
             'booking_ref' => $bookingRef,
             'fare_source_code' => $mappedFlight['fareSourceCode'] ?? '',

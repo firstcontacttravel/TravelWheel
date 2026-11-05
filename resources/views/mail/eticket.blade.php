@@ -81,4 +81,9 @@
         Quote your booking reference <strong style="font-family:{{ $mono }};color:{{ $c['ink'] }};">{{ $bookingRef }}</strong> whenever you contact us about this trip.
     </div>
 
+    @if ($booking->company_id && $booking->isSkylink() && filled(config('corporate.skylink_turnaround')))
+        <x-mail.callout title="Tickets and changes">
+            We handle tickets and changes on this booking {{ config('corporate.skylink_turnaround') }}.
+        </x-mail.callout>
+    @endif
 </x-mail.layout>

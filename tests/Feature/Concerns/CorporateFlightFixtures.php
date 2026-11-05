@@ -24,6 +24,9 @@ trait CorporateFlightFixtures
     /** What SkyLink's pricing call answers. A test raises this to make the fare rise. */
     protected int $verifiedPrice = self::SUPPLIER_FARE;
 
+    /** A test sets this to make SkyLink's reserve call answer with a server error. */
+    protected bool $reserveFails = false;
+
     protected function setUpCorporateFlights(): void
     {
         config([
@@ -167,6 +170,7 @@ trait CorporateFlightFixtures
                     'booking_token' => 'btk_repriced', 'verified' => true,
                     'original_price' => self::SUPPLIER_FARE, 'verified_price' => $this->verifiedPrice, 'currency' => 'NGN',
                 ]]),
+                str_ends_with($url, 'flights/reserve') && $this->reserveFails => Http::response(['success' => false, 'message' => 'Upstream'], 502),
                 str_ends_with($url, 'flights/reserve') => Http::response(['success' => true, 'data' => [
                     'pnr' => 'SKY-PNR-9', 'status' => 'confirmed', 'ticket_deadline' => now()->addDays(2)->format('Y-m-d H:i:s'),
                 ]]),
