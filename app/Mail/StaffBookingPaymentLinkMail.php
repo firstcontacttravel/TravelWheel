@@ -29,6 +29,7 @@ class StaffBookingPaymentLinkMail extends Mailable
         return new Content(view: 'emails.staff-booking-payment-link', with: [
             'booking' => $this->staffBooking->bookable,
             'product' => $this->staffBooking->productLabel(),
+            'summary' => $this->staffBooking->summary(),
             'payUrl' => $this->staffBooking->payUrl(),
         ]);
     }

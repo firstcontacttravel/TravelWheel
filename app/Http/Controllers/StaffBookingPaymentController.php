@@ -23,6 +23,7 @@ class StaffBookingPaymentController extends Controller
             'token' => $token,
             'booking' => $staffBooking->bookable,
             'product' => $staffBooking->productLabel(),
+            'summary' => $staffBooking->summary(),
         ]);
     }
 

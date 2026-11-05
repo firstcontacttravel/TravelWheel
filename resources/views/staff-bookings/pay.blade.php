@@ -35,11 +35,9 @@
         @endif
 
         <div class="row"><span>Reference</span><span>{{ $booking->payment_reference }}</span></div>
-        <div class="row"><span>Pick-up</span><span>{{ $booking->pickup_location }}</span></div>
-        @if (filled($booking->dropoff_location))
-            <div class="row"><span>Drop-off</span><span>{{ $booking->dropoff_location }}</span></div>
-        @endif
-        <div class="row"><span>Date</span><span>{{ $booking->pickup_date }} at {{ $booking->pickup_time }}</span></div>
+        @foreach ($summary as $label => $value)
+            <div class="row"><span>{{ $label }}</span><span>{{ $value }}</span></div>
+        @endforeach
         <div class="row total"><span>Amount</span><span>&#8358;{{ number_format((float) $booking->amount) }}</span></div>
 
         <form method="POST" action="{{ route('staff-bookings.pay.start', $token) }}">

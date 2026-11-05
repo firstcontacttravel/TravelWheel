@@ -40,4 +40,10 @@ class SupportFlightAssist extends Model
         'return_date' => 'date',
         'amount' => 'float',
     ];
+
+    /** Every other booking calls its customer full_name. */
+    public function getFullNameAttribute(): ?string
+    {
+        return $this->name_on_ticket;
+    }
 }

@@ -4,14 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\SupportExtraLuggage;
 use App\Models\SupportFlightAssist;
-use App\Models\SupportProductPrice;
 use App\Models\SupportVisaConfirmation;
 use App\Models\SupportYellowCard;
 use App\Services\BudPayPaymentService;
 use App\Services\SeerbitPaymentService;
+use App\Services\SupportBookingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SupportController extends Controller
 {
@@ -23,7 +22,7 @@ class SupportController extends Controller
     public function flightAssistForm()
     {
         return view('air.support.flight-assist', [
-            'flightAssistPrice' => SupportProductPrice::amountFor('flight_assist', 25000),
+            'flightAssistPrice' => app(SupportBookingService::class)->flightAssistPrice(),
         ]);
     }
 
@@ -68,21 +67,7 @@ class SupportController extends Controller
             'additional_info' => 'nullable|string',
         ]);
 
-        $reference = 'SPA-' . strtoupper(bin2hex(random_bytes(6)));
-
-        // Flight Assist isn't paid for here — the fee is billed together with
-        // the client's main flight booking fee, so this just records the
-        // request and notifies both the client and support team directly.
-        // The amount is looked up server-side (not trusted from the form) so
-        // it always reflects the admin-configured price at submission time.
-        $record = SupportFlightAssist::create(array_merge($data, [
-            'amount' => SupportProductPrice::amountFor('flight_assist', 25000),
-            'payment_option' => 'not_required',
-            'payment_reference' => $reference,
-            'payment_status' => 'billed_with_main_fee',
-        ]));
-
-        $this->sendMails($record, 'flight_assist');
+        app(SupportBookingService::class)->createFlightAssist($data);
 
         return redirect()->route('air.support.success')
             ->with('success', $this->successMessage('flight_assist'));
@@ -196,29 +181,14 @@ class SupportController extends Controller
         ]);
 
         $filePath = $request->file('data_page')->store('support/yellow-card', 'public');
-        $reference = 'SYC-' . strtoupper(bin2hex(random_bytes(6)));
-        $amount = $data['service_type'] === 'fasttrack' ? 50000 : 30000;
-
-        SupportYellowCard::create([
-            'service_type' => $data['service_type'],
-            'full_name' => $data['full_name'],
-            'email' => $data['email'],
-            'data_page' => $filePath,
-            'home_address' => $data['home_address'],
-            'phone_number' => $data['phone_number'],
-            'delivery_address' => $data['delivery_address'],
-            'payment_option' => $data['payment_option'],
-            'payment_reference' => $reference,
-            'payment_status' => 'pending',
-            'amount' => $amount,
-        ]);
+        $record = app(SupportBookingService::class)->createYellowCard($data, $filePath, $data['payment_option']);
 
         return $this->launchPayment(
             payment_option: $data['payment_option'],
-            amount: $amount,
+            amount: $record->amount,
             email: $data['email'],
             customerName: $data['full_name'],
-            reference: $reference,
+            reference: $record->payment_reference,
             product_title: 'Yellow Card',
         );
     }
@@ -401,10 +371,7 @@ class SupportController extends Controller
             return redirect()->route('air.support')->with('error', 'Payment received but request not found. Please contact support.');
         }
 
-        if ($record->payment_status !== 'paid') {
-            $record->update(['payment_status' => 'paid']);
-            $this->sendMails($record, $type);
-        }
+        app(SupportBookingService::class)->completePayment($record);
 
         return redirect()->route('air.support.success')->with('success', $this->successMessage($type));
     }
@@ -418,44 +385,6 @@ class SupportController extends Controller
             'yellow_card' => 'Yellow Card request confirmed!',
             default => 'Request confirmed!',
         };
-    }
-
-    private function sendMails($record, string $type): void
-    {
-        $supportMail = 'damilola@travelwheel.ng';
-
-        try {
-            switch ($type) {
-                case 'flight_assist':
-                    Mail::to($record->email)->send(new \App\Mail\SupportFlightAssistSuccessMail($record));
-                    Mail::to($supportMail)->send(new \App\Mail\SupportFlightAssistNotificationMail($record));
-                    break;
-                case 'extra_luggage':
-                    Mail::to($record->email)->send(new \App\Mail\SupportExtraLuggageSuccessMail($record));
-                    Mail::to($supportMail)->send(new \App\Mail\SupportExtraLuggageNotificationMail($record, [
-                        storage_path('app/public/' . $record->data_page),
-                        storage_path('app/public/' . $record->ticket),
-                    ]));
-                    break;
-                case 'visa_confirmation':
-                    Mail::to($record->email)->send(new \App\Mail\SupportVisaConfirmationSuccessMail($record));
-                    Mail::to($supportMail)->send(new \App\Mail\SupportVisaConfirmationNotificationMail($record, [
-                        storage_path('app/public/' . $record->visa_file),
-                    ]));
-                    break;
-                case 'yellow_card':
-                    Mail::to($record->email)->send(new \App\Mail\SupportYellowCardSuccessMail($record));
-                    Mail::to($supportMail)->send(new \App\Mail\SupportYellowCardNotificationMail($record, [
-                        storage_path('app/public/' . $record->data_page),
-                    ]));
-                    break;
-            }
-        } catch (\Exception $e) {
-            Log::error('Support mail error for ' . $type, [
-                'reference' => $record->payment_reference ?? 'unknown',
-                'error' => $e->getMessage(),
-            ]);
-        }
     }
 
     public function success()

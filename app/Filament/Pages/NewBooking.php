@@ -53,6 +53,10 @@ class NewBooking extends Page implements HasTable
                 ->label("Pick up 'n' Drop off")
                 ->icon('heroicon-o-map-pin')
                 ->url(fn (): string => BookGroundTransport::getUrl(['tab' => 'transfer'])),
+            Action::make('bookTravelAssist')
+                ->label('Travel Assist')
+                ->icon('heroicon-o-lifebuoy')
+                ->url(fn (): string => BookTravelAssist::getUrl()),
         ];
     }
 
@@ -75,11 +79,12 @@ class NewBooking extends Page implements HasTable
                     ->state(fn (StaffBooking $record) => $record->bookable?->amount)
                     ->money('NGN'),
                 TextColumn::make('payment')
-                    ->state(fn (StaffBooking $record): string => ucfirst((string) $record->bookable?->payment_status))
+                    ->state(fn (StaffBooking $record): string => ucfirst(str_replace('_', ' ', (string) $record->bookable?->payment_status)))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'Paid', 'Confirmed', 'Completed' => 'success',
                         'Cancelled', 'Failed' => 'danger',
+                        'Billed with main fee' => 'info',
                         default => 'warning',
                     })
                     ->description(fn (StaffBooking $record): ?string => $record->recorded_at

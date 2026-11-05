@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\GroundBookingService;
+use App\Services\SupportBookingService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -22,10 +23,12 @@ class StaffBooking extends Model
         'cash' => 'Cash',
     ];
 
-    /** Per product: its name, and the SeerBit callback that confirms a payment. */
+    /** Per product: its name, the SeerBit callback that confirms a payment, and what completes one. */
     public const PRODUCTS = [
-        CarHire::class => ['label' => 'Car Hire', 'seerbit_route' => 'air.carhire.seerbit.callback'],
-        Transfer::class => ['label' => "Pick up 'n' Drop off", 'seerbit_route' => 'air.transfer.seerbit.callback'],
+        CarHire::class => ['label' => 'Car Hire', 'seerbit_route' => 'air.carhire.seerbit.callback', 'service' => GroundBookingService::class],
+        Transfer::class => ['label' => "Pick up 'n' Drop off", 'seerbit_route' => 'air.transfer.seerbit.callback', 'service' => GroundBookingService::class],
+        SupportFlightAssist::class => ['label' => 'Flight Assist', 'seerbit_route' => 'air.support.seerbit.callback', 'service' => SupportBookingService::class],
+        SupportYellowCard::class => ['label' => 'Yellow Card Assistance', 'seerbit_route' => 'air.support.seerbit.callback', 'service' => SupportBookingService::class],
     ];
 
     protected $fillable = [
@@ -83,6 +86,29 @@ class StaffBooking extends Model
         return self::PRODUCTS[$this->bookable_type]['seerbit_route'];
     }
 
+    /**
+     * What the customer is paying for, as label => value.
+     *
+     * @return array<string, string>
+     */
+    public function summary(): array
+    {
+        $booking = $this->bookable;
+
+        if ($booking instanceof SupportYellowCard) {
+            return [
+                'Service' => SupportBookingService::YELLOW_CARD_SERVICES[$booking->service_type]['label'] ?? $booking->service_type,
+                'Delivery address' => $booking->delivery_address,
+            ];
+        }
+
+        return array_filter([
+            'Pick-up' => $booking->pickup_location,
+            'Drop-off' => $booking->dropoff_location,
+            'Date' => $booking->pickup_date.' at '.$booking->pickup_time,
+        ]);
+    }
+
     public function isAwaitingPayment(): bool
     {
         return $this->bookable?->payment_status === 'pending';
@@ -103,7 +129,7 @@ class StaffBooking extends Model
             'recorded_at' => now(),
         ]);
 
-        app(GroundBookingService::class)->completePayment($this->bookable, $method);
+        app(self::PRODUCTS[$this->bookable_type]['service'])->completePayment($this->bookable, $method);
     }
 
     public function cancel(): void
