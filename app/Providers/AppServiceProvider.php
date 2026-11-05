@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\FlightBooking;
 use App\Models\FlightSearch;
+use App\Services\Corporate\CompanyInvoices;
 use App\Services\Corporate\CorporateContext;
 use App\Support\Admin\ActivityRecorder;
 use App\Workflow\SyncsWorkItems;
@@ -13,6 +15,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -44,6 +47,27 @@ class AppServiceProvider extends ServiceProvider
         Action::configureUsing(fn (Action $action) => $action->hidden(fn (): bool => WorkAccess::blocks($action)));
 
         $this->configureFlightRateLimits();
+        $this->issueCompanyInvoices();
+    }
+
+    /**
+     * A booking can become paid and confirmed from several places: checkout, the
+     * gateway's callback, the admin. A failure here must never undo a booking,
+     * so it's reported, and corporate:housekeeping issues the invoice later.
+     */
+    private function issueCompanyInvoices(): void
+    {
+        FlightBooking::saved(function (FlightBooking $booking): void {
+            if (! $booking->company_id || ! ($booking->wasRecentlyCreated || $booking->wasChanged(['payment_status', 'booking_status', 'ticket_ordered']))) {
+                return;
+            }
+
+            try {
+                app(CompanyInvoices::class)->issueForBooking($booking);
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        });
     }
 
     /**

@@ -67,6 +67,7 @@ class ReportingAdapterRegistry
                     'cabin' => data_get($row, 'cabin'),
                     'fare_type' => data_get($row, 'fare_type'),
                     'markup_category' => data_get($row, 'markup_category'),
+                    'company_id' => data_get($row, 'company_id'),
                 ],
                 'data_quality' => $a->issues([
                     'missing_reference' => blank(data_get($row, 'booking_ref')) && blank(data_get($row, 'unique_id')),

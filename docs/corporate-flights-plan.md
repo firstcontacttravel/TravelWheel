@@ -1,6 +1,6 @@
 # TravelWheel Corporate Flights: Implementation Plan
 
-Status as of 2026-11-04: **Phases 1-5 pushed to `main`. Phases 6-7 not started.**
+Status as of 2026-11-04: **Phases 1-6 pushed to `main`, with staging confirmed by the user through Phase 5. Phase 7 not started.**
 
 ## What we are building
 
@@ -45,9 +45,12 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 | Who runs the admin Corporate actions | CEO only: add, approve, reject, invite, revoke, suspend, reactivate. Other staff can view. One method to widen: `CompanyResource::canManageAccounts()` | Proposed, built in Phase 1 |
 | Rejected requests | No email is sent. Staff contact the company themselves if needed, and a rejected company may apply again | Proposed, built in Phase 1 |
 | Password rule | At least 10 characters, with letters and numbers | Proposed, built in Phase 1 |
-| Card top-up fee | A percentage on top, paid by the company and never credited to the wallet. Set by the CEO on the Default Rates page. Card top-ups stay off until it is set | Agreed 2026-11-04 |
+| Card top-up fee | Paid by the company on top, and never credited to the wallet. SeerBit's own fee (about 1.5%, up to ₦2,000 on Nigerian cards) already does this, so TravelWheel's extra percentage is 0 unless the CEO raises it | Agreed 2026-11-04 |
 | Who can top up | Company Admins only. Bookers don't see the wallet | Proposed, built in Phase 3 |
-| Top-up limits | ₦1,000 to ₦100,000,000 each | Proposed, built in Phase 3 |
+| Top-up limits | ₦1,000 to ₦100,000,000 each | Agreed 2026-11-04 |
+| Saved traveller retention | Deleted 30 days after a company is suspended, if nobody has deleted them by hand. Reactivating within 30 days cancels it | Agreed 2026-11-04 |
+| Invoice timing | Issued once a booking is both paid and confirmed, so a refused booking never gets one | Proposed, for the accountant |
+| VAT | Off by default, switched on with a percentage on the Default Rates page. Treated as included in the service fee, so totals equal what was paid | Proposed, for the accountant |
 | Saved travellers | Shared across the company, masked for everyone | Proposed |
 | Signed-in corporate user on public pages | Always sees company rates, so one browser never shows two prices | Proposed |
 
@@ -67,8 +70,9 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 | 1 | VAT treatment of the service fee, and when an invoice should be issued | Accountant | Phase 6 |
 | 2 | Storing passport details long term, under Nigerian data protection rules | Legal or compliance adviser | Phase 5 |
 | 3 | Ticket and change turnaround you can promise on SkyLink, after confirming these are still manual | Operations | Phase 7 |
-| 4 | ~~Who pays the gateway fee on card top-ups~~ Decided 2026-11-04: the company pays a percentage on top. The CEO still needs to set the percentage | CEO | Card top-ups |
-| 5 | Whether wallet bank transfers should go to the same accounts as TravelFlex (`TRAVELFLEX_BANK_*`), which is what the wallet page shows | Finance | Phase 3 going live |
+| 4 | ~~Who pays the gateway fee on card top-ups~~ Decided 2026-11-04: the company pays on top. SeerBit already bills its fee to the customer (`feeBearer` CUSTOMER), so TravelWheel's own percentage defaults to 0 | Done | - |
+| 5 | ~~Wallet bank accounts~~ Decided 2026-11-04: use the same accounts as TravelFlex | Done | - |
+| 6 | Confirm SeerBit's live account also has `feeBearer` CUSTOMER. Our records are from test mode | Finance | Card top-ups going live |
 
 ---
 
@@ -296,14 +300,23 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 - **CSV exports:** bookings and wallet entries with cost codes. Bookers get their own bookings and invoices, and Admins get everything.
 - **Admin:** view any invoice or statement, and a company filter in `ReportingAnalytics`.
 
-**Deliverables:**
-- [ ] Invoices and credit notes as PDFs
-- [ ] Monthly statements
-- [ ] CSV exports
-- [ ] Company filter in admin reports
-- [ ] `CorporateInvoiceTest`: fare plus fee plus extras equals the amount paid, numbers don't repeat, issued invoices don't change, and statements match the ledger
+**As built:**
+- Invoices issue themselves when a booking becomes paid and confirmed, from any route. `corporate:housekeeping` runs daily and catches any that failed, and also applies the 30-day traveller deletion.
+- A card-paid booking's invoice shows SeerBit's charge as its own line, so the total matches what the company paid.
+- Statements are for Admins, because they show the wallet.
+- The company filter in reports fills in on the next `reports:sync`, for bookings synced from then on.
 
-**Ship checklist:** the accountant reviews a sample invoice, credit note and statement before release.
+**Deliverables:**
+- [x] Invoices and credit notes as PDFs
+- [x] Monthly statements
+- [x] CSV exports
+- [x] Company filter in admin reports
+- [x] `CorporateInvoiceTest`: fare plus fee plus extras equals the amount paid, numbers don't repeat, issued invoices don't change, and statements match the ledger
+
+**Ship checklist:**
+1. Run `php artisan migrate --force`.
+2. Set `CORPORATE_TAX_ID` if invoices should show it.
+3. Have the accountant review a sample invoice, credit note and statement, and confirm the VAT treatment and invoice timing.
 
 ---
 

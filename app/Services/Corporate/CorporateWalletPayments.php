@@ -20,7 +20,12 @@ use Illuminate\Support\Str;
  */
 class CorporateWalletPayments
 {
-    public function __construct(private readonly CompanyWallet $wallet) {}
+    private const DEADLOCK_ATTEMPTS = 5;
+
+    public function __construct(
+        private readonly CompanyWallet $wallet,
+        private readonly CompanyInvoices $invoices,
+    ) {}
 
     /**
      * Takes the fare from the wallet and marks the booking paid, before the
@@ -50,7 +55,7 @@ class CorporateWalletPayments
                 // can still be matched to this booking.
                 'payment_reference' => $booking->payment_reference ?: 'WALLET-'.$booking->booking_ref,
             ]);
-        });
+        }, self::DEADLOCK_ATTEMPTS);
 
         ActivityLog::recordForCompanyUser($user, 'company_wallet_payment', 'Paid '.$booking->booking_ref.' from the wallet', $booking, ['amount' => $amount]);
     }
@@ -67,10 +72,12 @@ class CorporateWalletPayments
             $locked = FlightBooking::query()->whereKey($booking->getKey())->lockForUpdate()->firstOrFail();
             $amount = $this->walletDebited($locked);
 
-            $this->wallet->post($locked->company, 'booking_return', $amount, 'booking_return:'.$locked->id, [
+            $entry = $this->wallet->post($locked->company, 'booking_return', $amount, 'booking_return:'.$locked->id, [
                 'flight_booking_id' => $locked->id,
                 'reason' => 'Airline did not confirm '.$locked->booking_ref,
             ]);
+
+            $this->invoices->creditNoteFor($locked, $entry, 'The airline did not confirm this booking.');
 
             $locked->update([
                 'booking_status' => 'cancelled',
@@ -80,7 +87,7 @@ class CorporateWalletPayments
             ]);
 
             return $amount;
-        });
+        }, self::DEADLOCK_ATTEMPTS);
     }
 
     /** What a company has paid on this booking and not yet had back. */
@@ -110,11 +117,13 @@ class CorporateWalletPayments
                 throw new DomainException('You can return up to NGN '.number_format($available, 2).' on this booking.');
             }
 
-            $this->wallet->post($locked->company, 'refund', $amount, 'refund:'.Str::uuid(), [
+            $entry = $this->wallet->post($locked->company, 'refund', $amount, 'refund:'.Str::uuid(), [
                 'flight_booking_id' => $locked->id,
                 'user_id' => $staff->getKey(),
                 'reason' => Str::limit($locked->booking_ref.': '.$reason, 490),
             ]);
+
+            $this->invoices->creditNoteFor($locked, $entry, $reason);
 
             if (round($available - $amount, 2) > 0) {
                 return;
@@ -123,7 +132,7 @@ class CorporateWalletPayments
             $wasIssued = $locked->ticket_ordered || in_array($locked->booking_status, ['ticketed', 'confirmed'], true);
 
             $locked->update(array_merge(['payment_status' => 'refunded'], $wasIssued ? [] : ['booking_status' => 'cancelled']));
-        });
+        }, self::DEADLOCK_ATTEMPTS);
     }
 
     private function amountPaid(FlightBooking $booking): float

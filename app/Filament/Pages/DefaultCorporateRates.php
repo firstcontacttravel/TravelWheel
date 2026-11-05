@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Filament\Resources\Companies\Schemas\CorporateRatesForm;
 use App\Models\ActivityLog;
 use App\Models\AppSetting;
+use App\Services\Corporate\CompanyInvoices;
 use App\Services\Corporate\CompanyWalletTopUps;
 use App\Services\Corporate\CorporateRates;
 use BackedEnum;
@@ -51,6 +52,7 @@ class DefaultCorporateRates extends Page
         $this->form->fill([
             'rates' => app(CorporateRates::class)->saved(null),
             'card_topup_fee_percent' => AppSetting::get(CompanyWalletTopUps::FEE_SETTING),
+            'vat_percent' => AppSetting::get(CompanyInvoices::VAT_SETTING),
         ]);
     }
 
@@ -62,16 +64,23 @@ class DefaultCorporateRates extends Page
     public function form(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Card top-up fee')
-                ->description('Added on top when a company tops up its wallet by card. It never goes into the wallet. Leave it blank to keep card top-ups switched off.')
+            Section::make('Card top-ups and VAT')
+                ->columns(2)
                 ->schema([
                     TextInput::make('card_topup_fee_percent')
-                        ->label('Fee')
+                        ->label('TravelWheel card fee')
+                        ->helperText('SeerBit already adds its own fee at checkout, so 0% means the company pays only that. Anything above 0 is charged on top of it. Blank switches card top-ups off.')
                         ->numeric()
                         ->minValue(0)
                         ->maxValue(20)
-                        ->suffix('%')
-                        ->maxWidth('xs'),
+                        ->suffix('%'),
+                    TextInput::make('vat_percent')
+                        ->label('VAT on invoices')
+                        ->helperText('Shown as included in the service fee, on invoices issued from now on. Blank leaves VAT off. Check with your accountant.')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(50)
+                        ->suffix('%'),
                 ]),
             ...CorporateRatesForm::sections(null),
         ])->statePath('data');
@@ -104,11 +113,17 @@ class DefaultCorporateRates extends Page
         $fee = filled($state['card_topup_fee_percent'] ?? null) ? (string) (float) $state['card_topup_fee_percent'] : null;
         AppSetting::set(CompanyWalletTopUps::FEE_SETTING, $fee);
 
+        $vatBefore = AppSetting::get(CompanyInvoices::VAT_SETTING);
+        $vat = filled($state['vat_percent'] ?? null) ? (string) (float) $state['vat_percent'] : null;
+        AppSetting::set(CompanyInvoices::VAT_SETTING, $vat);
+
         ActivityLog::record('corporate.default_rates_updated', 'Updated default corporate rates', properties: [
             'before' => $before,
             'after' => $rates->saved(null),
             'card_fee_before' => $feeBefore,
             'card_fee_after' => $fee,
+            'vat_before' => $vatBefore,
+            'vat_after' => $vat,
         ]);
 
         CorporateRatesForm::notifySaved($above);

@@ -4,7 +4,9 @@ use App\Http\Controllers\Business\AccountController;
 use App\Http\Controllers\Business\AuthController;
 use App\Http\Controllers\Business\BookingController;
 use App\Http\Controllers\Business\CompanyRequestController;
+use App\Http\Controllers\Business\AdminDocumentController;
 use App\Http\Controllers\Business\DashboardController;
+use App\Http\Controllers\Business\DocumentController;
 use App\Http\Controllers\Business\InvitationController;
 use App\Http\Controllers\Business\PasswordResetController;
 use App\Http\Controllers\Business\TeamController;
@@ -47,10 +49,16 @@ Route::prefix('business')->name('business.')->group(function () {
         Route::middleware(EnsureCompanyAdmin::class)->group(function () {
             Route::get('/wallet', [WalletController::class, 'index'])->name('wallet.index');
             Route::post('/wallet/top-ups', [WalletController::class, 'store'])->middleware('throttle:10,1')->name('wallet.top-ups.store');
+            Route::get('/statements', [DocumentController::class, 'statement'])->name('statements.show');
+            Route::get('/statements/pdf', [DocumentController::class, 'statementPdf'])->name('statements.pdf');
+            Route::get('/statements/csv', [DocumentController::class, 'statementCsv'])->name('statements.csv');
         });
 
         Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
         Route::get('/bookings/{reference}/ticket', [BookingController::class, 'ticket'])->name('bookings.ticket');
+        Route::get('/bookings-export', [DocumentController::class, 'bookingsCsv'])->name('bookings.export');
+        Route::get('/invoices', [DocumentController::class, 'invoices'])->name('invoices.index');
+        Route::get('/invoices/{number}/download', [DocumentController::class, 'downloadInvoice'])->name('invoices.download');
 
         Route::get('/travellers', [TravellerController::class, 'index'])->name('travellers.index');
         Route::get('/travellers/create', [TravellerController::class, 'create'])->name('travellers.create');
@@ -73,4 +81,10 @@ Route::prefix('business')->name('business.')->group(function () {
             Route::put('/members/{member}/reactivate', [TeamController::class, 'reactivate'])->whereNumber('member')->name('members.reactivate');
         });
     });
+});
+
+// Staff downloading a company's documents. The controller checks who's asking.
+Route::prefix('admin/corporate')->name('admin.corporate.')->group(function () {
+    Route::get('/invoices/{invoice}/download', [AdminDocumentController::class, 'invoice'])->name('invoice');
+    Route::get('/companies/{company}/statement', [AdminDocumentController::class, 'statement'])->name('statement');
 });

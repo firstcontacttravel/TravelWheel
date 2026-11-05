@@ -106,7 +106,7 @@ class CorporateAccounts
     {
         $this->assertStatus($company, 'invited', 'active');
 
-        $company->update(['status' => 'suspended', 'status_reason' => $reason]);
+        $company->update(['status' => 'suspended', 'status_reason' => $reason, 'suspended_at' => now()]);
     }
 
     public function reactivate(Company $company): void
@@ -116,6 +116,7 @@ class CorporateAccounts
         $company->update([
             'status' => $company->users()->exists() ? 'active' : 'invited',
             'status_reason' => null,
+            'suspended_at' => null,
         ]);
     }
 

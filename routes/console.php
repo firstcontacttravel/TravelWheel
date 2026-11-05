@@ -67,6 +67,11 @@ Schedule::command('model:prune', ['--model' => [FlightSearch::class, FlightSearc
     ->hourly()
     ->withoutOverlapping(30);
 
+Schedule::command('corporate:housekeeping')
+    ->dailyAt('02:00')
+    ->withoutOverlapping()
+    ->onOneServer();
+
 Schedule::command('flights:reconcile --limit=200')
     ->everyFiveMinutes()
     ->withoutOverlapping(10);

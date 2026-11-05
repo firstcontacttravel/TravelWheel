@@ -27,6 +27,7 @@ class AdminReportExportController extends Controller
             'payment_status' => ['nullable', 'string', 'max:40'],
             'fulfillment_status' => ['nullable', 'string', 'max:40'],
             'payment_method' => ['nullable', 'string', 'max:80'],
+            'company_id' => ['nullable', 'integer'],
         ]);
         $format = $validated['format'] ?? 'csv';
         unset($validated['format']);

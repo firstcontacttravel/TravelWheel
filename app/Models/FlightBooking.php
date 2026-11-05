@@ -107,6 +107,11 @@ class FlightBooking extends Model
         return $this->belongsTo(CompanyUser::class);
     }
 
+    public function companyInvoices(): HasMany
+    {
+        return $this->hasMany(CompanyInvoice::class);
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     public function isWebFare(): bool

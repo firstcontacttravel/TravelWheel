@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\Company;
 use App\Models\ReportingAlert;
 use App\Models\ReportingFact;
 use App\Models\ReportingSavedView;
@@ -36,6 +37,8 @@ class Reports extends Page
     public string $paymentStatus = '';
     public string $fulfillmentStatus = '';
     public string $paymentMethod = '';
+
+    public string $companyId = '';
     public string $savedViewName = '';
 
     public static function canAccess(): bool
@@ -64,6 +67,7 @@ class Reports extends Page
             'payment_status' => $this->paymentStatus,
             'fulfillment_status' => $this->fulfillmentStatus,
             'payment_method' => $this->paymentMethod,
+            'company_id' => $this->companyId,
         ];
     }
 
@@ -77,6 +81,11 @@ class Reports extends Page
         return collect(config('reporting.products'))->mapWithKeys(
             fn (array $product, string $key): array => [$key => $product['label']],
         )->all();
+    }
+
+    public function companyOptions(): array
+    {
+        return Company::query()->whereHas('invoices')->orWhere('status', 'active')->orderBy('name')->pluck('name', 'id')->all();
     }
 
     public function paymentMethodOptions(): array
@@ -122,6 +131,7 @@ class Reports extends Page
         $this->paymentStatus = $filters['payment_status'] ?? '';
         $this->fulfillmentStatus = $filters['fulfillment_status'] ?? '';
         $this->paymentMethod = $filters['payment_method'] ?? '';
+        $this->companyId = (string) ($filters['company_id'] ?? '');
     }
 
     public function deleteSavedView(int $id): void

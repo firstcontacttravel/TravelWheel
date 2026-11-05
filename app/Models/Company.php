@@ -40,6 +40,7 @@ class Company extends Model
         'status',
         'status_reason',
         'account_manager_id',
+        'suspended_at',
     ];
 
     protected function casts(): array
@@ -47,6 +48,7 @@ class Company extends Model
         return [
             'wallet_balance' => 'decimal:2',
             'credit_limit' => 'decimal:2',
+            'suspended_at' => 'datetime',
         ];
     }
 
@@ -78,6 +80,11 @@ class Company extends Model
     public function travellers(): HasMany
     {
         return $this->hasMany(CompanyTraveller::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(CompanyInvoice::class);
     }
 
     public function accountManager(): BelongsTo

@@ -7,6 +7,7 @@ use App\Filament\Resources\Companies\Schemas\CorporateRatesForm;
 use App\Models\ActivityLog;
 use App\Models\Company;
 use App\Models\CompanyInvitation;
+use App\Services\Corporate\CompanyStatements;
 use App\Services\Corporate\CompanyWallet;
 use App\Services\Corporate\CorporateAccounts;
 use App\Services\Corporate\CorporateRates;
@@ -37,6 +38,7 @@ class ViewCompany extends ViewRecord
             $this->ratesAction(),
             $this->adjustWalletAction(),
             $this->payoutAction(),
+            $this->statementAction(),
             $this->deleteTravellersAction(),
             $this->reactivateAction(),
             $this->suspendAction(),
@@ -209,7 +211,7 @@ class ViewCompany extends ViewRecord
             ->color('danger')
             ->visible(fn (): bool => $this->record->hasStatus('suspended') && $this->record->travellers()->exists())
             ->requiresConfirmation()
-            ->modalDescription('Permanently deletes this company\'s saved travellers and their passports. This cannot be undone.')
+            ->modalDescription(fn (): string => 'Permanently deletes this company\'s saved travellers and their passports now, rather than waiting for the automatic deletion after '.config('corporate.traveller_retention_days').' days. This cannot be undone.')
             ->action(function (): void {
                 $count = $this->record->travellers()->count();
                 $this->record->travellers()->delete();
@@ -220,6 +222,22 @@ class ViewCompany extends ViewRecord
             });
     }
 
+    private function statementAction(): Action
+    {
+        return Action::make('statement')
+            ->label('Statement')
+            ->icon('heroicon-o-document-text')
+            ->color('gray')
+            ->authorize(fn (): bool => auth()->user()?->canHandleMoney() ?? false)
+            ->visible(fn (): bool => auth()->user()?->canHandleMoney() ?? false)
+            ->form([
+                Select::make('month')->label('Month')->required()
+                    ->options(fn (): array => app(CompanyStatements::class)->availableMonths($this->record))
+                    ->default(now()->timezone('Africa/Lagos')->format('Y-m')),
+            ])
+            ->action(fn (array $data) => redirect()->route('admin.corporate.statement', ['company' => $this->record, 'month' => $data['month']]));
+    }
+
     private function suspendAction(): Action
     {
         return $this->managed('suspend')
@@ -228,7 +246,7 @@ class ViewCompany extends ViewRecord
             ->color('danger')
             ->visible(fn (): bool => $this->record->hasStatus('invited', 'active'))
             ->requiresConfirmation()
-            ->modalDescription('Everyone at this company is signed out at once and can\'t sign in or use an invitation until it is reactivated.')
+            ->modalDescription(fn (): string => 'Everyone at this company is signed out at once and can\'t sign in or use an invitation until it is reactivated. If it stays suspended for '.config('corporate.traveller_retention_days').' days, its saved travellers and their passports are deleted automatically.')
             ->form([
                 Textarea::make('reason')->label('Reason (internal)')->required()->rows(3),
             ])

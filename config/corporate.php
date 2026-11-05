@@ -11,6 +11,15 @@ return [
 
     'invitation_days' => 7,
 
+    // Saved travellers of a company suspended this long are deleted, if nobody
+    // has deleted them by hand. See corporate:housekeeping.
+    'traveller_retention_days' => 30,
+
+    'invoice' => [
+        // Printed on invoices once the accountant confirms it.
+        'tax_id' => env('CORPORATE_TAX_ID'),
+    ],
+
     'login_code' => [
         'minutes' => 10,
         'max_attempts' => 5,

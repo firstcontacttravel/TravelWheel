@@ -23,8 +23,13 @@ use Throwable;
  *
  * A bank transfer waits for Finance to confirm that it arrived. A card top-up
  * is credited once SeerBit confirms the payment, whichever of the browser's
- * return or the webhook gets here first. The card fee is on top and never
- * reaches the wallet.
+ * return or the webhook gets here first. Card fees are on top and never reach
+ * the wallet.
+ *
+ * SeerBit bills its own fee to the customer at checkout (feeBearer CUSTOMER on
+ * our payments, 1.5% up to NGN 2,000 on Nigerian cards). TravelWheel's percentage
+ * is on top of that, so it stays at 0 unless the CEO chooses to add more. What
+ * was really charged is recorded from SeerBit's answer.
  */
 class CompanyWalletTopUps
 {
@@ -160,7 +165,13 @@ class CompanyWalletTopUps
             return 'failed';
         }
 
-        $this->credit($topUp, (float) $topUp->amount, ['gateway_response' => $verification['raw'] ?? []], null, 'Card top-up');
+        $charged = round((float) $verification['amount'], 2);
+
+        $this->credit($topUp, (float) $topUp->amount, [
+            'gateway_response' => $verification['raw'] ?? [],
+            'total_charged' => $charged,
+            'fee_amount' => round($charged - (float) $topUp->amount, 2),
+        ], null, 'Card top-up');
         $this->tellCompany($topUp->fresh());
 
         return 'confirmed';

@@ -65,6 +65,10 @@ class ReportingAnalytics
             ->when(
                 filled($filters['payment_method'] ?? null),
                 fn (Builder $query) => $query->where('payment_method', $filters['payment_method']),
+            )
+            ->when(
+                filled($filters['company_id'] ?? null),
+                fn (Builder $query) => $query->where('dimensions->company_id', (int) $filters['company_id']),
             );
     }
 

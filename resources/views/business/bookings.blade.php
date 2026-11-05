@@ -9,7 +9,10 @@
             <h1>Bookings</h1>
             <p class="biz-sub">{{ $companyUser->isCompanyAdmin() ? 'Every booking made for your company.' : 'The bookings you have made.' }}</p>
         </div>
-        <a class="biz-btn" href="{{ route('air') }}">Book a flight</a>
+        <div class="biz-actions">
+            <a class="biz-btn biz-btn-light" href="{{ route('business.bookings.export') }}">Export CSV</a>
+            <a class="biz-btn" href="{{ route('air') }}">Book a flight</a>
+        </div>
     </div>
 
     @error('wallet')

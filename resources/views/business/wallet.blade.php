@@ -7,6 +7,8 @@
 
     @include('business.partials.status')
 
+    <p style="margin:0 0 16px;"><a href="{{ route('business.statements.show') }}">View monthly statements</a></p>
+
     <div class="biz-card">
         <div class="biz-help" style="margin-top:0">Available balance</div>
         <div style="font-size:30px;font-weight:700;color:var(--biz-ink);line-height:1.3;">₦{{ number_format((float) $company->wallet_balance, 2) }}</div>
@@ -17,7 +19,7 @@
         <p class="biz-sub">
             Bank transfers are added once Finance confirms the money has arrived.
             @if ($cardFeePercent !== null)
-                Card payments are added straight away, with a {{ rtrim(rtrim(number_format($cardFeePercent, 2), '0'), '.') }}% card fee on top, which doesn't go into your wallet.
+                Card payments are added straight away. SeerBit adds its card fee at checkout, usually 1.5% up to ₦2,000 on Nigerian cards@if ($cardFeePercent > 0), and a {{ rtrim(rtrim(number_format($cardFeePercent, 2), '0'), '.') }}% TravelWheel fee applies on top@endif. Fees don't go into your wallet.
             @endif
         </p>
 

@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\DB;
  */
 class CompanyWallet
 {
+    private const DEADLOCK_ATTEMPTS = 5;
+
     /**
      * @param  float  $amount  positive adds to the balance, negative takes from it
      * @param  array<string, mixed>  $details  optional: company_wallet_top_up_id, flight_booking_id, user_id, company_user_id, reason
@@ -52,7 +54,7 @@ class CompanyWallet
                 $company->setAttribute('wallet_balance', $locked->wallet_balance);
 
                 return $entry;
-            });
+            }, self::DEADLOCK_ATTEMPTS);
         } catch (UniqueConstraintViolationException) {
             return CompanyWalletEntry::query()->where('idempotency_key', $idempotencyKey)->firstOrFail();
         }

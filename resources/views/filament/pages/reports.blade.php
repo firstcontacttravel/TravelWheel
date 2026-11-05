@@ -74,6 +74,11 @@
                     @foreach ($this->paymentMethodOptions() as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach
                 </select>
             </label>
+            <label class="tw-field"><span>Company</span>
+                <select wire:model.live="companyId"><option value="">All customers</option>
+                    @foreach ($this->companyOptions() as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach
+                </select>
+            </label>
         </section>
 
         <section class="tw-bi-saved">
