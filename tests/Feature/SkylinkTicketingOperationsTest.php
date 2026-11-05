@@ -13,7 +13,6 @@ use App\Models\User;
 use App\Services\AdminPostTicketingService;
 use App\Services\AdminTicketingService;
 use App\Services\DurableMailService;
-use App\Services\ETicketPdfService;
 use App\Services\ItineraryPdfService;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
@@ -266,7 +265,7 @@ class SkylinkTicketingOperationsTest extends TestCase
     {
         $booking = $this->skylinkBooking(['tkt_time_limit' => now()->addDay()]);
 
-        $eticket = app(ETicketPdfService::class)->buildViewData($booking, []);
+        $eticket = app(ItineraryPdfService::class)->emailData($booking, []);
         $this->assertTrue($eticket['awaitingSupplierTicket']);
         // Was blank: the PNR came only from TravelNext's trip details.
         $this->assertSame('9P5QB2', $eticket['ticketPNR']);
@@ -278,7 +277,7 @@ class SkylinkTicketingOperationsTest extends TestCase
 
         $this->assertStringNotContainsString('Hold expires', view('pdf.itinerary', $customer)->render());
         $this->assertStringContainsString('Hold expires', view('pdf.itinerary', $internal)->render());
-        $this->assertStringContainsString('The airline issues your ticket separately', view('pdf.eticket', $eticket)->render());
+        $this->assertStringContainsString('The airline issues your ticket separately', view('pdf.itinerary', $customer)->render());
     }
 
     public function test_a_paid_customer_is_told_the_ticket_is_on_its_way_and_ops_still_see_ticketing_required(): void

@@ -3,7 +3,6 @@
 namespace App\Mail;
 
 use App\Models\FlightBooking;
-use App\Services\ETicketPdfService;
 use App\Services\ItineraryPdfService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -47,8 +46,7 @@ class ETicketMail extends Mailable
 
     public function content(): Content
     {
-        $pdfService = app(ETicketPdfService::class);
-        $viewData = $pdfService->buildViewData($this->booking, $this->tripDetails);
+        $viewData = app(ItineraryPdfService::class)->emailData($this->booking, $this->tripDetails);
 
         return new Content(
             view: 'mail.eticket',
@@ -87,12 +85,12 @@ class ETicketMail extends Mailable
         }
 
         // Until a ticket exists the PDF is an itinerary, and its name says so.
-        $prefix = $this->ticketed() ? 'eticket-' : 'booking-itinerary-';
+        $filename = $pdfService->filename($this->booking, $this->tripDetails, 'ticketed');
 
         return [
             Attachment::fromData(
                 fn () => $pdfBytes,
-                $prefix.$this->booking->booking_ref.'.pdf'
+                $filename
             )->withMime('application/pdf'),
         ];
     }

@@ -245,6 +245,36 @@ class ItineraryPdfService
     }
 
     /**
+     * What the e-ticket email's body shows, on top of the PDF's own data. The
+     * PNR is shown even before ticketing, because the seat is already reserved
+     * under it, whereas the PDF holds it back until there's a ticket.
+     */
+    public function emailData(FlightBooking $booking, array $tripDetails = []): array
+    {
+        $flight = $booking->flight_snapshot ?? [];
+        $currency = $flight['currency'] ?? $booking->currency ?? 'NGN';
+        $resolved = $this->resolveTripDetails($booking, $tripDetails);
+
+        return array_merge($this->buildViewData($booking, $tripDetails), [
+            'ticketPNR' => $this->airlinePnr($resolved) ?: ($booking->isSkylink() ? $booking->unique_id : null),
+            'totalAmount' => (float) ($booking->total_price ?? ($flight['price'] ?? 0)),
+            'currencySymbol' => match ($currency) {
+                'USD' => '$',
+                default => $currency.' ',
+            },
+        ]);
+    }
+
+    /** What the file is called, so its name always matches what it says inside. */
+    public function filename(FlightBooking $booking, array $tripDetails = [], string $state = 'auto'): string
+    {
+        $isTicket = $state === 'ticketed' || ($state === 'auto' && $this->isTicketed($booking, $tripDetails));
+
+        return ($isTicket && $this->isTicketed($booking, $tripDetails) ? 'eticket-' : 'booking-itinerary-')
+            .($booking->booking_ref ?: $booking->unique_id ?: 'booking').'.pdf';
+    }
+
+    /**
      * Whether the document for this booking is an e-ticket, by the same rule
      * the PDF itself uses, so an email can name its attachment to match.
      */
@@ -289,6 +319,8 @@ class ItineraryPdfService
     private function stateFor(FlightBooking $booking, bool $ticketed): string
     {
         if ($ticketed) return 'ticketed';
+        // Told us they've paid by transfer: "not yet paid for" would be wrong.
+        if ($booking->payment_status === 'awaiting_bank_transfer') return 'payment_pending';
         if ($booking->booking_status === 'on_hold') return 'on_hold';
         if ($booking->payment_status !== 'paid') return 'payment_pending';
         return 'ticketing_required';

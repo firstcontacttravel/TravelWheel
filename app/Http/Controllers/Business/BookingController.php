@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Business;
 use App\Http\Controllers\Controller;
 use App\Models\CompanyUser;
 use App\Models\FlightBooking;
-use App\Services\ETicketPdfService;
+use App\Services\ItineraryPdfService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -52,7 +52,7 @@ class BookingController extends Controller
         ]);
     }
 
-    public function ticket(Request $request, string $reference, ETicketPdfService $tickets): Response
+    public function ticket(Request $request, string $reference, ItineraryPdfService $documents): Response
     {
         $booking = $this->visibleTo($request->attributes->get('companyUser'))
             ->where('booking_ref', $reference)
@@ -60,9 +60,9 @@ class BookingController extends Controller
 
         abort_unless(self::hasTicket($booking), 404);
 
-        return response($tickets->generate($booking, (array) ($booking->itinerary_snapshot ?? [])), 200, [
+        return response($documents->generate($booking), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="eticket-'.$booking->booking_ref.'.pdf"',
+            'Content-Disposition' => 'attachment; filename="'.$documents->filename($booking).'"',
         ]);
     }
 

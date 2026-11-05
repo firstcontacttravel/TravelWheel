@@ -13,8 +13,8 @@ use App\Models\NotificationOutbox;
 use App\Models\User;
 use App\Services\Corporate\CorporateContext;
 use App\Services\DurableMailService;
-use App\Services\ETicketPdfService;
 use App\Services\Flights\FlightSupplierControl;
+use App\Services\ItineraryPdfService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
@@ -648,24 +648,13 @@ class CompanyTravellerTest extends TestCase
             ->assertDontSee(self::PASSPORT);
     }
 
-    public function test_the_ticket_document_masks_a_saved_passport(): void
+    public function test_the_ticket_document_never_prints_a_passport_number(): void
     {
-        $data = app(ETicketPdfService::class)->buildViewData($this->paidBookingWithSavedTraveller($this->company()), []);
+        $service = app(ItineraryPdfService::class);
+        $html = view('pdf.itinerary', $service->buildViewData($this->paidBookingWithSavedTraveller($this->company())))->render();
 
-        $this->assertSame('ending 5432', $data['passengers'][0]['passport_no']);
-    }
-
-    public function test_a_passport_typed_by_a_public_customer_still_shows_in_full_as_today(): void
-    {
-        $booking = FlightBooking::create([
-            'booking_ref' => 'TW-P1', 'fare_source_code' => 'x', 'currency' => 'NGN', 'total_price' => 5000,
-            'flight_snapshot' => $this->flight(),
-            'passengers_snapshot' => [['type' => 'ADT', 'first_name' => 'A', 'last_name' => 'B', 'passport_no' => self::PASSPORT]],
-        ]);
-
-        $data = app(ETicketPdfService::class)->buildViewData($booking, []);
-
-        $this->assertSame(self::PASSPORT, $data['passengers'][0]['passport_no']);
+        $this->assertStringContainsString('NGOZI', strtoupper($html));
+        $this->assertStringNotContainsString(self::PASSPORT, $html);
     }
 
     public function test_the_traveller_gets_a_copy_of_their_e_ticket_but_not_other_emails(): void

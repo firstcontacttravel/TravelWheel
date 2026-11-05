@@ -9,7 +9,6 @@ use App\Mail\TravelFlexStatusMail;
 use App\Mail\UnTicketedConfirmationAlert;
 use App\Models\FlightBooking;
 use App\Models\TravelFlexApplication;
-use App\Services\ETicketPdfService;
 use App\Services\ItineraryPdfService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -88,7 +87,7 @@ class FlightDocumentReadinessTest extends TestCase
     {
         $booking = $this->booking('ticketed', true);
 
-        $data = app(ETicketPdfService::class)->buildViewData($booking, []);
+        $data = app(ItineraryPdfService::class)->buildViewData($booking, []);
 
         $this->assertTrue($data['isTicketed']);
     }

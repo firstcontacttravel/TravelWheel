@@ -54,7 +54,10 @@ class BookingPendingMail extends Mailable
 
     public function attachments(): array
     {
-        $state = $this->booking->booking_status === 'on_hold' ? 'on_hold' : 'payment_pending';
+        // A held booking the customer says they've paid by transfer isn't "unpaid".
+        $state = $this->booking->booking_status === 'on_hold' && $this->booking->payment_status !== 'awaiting_bank_transfer'
+            ? 'on_hold'
+            : 'payment_pending';
 
         return [$this->itineraryAttachment($this->booking, state: $state)];
     }

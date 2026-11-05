@@ -3,117 +3,78 @@
 namespace Tests\Feature;
 
 use App\Models\FlightBooking;
-use App\Services\ETicketPdfService;
 use App\Services\ItineraryPdfService;
 use Tests\TestCase;
 
 /**
- * The e-ticket and itinerary PDFs now share one stylesheet and one journey
- * component. These assert on the rendered HTML rather than the PDF bytes —
- * every defect below was visible in the markup, and rendering through DomPDF
- * in a test would only add minutes without adding coverage. The PDF output
- * itself is reviewed with `php artisan pdf:preview`.
+ * The flight document: one template for every state, from a seat on hold to an
+ * issued e-ticket. These assert on the rendered HTML rather than the PDF bytes.
+ * The PDF output itself is reviewed with `php artisan pdf:preview`.
  */
 class TravelDocumentPdfTest extends TestCase
 {
     /**
-     * The old partial ran every flight time through ->timezone('Africa/Lagos').
-     * Supplier datetimes arrive naive and are parsed as UTC (config app.timezone),
-     * so that quietly pushed every departure and arrival forward by an hour: a
-     * 22:35 departure printed as 23:35, and an Amsterdam connection at 08:25
-     * local printed as 09:25. The itinerary parsed the same value without
-     * shifting, so the two documents attached to one email disagreed about
-     * when the flight left.
+     * Supplier datetimes arrive naive and are parsed as UTC, so converting them
+     * to Lagos time pushed a 22:35 departure to 23:35. The time is frozen because
+     * the footer prints when the document was made.
      */
     public function test_flight_times_are_printed_as_given_not_shifted_into_lagos_time(): void
     {
-        $html = $this->eticketHtml();
+        $this->travelTo('2026-09-20 09:00:00');
+
+        $html = $this->itineraryHtml();
 
         $this->assertStringContainsString('22:35', $html, 'The 22:35 departure is missing.');
         $this->assertStringNotContainsString('23:35', $html, 'A flight time was shifted forward by an hour.');
-
-        $itinerary = $this->itineraryHtml();
-        $this->assertStringContainsString('22:35', $itinerary);
-        $this->assertStringNotContainsString('23:35', $itinerary);
     }
 
-    /**
-     * The previous layout drew each segment as a separate boxed card, so on
-     * LOS-AMS-LHR the traveller saw "arrive AMS 06:10" and "depart AMS 08:25"
-     * as two unrelated flights. The connection time could not be expressed.
-     */
     public function test_a_connection_shows_how_long_the_layover_is(): void
     {
-        foreach (['e-ticket' => $this->eticketHtml(), 'itinerary' => $this->itineraryHtml()] as $doc => $html) {
-            $this->assertStringContainsString('2h 15m connection', $html, "The {$doc} does not show the layover.");
-        }
+        $this->assertStringContainsString('2h 15m connection', $this->itineraryHtml());
     }
 
     /**
      * A multi-city booking carries its first leg in both flight_snapshot
-     * .segments and .multiLegs[0]. Rendering the outbound section
-     * unconditionally alongside the legs printed that leg twice.
+     * .segments and .multiLegs[0], and that leg must only print once.
      */
-    public function test_a_multi_city_eticket_does_not_print_its_first_leg_twice(): void
+    public function test_a_multi_city_document_does_not_print_its_first_leg_twice(): void
     {
-        $html = $this->eticketHtml($this->booking(multiCity: true));
+        $html = $this->itineraryHtml($this->booking(multiCity: true));
 
-        $this->assertStringContainsString('Leg 1', $html);
-        $this->assertStringContainsString('Leg 3', $html);
-        $this->assertStringNotContainsString('>Outbound<', $html, 'Multi-city printed an Outbound section as well as its legs.');
+        $this->assertMatchesRegularExpression('/leg 1/i', $html);
+        $this->assertMatchesRegularExpression('/leg 3/i', $html);
+        $this->assertDoesNotMatchRegularExpression('/>\s*outbound\s*</i', $html, 'Multi-city printed an Outbound section as well as its legs.');
         $this->assertSame(1, substr_count($html, 'KL 588'), 'The first leg appears more than once.');
     }
 
     /**
-     * The multi-city header measured first departure to last arrival
-     * ("282h 30m"), counted stops from the outbound segments only (leg 1's,
-     * or "Non-stop" for SkyLink, which leaves them empty), and showed a
-     * circular trip as LOS to LOS with nothing in between.
+     * A multi-city header must name the whole route, not read as a circular
+     * LOS to LOS, whether the supplier fills the top-level segments
+     * (TravelNext) or leaves them empty (SkyLink).
      */
-    public function test_a_multi_city_eticket_header_shows_its_legs_and_route(): void
+    public function test_a_multi_city_document_header_shows_its_whole_route(): void
     {
         $travelnext = $this->booking(multiCity: true);
         $skylink = $this->booking(multiCity: true);
         $skylink->flight_snapshot = ['segments' => []] + $skylink->flight_snapshot;
 
         foreach (['TravelNext' => $travelnext, 'SkyLink' => $skylink] as $shape => $booking) {
-            $html = $this->eticketHtml($booking);
+            $data = app(ItineraryPdfService::class)->buildViewData($booking);
 
-            $this->assertStringContainsString('3 legs', $html, $shape);
-            $this->assertStringContainsString('LOS · AMS · CDG · LOS', $html, $shape);
-            $this->assertStringNotContainsString('282h', $html, $shape);
-            $this->assertStringNotContainsString('Non-stop', $html, $shape);
-            $this->assertStringNotContainsString('1 stop', $html, $shape);
+            $this->assertSame('LOS City to AMS City to CDG City to LOS City', $data['tripTitle'], $shape);
+            $this->assertSame('Multi-City', $data['tripLabel'], $shape);
+            $this->assertCount(3, $data['segmentGroups'], $shape);
+            $this->assertStringNotContainsString('282h', view('pdf.itinerary', $data)->render(), $shape);
         }
     }
 
-    /**
-     * The e-ticket painted its header #303191 and the itinerary painted its own
-     * #39328f — two different brand blues on two PDFs attached to the same
-     * email. Both now read config/brand.php through the shared stylesheet.
-     */
-    public function test_both_documents_are_built_from_the_shared_stylesheet(): void
+    public function test_the_document_reads_its_colours_from_the_brand_config(): void
     {
-        // The itinerary was redesigned with its own stylesheet; both still
-        // take their colours from config/brand.php.
-        foreach ([
-            'resources/views/pdf/eticket.blade.php' => 'pdf.partials.styles',
-            'resources/views/pdf/itinerary.blade.php' => 'pdf.partials.itinerary-styles',
-        ] as $view => $stylesheet) {
-            $source = (string) file_get_contents(base_path($view));
+        $source = (string) file_get_contents(resource_path('views/pdf/itinerary.blade.php'));
 
-            $this->assertStringContainsString("@include('{$stylesheet}')", $source, "{$view} does not use its stylesheet.");
-            $this->assertDoesNotMatchRegularExpression(
-                '/#(0[Dd]1883|39328[Ff]|303191|009933|2[Ff]2[Cc]90)/',
-                $source,
-                "{$view} hardcodes a brand colour instead of reading config('brand.colors').",
-            );
-        }
-
-        // Same brand colour reaches both documents.
-        $brand = config('brand.colors.brand');
-        $this->assertStringContainsString($brand, $this->eticketHtml());
-        $this->assertStringContainsString($brand, $this->itineraryHtml());
+        $this->assertStringContainsString("@include('pdf.partials.itinerary-styles')", $source);
+        $this->assertDoesNotMatchRegularExpression('/#(0[Dd]1883|39328[Ff]|303191|009933|2[Ff]2[Cc]90)/', $source);
+        $this->assertStringContainsString(config('brand.colors.brand'), $this->itineraryHtml());
     }
 
     /**
@@ -125,14 +86,13 @@ class TravelDocumentPdfTest extends TestCase
      */
     public function test_the_documents_do_not_embed_the_unusable_logo(): void
     {
-        foreach (['e-ticket' => $this->eticketHtml(), 'itinerary' => $this->itineraryHtml()] as $doc => $html) {
-            // Assert the property that matters — no image is placed or embedded
-            // at all — rather than a filename, which could legitimately appear
-            // in prose explaining why there isn't one.
-            $this->assertStringNotContainsString('<img', $html, "The {$doc} places an image.");
-            $this->assertStringNotContainsString('data:image', $html, "The {$doc} embeds an image data URI.");
-            $this->assertStringContainsString('TravelWheel', $html);
-        }
+        // Assert the property that matters — no image is placed or embedded at
+        // all — rather than a filename.
+        $html = $this->itineraryHtml();
+
+        $this->assertStringNotContainsString('<img', $html);
+        $this->assertStringNotContainsString('data:image', $html);
+        $this->assertStringContainsString('TravelWheel', $html);
     }
 
     /**
@@ -161,26 +121,13 @@ class TravelDocumentPdfTest extends TestCase
         $this->assertStringContainsString('IBMPlexMono', $pdf);
     }
 
-    /** A document that is not a ticket has to say so, in both places. */
+    /** A document that is not a ticket has to say so. */
     public function test_an_unticketed_document_is_marked_as_not_valid_for_travel(): void
     {
-        $pending = $this->booking(ticketed: false);
+        $itinerary = $this->itineraryHtml($this->booking(ticketed: false));
 
-        $eticket = $this->eticketHtml($pending);
-        $this->assertStringContainsString('NOT YET A TICKET', $eticket);
-        $this->assertStringContainsString('Do not travel on this document', $eticket);
-
-        $itinerary = $this->itineraryHtml($pending);
         $this->assertStringContainsString('ITINERARY ONLY', $itinerary);
         $this->assertStringContainsString('not a ticket', $itinerary);
-    }
-
-    private function eticketHtml(?FlightBooking $booking = null): string
-    {
-        $booking ??= $this->booking();
-        $service = app(ETicketPdfService::class);
-
-        return view('pdf.eticket', $service->buildViewData($booking, $this->tripDetails($booking)))->render();
     }
 
     private function itineraryHtml(?FlightBooking $booking = null): string
@@ -246,5 +193,69 @@ class TravelDocumentPdfTest extends TestCase
             'equipment' => 'Boeing 777-300ER', 'duration' => 455, 'stops' => 0,
             'cabin' => 'Economy', 'cabinCode' => 'Y', 'resBookCode' => 'T', 'baggage' => '2 Pieces',
         ];
+    }
+
+    // ── The right state for each situation ─────────────────────────────────
+
+    /** @return array<string, array{0: array<string, mixed>, 1: string, 2: string}> */
+    public static function situations(): array
+    {
+        return [
+            'ticketed' => [['booking_status' => 'ticketed', 'ticket_ordered' => true, 'payment_status' => 'paid'], 'E-ticket itinerary', 'Ticketed'],
+            'seat on hold, unpaid' => [['booking_status' => 'on_hold', 'ticket_ordered' => false, 'payment_status' => 'pending'], 'Booking itinerary', 'On hold'],
+            'told us they paid by transfer' => [['booking_status' => 'on_hold', 'ticket_ordered' => false, 'payment_status' => 'awaiting_bank_transfer'], 'Booking itinerary', 'Payment pending'],
+            'card not confirmed yet' => [['booking_status' => 'pending_payment', 'ticket_ordered' => false, 'payment_status' => 'pending'], 'Booking itinerary', 'Payment pending'],
+            'paid, ticket on its way' => [['booking_status' => 'confirmed', 'ticket_ordered' => false, 'payment_status' => 'paid'], 'Booking itinerary', 'Ticket being issued'],
+        ];
+    }
+
+    /**
+     * @dataProvider situations
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function test_each_situation_gets_the_right_document(array $attributes, string $title, string $label): void
+    {
+        $booking = $this->booking();
+        $booking->forceFill($attributes);
+
+        $data = app(ItineraryPdfService::class)->buildViewData($booking);
+
+        $this->assertSame($title, $data['documentTitle']);
+        $this->assertSame($label, $data['statusLabel']);
+        $this->assertSame($label !== 'Ticketed', $data['showWatermark']);
+    }
+
+    public function test_a_transfer_the_customer_says_they_paid_does_not_read_as_unpaid(): void
+    {
+        $booking = $this->booking(ticketed: false);
+        $booking->forceFill(['booking_status' => 'on_hold', 'payment_status' => 'awaiting_bank_transfer']);
+
+        $html = view('pdf.itinerary', app(ItineraryPdfService::class)->buildViewData($booking))->render();
+
+        $this->assertStringContainsString('waiting for your payment to be confirmed', $html);
+        $this->assertStringNotContainsString('not yet paid for', $html);
+    }
+
+    public function test_the_filename_matches_what_the_document_says(): void
+    {
+        $service = app(ItineraryPdfService::class);
+        $pending = $this->booking(ticketed: false);
+
+        $this->assertSame('eticket-TW-8F3K2A.pdf', $service->filename($this->booking()));
+        $this->assertSame('booking-itinerary-TW-8F3K2A.pdf', $service->filename($pending));
+        // Asking for a ticket doesn't make one exist.
+        $this->assertSame('booking-itinerary-TW-8F3K2A.pdf', $service->filename($pending, [], 'ticketed'));
+        // A TravelFlex letter about a ticketed booking still isn't the ticket.
+        $this->assertSame('booking-itinerary-TW-8F3K2A.pdf', $service->filename($this->booking(), [], 'travelflex_approved'));
+    }
+
+    public function test_the_old_ticket_design_is_gone(): void
+    {
+        foreach (['pdf.eticket', 'pdf.partials.styles', 'pdf.partials.journey'] as $view) {
+            $this->assertFalse(view()->exists($view), "{$view} should have been deleted.");
+        }
+
+        $this->assertFalse(class_exists(\App\Services\ETicketPdfService::class));
     }
 }

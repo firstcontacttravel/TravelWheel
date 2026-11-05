@@ -298,7 +298,7 @@ Phases 1-7 are the launch scope. A pilot company could start after Phase 4, with
 **Build:**
 - **`company_invoices`:** number sequence and a fixed snapshot, so later rate changes don't alter issued invoices. Lines cover fare, service fee (`markup_amount`), extras and any VAT, following the accountant's answer.
 - **Credit notes:** issued for refunds, linked to the original invoice.
-- **PDFs:** built with the existing `barryvdh/laravel-dompdf`, following `ETicketPdfService`.
+- **PDFs:** built with the existing `barryvdh/laravel-dompdf`, following `ItineraryPdfService`.
 - **Monthly statement:** opening balance, entries and closing balance, from the ledger.
 - **CSV exports:** bookings and wallet entries with cost codes. Bookers get their own bookings and invoices, and Admins get everything.
 - **Admin:** view any invoice or statement, and a company filter in `ReportingAnalytics`.

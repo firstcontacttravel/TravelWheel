@@ -3,13 +3,12 @@
 namespace App\Console\Commands;
 
 use App\Models\FlightBooking;
-use App\Services\ETicketPdfService;
 use App\Services\ItineraryPdfService;
 use Illuminate\Console\Command;
 use Throwable;
 
 /**
- * Renders the e-ticket and itinerary PDFs with representative sample data to
+ * Renders the flight document PDF in each of its states with representative sample data to
  * public/pdf-preview/, so the real DomPDF output can be reviewed rather than an
  * HTML approximation of it — DomPDF has no flexbox, no CSS variables and its
  * own idea of table layout, so a browser preview of the Blade would flatter
@@ -21,9 +20,9 @@ class PreviewPdf extends Command
 {
     protected $signature = 'pdf:preview';
 
-    protected $description = 'Render the e-ticket and itinerary PDFs to public/pdf-preview for visual review';
+    protected $description = 'Render the flight document PDF to public/pdf-preview for visual review';
 
-    public function handle(ETicketPdfService $eticket, ItineraryPdfService $itinerary): int
+    public function handle(ItineraryPdfService $itinerary): int
     {
         if (app()->isProduction()) {
             $this->error('Refusing to write previews into a production document root.');
@@ -37,10 +36,8 @@ class PreviewPdf extends Command
         }
 
         $cases = [
-            'eticket-roundtrip-ticketed' => fn () => $eticket->generate($this->booking(), $this->tripDetails()),
-            'eticket-oneway-pending' => fn () => $eticket->generate($this->booking(ticketed: false, roundTrip: false), []),
-            'eticket-multicity' => fn () => $eticket->generate($this->booking(multiCity: true), $this->tripDetails()),
             'itinerary-ticketed' => fn () => $itinerary->generate($this->booking(), $this->tripDetails()),
+            'itinerary-oneway-ticketed' => fn () => $itinerary->generate($this->booking(roundTrip: false), $this->tripDetails()),
             'itinerary-payment-pending' => fn () => $itinerary->generate($this->booking(ticketed: false, paid: false), [], 'payment_pending'),
             'itinerary-ticket-being-issued' => fn () => $itinerary->generate($this->booking(ticketed: false), [], 'ticketed'),
             'itinerary-skylink-awaiting-ticket' => fn () => $itinerary->generate($this->booking(ticketed: false, roundTrip: false, supplier: 'skylink'), [], 'ticketed'),

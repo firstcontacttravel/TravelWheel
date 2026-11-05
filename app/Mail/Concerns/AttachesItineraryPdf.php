@@ -14,12 +14,11 @@ trait AttachesItineraryPdf
         string $state = 'auto',
         string $audience = 'customer',
     ): Attachment {
-        $reference = $booking->booking_ref ?: $booking->unique_id ?: 'booking';
-        $prefix = $state === 'ticketed' ? 'eticket-itinerary-' : 'booking-itinerary-';
+        $service = app(ItineraryPdfService::class);
 
         return Attachment::fromData(
-            fn () => app(ItineraryPdfService::class)->generate($booking, $tripDetails, $state, $audience),
-            $prefix . $reference . '.pdf',
+            fn () => $service->generate($booking, $tripDetails, $state, $audience),
+            $service->filename($booking, $tripDetails, $state),
         )->withMime('application/pdf');
     }
 }
