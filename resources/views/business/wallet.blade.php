@@ -18,9 +18,6 @@
         <h2>Top up</h2>
         <p class="biz-sub">
             Bank transfers are added once Finance confirms the money has arrived.
-            @if ($cardFeePercent !== null)
-                Card payments are added straight away. SeerBit adds its card fee at checkout, usually 1.5% up to ₦2,000 on Nigerian cards@if ($cardFeePercent > 0), and a {{ rtrim(rtrim(number_format($cardFeePercent, 2), '0'), '.') }}% TravelWheel fee applies on top@endif. Fees don't go into your wallet.
-            @endif
         </p>
 
         <form method="POST" action="{{ route('business.wallet.top-ups.store') }}" style="max-width:420px">
