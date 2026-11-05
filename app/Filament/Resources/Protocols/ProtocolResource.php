@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Protocols;
 
+use App\Filament\Concerns\EditableByPricingStaff;
 use App\Filament\Resources\Protocols\Pages\CreateProtocol;
 use App\Filament\Resources\Protocols\Pages\EditProtocol;
 use App\Filament\Resources\Protocols\Pages\ListProtocols;
@@ -19,6 +20,8 @@ use Filament\Tables\Table;
 
 class ProtocolResource extends Resource
 {
+    use EditableByPricingStaff;
+
     protected static ?string $model = Protocol::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMapPin;

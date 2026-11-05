@@ -22,6 +22,7 @@ class ListLounges extends ListRecords
             // after converting it to naira. Local lounges use their own
             // per-lounge Markup field instead.
             Action::make('loungePairMarkup')
+                ->authorize(fn (): bool => auth()->user()?->canEditPrices() ?? false)
                 ->label('LoungePair markup')
                 ->icon('heroicon-o-banknotes')
                 ->color('gray')

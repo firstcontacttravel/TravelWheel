@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\FleetCars;
 
+use App\Filament\Concerns\EditableByPricingStaff;
 use App\Filament\Resources\FleetCars\Pages\CreateFleetCar;
 use App\Filament\Resources\FleetCars\Pages\EditFleetCar;
 use App\Filament\Resources\FleetCars\Pages\ListFleetCars;
@@ -31,6 +32,8 @@ use Filament\Tables\Table;
 
 class FleetCarResource extends Resource
 {
+    use EditableByPricingStaff;
+
     protected static ?string $model = FleetCar::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTruck;

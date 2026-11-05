@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ShippingZones;
 
+use App\Filament\Concerns\EditableByPricingStaff;
 use App\Filament\Resources\ShippingZones\Pages\CreateShippingZone;
 use App\Filament\Resources\ShippingZones\Pages\EditShippingZone;
 use App\Filament\Resources\ShippingZones\Pages\ListShippingZones;
@@ -18,6 +19,8 @@ use Filament\Tables\Table;
 
 class ShippingZoneResource extends Resource
 {
+    use EditableByPricingStaff;
+
     protected static ?string $model = ShippingZone::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedGlobeAlt;

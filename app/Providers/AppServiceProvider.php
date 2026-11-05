@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Filament\PriceAccess;
 use App\Models\FlightBooking;
 use App\Models\FlightSearch;
 use App\Services\Corporate\AccountManagerAlerts;
@@ -46,6 +47,9 @@ class AppServiceProvider extends ServiceProvider
         // Any action on a booking the signed-in person may not take is hidden,
         // and Filament refuses a hidden action even if called directly.
         Action::configureUsing(fn (Action $action) => $action->hidden(fn (): bool => WorkAccess::blocks($action)));
+
+        // Through visible(), because DeleteAction sets its own hidden() and would replace this.
+        Action::configureUsing(fn (Action $action) => $action->visible(fn (): bool => ! PriceAccess::blocks($action)));
 
         $this->configureFlightRateLimits();
         $this->issueCompanyInvoices();

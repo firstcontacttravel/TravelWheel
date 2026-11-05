@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ExchangeRates;
 
+use App\Filament\Concerns\EditableByPricingStaff;
 use App\Filament\Resources\ExchangeRates\Pages\CreateExchangeRate;
 use App\Filament\Resources\ExchangeRates\Pages\EditExchangeRate;
 use App\Filament\Resources\ExchangeRates\Pages\ListExchangeRates;
@@ -18,6 +19,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ExchangeRateResource extends Resource
 {
+    use EditableByPricingStaff;
+
     protected static ?string $model = ExchangeRate::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCurrencyDollar;

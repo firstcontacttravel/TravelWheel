@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CargoDocumentPrices;
 
+use App\Filament\Concerns\EditableByPricingStaff;
 use App\Filament\Resources\CargoDocumentPrices\Pages\CreateCargoDocumentPrice;
 use App\Filament\Resources\CargoDocumentPrices\Pages\EditCargoDocumentPrice;
 use App\Filament\Resources\CargoDocumentPrices\Pages\ListCargoDocumentPrices;
@@ -19,6 +20,8 @@ use Filament\Tables\Table;
 
 class CargoDocumentPriceResource extends Resource
 {
+    use EditableByPricingStaff;
+
     protected static ?string $model = CargoDocumentPrice::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentText;

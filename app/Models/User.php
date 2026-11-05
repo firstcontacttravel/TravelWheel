@@ -102,6 +102,18 @@ class User extends Authenticatable implements FilamentUser
         return $this->isAdmin() || $this->inDepartment(Department::FINANCE) || $this->visa_role === 'finance';
     }
 
+    /**
+     * Changing prices and rates customers pay, including Fleet and Lounges.
+     * Everyone else in staff only views them. The visa_role values are the
+     * pre-department way of saying Operations and Finance.
+     */
+    public function canEditPrices(): bool
+    {
+        return $this->isAdmin()
+            || $this->inDepartment(Department::OPERATIONS, Department::FINANCE)
+            || in_array($this->visa_role, ['administrator', 'visa_officer', 'finance'], true);
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() !== 'admin' || $this->isDeactivated()) {

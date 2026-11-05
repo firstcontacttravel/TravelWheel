@@ -20,6 +20,7 @@ class ListProtocols extends ListRecords
             // Prices shown beside each pick-up / drop-off vehicle on the protocol form.
             // For information only: they are never added to the protocol amount.
             Action::make('vehiclePrices')
+                ->authorize(fn (): bool => auth()->user()?->canEditPrices() ?? false)
                 ->label('Pick-up vehicle prices')
                 ->icon('heroicon-o-truck')
                 ->color('gray')

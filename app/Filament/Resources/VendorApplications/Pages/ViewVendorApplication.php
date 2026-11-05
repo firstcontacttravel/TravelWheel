@@ -90,7 +90,9 @@ class ViewVendorApplication extends ViewRecord
 
     private function approveAction(): Action
     {
+        // Approving or rejecting a vendor is the CEO's decision
         return Action::make('approve')
+            ->authorize(fn (): bool => auth()->user()?->isAdmin() ?? false)
             ->label('Approve')
             ->icon('heroicon-o-check-badge')
             ->color('success')
@@ -133,6 +135,7 @@ class ViewVendorApplication extends ViewRecord
     private function rejectAction(): Action
     {
         return Action::make('reject')
+            ->authorize(fn (): bool => auth()->user()?->isAdmin() ?? false)
             ->label('Reject')
             ->icon('heroicon-o-x-circle')
             ->color('danger')

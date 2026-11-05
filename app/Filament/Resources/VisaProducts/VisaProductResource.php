@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\VisaProducts;
 
+use App\Filament\Concerns\EditableByPricingStaff;
 use App\Filament\Resources\VisaProducts\Pages\CreateVisaProduct;
 use App\Filament\Resources\VisaProducts\Pages\EditVisaProduct;
 use App\Filament\Resources\VisaProducts\Pages\ListVisaProducts;
@@ -16,6 +17,8 @@ use Filament\Tables\Table;
 
 class VisaProductResource extends Resource
 {
+    use EditableByPricingStaff;
+
     protected static ?string $model = VisaProduct::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedIdentification;

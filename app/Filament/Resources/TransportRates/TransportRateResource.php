@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TransportRates;
 
+use App\Filament\Concerns\EditableByPricingStaff;
 use App\Filament\Resources\TransportRates\Pages\EditTransportRate;
 use App\Filament\Resources\TransportRates\Pages\ListTransportRates;
 use App\Models\TransportRate;
@@ -18,6 +19,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class TransportRateResource extends Resource
 {
+    use EditableByPricingStaff;
+
     protected static ?string $model = TransportRate::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCurrencyDollar;

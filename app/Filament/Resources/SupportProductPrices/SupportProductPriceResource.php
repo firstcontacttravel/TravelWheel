@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\SupportProductPrices;
 
+use App\Filament\Concerns\EditableByPricingStaff;
 use App\Filament\Resources\SupportProductPrices\Pages\EditSupportProductPrice;
 use App\Filament\Resources\SupportProductPrices\Pages\ListSupportProductPrices;
 use App\Models\SupportProductPrice;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class SupportProductPriceResource extends Resource
 {
+    use EditableByPricingStaff;
+
     protected static ?string $model = SupportProductPrice::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;

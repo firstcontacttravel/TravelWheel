@@ -21,6 +21,7 @@ class ListTransportRates extends ListRecords
             // "Fuel (₦…)" in the Car Hire price breakdown, and it drives each
             // type's fuel/min (recalculated by TransportRate on save).
             Action::make('fuelPumpPrice')
+                ->authorize(fn (): bool => auth()->user()?->canEditPrices() ?? false)
                 ->label(fn (): string => 'Fuel pump price: ₦' . number_format((int) TransportRate::max('fuel_pump_price')))
                 ->icon('heroicon-o-beaker')
                 ->fillForm(fn (): array => ['fuel_pump_price' => (int) TransportRate::max('fuel_pump_price')])

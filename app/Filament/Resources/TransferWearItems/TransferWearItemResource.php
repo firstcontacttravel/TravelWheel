@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TransferWearItems;
 
+use App\Filament\Concerns\EditableByPricingStaff;
 use App\Filament\Resources\TransferWearItems\Pages\CreateTransferWearItem;
 use App\Filament\Resources\TransferWearItems\Pages\EditTransferWearItem;
 use App\Filament\Resources\TransferWearItems\Pages\ListTransferWearItems;
@@ -20,6 +21,8 @@ use Filament\Tables\Table;
 
 class TransferWearItemResource extends Resource
 {
+    use EditableByPricingStaff;
+
     protected static ?string $model = TransferWearItem::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedWrenchScrewdriver;

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\FlightServiceCharges;
 
+use App\Filament\Concerns\EditableByPricingStaff;
 use App\Filament\Resources\FlightServiceCharges\Pages\EditFlightServiceCharge;
 use App\Filament\Resources\FlightServiceCharges\Pages\ListFlightServiceCharges;
 use App\Models\FlightServiceCharge;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class FlightServiceChargeResource extends Resource
 {
+    use EditableByPricingStaff;
+
     protected static ?string $model = FlightServiceCharge::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;

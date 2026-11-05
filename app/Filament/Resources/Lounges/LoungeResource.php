@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Lounges;
 
+use App\Filament\Concerns\EditableByPricingStaff;
 use App\Filament\Resources\Lounges\Pages\CreateLounge;
 use App\Filament\Resources\Lounges\Pages\EditLounge;
 use App\Filament\Resources\Lounges\Pages\ListLounges;
@@ -25,6 +26,8 @@ use Filament\Tables\Table;
 
 class LoungeResource extends Resource
 {
+    use EditableByPricingStaff;
+
     protected static ?string $model = Lounge::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice2;
@@ -116,7 +119,7 @@ class LoungeResource extends Resource
             ->columns([
                 ImageColumn::make('pics1')->label('')->getStateUsing(fn (Lounge $record): string => asset('assets/lounge/' . $record->pics1)),
                 TextColumn::make('brand_name')->searchable()->description(fn (Lounge $record): string => $record->location),
-                ToggleColumn::make('is_active')->label('Active'),
+                ToggleColumn::make('is_active')->label('Active')->disabled(fn (): bool => ! static::canEditPrices()),
                 TextColumn::make('airport')->searchable(),
                 TextColumn::make('terminal'),
                 TextColumn::make('given_PriceA')->label('Vendor (Adult)')->money('NGN'),
