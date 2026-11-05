@@ -24,7 +24,7 @@
                             @foreach ($summary as $label => $value)
                                 <tr><td style="padding:0 16px 12px; font-size:14px; color:#5c6070;">{{ $label }}</td><td align="right" style="padding:0 16px 12px; font-size:14px;">{{ $value }}</td></tr>
                             @endforeach
-                            <tr><td style="padding:0 16px 12px; font-size:14px; color:#5c6070;">Amount</td><td align="right" style="padding:0 16px 12px; font-size:16px; font-weight:700; color:#0d1883;">&#8358;{{ number_format((float) $booking->amount) }}</td></tr>
+                            <tr><td style="padding:0 16px 12px; font-size:14px; color:#5c6070;">Amount</td><td align="right" style="padding:0 16px 12px; font-size:16px; font-weight:700; color:#0d1883;">&#8358;{{ number_format((float) $total) }}</td></tr>
                         </table>
                         <p style="text-align:center; margin:0 0 18px;">
                             <a href="{{ $payUrl }}" style="display:inline-block; background:#0d9c53; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:24px;">Pay now</a>

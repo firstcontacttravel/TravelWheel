@@ -2,12 +2,12 @@
 @include('air.lounge.partials.lounge-ui')
 
 @php
-    $c_amount  = (int) str_replace(',', '', $dataform['amount'] ?? 0);
-    $vat       = round(($c_amount * 7.5) / 100, 2);
+    $c_amount  = (float) ($dataform['amount'] ?? 0);
+    $vat       = round(($c_amount * \App\Services\LoungeBookingService::VAT_PERCENT) / 100, 2);
     $total     = $c_amount + $vat;
-    $adultAmt  = (int) str_replace(',', '', $dataform['adultAmount'] ?? 0);
-    $childAmt  = (int) str_replace(',', '', $dataform['childAmount'] ?? 0);
-    $infantAmt = (int) str_replace(',', '', $dataform['infantAmount'] ?? 0);
+    $adultAmt  = (float) ($dataform['adultAmount'] ?? 0);
+    $childAmt  = (float) ($dataform['childAmount'] ?? 0);
+    $infantAmt = (float) ($dataform['infantAmount'] ?? 0);
 @endphp
 
 <section class="lounge-page">

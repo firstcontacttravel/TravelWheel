@@ -43,6 +43,37 @@ class LoungeBooking extends Model
         'fulfilment_status',
     ];
 
+    /**
+     * Every other booking calls these full_name, phone_number and payment_reference.
+     * PHP ignores case in method names, so this also answers for the fullname column.
+     */
+    public function getFullNameAttribute(): ?string
+    {
+        return $this->attributes['fullname'] ?? null;
+    }
+
+    public function getPhoneNumberAttribute(): ?string
+    {
+        return $this->phone_no;
+    }
+
+    public function getPaymentReferenceAttribute(): ?string
+    {
+        return $this->trans_id;
+    }
+
+    /** The status column in the words every other booking's payment_status uses. */
+    public function getPaymentStatusAttribute(): string
+    {
+        return $this->status === 'Successful' ? 'paid' : strtolower((string) $this->status);
+    }
+
+    /** VAT is kept apart from amount here, so this is what the customer pays. */
+    public function totalAmount(): float
+    {
+        return (float) $this->amount + (float) $this->vat;
+    }
+
     public function lounge()
     {
         return $this->belongsTo(Lounge::class, 'lounge_id');

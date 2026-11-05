@@ -79,6 +79,13 @@
     .bk-note.warn { background: #fff8e8; border-color: #f2d99a; color: #8a6100; }
     .bk-one { max-width: 860px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
     .bk-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+    .bk-guest { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eef0f6; }
+    .bk-guest b { display: block; font-size: 13.5px; font-weight: 600; }
+    .bk-guest small { font-size: 11.5px; color: #888; }
+    .bk-count { display: flex; align-items: center; gap: 10px; }
+    .bk-count span { min-width: 22px; text-align: center; font-size: 14px; font-weight: 600; }
+    .bk-count button { width: 32px; height: 32px; border: 1.5px solid #dde0ee; border-radius: 50%; background: #fff; color: #0d1883; font: 700 16px 'DM Sans', sans-serif; line-height: 1; cursor: pointer; }
+    .bk-count button:hover { border-color: #0d1883; background: #f0f3ff; }
     .bk-suggest { position: relative; }
     .bk-suggest ul { position: absolute; z-index: 20; inset: 100% 0 auto 0; margin: 4px 0 0; padding: 4px; list-style: none; max-height: 240px; overflow-y: auto; background: #fff; border: 1px solid #dde0ee; border-radius: 10px; box-shadow: 0 8px 22px rgba(0,0,0,.12); }
     .bk-suggest button { display: block; width: 100%; padding: 8px 10px; border: 0; border-radius: 7px; background: none; text-align: left; font: 400 12.5px 'DM Sans', sans-serif; color: #1a1a1a; cursor: pointer; }

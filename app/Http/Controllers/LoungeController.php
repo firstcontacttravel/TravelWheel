@@ -2,16 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\LoungeBookingMail;
-use App\Mail\LoungeReservationNotificationMail;
 use App\Models\Lounge;
 use App\Models\LoungeBooking;
+use App\Services\LoungeBookingService;
 use App\Services\LoungePairCatalogueSyncService;
 use App\Services\SeerbitPaymentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
 
 class LoungeController extends Controller
@@ -98,7 +96,7 @@ class LoungeController extends Controller
         return view('air.lounge.loungebooking', compact('lounges'));
     }
 
-    public function loungecheckout(Request $request)
+    public function loungecheckout(Request $request, LoungeBookingService $bookings)
     {
         $request->validate(
             ['nop' => 'required'],
@@ -108,25 +106,61 @@ class LoungeController extends Controller
         $dataform = $request->all();
 
         // Admin may have disabled the lounge after the customer opened it
-        if (filled($dataform['lounge_id'] ?? null) && ! Lounge::active()->whereKey($dataform['lounge_id'])->exists()) {
+        $lounge = Lounge::active()->find($dataform['lounge_id'] ?? null);
+        if (! $lounge) {
             return redirect()->route('air.lounge')->with('error', 'That lounge is no longer available. Please choose another.');
         }
+
+        // The prices the form sent were only for display; these are the real ones
+        $quote = $bookings->quote($lounge, (int) ($dataform['adultValue'] ?? 0), (int) ($dataform['childValue'] ?? 0), (int) ($dataform['infantValue'] ?? 0));
+        if ($quote['total'] <= 0) {
+            return back()->withInput()->withErrors(['nop' => 'Please add at least one adult or child.']);
+        }
+
+        $dataform = array_merge($dataform, [
+            'lounge' => $lounge->brand_name,
+            'amount' => $quote['subtotal'],
+            'adultAmount' => $quote['adult_amount'],
+            'childAmount' => $quote['child_amount'],
+            'infantAmount' => $quote['infant_amount'],
+        ]);
 
         return view('air.lounge.loungecheckout', compact('dataform'));
     }
 
-    public function makePurchase(Request $request)
+    public function makePurchase(Request $request, LoungeBookingService $bookings)
     {
-        $dataform  = $request->all();
+        $dataform = $request->all();
+
+        $lounge = Lounge::active()->find($dataform['lounge_id'] ?? null);
+        if (! $lounge) {
+            return redirect()->route('air.lounge')->with('error', 'That lounge is no longer available. Please choose another.');
+        }
+
+        // Charge what the lounge costs, never an amount the browser sent
+        $quote = $bookings->quote($lounge, (int) ($dataform['noa'] ?? 0), (int) ($dataform['noc'] ?? 0), (int) ($dataform['noi'] ?? 0));
+        if ($quote['total'] <= 0) {
+            return redirect()->route('air.lounge')->with('error', 'Please add at least one adult or child.');
+        }
+
+        $reference = strtoupper('LNG' . bin2hex(random_bytes(6)));
+        $dataform = array_merge($dataform, [
+            'lounge' => $lounge->brand_name,
+            'adultAmount' => $quote['adult_amount'],
+            'childAmount' => $quote['child_amount'],
+            'infantAmount' => $quote['infant_amount'],
+            'c_amount' => $quote['subtotal'],
+            'vat' => $quote['vat'],
+            'p_amount' => $quote['total'],
+            'reference' => $reference,
+        ]);
         Session::put('lounge_checkout_form', $dataform);
 
-        $fullname  = trim(($dataform['lastname'] ?? '') . ' ' . ($dataform['firstname'] ?? ''));
-        $reference = strtoupper('LNG' . bin2hex(random_bytes(6)));
-        $amount    = (float) str_replace(',', '', (string) ($dataform['p_amount'] ?? 0));
-        $phone     = preg_replace('/\D/', '', '+234' . ltrim($dataform['phone'] ?? '', '0'));
+        $fullname = trim(($dataform['lastname'] ?? '') . ' ' . ($dataform['firstname'] ?? ''));
+        $amount = $quote['total'];
+        $phone = preg_replace('/\D/', '', '+234' . ltrim($dataform['phone'] ?? '', '0'));
 
-        $seerbit = new SeerbitPaymentService();
-        $result  = $seerbit->initializePayment([
+        $result = app(SeerbitPaymentService::class)->initializePayment([
             'amount'             => (string) $amount,
             'currency'           => 'NGN',
             'email'              => $dataform['email'] ?? '',
@@ -156,19 +190,28 @@ class LoungeController extends Controller
             return redirect()->route('air.lounge')->with('error', 'Payment reference missing.');
         }
 
-        $seerbit = new SeerbitPaymentService();
-        $result  = $seerbit->verifyPayment($paymentReference);
+        $result = app(SeerbitPaymentService::class)->verifyPayment($paymentReference);
         if (!$result['ok']) {
             return redirect()->route('air.lounge')->with('error', 'Payment was not successful.');
         }
 
-        if (LoungeBooking::where('trans_id', $paymentReference)->exists()) {
+        // Already saved: a repeat of this callback, or a booking staff made before payment
+        if ($existing = LoungeBooking::where('trans_id', $paymentReference)->first()) {
+            app(LoungeBookingService::class)->completePayment($existing);
+
             return redirect()->route('air.lounge_payment', ['trans_id' => $paymentReference]);
         }
 
         $dataform = Session::get('lounge_checkout_form');
         if (!$dataform) {
             return redirect()->route('air.lounge')->with('error', 'Session expired. Please rebook.');
+        }
+
+        // The form in the session must be the one this payment was started for
+        if (isset($dataform['reference']) && $dataform['reference'] !== $paymentReference) {
+            Log::warning('Lounge payment does not match the checkout in this session', ['reference' => $paymentReference, 'expected' => $dataform['reference']]);
+
+            return redirect()->route('air.lounge')->with('error', 'We could not match this payment to your booking. Please contact support and quote '.$paymentReference.'.');
         }
 
         $fullname = trim(($dataform['lastname'] ?? '') . ' ' . ($dataform['firstname'] ?? ''));
@@ -204,16 +247,7 @@ class LoungeController extends Controller
             'ref_id'         => $paymentReference,
         ]);
 
-        // Reservations get the full booking form; sent first so a failing customer email can't stop it
-        try {
-            Mail::to(config('travelwheel.reservations_email'))->send(new LoungeReservationNotificationMail($booking, $dataform));
-        } catch (\Throwable $e) {
-            Log::error('Lounge reservation notification failed', ['reference' => $paymentReference, 'error' => $e->getMessage()]);
-        }
-
-        Mail::to($dataform['email'] ?? '')->send(
-            new LoungeBookingMail($fullname, $paymentReference, $lounge?->provider === 'loungepair')
-        );
+        app(LoungeBookingService::class)->sendConfirmations($booking, $dataform);
         Session::forget('lounge_checkout_form');
 
         return redirect()->route('air.lounge_payment', ['trans_id' => $paymentReference]);
@@ -221,13 +255,14 @@ class LoungeController extends Controller
 
     public function lounge_payment($trans_id)
     {
-        $booking = LoungeBooking::where('trans_id', $trans_id)->firstOrFail();
+        // A booking staff made isn't paid yet, and an unpaid one gets no pass
+        $booking = LoungeBooking::where('trans_id', $trans_id)->where('status', 'Successful')->firstOrFail();
         return view('air.lounge.lounge_payment', compact('booking', 'trans_id'));
     }
 
     public function generateLoungePass($trans_id)
     {
-        $booking = LoungeBooking::where('trans_id', $trans_id)->firstOrFail();
+        $booking = LoungeBooking::where('trans_id', $trans_id)->where('status', 'Successful')->firstOrFail();
         $pdf = Pdf::loadView('pdf.lounge-pass', compact('booking'));
         return $pdf->download("lounge-pass-{$trans_id}.pdf");
     }

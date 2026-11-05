@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\GroundBookingService;
+use App\Services\LoungeBookingService;
 use App\Services\SupportBookingService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +30,7 @@ class StaffBooking extends Model
         Transfer::class => ['label' => "Pick up 'n' Drop off", 'seerbit_route' => 'air.transfer.seerbit.callback', 'service' => GroundBookingService::class],
         SupportFlightAssist::class => ['label' => 'Flight Assist', 'seerbit_route' => 'air.support.seerbit.callback', 'service' => SupportBookingService::class],
         SupportYellowCard::class => ['label' => 'Yellow Card Assistance', 'seerbit_route' => 'air.support.seerbit.callback', 'service' => SupportBookingService::class],
+        LoungeBooking::class => ['label' => 'Lounge', 'seerbit_route' => 'air.lounge.callback', 'service' => LoungeBookingService::class],
     ];
 
     protected $fillable = [
@@ -102,11 +104,27 @@ class StaffBooking extends Model
             ];
         }
 
+        if ($booking instanceof LoungeBooking) {
+            return [
+                'Lounge' => $booking->lounge_name,
+                'Date' => $booking->travel_date->format('j M Y').' at '.$booking->d_time,
+                'Guests' => "{$booking->noa} adult(s), {$booking->noc} child(ren), {$booking->noi} infant(s)",
+            ];
+        }
+
         return array_filter([
             'Pick-up' => $booking->pickup_location,
             'Drop-off' => $booking->dropoff_location,
             'Date' => $booking->pickup_date.' at '.$booking->pickup_time,
         ]);
+    }
+
+    /** What the customer pays. */
+    public function total(): ?float
+    {
+        $booking = $this->bookable;
+
+        return $booking instanceof LoungeBooking ? $booking->totalAmount() : $booking?->amount;
     }
 
     public function isAwaitingPayment(): bool
@@ -134,6 +152,6 @@ class StaffBooking extends Model
 
     public function cancel(): void
     {
-        $this->bookable->update(['payment_status' => 'cancelled']);
+        $this->bookable->update($this->bookable instanceof LoungeBooking ? ['status' => 'Cancelled'] : ['payment_status' => 'cancelled']);
     }
 }

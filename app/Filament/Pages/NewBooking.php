@@ -57,6 +57,10 @@ class NewBooking extends Page implements HasTable
                 ->label('Travel Assist')
                 ->icon('heroicon-o-lifebuoy')
                 ->url(fn (): string => BookTravelAssist::getUrl()),
+            Action::make('bookLounge')
+                ->label('Lounge')
+                ->icon('heroicon-o-building-office')
+                ->url(fn (): string => BookLounge::getUrl()),
         ];
     }
 
@@ -76,7 +80,7 @@ class NewBooking extends Page implements HasTable
                     ->state(fn (StaffBooking $record): ?string => $record->bookable?->full_name)
                     ->description(fn (StaffBooking $record): ?string => $record->bookable?->email),
                 TextColumn::make('amount')
-                    ->state(fn (StaffBooking $record) => $record->bookable?->amount)
+                    ->state(fn (StaffBooking $record) => $record->total())
                     ->money('NGN'),
                 TextColumn::make('payment')
                     ->state(fn (StaffBooking $record): string => ucfirst(str_replace('_', ' ', (string) $record->bookable?->payment_status)))

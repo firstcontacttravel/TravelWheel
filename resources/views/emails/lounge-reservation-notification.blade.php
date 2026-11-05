@@ -93,7 +93,7 @@
             <div class="detail-row"><span class="detail-label">Subtotal</span><span class="detail-value">₦{{ number_format((float) $booking->amount, 2) }}</span></div>
             <div class="detail-row"><span class="detail-label">VAT</span><span class="detail-value">₦{{ number_format((float) $booking->vat, 2) }}</span></div>
             <div class="detail-row amount-row"><span class="detail-label">Total paid</span><span class="detail-value">₦{{ number_format($totalPaid, 2) }}</span></div>
-            <div class="detail-row"><span class="detail-label">Payment method</span><span class="detail-value">{{ ucfirst($booking->payment_option ?: 'seerbit') }}</span></div>
+            <div class="detail-row"><span class="detail-label">Payment method</span><span class="detail-value">{{ ucfirst(str_replace('_', ' ', $booking->payment_option ?: 'seerbit')) }}</span></div>
             <div class="detail-row ref-row"><span class="detail-label">Payment reference</span><span class="detail-value">{{ $booking->trans_id }}</span></div>
             <div class="detail-row"><span class="detail-label">Booked</span><span class="detail-value">{{ $booking->created_at?->format('j M Y, g:i A') }}</span></div>
         </div>

@@ -24,6 +24,7 @@ class StaffBookingPaymentController extends Controller
             'booking' => $staffBooking->bookable,
             'product' => $staffBooking->productLabel(),
             'summary' => $staffBooking->summary(),
+            'total' => $staffBooking->total(),
         ]);
     }
 
@@ -38,7 +39,7 @@ class StaffBookingPaymentController extends Controller
 
         try {
             $result = $seerbit->initializePayment([
-                'amount' => (string) $booking->amount,
+                'amount' => (string) $staffBooking->total(),
                 'currency' => 'NGN',
                 'callbackUrl' => route($staffBooking->seerbitCallbackRoute()),
                 'email' => $booking->email,
