@@ -12,6 +12,7 @@
     <style>
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 11px; color: {{ $c['text'] }}; }
         h1 { font-size: 20px; color: {{ $c['brand'] }}; margin: 0; }
+        .logo { height: 30px; width: auto; display: block; margin-bottom: 6px; }
         .muted { color: {{ $c['muted'] }}; }
         .head td { vertical-align: top; }
         table { width: 100%; border-collapse: collapse; }
@@ -28,7 +29,7 @@
     <table class="head">
         <tr>
             <td>
-                <h1>{{ config('brand.name') }}</h1>
+                <img class="logo" src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('assets/travelwheel-pdf.png'))) }}" alt="{{ config('brand.name') }}">
                 <div class="muted">{{ config('brand.address') }}</div>
                 <div class="muted">{{ config('brand.support_email') }}</div>
                 @if (config('corporate.invoice.tax_id'))
