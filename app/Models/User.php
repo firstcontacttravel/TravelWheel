@@ -113,6 +113,12 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
             || in_array($this->visa_role, ['administrator', 'visa_officer', 'finance'], true);
     }
 
+    /** Making bookings for customers from the admin's New Booking page. */
+    public function canBookForCustomers(): bool
+    {
+        return $this->canEditPrices();
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() !== 'admin' || $this->isDeactivated()) {

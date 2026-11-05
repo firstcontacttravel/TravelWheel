@@ -367,10 +367,10 @@ class SupportController extends Controller
 
     public function seerbitCallback(Request $request)
     {
-        $reference = $request->query('reference');
-        $message = $request->query('message');
+        $reference = $request->query('reference') ?? $request->query('paymentReference');
 
-        if (strtolower((string) $message) !== 'successful') {
+        // The redirect's own message proves nothing: anyone can type it into the address bar
+        if (! $reference || ! (app(SeerbitPaymentService::class)->verifyPayment($reference)['ok'] ?? false)) {
             return redirect()->route('air.support')->with('error', 'Payment failed or was cancelled. Please try again.');
         }
 

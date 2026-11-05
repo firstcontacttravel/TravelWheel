@@ -17,6 +17,7 @@ use App\Http\Controllers\ProtocolController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\VisaApplicationController;
 use App\Http\Controllers\VisaPaymentController;
+use App\Http\Controllers\StaffBookingPaymentController;
 use App\Http\Controllers\VisaPortalController;
 use App\Http\Controllers\VisaSearchController;
 use App\Http\Middleware\EnsureVisaProductEnabled;
@@ -217,6 +218,10 @@ Route::get('/air/carhire/payment/callback/budpay', [CarController::class, 'budpa
 Route::get('/air/carhire/payment/callback/seerbit', [CarController::class, 'seerbitCallbackCarHire'])->name('air.carhire.seerbit.callback');
 Route::get('/air/carhire/success', [CarController::class, 'successCarHire'])->name('air.carhire.success');
 Route::post('/air/carhire/distance', [CarController::class, 'distance'])->name('air.carhire.distance');
+
+// A customer paying for a booking staff made for them
+Route::get('/pay/{token}', [StaffBookingPaymentController::class, 'show'])->middleware('throttle:30,1')->name('staff-bookings.pay');
+Route::post('/pay/{token}', [StaffBookingPaymentController::class, 'start'])->middleware('throttle:10,1')->name('staff-bookings.pay.start');
 
 // Transfer routes
 Route::post('/air/transfer/submit', [CarController::class, 'submitTransfer'])->name('air.transfer.submit');

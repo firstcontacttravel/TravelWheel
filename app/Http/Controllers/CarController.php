@@ -6,21 +6,19 @@ use App\Models\CarHire;
 use App\Models\Transfer;
 use App\Services\BudPayPaymentService;
 use App\Services\CarFleetCatalogService;
+use App\Services\GroundBookingService;
 use App\Services\SeerbitPaymentService;
-use App\Services\TransferPricingService;
 use App\Support\GroundStates;
+use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class CarController extends Controller
 {
     public function __construct(
-        private readonly CarFleetCatalogService $catalog,
-        private readonly TransferPricingService $transferPricing,
+        private readonly GroundBookingService $bookings,
     ) {
     }
 
@@ -36,11 +34,6 @@ class CarController extends Controller
             'destination' => 'required|string|max:500',
         ]);
 
-        $apiKey = config('services.google_maps.key');
-        if (! $apiKey) {
-            return response()->json(['error' => 'Maps API not configured.'], 500);
-        }
-
         $origin = ($request->filled('origin_lat') && $request->filled('origin_lng'))
             ? $request->origin_lat . ',' . $request->origin_lng
             : $request->origin;
@@ -50,40 +43,9 @@ class CarController extends Controller
             : $request->destination;
 
         try {
-            $response = Http::get('https://maps.googleapis.com/maps/api/distancematrix/json', [
-                'origins' => $origin,
-                'destinations' => $destination,
-                'units' => 'metric',
-                'region' => 'NG',
-                'key' => $apiKey,
-            ]);
-
-            $data = $response->json();
-
-            if (($data['status'] ?? '') !== 'OK') {
-                Log::warning('Google Maps Distance API error', ['status' => $data['status'] ?? 'unknown']);
-
-                return response()->json(['error' => 'Google API error: ' . ($data['status'] ?? 'UNKNOWN')], 500);
-            }
-
-            $element = $data['rows'][0]['elements'][0] ?? null;
-            if (! $element || ($element['status'] ?? '') !== 'OK') {
-                return response()->json(['error' => 'No route found. Status: ' . ($element['status'] ?? 'N/A')], 400);
-            }
-
-            $distanceKm = max(1, (int) ceil($element['distance']['value'] / 1000));
-            $durationMins = (int) ceil($element['duration']['value'] / 60);
-            $driveTime = $durationMins >= 60
-                ? floor($durationMins / 60) . 'h ' . ($durationMins % 60 > 0 ? ($durationMins % 60) . 'm' : '')
-                : $durationMins . ' mins';
-
-            return response()->json([
-                'distance_km' => $distanceKm,
-                'distance_text' => $element['distance']['text'],
-                'duration_text' => $element['duration']['text'],
-                'duration_mins' => $durationMins,
-                'drive_time' => trim($driveTime),
-            ]);
+            return response()->json($this->bookings->distance($origin, $destination));
+        } catch (\RuntimeException $e) {
+            return response()->json(['error' => $e->getMessage()], str_starts_with($e->getMessage(), 'No route') ? 400 : 500);
         } catch (\Exception $e) {
             Log::error('Google Maps Distance Exception', ['error' => $e->getMessage()]);
 
@@ -113,46 +75,14 @@ class CarController extends Controller
             'payment_option' => 'required|in:budpay,seerbit',
         ]);
 
-        if (! $this->catalog->carHireCategoryAvailable($data['car_type'], $data['category'], $data['state'])) {
-            return back()->with('error', 'That vehicle category is no longer available. Please choose another.');
+        try {
+            $booking = $this->bookings->createCarHire($data, $data['payment_option']);
+        } catch (DomainException $e) {
+            return back()->with('error', $e->getMessage());
         }
 
-        $allCats = $this->catalog->categoriesData();
-        $typeData = $allCats[$data['car_type']] ?? null;
-        $catItem = collect($typeData['items'] ?? [])->firstWhere('name', $data['category']);
-        $basePrice = (int) ($catItem['price'] ?? 0);
-        $durationMins = (int) round($data['rental_hours'] * 60);
-
-        $quote = $this->transferPricing->quoteForBaseFare($data['car_type'], $basePrice, $durationMins);
-        $verifiedPrice = $quote['total'];
-
-        $reference = 'CARHIRE' . strtoupper(bin2hex(random_bytes(5)));
-
-        CarHire::create([
-            'car_type' => $data['car_type'],
-            'category' => $data['category'],
-            'state' => $data['state'],
-            // Customers book a category; the actual car is chosen from what's
-            // available on ground and recorded when a driver is assigned.
-            'car_model' => null,
-            'full_name' => $data['full_name'],
-            'email' => $data['email'],
-            'phone_number' => $data['phone_number'],
-            'passengers' => $data['passengers'],
-            'pickup_location' => $data['pickup_location'],
-            'pickup_date' => $data['pickup_date'],
-            'pickup_time' => $data['pickup_time'],
-            'rental_hours' => $data['rental_hours'],
-            'duration_mins' => $durationMins,
-            'amount' => $verifiedPrice,
-            'base_fare' => $quote['base_fare'],
-            'tear_wear_amount' => $quote['tear_wear_amount'],
-            'fuel_amount' => $quote['fuel_amount'],
-            'admin_fee_amount' => $quote['admin_fee_amount'],
-            'payment_option' => $data['payment_option'],
-            'payment_reference' => $reference,
-            'payment_status' => 'pending',
-        ]);
+        $verifiedPrice = $booking->amount;
+        $reference = $booking->payment_reference;
 
         return $this->launchPayment(
             payment_option: $data['payment_option'],
@@ -225,49 +155,15 @@ class CarController extends Controller
             'payment_option' => 'required|in:budpay,seerbit',
         ]);
 
-        if (! $this->catalog->transferCategoryAvailable($data['vehicle_type'], $data['category'], $data['state'])) {
-            return back()->with('error', 'That vehicle category is no longer available. Please choose another.');
+        try {
+            $booking = $this->bookings->createTransfer($data, $data['payment_option']);
+        } catch (DomainException $e) {
+            return back()->with('error', $e->getMessage());
         }
 
-        // Customers book a category, not a specific car: the car sent depends
-        // on what's available and is recorded when a driver is assigned.
-        $data['vehicle_name'] = $data['category'] . ' ' . match ($data['vehicle_type']) {
-            'van' => 'Mini Van',
-            'suv' => 'SUV',
-            default => ucfirst($data['vehicle_type']),
-        };
-
-        $quote = $this->transferPricing->quote($data['vehicle_type'], $data['category'], $data['duration_mins']);
-        $verifiedPrice = (int) round($quote['total']);
-
-        $reference = 'TRANSFER' . strtoupper(bin2hex(random_bytes(5)));
-
-        Transfer::create([
-            'vehicle_type' => $data['vehicle_type'],
-            'vehicle_name' => $data['vehicle_name'],
-            'category' => $data['category'],
-            'state' => $data['state'],
-            'amount' => $verifiedPrice,
-            'distance_km' => $data['distance_km'],
-            'duration_mins' => $data['duration_mins'],
-            'base_fare' => $quote['base_fare'],
-            'tear_wear_amount' => $quote['tear_wear_amount'],
-            'fuel_amount' => $quote['fuel_amount'],
-            'admin_fee_amount' => $quote['admin_fee_amount'],
-            'pickup_location' => $data['pickup_location'],
-            'dropoff_location' => $data['dropoff_location'],
-            'full_name' => $data['full_name'],
-            'email' => $data['email'],
-            'phone_number' => $data['phone_number'],
-            'passengers' => $data['passengers'],
-            'flight_number' => $data['flight_number'] ?? null,
-            'special_requests' => $data['special_requests'] ?? null,
-            'pickup_date' => $data['pickup_date'],
-            'pickup_time' => $data['pickup_time'],
-            'payment_option' => $data['payment_option'],
-            'payment_reference' => $reference,
-            'payment_status' => 'pending',
-        ]);
+        $verifiedPrice = $booking->amount;
+        $reference = $booking->payment_reference;
+        $data['vehicle_name'] = $booking->vehicle_name;
 
         return $this->launchPayment(
             payment_option: $data['payment_option'],
@@ -503,10 +399,10 @@ class CarController extends Controller
         string $fail_route,
         string $success_route
     ) {
-        $reference = $request->query('reference');
-        $message = $request->query('message');
+        $reference = $request->query('reference') ?? $request->query('paymentReference');
 
-        if (strtolower((string) $message) !== 'successful') {
+        // The redirect's own message proves nothing: anyone can type it into the address bar
+        if (! $reference || ! (app(SeerbitPaymentService::class)->verifyPayment($reference)['ok'] ?? false)) {
             return redirect()->route($fail_route)->with('error', 'Payment failed or was cancelled. Please try again.');
         }
 
@@ -521,44 +417,10 @@ class CarController extends Controller
             return redirect()->route($fail_route)->with('error', 'Payment received but booking not found. Please contact support.');
         }
 
-        if ($record->payment_status !== 'paid') {
-            $record->update(['payment_status' => 'paid']);
-            $this->sendMails($record, $product_type);
-        }
+        $this->bookings->completePayment($record);
 
         session()->put('last_booking.' . $product_type, $record->payment_reference);
 
         return redirect()->route($success_route);
-    }
-
-    /*
-    |==========================================================================
-    | MAIL SENDER
-    |==========================================================================
-    */
-    private function sendMails($record, string $product_type): void
-    {
-        $supportMail = 'damilola@travelwheel.ng';
-
-        try {
-            switch ($product_type) {
-                case 'car_hire':
-                    Mail::to($record->email)->send(new \App\Mail\CarHireSuccessMail($record));
-                    Mail::to($supportMail)->send(new \App\Mail\CarHireNotificationMail($record));
-                    break;
-                case 'transfer':
-                    Mail::to($record->email)->send(new \App\Mail\TransferSuccessMail($record));
-                    Mail::to($supportMail)->send(new \App\Mail\TransferNotificationMail($record));
-                    break;
-                default:
-                    Log::warning('sendMails: unknown product_type', ['product_type' => $product_type]);
-                    break;
-            }
-        } catch (\Exception $e) {
-            Log::error('Mail Error for ' . $product_type, [
-                'reference' => $record->payment_reference ?? 'unknown',
-                'error' => $e->getMessage(),
-            ]);
-        }
     }
 }
