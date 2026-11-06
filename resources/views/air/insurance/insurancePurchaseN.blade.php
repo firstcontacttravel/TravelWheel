@@ -3,7 +3,7 @@
 
 @php
     $amount = (float) ($dataform['amount'] ?? 0);
-    $vat    = round($amount * 0.075, 2);
+    $vat    = round($amount * \App\Services\InsuranceBookingService::VAT_PERCENT / 100, 2);
     $total  = round($amount + $vat, 2);
 @endphp
 

@@ -6,6 +6,7 @@ use App\Mail\InsurancePurchaseNotificationMail;
 use App\Models\InsurancePurchase;
 use App\Models\InsuranceQuote;
 use App\Services\BookingThankYou;
+use App\Services\InsuranceBookingService;
 use App\Services\SeerbitPaymentService;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
@@ -119,31 +120,53 @@ class InsuranceController extends Controller
         return view('air.insurance.insurancePurchase', compact('quote'));
     }
 
-    public function insurancePurchase(Request $request)
+    public function insurancePurchase(Request $request, InsuranceBookingService $insurance)
     {
         $dataform = $request->all();
+
+        // The amount the form sent was only for display; the quote's is the real one
+        $quote = $insurance->quote($dataform['qouteId'] ?? null);
+        if (! $quote) {
+            return redirect()->route('air.insurance')->with('error', 'Your quote could not be found. Please get a new quote.');
+        }
+        $dataform['amount'] = $insurance->price($quote)['amount'];
+        $dataform['bookingTypeId'] = $quote->bookingTypeId;
+
         Session::put('insurance_data_form', $dataform);
 
         return view('air.insurance.insurancePurchaseN', compact('dataform'));
     }
 
-    public function makeRequestPurchase(Request $request)
+    public function makeRequestPurchase(Request $request, InsuranceBookingService $insurance)
     {
         $dataform2 = $request->all();
-        Session::put('insurance_data_form2', $dataform2);
 
         $dataform  = Session::get('insurance_data_form');
         if (!$dataform) {
             return back()->with('error', 'Session expired. Please rebook.');
         }
 
-        $fullname  = trim(($dataform['surname'] ?? '') . ' ' . ($dataform['firstname'] ?? ''));
+        // Charge the quote's price, never an amount the browser sent
+        $quote = $insurance->quote($dataform['qouteId'] ?? null);
+        if (! $quote) {
+            return redirect()->route('air.insurance')->with('error', 'Your quote could not be found. Please get a new quote.');
+        }
+        $price = $insurance->price($quote);
+
         $reference = 'INS' . strtoupper(bin2hex(random_bytes(6)));
-        $amount    = (float) ($dataform2['p_amount'] ?? 0);
+        $dataform2 = array_merge($dataform2, [
+            'c_amount' => $price['amount'],
+            'vat' => $price['vat'],
+            'p_amount' => $price['total'],
+            'reference' => $reference,
+        ]);
+        Session::put('insurance_data_form2', $dataform2);
+
+        $fullname  = trim(($dataform['surname'] ?? '') . ' ' . ($dataform['firstname'] ?? ''));
+        $amount    = $price['total'];
         $phone     = preg_replace('/\D/', '', '+234' . ltrim($dataform['phone_no'] ?? '', '0'));
 
-        $seerbit = new SeerbitPaymentService();
-        $result  = $seerbit->initializePayment([
+        $result = app(SeerbitPaymentService::class)->initializePayment([
             'amount'             => (string) $amount,
             'currency'           => 'NGN',
             'email'              => $dataform['email'] ?? '',
@@ -173,8 +196,7 @@ class InsuranceController extends Controller
             return redirect()->route('air.insurance')->with('error', 'Payment reference missing.');
         }
 
-        $seerbit = new SeerbitPaymentService();
-        $result  = $seerbit->verifyPayment($paymentReference);
+        $result = app(SeerbitPaymentService::class)->verifyPayment($paymentReference);
         if (!$result['ok']) {
             return redirect()->route('air.insurance')->with('error', 'Payment was not successful.');
         }
@@ -188,6 +210,13 @@ class InsuranceController extends Controller
 
         if (!$dataform || !$dataform2) {
             return redirect()->route('air.insurance')->with('error', 'Session expired. Please rebook.');
+        }
+
+        // The forms in the session must be the ones this payment was started for
+        if (isset($dataform2['reference']) && $dataform2['reference'] !== $paymentReference) {
+            Log::warning('Insurance payment does not match the checkout in this session', ['reference' => $paymentReference, 'expected' => $dataform2['reference']]);
+
+            return redirect()->route('air.insurance')->with('error', 'We could not match this payment to your booking. Please contact support and quote '.$paymentReference.'.');
         }
 
         $bookingTypeId = (int) ($dataform['bookingTypeId'] ?? 1);
