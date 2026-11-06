@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\AirCargoBookingService;
 use App\Services\GroundBookingService;
+use App\Services\InsuranceBookingService;
 use App\Services\LoungeBookingService;
 use App\Services\ProtocolBookingService;
 use App\Services\SupportBookingService;
@@ -35,6 +36,7 @@ class StaffBooking extends Model
         LoungeBooking::class => ['label' => 'Lounge', 'seerbit_route' => 'air.lounge.callback', 'service' => LoungeBookingService::class],
         ProtocolBooking::class => ['label' => 'Protocol', 'seerbit_route' => 'air.protocol.callback', 'service' => ProtocolBookingService::class],
         AirCargoModel::class => ['label' => 'Air Cargo', 'seerbit_route' => 'air.cargo.callback', 'service' => AirCargoBookingService::class],
+        InsurancePurchase::class => ['label' => 'Travel Insurance', 'seerbit_route' => 'air.insurance.callback', 'service' => InsuranceBookingService::class],
     ];
 
     protected $fillable = [
@@ -108,6 +110,15 @@ class StaffBooking extends Model
             ];
         }
 
+        if ($booking instanceof InsurancePurchase) {
+            $quote = app(InsuranceBookingService::class)->quote($booking->qoute_id);
+
+            return array_filter([
+                'Cover' => (int) $booking->bookingtype_id === InsuranceBookingService::FAMILY ? 'Family, with '.(int) $booking->noc.' child(ren)' : 'Individual',
+                'Dates' => $quote ? $quote->coverBegins.' to '.$quote->coverEnds : null,
+            ]);
+        }
+
         if ($booking instanceof AirCargoModel) {
             return [
                 'Shipment' => $booking->shipment_type.' to '.$booking->shipping_to,
@@ -154,6 +165,7 @@ class StaffBooking extends Model
         return match (true) {
             $booking instanceof LoungeBooking, $booking instanceof ProtocolBooking => $booking->totalAmount(),
             $booking instanceof AirCargoModel => (float) $booking->total_price,
+            $booking instanceof InsurancePurchase => (float) $booking->t_amount,
             default => $booking?->amount,
         };
     }
@@ -191,6 +203,8 @@ class StaffBooking extends Model
 
     public function cancel(): void
     {
-        $this->bookable->update($this->bookable instanceof LoungeBooking || $this->bookable instanceof ProtocolBooking ? ['status' => 'Cancelled'] : ['payment_status' => 'cancelled']);
+        $usesStatus = $this->bookable instanceof LoungeBooking || $this->bookable instanceof ProtocolBooking || $this->bookable instanceof InsurancePurchase;
+
+        $this->bookable->update($usesStatus ? ['status' => 'Cancelled'] : ['payment_status' => 'cancelled']);
     }
 }

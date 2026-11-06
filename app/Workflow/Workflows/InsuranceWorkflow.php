@@ -77,6 +77,8 @@ class InsuranceWorkflow extends ServiceWorkflow
 
         return match (true) {
             $fulfilment === 'cancelled' => 'cancelled',
+            // A policy staff booked that was cancelled before payment
+            strtolower((string) $subject->getAttribute('status')) === 'cancelled' => 'cancelled',
             $fulfilment === 'issued' => 'issued',
             strtolower((string) $subject->getAttribute('status')) === 'successful' => 'issued',
             strtolower((string) $subject->getAttribute('status')) === 'failed' => 'issue_failed',

@@ -2,106 +2,37 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\InsurancePurchaseNotificationMail;
 use App\Models\InsurancePurchase;
 use App\Models\InsuranceQuote;
 use App\Services\BookingThankYou;
 use App\Services\InsuranceBookingService;
 use App\Services\SeerbitPaymentService;
-use Carbon\Carbon;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
 
 class InsuranceController extends Controller
 {
-    private function sanlaBaseUrl(): string
-    {
-        return rtrim((string) config('services.sanlam.base_url', 'https://web-app.sanlamallianz.com.ng'), '/');
-    }
-
-    private function sanlaToken(): string
-    {
-        $response = Http::asForm()->post($this->sanlaBaseUrl() . '/Travel/token', [
-            'username'   => config('services.sanlam.username'),
-            'password'   => config('services.sanlam.password'),
-            'grant_type' => 'password',
-        ]);
-        $data = $response->json();
-        if (empty($data['access_token'])) {
-            throw new \RuntimeException('Sanla authentication failed.');
-        }
-        return $data['access_token'];
-    }
-
-    public function makeRequestQuote(Request $request)
+    public function makeRequestQuote(Request $request, InsuranceBookingService $insurance)
     {
         $dataform = $request->all();
 
-        $TravelPlanId = ($dataform['travel_plan'] === 'Schengen') ? 1 : 2;
-
-        $dateOfBirth = Carbon::createFromFormat('Y-m-d', $dataform['dob'])->format('d-M-Y');
-        $coverDate   = Carbon::createFromFormat('Y-m-d', $dataform['begin_date'])->format('d-M-Y');
-        $endDate     = Carbon::createFromFormat('Y-m-d', $dataform['end_date'])->format('d-M-Y');
-
         try {
-            $token = $this->sanlaToken();
-
-            $payload = [
-                'DateOfBirth'     => $dateOfBirth,
-                'Email'           => $dataform['email'],
-                'Telephone'       => $dataform['phone_no'],
-                'CoverBegins'     => $coverDate,
-                'CoverEnds'       => $endDate,
-                'CountryId'       => $dataform['country'],
-                'PurposeOfTravel' => $dataform['purpose_of_travel'],
-                'TravelPlanId'    => $TravelPlanId,
-                'BookingTypeId'   => $dataform['booking_type'],
-                'IsRoundTrip'     => false,
-                'NoOfPeople'      => $dataform['nop'] ?? 1,
-                'NoOfChildren'    => $dataform['noc'] ?? 0,
-                'IsMultiTrip'     => false,
-            ];
-
-            $client   = new Client();
-            $response = $client->request('POST', $this->sanlaBaseUrl() . '/Travel/api/Quote', [
-                'headers' => ['Authorization' => 'Bearer ' . $token, 'Accept' => 'application/json'],
-                'json'    => $payload,
-            ]);
-
-            $data = json_decode($response->getBody()->getContents(), true);
-
-            $quote = InsuranceQuote::create([
-                'quoteRequestId'  => $data['QuoteRequestId'],
-                'productVariantId'=> $data['ProductVariantId'],
-                'dob'             => $data['DateOfBirth'],
-                'email'           => $data['Email'],
-                'phone_no'        => $data['Telephone'],
-                'coverBegins'     => $data['CoverBegins'],
-                'coverEnds'       => $data['CoverEnds'],
-                'countryId'       => $data['CountryId'],
-                'countryId2'      => $data['CountryId2'] ?? null,
-                'purposeOfTravel' => $data['PurposeOfTravel'],
-                'travelPlanId'    => $data['TravelPlanId'],
-                'bookingTypeId'   => $data['BookingTypeId'],
-                'noOfPeople'      => $data['NoOfPeople'],
-                'noOfChildren'    => $data['NoOfChildren'],
-                'multiTrip'       => $data['IsMultiTrip'] ?? false,
-                'amount'          => $data['Amount'],
-                'amountA'         => $data['AllianzPrice'] ?? null,
-                'quoteId'         => $data['quoteId'],
-                'requestdate'     => $data['DateTimeAdded'] ?? now(),
+            $quote = $insurance->requestQuote([
+                'dob' => $dataform['dob'],
+                'email' => $dataform['email'],
+                'phone_no' => $dataform['phone_no'],
+                'begin_date' => $dataform['begin_date'],
+                'end_date' => $dataform['end_date'],
+                'country' => $dataform['country'],
+                'purpose_of_travel' => $dataform['purpose_of_travel'],
+                'travel_plan' => $dataform['travel_plan'],
+                'booking_type' => $dataform['booking_type'],
+                'nop' => $dataform['nop'] ?? 1,
+                'noc' => $dataform['noc'] ?? 0,
             ]);
 
             return redirect()->route('air.insurance.quote.show', ['qid' => $quote->id]);
-
-        } catch (RequestException $e) {
-            Log::error('Sanla quote error: ' . $e->getMessage());
-            return back()->with('error', 'Could not retrieve quote. Please try again.');
         } catch (\Exception $e) {
             Log::error('Sanla quote error: ' . $e->getMessage());
             return back()->with('error', 'Could not retrieve quote. Please try again.');
@@ -181,7 +112,7 @@ class InsuranceController extends Controller
         return redirect($result['redirect_link']);
     }
 
-    public function callbackSeerbit(Request $request)
+    public function callbackSeerbit(Request $request, InsuranceBookingService $insurance)
     {
         // SeerBit's hosted checkout redirects back with `reference` in some modes,
         // not just `paymentReference` — check both (see ProtocolController::callbackSeerbit).
@@ -201,7 +132,10 @@ class InsuranceController extends Controller
             return redirect()->route('air.insurance')->with('error', 'Payment was not successful.');
         }
 
-        if (InsurancePurchase::where('trans_id', $paymentReference)->exists()) {
+        // Already saved: a repeat of this callback, or a policy staff booked before payment
+        if ($existing = InsurancePurchase::where('trans_id', $paymentReference)->first()) {
+            $insurance->completePayment($existing);
+
             return redirect()->route('air.insurance.success');
         }
 
@@ -219,19 +153,11 @@ class InsuranceController extends Controller
             return redirect()->route('air.insurance')->with('error', 'We could not match this payment to your booking. Please contact support and quote '.$paymentReference.'.');
         }
 
-        $bookingTypeId = (int) ($dataform['bookingTypeId'] ?? 1);
-
         try {
-            $token = $this->sanlaToken();
+            $coverId = $insurance->issuePolicy($dataform, $dataform2);
 
-            $coverId = $bookingTypeId === 2
-                ? $this->familyBooking($token, $dataform, $dataform2)
-                : $this->individualBooking($token, $dataform, $dataform2);
-
-            $purchase = InsurancePurchase::create($this->purchaseAttributes(
-                $dataform, $dataform2, $paymentReference, $bookingTypeId, $coverId, 'Successful',
-            ));
-            $this->notifyReservations($purchase);
+            $purchase = InsurancePurchase::create($insurance->purchaseAttributes($dataform, $dataform2, $paymentReference, $coverId, 'Successful'));
+            $insurance->notifyReservations($purchase);
             // Insurance sends the customer no confirmation email, so the thank-you isn't
             // triggered automatically like the other products (see SendBookingThankYou)
             app(BookingThankYou::class)->send($purchase->email, $purchase->firstname, 'insurance');
@@ -246,10 +172,8 @@ class InsuranceController extends Controller
             // policy could not be confirmed — record it as failed so ops can follow
             // up, instead of silently telling a paying customer they're covered.
             if (! InsurancePurchase::where('trans_id', $paymentReference)->exists()) {
-                $purchase = InsurancePurchase::create($this->purchaseAttributes(
-                    $dataform, $dataform2, $paymentReference, $bookingTypeId, null, 'Failed',
-                ));
-                $this->notifyReservations($purchase);
+                $purchase = InsurancePurchase::create($insurance->purchaseAttributes($dataform, $dataform2, $paymentReference, null, 'Failed'));
+                $insurance->notifyReservations($purchase);
             }
 
             return redirect()->route('air.insurance.success')->with([
@@ -257,201 +181,6 @@ class InsuranceController extends Controller
                 'message' => "Your payment was received, but we couldn't confirm your policy automatically. Our team has been notified and will email your policy documents shortly. If you don't hear from us within 24 hours, please contact support with reference {$paymentReference}.",
             ]);
         }
-    }
-
-    /** Email the reservations team; never let a mail problem break the customer's redirect. */
-    private function notifyReservations(InsurancePurchase $purchase): void
-    {
-        try {
-            Mail::to(config('travelwheel.reservations_email'))->send(new InsurancePurchaseNotificationMail($purchase));
-        } catch (\Throwable $e) {
-            Log::error('Insurance reservation notification failed', ['reference' => $purchase->trans_id, 'error' => $e->getMessage()]);
-        }
-    }
-
-    private function purchaseAttributes(
-        array $dataform,
-        array $dataform2,
-        string $paymentReference,
-        int $bookingTypeId,
-        ?string $coverId,
-        string $status,
-    ): array {
-        return [
-            'trans_id'       => $paymentReference,
-            'ref_id'         => $paymentReference,
-            'qoute_id'       => $dataform['qouteId'] ?? null,
-            'cover_id'       => $coverId,
-            'bookingtype_id' => $bookingTypeId,
-            'c_amount'       => $dataform['amount'] ?? null,
-            'vat'            => $dataform2['vat'] ?? null,
-            't_amount'       => $dataform2['p_amount'] ?? null,
-            'payment_option' => 'seerbit',
-            'surname'        => $dataform['surname'] ?? null,
-            'middlename'     => $bookingTypeId === 2 ? ($dataform['middlename1'] ?? null) : ($dataform['middlename'] ?? null),
-            'firstname'      => $dataform['firstname'] ?? null,
-            'gender'         => $bookingTypeId === 2 ? ($dataform['gender1'] ?? null) : ($dataform['gender'] ?? null),
-            'title'          => $bookingTypeId === 2 ? ($dataform['title1'] ?? null) : ($dataform['title'] ?? null),
-            'dob'            => $bookingTypeId === 2 ? ($dataform['dob1'] ?? null) : ($dataform['dob'] ?? null),
-            'email'          => $dataform['email'] ?? null,
-            'phone_no'       => $dataform['phone_no'] ?? null,
-            'state'          => $dataform['state'] ?? null,
-            'address'        => $dataform['address'] ?? null,
-            'zipcode'        => $dataform['zipcode'] ?? null,
-            'passport_no'    => $dataform['passport_no'] ?? null,
-            'nin'            => $dataform['nin'] ?? null,
-            'occupation'     => $bookingTypeId === 2 ? ($dataform['ocupation1'] ?? null) : ($dataform['ocupation'] ?? null),
-            'nationalty'     => $bookingTypeId === 2 ? ($dataform['nationalty1'] ?? null) : ($dataform['nationalty'] ?? null),
-            'marital_status' => $bookingTypeId === 2 ? ($dataform['marital_status1'] ?? null) : ($dataform['marital_status'] ?? null),
-            'noc'            => $dataform['noc'] ?? 0,
-            'medicalCondition' => $bookingTypeId === 2 ? ($dataform['MedicalCondition1'] ?? null) : ($dataform['MedicalCondition'] ?? null),
-            'nok_fullname'   => $dataform2['nok_fullname'] ?? null,
-            'nok_address'    => $dataform2['nok_address'] ?? null,
-            'nok_phone'      => $dataform2['nok_phone'] ?? null,
-            'nok_relationship' => $dataform2['nok_relationship'] ?? null,
-            'status'         => $status,
-        ];
-    }
-
-    private function individualBooking(string $token, array $dataform, array $dataform2): string
-    {
-        $dateOfBirth = Carbon::createFromFormat('Y-m-d', $dataform['dob'])->format('d-M-Y');
-
-        $payload = [
-            'QuoteId'                    => $dataform['qouteId'],
-            'Surname'                    => $dataform['surname'],
-            'MiddleName'                 => $dataform['middlename'],
-            'FirstName'                  => $dataform['firstname'],
-            'GenderId'                   => $dataform['gender'],
-            'TitleId'                    => $dataform['title'],
-            'DateOfBirth'                => $dateOfBirth,
-            'Email'                      => $dataform['email'],
-            'Telephone'                  => $dataform['phone_no'],
-            'StateId'                    => $dataform['state'],
-            'Address'                    => $dataform['address'],
-            'ZipCode'                    => $dataform['zipcode'],
-            'Nationality'                => $dataform['nationalty'],
-            'PassportNo'                 => $dataform['passport_no'],
-            'IdentificationPath'         => null,
-            'Occupation'                 => $dataform['ocupation'],
-            'Nin'                        => $dataform['nin'] ?? null,
-            'MaritalStatusId'            => $dataform['marital_status'],
-            'PreExistingMedicalCondition'=> false,
-            'MedicalCondition'           => null,
-            'NextOfKin'                  => [
-                'FullName'     => $dataform2['nok_fullname'] ?? '',
-                'Address'      => $dataform2['nok_address'] ?? '',
-                'Relationship' => $dataform2['nok_relationship'] ?? '',
-                'Telephone'    => $dataform2['nok_phone'] ?? '',
-            ],
-        ];
-
-        $client   = new Client();
-        $response = $client->request('POST', $this->sanlaBaseUrl() . '/Travel/api/IndividualBooking', [
-            'headers' => ['Authorization' => 'Bearer ' . $token, 'Accept' => 'application/json'],
-            'json'    => $payload,
-        ]);
-
-        return $response->getBody()->getContents();
-    }
-
-    private function familyBooking(string $token, array $dataform, array $dataform2): string
-    {
-        $dob1 = Carbon::createFromFormat('Y-m-d', $dataform['dob1'])->format('d-M-Y');
-        $dob2 = Carbon::createFromFormat('Y-m-d', $dataform['dob2'])->format('d-M-Y');
-
-        $nokPayload = [
-            'FullName'     => $dataform2['nok_fullname'] ?? '',
-            'Address'      => $dataform2['nok_address'] ?? '',
-            'Relationship' => $dataform2['nok_relationship'] ?? '',
-            'Telephone'    => $dataform2['nok_phone'] ?? '',
-        ];
-
-        $payload = [
-            [
-                'QuoteId'    => $dataform['qouteId'],
-                'Surname'    => $dataform['surname'],
-                'MiddleName' => $dataform['middlename1'] ?? '',
-                'FirstName'  => $dataform['firstname'],
-                'GenderId'   => $dataform['gender1'],
-                'TitleId'    => $dataform['title1'],
-                'DateOfBirth'=> $dob1,
-                'Email'      => $dataform['email'],
-                'Telephone'  => $dataform['phone_no'],
-                'StateId'    => $dataform['state'],
-                'Address'    => $dataform['address'],
-                'ZipCode'    => $dataform['zipcode'],
-                'Nationality'=> $dataform['nationalty1'],
-                'PassportNo' => $dataform['passport_no'],
-                'IdentificationPath' => null,
-                'Occupation' => $dataform['ocupation1'],
-                'MaritalStatusId' => $dataform['marital_status1'],
-                'PreExistingMedicalCondition' => false,
-                'MedicalCondition' => null,
-                'Nin'        => $dataform['nin'] ?? null,
-                'NextOfKin'  => $nokPayload,
-            ],
-            [
-                'QuoteId'    => $dataform['qouteId'],
-                'Surname'    => $dataform['surname'],
-                'MiddleName' => $dataform['middlename2'] ?? '',
-                'FirstName'  => $dataform['firstname2'],
-                'GenderId'   => $dataform['gender2'],
-                'TitleId'    => $dataform['title2'],
-                'DateOfBirth'=> $dob2,
-                'Email'      => $dataform['email2'],
-                'Telephone'  => $dataform['phone_no2'],
-                'StateId'    => $dataform['state'],
-                'Address'    => $dataform['address'],
-                'ZipCode'    => $dataform['zipcode'],
-                'Nationality'=> $dataform['nationalty2'],
-                'PassportNo' => $dataform['passport_no2'] ?? '',
-                'IdentificationPath' => null,
-                'Occupation' => $dataform['ocupation2'],
-                'MaritalStatusId' => $dataform['marital_status1'],
-                'PreExistingMedicalCondition' => false,
-                'MedicalCondition' => null,
-                'Nin'        => $dataform['nin2'] ?? null,
-                'NextOfKin'  => $nokPayload,
-            ],
-        ];
-
-        // Append children
-        $totalChildren = (int) ($dataform['noc'] ?? 0);
-        for ($i = 1; $i <= $totalChildren; $i++) {
-            $dobC = $dataform['dobC' . $i] ?? null;
-            $payload[] = [
-                'QuoteId'    => $dataform['qouteId'],
-                'Surname'    => $dataform['surname'],
-                'MiddleName' => $dataform['middlenameC' . $i] ?? '',
-                'FirstName'  => $dataform['firstnameC' . $i] ?? '',
-                'GenderId'   => $dataform['genderC' . $i] ?? 1,
-                'TitleId'    => $dataform['titleC' . $i] ?? 18,
-                'DateOfBirth'=> $dobC ? Carbon::createFromFormat('Y-m-d', $dobC)->format('d-M-Y') : '',
-                'Email'      => $dataform['email'],
-                'Telephone'  => $dataform['phone_no'],
-                'StateID'    => $dataform['state'],
-                'Address'    => $dataform['address'],
-                'ZipCode'    => $dataform['zipcode'],
-                'Nationality'=> $dataform['nationaltyC' . $i] ?? '',
-                'PassportNo' => $dataform['passport_noC' . $i] ?? '',
-                'IdentificationPath' => null,
-                'Occupation' => 'Student',
-                'MaritalStatusId' => 1,
-                'PreExistingMedicalCondition' => false,
-                'MedicalCondition' => null,
-                'Nin'        => $dataform['ninC' . $i] ?? null,
-                'NextOfKin'  => $nokPayload,
-            ];
-        }
-
-        $client   = new Client();
-        $response = $client->request('POST', $this->sanlaBaseUrl() . '/Travel/api/FamilyBooking', [
-            'headers' => ['Authorization' => 'Bearer ' . $token, 'Accept' => 'application/json'],
-            'json'    => $payload,
-        ]);
-
-        return $response->getBody()->getContents();
     }
 
     public function insuranceSuccess()

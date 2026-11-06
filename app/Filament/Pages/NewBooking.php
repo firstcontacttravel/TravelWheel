@@ -69,6 +69,10 @@ class NewBooking extends Page implements HasTable
                 ->label('Air Cargo')
                 ->icon('heroicon-o-paper-airplane')
                 ->url(fn (): string => BookAirCargo::getUrl()),
+            Action::make('bookInsurance')
+                ->label('Insurance')
+                ->icon('heroicon-o-shield-check')
+                ->url(fn (): string => BookInsurance::getUrl()),
         ];
     }
 
