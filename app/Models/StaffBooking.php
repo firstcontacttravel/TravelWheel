@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Services\GroundBookingService;
 use App\Services\LoungeBookingService;
+use App\Services\ProtocolBookingService;
 use App\Services\SupportBookingService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +32,7 @@ class StaffBooking extends Model
         SupportFlightAssist::class => ['label' => 'Flight Assist', 'seerbit_route' => 'air.support.seerbit.callback', 'service' => SupportBookingService::class],
         SupportYellowCard::class => ['label' => 'Yellow Card Assistance', 'seerbit_route' => 'air.support.seerbit.callback', 'service' => SupportBookingService::class],
         LoungeBooking::class => ['label' => 'Lounge', 'seerbit_route' => 'air.lounge.callback', 'service' => LoungeBookingService::class],
+        ProtocolBooking::class => ['label' => 'Protocol', 'seerbit_route' => 'air.protocol.callback', 'service' => ProtocolBookingService::class],
     ];
 
     protected $fillable = [
@@ -104,6 +106,14 @@ class StaffBooking extends Model
             ];
         }
 
+        if ($booking instanceof ProtocolBooking) {
+            return [
+                'Service' => ($booking->package == '2' ? 'Regular' : 'VIP').', '.$booking->airport.' '.$booking->service_type.', '.$booking->state,
+                'Date' => $booking->travel_date->format('j M Y').' at '.$booking->d_time,
+                'Passengers' => (string) $booking->passenger,
+            ];
+        }
+
         if ($booking instanceof LoungeBooking) {
             return [
                 'Lounge' => $booking->lounge_name,
@@ -119,12 +129,20 @@ class StaffBooking extends Model
         ]);
     }
 
+    /** Who the booking is for; a Protocol booking lists every passenger, the lead first. */
+    public function customerName(): ?string
+    {
+        $booking = $this->bookable;
+
+        return $booking instanceof ProtocolBooking ? ($booking->fullname[0] ?? null) : $booking?->full_name;
+    }
+
     /** What the customer pays. */
     public function total(): ?float
     {
         $booking = $this->bookable;
 
-        return $booking instanceof LoungeBooking ? $booking->totalAmount() : $booking?->amount;
+        return $booking instanceof LoungeBooking || $booking instanceof ProtocolBooking ? $booking->totalAmount() : $booking?->amount;
     }
 
     public function isAwaitingPayment(): bool
@@ -152,6 +170,6 @@ class StaffBooking extends Model
 
     public function cancel(): void
     {
-        $this->bookable->update($this->bookable instanceof LoungeBooking ? ['status' => 'Cancelled'] : ['payment_status' => 'cancelled']);
+        $this->bookable->update($this->bookable instanceof LoungeBooking || $this->bookable instanceof ProtocolBooking ? ['status' => 'Cancelled'] : ['payment_status' => 'cancelled']);
     }
 }

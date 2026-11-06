@@ -61,6 +61,10 @@ class NewBooking extends Page implements HasTable
                 ->label('Lounge')
                 ->icon('heroicon-o-building-office')
                 ->url(fn (): string => BookLounge::getUrl()),
+            Action::make('bookProtocol')
+                ->label('Protocol')
+                ->icon('heroicon-o-user-group')
+                ->url(fn (): string => BookProtocol::getUrl()),
         ];
     }
 
@@ -77,7 +81,7 @@ class NewBooking extends Page implements HasTable
                     ->weight('bold')
                     ->description(fn (StaffBooking $record): string => $record->productLabel()),
                 TextColumn::make('customer')
-                    ->state(fn (StaffBooking $record): ?string => $record->bookable?->full_name)
+                    ->state(fn (StaffBooking $record): ?string => $record->customerName())
                     ->description(fn (StaffBooking $record): ?string => $record->bookable?->email),
                 TextColumn::make('amount')
                     ->state(fn (StaffBooking $record) => $record->total())

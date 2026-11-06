@@ -13,7 +13,7 @@ class ProtocolPickupVehicleTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function protocol(string $airport): Protocol
+    private function protocol(string $airport, array $prices = []): Protocol
     {
         // Fill whatever required columns this test doesn't care about
         $required = collect(Schema::getColumns('protocols'))
@@ -21,7 +21,7 @@ class ProtocolPickupVehicleTest extends TestCase
             ->mapWithKeys(fn ($c) => [$c['name'] => preg_match('/int|decimal|double|float|numeric/', $c['type']) ? 0 : 'x'])
             ->except(['id', 'created_at', 'updated_at']);
 
-        return Protocol::forceCreate([...$required->all(), 'id' => 1, 'location' => 'Lagos', 'airport' => $airport, 'service' => 'Departure']);
+        return Protocol::forceCreate([...$required->all(), 'id' => 1, 'location' => 'Lagos', 'airport' => $airport, 'service' => 'Departure', ...$prices]);
     }
 
     private function checkoutData(array $extra): array
@@ -53,6 +53,7 @@ class ProtocolPickupVehicleTest extends TestCase
     public function test_checkout_shows_the_chosen_vehicle_without_adding_it_to_the_total(): void
     {
         ProtocolVehicles::setPrice('suv', 40000);
+        $this->protocol('International', ['Given_Price1' => 40000, 'markup_price' => 10000]);
 
         $this->post(route('air.protocol_checkout'), $this->checkoutData(['optinal_requestD' => 'Pick-up & Escort', 'optional_vehicleD' => 'suv']))
             ->assertOk()
@@ -73,6 +74,8 @@ class ProtocolPickupVehicleTest extends TestCase
 
     public function test_police_escort_alone_needs_no_vehicle(): void
     {
+        $this->protocol('International', ['Given_Price1' => 40000, 'markup_price' => 10000]);
+
         $this->post(route('air.protocol_checkout'), $this->checkoutData(['optinal_requestD' => 'Police Escort']))
             ->assertOk()
             ->assertDontSee('Pick-Up Details');

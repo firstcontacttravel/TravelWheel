@@ -25,6 +25,7 @@ class StaffBookingPaymentController extends Controller
             'product' => $staffBooking->productLabel(),
             'summary' => $staffBooking->summary(),
             'total' => $staffBooking->total(),
+            'customer' => $staffBooking->customerName(),
         ]);
     }
 
@@ -43,7 +44,7 @@ class StaffBookingPaymentController extends Controller
                 'currency' => 'NGN',
                 'callbackUrl' => route($staffBooking->seerbitCallbackRoute()),
                 'email' => $booking->email,
-                'fullName' => $booking->full_name,
+                'fullName' => $staffBooking->customerName(),
                 'mobileNumber' => $booking->phone_number,
                 'paymentReference' => $booking->payment_reference,
                 'productDescription' => trim(preg_replace('/[^A-Za-z0-9 ().,-]/', '', Str::ascii($staffBooking->productLabel()))),

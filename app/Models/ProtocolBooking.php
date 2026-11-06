@@ -19,6 +19,29 @@ class ProtocolBooking extends Model
         'travel_date'     => 'date',
     ];
 
+    /** Every other booking calls these phone_number and payment_reference. */
+    public function getPhoneNumberAttribute(): ?string
+    {
+        return $this->phone;
+    }
+
+    public function getPaymentReferenceAttribute(): ?string
+    {
+        return $this->trans_id;
+    }
+
+    /** The status column in the words every other booking's payment_status uses. */
+    public function getPaymentStatusAttribute(): string
+    {
+        return $this->status === 'Successful' ? 'paid' : strtolower((string) $this->status);
+    }
+
+    /** VAT is kept apart from amount here, so this is what the customer pays. */
+    public function totalAmount(): float
+    {
+        return (float) $this->amount + (float) $this->vat;
+    }
+
     protected $fillable = [
         'paymentoption',
         'fullname',

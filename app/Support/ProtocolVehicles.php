@@ -49,6 +49,14 @@ class ProtocolVehicles
         return $price === null ? 'Price on request' : '₦'.number_format($price);
     }
 
+    /** e.g. "Saloon Comfort (Up to 3 Seaters) - ₦25,000, not included in protocol amount" */
+    public static function summary(string $name, ?string $seaters, ?float $price): string
+    {
+        return $name
+            .(filled($seaters) && $seaters !== 'None' ? " ($seaters)" : '')
+            .' - '.self::priceLabel($price).', not included in protocol amount';
+    }
+
     /** "Pick-up", "Drop-off" and their "& Escort" versions need a vehicle; "Police Escort" alone doesn't. */
     public static function needsVehicle(?string $request): bool
     {

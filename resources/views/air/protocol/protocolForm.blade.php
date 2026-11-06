@@ -263,51 +263,19 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const intlAirlineMap = {
-        "Lagos": ["BRITISH AIRWAYS","QATAR AIRWAYS","EMIRATES","LUFTHANSA","TURKISH AIRLINES","DELTA AIRLINES","VIRGIN ATLANTIC","ETHIOPIAN AIRLINES","KENYA AIRWAYS","AIR PEACE","ASKY AIRLINES","AIR FRANCE","KLM","EGYPT AIR","ROYAL AIR MAROC","TAAG ANGOLA","SOUTH AFRICA AIRWAYS","UNITED AIRLINES","RWANDAIR"],
-        "Abuja": ["BRITISH AIRWAYS","LUFTHANSA","ETHIOPIAN AIRLINES","KLM","EMIRATES","QATAR AIRWAYS","TURKISH AIRLINES","AIR FRANCE","AIR PEACE","ASKY AIRLINES","ROYAL AIR MAROC","UNITED AIRLINES","VIRGIN ATLANTIC","DELTA AIRLINES"],
-        "Kano": ["ETHIOPIAN AIRLINES"],
-        "Enugu": ["ETHIOPIAN AIRLINES"],
-        "Rivers": ["QATAR AIRWAYS","TURKISH AIRLINES","LUFTHANSA"]
-    };
+    // The airlines for this location, from App\Support\ProtocolAirlines
+    const airlines = @json($airlines);
 
     const select1 = document.getElementById('airlineselect1');
     if (select1) {
-        const location = @json($data['location'] ?? '');
-        const airlines = intlAirlineMap[location] || [];
         airlines.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; select1.appendChild(o); });
         const othersOpt = document.createElement('option'); othersOpt.value = 'OTHERS'; othersOpt.textContent = 'OTHERS'; select1.appendChild(othersOpt);
         select1.addEventListener('change', () => { document.getElementById('other1').classList.toggle('protocol-hide', select1.value !== 'OTHERS'); });
     }
 
-    const localAirlineMap = {
-        "Lagos": ["Air Peace","Arik","Ibom Air","Value Jet","Overland Airways","United Nigeria Airlines","Max Air","XEjet","Aero Contractor","Green Africa","Rano Air","Umza Air"],
-        "Abuja": ["Air Peace","Arik","Ibom Air","Value Jet","Overland Airways","United Nigeria Airlines","Max Air","XEjet","Aero Contractor","Green Africa","Rano Air","Umza Air"],
-        "Enugu": ["Ibom Air","United Nigeria Airlines","XEjet"],
-        "Rivers": ["Air Peace","Arik","Aero Contractor","Ibom Air","United Nigeria Airlines","Value Jet","Umza Air"],
-        "Kano": ["Air Peace","Rano Air","Value Jet","Umza Air"],
-        "Delta Asaba": ["Air Peace","Arik","Aero Contractor","United Nigeria Airlines"],
-        "Imo": ["Air Peace","United Nigeria Airlines","XEjet"],
-        "Oyo": ["Overland Airways"],
-        "Kwara": ["Overland Airways"],
-        "Anambra": ["Air Peace","United Nigeria Airlines"],
-        "Delta Warri": ["Air Peace","Arik","Aero Contractor"],
-        "Edo": ["Air Peace","Arik","Aero Contractor","United Nigeria Airlines"],
-        "Gombe": ["Air Peace"],
-        "Borno": ["Air Peace","Umza Air","Rano Air"],
-        "Adamawa": ["Air Peace","Umza Air"],
-        "Sokoto": ["Umza Air","Rano Air"],
-        "Kaduna": ["Rano Air"],
-        "Cross River": ["Ibom Air","Value Jet"]
-    };
-
     const select2 = document.getElementById('airlineselect2');
     if (select2) {
-        const loc2 = document.getElementById('location') ? document.getElementById('location').value.trim() : @json($data['location'] ?? '');
-        const key2 = Object.keys(localAirlineMap).find(k => k.toLowerCase() === loc2.toLowerCase());
-        if (key2) {
-            localAirlineMap[key2].forEach(a => { const o = document.createElement('option'); o.value = a.toUpperCase(); o.textContent = a; select2.appendChild(o); });
-        }
+        airlines.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; select2.appendChild(o); });
         const othersOpt2 = document.createElement('option'); othersOpt2.value = 'OTHERS'; othersOpt2.textContent = 'OTHERS'; select2.appendChild(othersOpt2);
         select2.addEventListener('change', () => { document.getElementById('other2').classList.toggle('protocol-hide', select2.value !== 'OTHERS'); });
     }

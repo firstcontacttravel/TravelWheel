@@ -28,7 +28,7 @@
         <p>Please contact {{ config('travelwheel.reservations_email') }} and quote <strong>{{ $booking->payment_reference }}</strong>.</p>
     @else
         <h1>Complete your booking</h1>
-        <p>Dear {{ $booking->full_name }}, your {{ $product }} booking is confirmed once payment is received.</p>
+        <p>Dear {{ $customer }}, your {{ $product }} booking is confirmed once payment is received.</p>
 
         @if (session('error'))
             <div class="error" role="alert">{{ session('error') }}</div>

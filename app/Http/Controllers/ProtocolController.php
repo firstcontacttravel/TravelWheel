@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\ProtocolBookingMail;
 use App\Models\Protocol;
 use App\Models\ProtocolBooking;
+use App\Services\ProtocolBookingService;
 use App\Services\SeerbitPaymentService;
+use App\Support\ProtocolAirlines;
 use App\Support\ProtocolVehicles;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 
 class ProtocolController extends Controller
@@ -86,12 +87,22 @@ class ProtocolController extends Controller
 
         $price = $plan == '1' ? $protocol->price1 : $protocol->price2;
 
-        return view('air.protocol.protocolForm', compact('data', 'price', 'plan'));
+        $airlines = ProtocolAirlines::for($data['location'], $data['airport'] === 'International Airport');
+
+        return view('air.protocol.protocolForm', compact('data', 'price', 'plan', 'airlines'));
     }
 
-    public function protocol_checkout(Request $request)
+    public function protocol_checkout(Request $request, ProtocolBookingService $bookings)
     {
         $dataform = $request->all();
+
+        // The amount the form sent was only for display; this is the real one
+        $protocol = $bookings->find($dataform['location'] ?? null, $dataform['airport'] ?? null, $dataform['service'] ?? null);
+        $quote = $protocol ? $bookings->quote($protocol, (string) ($dataform['plan'] ?? ''), (int) ($dataform['nop'] ?? 0)) : null;
+        if (! $quote || $quote['total'] <= 0) {
+            return back()->withInput()->with('error', 'That protocol service is not available for this selection. Please check the plan and number of persons.');
+        }
+        $dataform['amount'] = $quote['subtotal'];
 
         $optinal_request  = 'None';
         $optionalVehicle  = 'None';
@@ -125,11 +136,18 @@ class ProtocolController extends Controller
         return view('air.protocol.protocol_checkout', compact('dataform', 'optinal_request', 'optionalVehicle', 'seaters', 'vehiclePrice', 'vehicleDirection'));
     }
 
-    public function makePurchase(Request $request)
+    public function makePurchase(Request $request, ProtocolBookingService $bookings)
     {
         $dataform = $request->all();
 
-        $nop             = (int) ($dataform['no_of_passenger'] ?? 1);
+        // Charge what the protocol costs, never an amount the browser sent
+        $protocol = $bookings->find($dataform['state'] ?? null, $dataform['airport'] ?? null, $dataform['service'] ?? null);
+        $quote = $protocol ? $bookings->quote($protocol, (string) ($dataform['package'] ?? ''), (int) ($dataform['no_of_passenger'] ?? 0)) : null;
+        if (! $quote || $quote['total'] <= 0) {
+            return redirect()->route('air.protocol')->with('error', 'That protocol service is not available for this selection. Please start again.');
+        }
+
+        $nop             = (int) $dataform['no_of_passenger'];
         $destinationPath = public_path('assets/means_id');
 
         if (! File::isDirectory($destinationPath)) {
@@ -149,15 +167,20 @@ class ProtocolController extends Controller
             }
         }
 
+        $reference = strtoupper('PROT' . bin2hex(random_bytes(6)));
+        $dataform = array_merge($dataform, [
+            'c_amount' => $quote['subtotal'],
+            'vat' => $quote['vat'],
+            'p_amount' => $quote['total'],
+            'reference' => $reference,
+        ]);
         Session::put('protocol_checkout_form', $dataform);
 
         $fullname  = trim(($dataform['lastname1'] ?? '') . ' ' . ($dataform['firstname1'] ?? ''));
-        $reference = strtoupper('PROT' . bin2hex(random_bytes(6)));
-        $amount    = (float) str_replace(',', '', (string) ($dataform['p_amount'] ?? 0));
+        $amount    = $quote['total'];
         $phone     = preg_replace('/\D/', '', ($dataform['country_code'] ?? '+234') . ($dataform['phone'] ?? ''));
 
-        $seerbit = new SeerbitPaymentService();
-        $result  = $seerbit->initializePayment([
+        $result = app(SeerbitPaymentService::class)->initializePayment([
             'amount'             => (string) $amount,
             'currency'           => 'NGN',
             'email'              => $dataform['email'] ?? '',
@@ -189,17 +212,30 @@ class ProtocolController extends Controller
             return redirect()->route('air.protocol')->with('error', 'Payment reference missing.');
         }
 
-        $seerbit = new SeerbitPaymentService();
-        $result  = $seerbit->verifyPayment($paymentReference);
+        $result = app(SeerbitPaymentService::class)->verifyPayment($paymentReference);
 
         if (! $result['ok']) {
             return redirect()->route('air.protocol')->with('error', 'Payment was not successful. Please try again.');
+        }
+
+        // Already saved: a repeat of this callback, or a booking staff made before payment
+        if ($existing = ProtocolBooking::where('trans_id', $paymentReference)->first()) {
+            app(ProtocolBookingService::class)->completePayment($existing);
+
+            return redirect()->route('air.protocol_payment', ['trans_id' => $paymentReference]);
         }
 
         $dataform = Session::get('protocol_checkout_form');
 
         if (! $dataform) {
             return redirect()->route('air.protocol')->with('error', 'Session expired. Please rebook.');
+        }
+
+        // The form in the session must be the one this payment was started for
+        if (isset($dataform['reference']) && $dataform['reference'] !== $paymentReference) {
+            Log::warning('Protocol payment does not match the checkout in this session', ['reference' => $paymentReference, 'expected' => $dataform['reference']]);
+
+            return redirect()->route('air.protocol')->with('error', 'We could not match this payment to your booking. Please contact support and quote '.$paymentReference.'.');
         }
 
         $nop       = (int) ($dataform['no_of_passenger'] ?? 1);
@@ -219,9 +255,7 @@ class ProtocolController extends Controller
             ? ($dataform['means_id_image'] ?? '')
             : ($dataform['means_id_image_passenger1'] ?? '');
 
-        $fullname = $nop === 1 ? $fullnames[0] : $fullnames[0];
-
-        ProtocolBooking::create([
+        $booking = ProtocolBooking::create([
             'paymentoption'          => 'seerbit',
             'fullname'               => $nop === 1 ? [$fullnames[0]] : $fullnames,
             'package'                => $dataform['package'] ?? '',
@@ -251,8 +285,7 @@ class ProtocolController extends Controller
             'ref_id'                 => $paymentReference,
         ]);
 
-        $amount = (float) str_replace(',', '', (string) ($dataform['c_amount'] ?? 0));
-        Mail::to($dataform['email'] ?? '')->send(new ProtocolBookingMail($fullname, $amount, $paymentReference));
+        app(ProtocolBookingService::class)->sendConfirmation($booking);
 
         Session::forget('protocol_checkout_form');
 
@@ -261,13 +294,14 @@ class ProtocolController extends Controller
 
     public function protocol_payment($trans_id)
     {
-        $protocols = ProtocolBooking::where('trans_id', $trans_id)->firstOrFail();
+        // A booking staff made isn't paid yet, and an unpaid one gets no pass
+        $protocols = ProtocolBooking::where('trans_id', $trans_id)->where('status', 'Successful')->firstOrFail();
         return view('air.protocol.protocol_payment', compact('protocols'));
     }
 
     public function generateProtocolPass($trans_id)
     {
-        $booking   = ProtocolBooking::where('trans_id', $trans_id)->firstOrFail();
+        $booking   = ProtocolBooking::where('trans_id', $trans_id)->where('status', 'Successful')->firstOrFail();
         $fullnames = is_array($booking->fullname) ? $booking->fullname : [$booking->fullname];
         $pnrs      = is_array($booking->reservationCode) ? $booking->reservationCode : [$booking->reservationCode];
         $ticketNos = is_array($booking->eTicketNo) ? $booking->eTicketNo : [$booking->eTicketNo];
@@ -292,11 +326,8 @@ class ProtocolController extends Controller
             return null;
         }
 
-        $seaters = $dataform['seaters'] ?? null;
         $price = filled($dataform['vehicle_price'] ?? null) ? (float) $dataform['vehicle_price'] : null;
 
-        return $vehicle
-            .(filled($seaters) && $seaters !== 'None' ? " ($seaters)" : '')
-            .' - '.ProtocolVehicles::priceLabel($price).', not included in protocol amount';
+        return ProtocolVehicles::summary($vehicle, $dataform['seaters'] ?? null, $price);
     }
 }

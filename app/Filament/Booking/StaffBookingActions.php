@@ -21,7 +21,7 @@ class StaffBookingActions
     {
         $staffBooking = StaffBooking::record($booking, auth()->user());
 
-        ActivityLog::record('staff_booking.created', "Booked {$booking->payment_reference} for {$booking->full_name}", $booking);
+        ActivityLog::record('staff_booking.created', "Booked {$booking->payment_reference} for {$staffBooking->customerName()}", $booking);
 
         if ($data['send_link'] ?? false) {
             self::sendLink($staffBooking);

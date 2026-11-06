@@ -2,9 +2,8 @@
 @include('air.protocol.partials.protocol-ui')
 
 @php
-    $c_amount = $dataform['amount'] ?? 0;
-    $amount = (int) str_replace(',', '', $c_amount);
-    $vatAmt = 7.5 / 100 * $amount;
+    $amount = (float) ($dataform['amount'] ?? 0);
+    $vatAmt = round(\App\Services\ProtocolBookingService::VAT_PERCENT / 100 * $amount, 2);
     $total = $amount + $vatAmt;
     $passengerCount = (int) ($dataform['nop'] ?? 1);
 @endphp
@@ -138,8 +137,8 @@
                     <div class="protocol-section-title"><x-ph-icon name="wallet" /> Payment Summary</div>
                     <div class="protocol-total-row">
                         <span>Service amount</span>
-                        <strong>₦{{ $dataform['amount'] ?? '0' }}</strong>
-                        <input type="hidden" name="c_amount" value="{{ $dataform['amount'] ?? '0' }}">
+                        <strong>₦{{ number_format($amount, 2) }}</strong>
+                        <input type="hidden" name="c_amount" value="{{ $amount }}">
                     </div>
                     <div class="protocol-total-row">
                         <span>VAT 7.5%</span>

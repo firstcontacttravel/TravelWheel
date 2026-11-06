@@ -17,7 +17,7 @@
                 </tr>
                 <tr>
                     <td style="padding:26px 32px;">
-                        <p style="font-size:15px; line-height:1.6; margin:0 0 14px;">Dear {{ $booking->full_name }},</p>
+                        <p style="font-size:15px; line-height:1.6; margin:0 0 14px;">Dear {{ $customer }},</p>
                         <p style="font-size:15px; line-height:1.6; margin:0 0 18px;">Our team has made a <strong>{{ $product }}</strong> booking for you. Your booking is confirmed once payment is received.</p>
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f8ff; border:1px solid #e0e4f8; border-radius:10px; margin-bottom:20px;">
                             <tr><td style="padding:12px 16px; font-size:14px; color:#5c6070;">Reference</td><td align="right" style="padding:12px 16px; font-size:14px; font-weight:600;">{{ $booking->payment_reference }}</td></tr>

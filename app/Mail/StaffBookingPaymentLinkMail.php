@@ -31,6 +31,7 @@ class StaffBookingPaymentLinkMail extends Mailable
             'product' => $this->staffBooking->productLabel(),
             'summary' => $this->staffBooking->summary(),
             'total' => $this->staffBooking->total(),
+            'customer' => $this->staffBooking->customerName(),
             'payUrl' => $this->staffBooking->payUrl(),
         ]);
     }
