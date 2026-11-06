@@ -4,18 +4,14 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Carbon\Carbon;
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\AirCargoModel;
 use App\Models\ShippingZone;
 use App\Models\CargoDocumentPrice;
 use App\Models\CargoPackagePrice;
-use App\Mail\ShipmentMail;
+use App\Services\AirCargoBookingService;
 use App\Services\SeerbitPaymentService;
+use App\Support\CargoCountries;
 
 class AirCargoController extends Controller
 {
@@ -61,22 +57,29 @@ class AirCargoController extends Controller
         return response()->json(ShippingZone::all());
     }
 
-    public function airCargoPost(Request $request)
+    public function airCargoPost(Request $request, AirCargoBookingService $cargo)
     {
         $dataform     = $request->input();
-        $date         = Carbon::now()->format('md');
-        $shippingId   = 'TWAC07' . $date . Str::random(2);
-        $shippingType = $dataform['shipment_type'];
+        $shippingId   = $cargo->newShippingId();
+        $shippingType = $dataform['shipment_type'] ?? null;
+
+        // Charge what the price tables say, never an amount the browser sent
+        $weight = $shippingType === 'Document' ? ($dataform['doc_weight'] ?? null) : ($dataform['package_weight'] ?? null);
+        $quote = $cargo->quote($shippingType, $dataform['country1'] ?? null, $weight, $dataform['nBus_stop'] ?? null);
+        if (! $quote) {
+            return back()->withInput()->with('error', 'We could not price this shipment. Please check the destination, shipment type and weight.');
+        }
+        $shippingPrice = $quote['shipping'];
+        $receiverCountry = CargoCountries::find($dataform['country1'])['name'];
 
         if ($shippingType === 'Document') {
-            $shippingPrice = str_replace(',', '', $dataform['price']);
-            $shipPrice     = (int) $shippingPrice;
+            $shipPrice     = $shippingPrice;
 
             $data = [
                 'shipping_id'      => $shippingId,
                 'shipping_price'   => $shipPrice,
-                'pickup_price'     => $dataform['pick-Upshipment'] ?? null,
-                'total_price'      => $dataform['totalPrice'],
+                'pickup_price'     => $quote['pickup'] ?: null,
+                'total_price'      => $quote['total'],
                 'sender_name'      => $dataform['fullname'],
                 'sender_address'   => $dataform['address1'],
                 'sender_email'     => $dataform['email'],
@@ -87,7 +90,7 @@ class AirCargoController extends Controller
                 'receiver_address' => $dataform['address2'],
                 'receiver_email'   => $dataform['email2'],
                 'receiver_phone'   => $dataform['contact2'],
-                'receiver_country' => $dataform['rCountry'] ?? '',
+                'receiver_country' => $receiverCountry,
                 'receiver_postalCode' => $dataform['postalcode2'] ?? '',
                 'shipment_type'    => $shippingType,
                 'document_type'    => $dataform['typeOfDoc'],
@@ -98,9 +101,7 @@ class AirCargoController extends Controller
                 'dropoff_date'     => $dataform['dropoff_date'] ?? null,
             ];
 
-            $pdf      = Pdf::loadView('air.air_cargo.shipment2', $data);
-            $filename = $shippingId . '.pdf';
-            Storage::put('public/shipments/' . $filename, $pdf->output());
+            $filename = $cargo->saveShipmentDocument($data);
 
             if ($request->hasFile('preview')) {
                 $previewFile  = $request->file('preview');
@@ -111,15 +112,14 @@ class AirCargoController extends Controller
                 $previewImage = null;
             }
         } else {
-            $shippingPrice = str_replace(',', '', $dataform['price2']);
-            $shipPrice     = (int) $shippingPrice;
+            $shipPrice     = $shippingPrice;
             $pVolume       = 'Length: ' . ($dataform['length'] ?? '') . ' | Width: ' . ($dataform['width'] ?? '') . ' | Height: ' . ($dataform['height'] ?? '');
 
             $data = [
                 'shipping_id'        => $shippingId,
                 'shipping_price'     => $shipPrice,
-                'pickup_price'       => $dataform['pick-Upshipment'] ?? null,
-                'total_price'        => $dataform['totalPrice2'],
+                'pickup_price'       => $quote['pickup'] ?: null,
+                'total_price'        => $quote['total'],
                 'sender_name'        => $dataform['fullname'],
                 'sender_address'     => $dataform['address1'],
                 'sender_email'       => $dataform['email'],
@@ -130,7 +130,7 @@ class AirCargoController extends Controller
                 'receiver_address'   => $dataform['address2'],
                 'receiver_email'     => $dataform['email2'],
                 'receiver_phone'     => $dataform['contact2'],
-                'receiver_country'   => $dataform['rCountry'] ?? '',
+                'receiver_country'   => $receiverCountry,
                 'receiver_postalCode'=> $dataform['postalcode2'] ?? '',
                 'shipment_type'      => $shippingType,
                 'pDescription'       => $dataform['pDescription'],
@@ -142,9 +142,7 @@ class AirCargoController extends Controller
                 'dropoff_date'       => $dataform['dropoff_date'] ?? null,
             ];
 
-            $pdf      = Pdf::loadView('air.air_cargo.shipment2', $data);
-            $filename = $shippingId . '.pdf';
-            Storage::put('public/shipments/' . $filename, $pdf->output());
+            $filename = $cargo->saveShipmentDocument($data);
 
             if ($request->hasFile('pPreview')) {
                 $previewFile  = $request->file('pPreview');
@@ -156,23 +154,26 @@ class AirCargoController extends Controller
             }
         }
 
+        // Kept on the shipment before payment, so a payment can only ever complete this shipment
+        $reference = $cargo->newReference();
+
         AirCargoModel::create([
             'shipping_id'      => $shippingId,
             'fullname'         => $dataform['fullname'],
             'email'            => $dataform['email'],
             'phone'            => $dataform['phone_no'],
-            'shipping_to'      => $dataform['rCountry'] ?? ($dataform['country1'] ?? ''),
+            'shipping_to'      => $receiverCountry,
             'shipment_type'    => $shippingType,
             'shipment_preview' => $previewImage,
             'shipment_details' => $filename,
             'price'            => $shippingPrice,
             'total_price'      => $data['total_price'],
             'payment_status'   => 'Pending',
+            'transaction_ref'  => $reference,
         ]);
 
-        Session::put('shipData', $data);
+        Session::put('shipData', $data + ['reference' => $reference]);
 
-        $reference = 'ACG' . strtoupper(bin2hex(random_bytes(6)));
         $seerbit   = app(SeerbitPaymentService::class);
         $result    = $seerbit->initializePayment([
             'amount'             => (string) $data['total_price'],
@@ -209,12 +210,6 @@ class AirCargoController extends Controller
             ?? $request->query('payRef')
             ?? $request->input('payRef');
 
-        $shipData = Session::get('shipData');
-
-        if (!$shipData) {
-            return redirect()->route('air.cargo.success');
-        }
-
         if (! $paymentReference) {
             return redirect()->route('air.cargo')->with('error', 'Payment reference missing.');
         }
@@ -226,20 +221,23 @@ class AirCargoController extends Controller
             return redirect()->route('air.cargo')->with('error', 'Payment verification failed. Please contact support.');
         }
 
-        $shippingId = $shipData['shipping_id'];
-        $shipment   = AirCargoModel::where('shipping_id', $shippingId)->first();
+        // The shipment this payment was started for: the website's or one staff made
+        $shipData = Session::get('shipData');
+        $shipment = AirCargoModel::where('transaction_ref', $paymentReference)->first();
 
-        if ($shipment && $shipment->payment_status !== 'successful') {
-            $shipment->payment_status  = 'successful';
-            $shipment->transaction_ref = $paymentReference;
-            $shipment->save();
-
-            try {
-                Mail::to($shipment->email)->send(new ShipmentMail($shipment, $shipment->shipment_details));
-            } catch (\Exception $e) {
-                Log::error('Cargo email failed: ' . $e->getMessage());
-            }
+        // A shipment started before references were kept has none yet
+        if (! $shipment && $shipData && ! isset($shipData['reference'])) {
+            $shipment = AirCargoModel::where('shipping_id', $shipData['shipping_id'])->whereNull('transaction_ref')->first();
+            $shipment?->update(['transaction_ref' => $paymentReference]);
         }
+
+        if (! $shipment) {
+            Log::warning('Cargo payment matches no shipment', ['reference' => $paymentReference]);
+
+            return redirect()->route('air.cargo')->with('error', 'We could not match this payment to a shipment. Please contact support and quote '.$paymentReference.'.');
+        }
+
+        app(AirCargoBookingService::class)->completePayment($shipment);
 
         return redirect()->route('air.cargo.success')->with('data', $shipData);
     }

@@ -65,6 +65,10 @@ class NewBooking extends Page implements HasTable
                 ->label('Protocol')
                 ->icon('heroicon-o-user-group')
                 ->url(fn (): string => BookProtocol::getUrl()),
+            Action::make('bookAirCargo')
+                ->label('Air Cargo')
+                ->icon('heroicon-o-paper-airplane')
+                ->url(fn (): string => BookAirCargo::getUrl()),
         ];
     }
 
@@ -87,7 +91,7 @@ class NewBooking extends Page implements HasTable
                     ->state(fn (StaffBooking $record) => $record->total())
                     ->money('NGN'),
                 TextColumn::make('payment')
-                    ->state(fn (StaffBooking $record): string => ucfirst(str_replace('_', ' ', (string) $record->bookable?->payment_status)))
+                    ->state(fn (StaffBooking $record): string => ucfirst(str_replace('_', ' ', (string) $record->paymentState())))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'Paid', 'Confirmed', 'Completed' => 'success',

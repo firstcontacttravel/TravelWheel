@@ -20,10 +20,10 @@
 </head>
 <body>
 <div class="card">
-    @if ($booking->payment_status === 'paid')
+    @if ($state === 'paid')
         <h1>This booking is paid</h1>
         <p>Thank you. Your confirmation has been sent to your email. Reference: <strong>{{ $booking->payment_reference }}</strong>.</p>
-    @elseif ($booking->payment_status !== 'pending')
+    @elseif ($state !== 'pending')
         <h1>This booking is no longer available</h1>
         <p>Please contact {{ config('travelwheel.reservations_email') }} and quote <strong>{{ $booking->payment_reference }}</strong>.</p>
     @else

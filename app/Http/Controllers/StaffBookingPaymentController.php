@@ -26,6 +26,7 @@ class StaffBookingPaymentController extends Controller
             'summary' => $staffBooking->summary(),
             'total' => $staffBooking->total(),
             'customer' => $staffBooking->customerName(),
+            'state' => $staffBooking->paymentState(),
         ]);
     }
 

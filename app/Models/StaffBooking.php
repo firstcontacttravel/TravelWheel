@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\AirCargoBookingService;
 use App\Services\GroundBookingService;
 use App\Services\LoungeBookingService;
 use App\Services\ProtocolBookingService;
@@ -33,6 +34,7 @@ class StaffBooking extends Model
         SupportYellowCard::class => ['label' => 'Yellow Card Assistance', 'seerbit_route' => 'air.support.seerbit.callback', 'service' => SupportBookingService::class],
         LoungeBooking::class => ['label' => 'Lounge', 'seerbit_route' => 'air.lounge.callback', 'service' => LoungeBookingService::class],
         ProtocolBooking::class => ['label' => 'Protocol', 'seerbit_route' => 'air.protocol.callback', 'service' => ProtocolBookingService::class],
+        AirCargoModel::class => ['label' => 'Air Cargo', 'seerbit_route' => 'air.cargo.callback', 'service' => AirCargoBookingService::class],
     ];
 
     protected $fillable = [
@@ -106,6 +108,13 @@ class StaffBooking extends Model
             ];
         }
 
+        if ($booking instanceof AirCargoModel) {
+            return [
+                'Shipment' => $booking->shipment_type.' to '.$booking->shipping_to,
+                'Shipping ID' => $booking->shipping_id,
+            ];
+        }
+
         if ($booking instanceof ProtocolBooking) {
             return [
                 'Service' => ($booking->package == '2' ? 'Regular' : 'VIP').', '.$booking->airport.' '.$booking->service_type.', '.$booking->state,
@@ -142,12 +151,24 @@ class StaffBooking extends Model
     {
         $booking = $this->bookable;
 
-        return $booking instanceof LoungeBooking || $booking instanceof ProtocolBooking ? $booking->totalAmount() : $booking?->amount;
+        return match (true) {
+            $booking instanceof LoungeBooking, $booking instanceof ProtocolBooking => $booking->totalAmount(),
+            $booking instanceof AirCargoModel => (float) $booking->total_price,
+            default => $booking?->amount,
+        };
+    }
+
+    /** The payment status in one set of words for every product: pending, paid, cancelled or failed. */
+    public function paymentState(): ?string
+    {
+        $status = strtolower((string) $this->bookable?->payment_status);
+
+        return $status === 'successful' ? 'paid' : ($status ?: null);
     }
 
     public function isAwaitingPayment(): bool
     {
-        return $this->bookable?->payment_status === 'pending';
+        return $this->paymentState() === 'pending';
     }
 
     public function payUrl(): string
