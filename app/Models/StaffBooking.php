@@ -8,9 +8,11 @@ use App\Services\InsuranceBookingService;
 use App\Services\LoungeBookingService;
 use App\Services\ProtocolBookingService;
 use App\Services\SupportBookingService;
+use App\Services\VisaPaymentService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -37,6 +39,8 @@ class StaffBooking extends Model
         ProtocolBooking::class => ['label' => 'Protocol', 'seerbit_route' => 'air.protocol.callback', 'service' => ProtocolBookingService::class],
         AirCargoModel::class => ['label' => 'Air Cargo', 'seerbit_route' => 'air.cargo.callback', 'service' => AirCargoBookingService::class],
         InsurancePurchase::class => ['label' => 'Travel Insurance', 'seerbit_route' => 'air.insurance.callback', 'service' => InsuranceBookingService::class],
+        // The customer pays a visa in the website's own application, so its link goes there
+        VisaApplication::class => ['label' => 'Visa', 'seerbit_route' => 'visa.payments.callback', 'service' => VisaPaymentService::class],
     ];
 
     protected $fillable = [
@@ -89,6 +93,25 @@ class StaffBooking extends Model
         return self::PRODUCTS[$this->bookable_type]['label'] ?? class_basename($this->bookable_type);
     }
 
+    public function bookingReference(): ?string
+    {
+        $booking = $this->bookable;
+
+        return $booking instanceof VisaApplication ? $booking->reference : $booking?->payment_reference;
+    }
+
+    public function customerEmail(): ?string
+    {
+        $booking = $this->bookable;
+
+        return $booking instanceof VisaApplication ? $booking->contact_email : $booking?->email;
+    }
+
+    public function isVisa(): bool
+    {
+        return $this->bookable instanceof VisaApplication;
+    }
+
     public function seerbitCallbackRoute(): string
     {
         return self::PRODUCTS[$this->bookable_type]['seerbit_route'];
@@ -108,6 +131,14 @@ class StaffBooking extends Model
                 'Service' => SupportBookingService::YELLOW_CARD_SERVICES[$booking->service_type]['label'] ?? $booking->service_type,
                 'Delivery address' => $booking->delivery_address,
             ];
+        }
+
+        if ($booking instanceof VisaApplication) {
+            return array_filter([
+                'Visa' => $booking->product?->name,
+                'Dates' => $booking->arrival_date->format('j M Y').' to '.$booking->departure_date->format('j M Y'),
+                'Travellers' => "{$booking->adult_count} adult(s), {$booking->child_count} child(ren), {$booking->infant_count} infant(s)",
+            ]);
         }
 
         if ($booking instanceof InsurancePurchase) {
@@ -154,13 +185,25 @@ class StaffBooking extends Model
     {
         $booking = $this->bookable;
 
+        if ($booking instanceof VisaApplication) {
+            $lead = $booking->travelers->first();
+
+            return trim(($lead?->first_name ?? '').' '.($lead?->last_name ?? '')) ?: $booking->contact_email;
+        }
+
         return $booking instanceof ProtocolBooking ? ($booking->fullname[0] ?? null) : $booking?->full_name;
     }
 
-    /** What the customer pays. */
+    /** What the customer pays. A visa has no price until its application is finished and quoted. */
     public function total(): ?float
     {
         $booking = $this->bookable;
+
+        if ($booking instanceof VisaApplication) {
+            $quote = $booking->quotes()->whereIn('status', ['active', 'consumed'])->latest('id')->first();
+
+            return $quote ? (float) $quote->payable_total : null;
+        }
 
         return match (true) {
             $booking instanceof LoungeBooking, $booking instanceof ProtocolBooking => $booking->totalAmount(),
@@ -173,6 +216,16 @@ class StaffBooking extends Model
     /** The payment status in one set of words for every product: pending, paid, cancelled or failed. */
     public function paymentState(): ?string
     {
+        $booking = $this->bookable;
+
+        if ($booking instanceof VisaApplication) {
+            return match (true) {
+                $booking->payments()->where('status', 'paid')->exists() => 'paid',
+                in_array($booking->status, ['draft', 'awaiting_payment'], true) => $booking->expires_at->isPast() ? 'expired' : 'pending',
+                default => 'cancelled',
+            };
+        }
+
         $status = strtolower((string) $this->bookable?->payment_status);
 
         return $status === 'successful' ? 'paid' : ($status ?: null);
@@ -183,6 +236,12 @@ class StaffBooking extends Model
         return $this->paymentState() === 'pending';
     }
 
+    /** A visa is paid for once its application is finished and has a quote: before that there is no amount to receive. */
+    public function canRecordPayment(): bool
+    {
+        return $this->isAwaitingPayment() && (! $this->isVisa() || $this->total() !== null);
+    }
+
     public function payUrl(): string
     {
         return route('staff-bookings.pay', $this->pay_token);
@@ -191,20 +250,43 @@ class StaffBooking extends Model
     /** Sends the customer's confirmations, the same ones a website booking gets. */
     public function recordPayment(string $method, string $reference, User $staff): void
     {
-        $this->update([
-            'recorded_method' => $method,
-            'recorded_reference' => $reference,
-            'recorded_by' => $staff->id,
-            'recorded_at' => now(),
-        ]);
+        // Together, so a payment the product refuses (an unfinished visa) isn't left recorded
+        DB::transaction(function () use ($method, $reference, $staff): void {
+            $this->update([
+                'recorded_method' => $method,
+                'recorded_reference' => $reference,
+                'recorded_by' => $staff->id,
+                'recorded_at' => now(),
+            ]);
 
-        app(self::PRODUCTS[$this->bookable_type]['service'])->completePayment($this->bookable, $method);
+            app(self::PRODUCTS[$this->bookable_type]['service'])->completePayment($this->bookable, $method, $reference);
+        });
     }
 
     public function cancel(): void
     {
+        if ($this->bookable instanceof VisaApplication) {
+            $this->cancelVisa($this->bookable);
+
+            return;
+        }
+
         $usesStatus = $this->bookable instanceof LoungeBooking || $this->bookable instanceof ProtocolBooking || $this->bookable instanceof InsurancePurchase;
 
         $this->bookable->update($usesStatus ? ['status' => 'Cancelled'] : ['payment_status' => 'cancelled']);
+    }
+
+    /**
+     * Closed as "expired before submission": a cancelled visa can be reopened
+     * into review, which an unpaid application must never reach.
+     */
+    private function cancelVisa(VisaApplication $application): void
+    {
+        DB::transaction(function () use ($application): void {
+            $application->quotes()->where('status', 'active')->update(['status' => 'superseded', 'superseded_at' => now()]);
+            $from = $application->status;
+            $application->update(['status' => 'expired']);
+            $application->statusHistory()->create(['from_status' => $from, 'to_status' => 'expired', 'actor_type' => 'user', 'actor_id' => auth()->id(), 'reason' => 'Cancelled by staff before payment']);
+        });
     }
 }

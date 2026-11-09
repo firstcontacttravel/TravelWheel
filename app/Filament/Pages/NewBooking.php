@@ -73,6 +73,11 @@ class NewBooking extends Page implements HasTable
                 ->label('Insurance')
                 ->icon('heroicon-o-shield-check')
                 ->url(fn (): string => BookInsurance::getUrl()),
+            Action::make('bookVisa')
+                ->label('Visa')
+                ->icon('heroicon-o-identification')
+                ->visible(fn (): bool => (bool) config('visa.enabled'))
+                ->url(fn (): string => BookVisa::getUrl()),
         ];
     }
 
@@ -84,22 +89,23 @@ class NewBooking extends Page implements HasTable
             ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('reference')
-                    ->state(fn (StaffBooking $record): ?string => $record->bookable?->payment_reference)
+                    ->state(fn (StaffBooking $record): ?string => $record->bookingReference())
                     ->copyable()
                     ->weight('bold')
                     ->description(fn (StaffBooking $record): string => $record->productLabel()),
                 TextColumn::make('customer')
                     ->state(fn (StaffBooking $record): ?string => $record->customerName())
-                    ->description(fn (StaffBooking $record): ?string => $record->bookable?->email),
+                    ->description(fn (StaffBooking $record): ?string => $record->customerEmail()),
                 TextColumn::make('amount')
                     ->state(fn (StaffBooking $record) => $record->total())
-                    ->money('NGN'),
+                    ->money('NGN')
+                    ->placeholder('Priced when finished'),
                 TextColumn::make('payment')
                     ->state(fn (StaffBooking $record): string => ucfirst(str_replace('_', ' ', (string) $record->paymentState())))
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'Paid', 'Confirmed', 'Completed' => 'success',
-                        'Cancelled', 'Failed' => 'danger',
+                        'Cancelled', 'Failed', 'Expired' => 'danger',
                         'Billed with main fee' => 'info',
                         default => 'warning',
                     })

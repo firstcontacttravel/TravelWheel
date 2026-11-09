@@ -18,16 +18,22 @@
                 <tr>
                     <td style="padding:26px 32px;">
                         <p style="font-size:15px; line-height:1.6; margin:0 0 14px;">Dear {{ $customer }},</p>
-                        <p style="font-size:15px; line-height:1.6; margin:0 0 18px;">Our team has made a <strong>{{ $product }}</strong> booking for you. Your booking is confirmed once payment is received.</p>
+                        @if ($visa)
+                            <p style="font-size:15px; line-height:1.6; margin:0 0 18px;">Our team has started a <strong>visa application</strong> for you. Follow the link to check your details, finish any steps still open, and pay. We submit your application once payment is received.</p>
+                        @else
+                            <p style="font-size:15px; line-height:1.6; margin:0 0 18px;">Our team has made a <strong>{{ $product }}</strong> booking for you. Your booking is confirmed once payment is received.</p>
+                        @endif
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f7f8ff; border:1px solid #e0e4f8; border-radius:10px; margin-bottom:20px;">
-                            <tr><td style="padding:12px 16px; font-size:14px; color:#5c6070;">Reference</td><td align="right" style="padding:12px 16px; font-size:14px; font-weight:600;">{{ $booking->payment_reference }}</td></tr>
+                            <tr><td style="padding:12px 16px; font-size:14px; color:#5c6070;">Reference</td><td align="right" style="padding:12px 16px; font-size:14px; font-weight:600;">{{ $reference }}</td></tr>
                             @foreach ($summary as $label => $value)
                                 <tr><td style="padding:0 16px 12px; font-size:14px; color:#5c6070;">{{ $label }}</td><td align="right" style="padding:0 16px 12px; font-size:14px;">{{ $value }}</td></tr>
                             @endforeach
-                            <tr><td style="padding:0 16px 12px; font-size:14px; color:#5c6070;">Amount</td><td align="right" style="padding:0 16px 12px; font-size:16px; font-weight:700; color:#0d1883;">&#8358;{{ number_format((float) $total) }}</td></tr>
+                            @if ($total !== null)
+                                <tr><td style="padding:0 16px 12px; font-size:14px; color:#5c6070;">Amount</td><td align="right" style="padding:0 16px 12px; font-size:16px; font-weight:700; color:#0d1883;">&#8358;{{ number_format((float) $total) }}</td></tr>
+                            @endif
                         </table>
                         <p style="text-align:center; margin:0 0 18px;">
-                            <a href="{{ $payUrl }}" style="display:inline-block; background:#0d9c53; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:24px;">Pay now</a>
+                            <a href="{{ $payUrl }}" style="display:inline-block; background:#0d9c53; color:#ffffff; font-size:15px; font-weight:600; text-decoration:none; padding:12px 28px; border-radius:24px;">{{ $visa ? 'Continue your application' : 'Pay now' }}</a>
                         </p>
                         <p style="font-size:13px; line-height:1.6; color:#5c6070; margin:0;">If you weren't expecting this, simply reply to this email.</p>
                     </td>

@@ -15,13 +15,20 @@ use Illuminate\View\View;
  */
 class StaffBookingPaymentController extends Controller
 {
-    public function show(string $token): View
+    public function show(string $token): View|RedirectResponse
     {
         $staffBooking = StaffBooking::where('pay_token', $token)->firstOrFail();
 
+        // A visa is finished and paid in the website's application, which this link opens like its resume link
+        if ($staffBooking->isVisa() && $staffBooking->isAwaitingPayment()) {
+            session()->put("visa_application_access.{$staffBooking->bookingReference()}", true);
+
+            return redirect()->route('visa.application', $staffBooking->bookable);
+        }
+
         return view('staff-bookings.pay', [
             'token' => $token,
-            'booking' => $staffBooking->bookable,
+            'reference' => $staffBooking->bookingReference(),
             'product' => $staffBooking->productLabel(),
             'summary' => $staffBooking->summary(),
             'total' => $staffBooking->total(),
@@ -35,7 +42,7 @@ class StaffBookingPaymentController extends Controller
         $staffBooking = StaffBooking::where('pay_token', $token)->firstOrFail();
         $booking = $staffBooking->bookable;
 
-        if (! $staffBooking->isAwaitingPayment()) {
+        if ($staffBooking->isVisa() || ! $staffBooking->isAwaitingPayment()) {
             return redirect()->route('staff-bookings.pay', $token);
         }
 

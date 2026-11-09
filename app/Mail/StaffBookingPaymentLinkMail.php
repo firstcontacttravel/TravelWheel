@@ -20,14 +20,15 @@ class StaffBookingPaymentLinkMail extends Mailable
         return new Envelope(
             from: new Address($reservations, 'TravelWheel Reservations'),
             replyTo: [new Address($reservations, 'TravelWheel Reservations')],
-            subject: 'Complete your TravelWheel booking - '.$this->staffBooking->bookable->payment_reference,
+            subject: ($this->staffBooking->isVisa() ? 'Finish your TravelWheel visa application - ' : 'Complete your TravelWheel booking - ').$this->staffBooking->bookingReference(),
         );
     }
 
     public function content(): Content
     {
         return new Content(view: 'emails.staff-booking-payment-link', with: [
-            'booking' => $this->staffBooking->bookable,
+            'reference' => $this->staffBooking->bookingReference(),
+            'visa' => $this->staffBooking->isVisa(),
             'product' => $this->staffBooking->productLabel(),
             'summary' => $this->staffBooking->summary(),
             'total' => $this->staffBooking->total(),

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\VisaApplication;
 use App\Models\VisaPayment;
 use App\Models\VisaPaymentEvent;
 use App\Models\VisaQuote;
@@ -80,30 +81,79 @@ class VisaPaymentService
                 return $payment->fresh();
             }
             $payment->update(['status' => 'paid', 'verified_amount' => $verifiedAmount, 'verified_currency' => $verifiedCurrency, 'verification_response' => $verification['raw'] ?? [], 'verified_at' => now(), 'failure_code' => null, 'failure_message' => null]);
-            $payment->quote()->update(['status' => 'consumed', 'accepted_at' => now()]);
-            $application = $payment->application;
-            if ($application->status !== 'submitted') {
-                $from = $application->status;
-                $application->update(['status' => 'submitted']);
-                $application->statusHistory()->create(['from_status' => $from, 'to_status' => 'submitted', 'actor_type' => 'system', 'reason' => 'SeerBit payment verified', 'metadata' => ['payment_reference' => $payment->reference]]);
-            }
+            $this->submit($payment, 'system', 'SeerBit payment verified');
             $event?->update(['processing_status' => 'processed', 'processing_message' => 'Payment verified.', 'processed_at' => now()]);
 
             return $payment->fresh();
         });
 
         if ($payment->status === 'paid') {
-            $this->funnel->record('payment_verified', ['payment_reference' => $payment->reference, 'amount' => $payment->verified_amount, 'currency' => $payment->verified_currency], $payment->application, 'payment_verified|'.$payment->id);
-            $this->funnel->record('application_submitted', [], $payment->application, 'application_submitted|'.$payment->application->id);
-            $this->communications->sendOnce(
-                $payment->application,
-                'payment_confirmed',
-                'Visa payment confirmed — '.$payment->application->reference,
-                'Payment confirmed',
-                'Your payment has been verified and your visa application is now submitted. You can track progress from the secure customer portal.'
-            );
+            $this->announce($payment);
         }
 
         return $payment;
+    }
+
+    /**
+     * Finance recording a bank transfer, POS or cash payment for an application
+     * staff started. The amount is a quote made now from the finished
+     * application: the same one the customer would have paid online.
+     */
+    public function completePayment(VisaApplication $application, ?string $method = null, ?string $reference = null): VisaPayment
+    {
+        $quote = app(VisaQuotationService::class)->create($application);
+
+        $payment = DB::transaction(function () use ($application, $quote, $method, $reference): VisaPayment {
+            $quote = VisaQuote::query()->lockForUpdate()->findOrFail($quote->id);
+            $paid = $application->payments()->where('status', 'paid')->first();
+            if ($paid) {
+                return $paid;
+            }
+            if ($quote->status !== 'active') {
+                throw ValidationException::withMessages(['payment' => 'This quote is no longer active. Try again.']);
+            }
+
+            $payment = VisaPayment::query()->create([
+                'reference' => 'VWV-'.Str::upper((string) Str::ulid()), 'visa_application_id' => $application->id,
+                'visa_quote_id' => $quote->id, 'provider' => 'manual', 'status' => 'paid',
+                'idempotency_key' => hash('sha256', 'manual|'.$quote->id.'|'.$quote->pricing_fingerprint),
+                'expected_amount' => $quote->payable_total, 'expected_currency' => $quote->checkout_currency,
+                'verified_amount' => $quote->payable_total, 'verified_currency' => $quote->checkout_currency,
+                'verification_response' => ['method' => $method, 'reference' => $reference, 'recorded_by' => auth()->id()],
+                'verified_at' => now(),
+            ]);
+            $this->submit($payment, 'user', 'Payment recorded by staff');
+
+            return $payment;
+        });
+
+        $this->announce($payment);
+
+        return $payment;
+    }
+
+    /** Inside the payment's transaction: the quote is used up and the application goes to the visa team. */
+    private function submit(VisaPayment $payment, string $actorType, string $reason): void
+    {
+        $payment->quote()->update(['status' => 'consumed', 'accepted_at' => now()]);
+        $application = $payment->application;
+        if ($application->status !== 'submitted') {
+            $from = $application->status;
+            $application->update(['status' => 'submitted']);
+            $application->statusHistory()->create(['from_status' => $from, 'to_status' => 'submitted', 'actor_type' => $actorType, 'actor_id' => $actorType === 'user' ? auth()->id() : null, 'reason' => $reason, 'metadata' => ['payment_reference' => $payment->reference]]);
+        }
+    }
+
+    private function announce(VisaPayment $payment): void
+    {
+        $this->funnel->record('payment_verified', ['payment_reference' => $payment->reference, 'amount' => $payment->verified_amount, 'currency' => $payment->verified_currency], $payment->application, 'payment_verified|'.$payment->id);
+        $this->funnel->record('application_submitted', [], $payment->application, 'application_submitted|'.$payment->application->id);
+        $this->communications->sendOnce(
+            $payment->application,
+            'payment_confirmed',
+            'Visa payment confirmed — '.$payment->application->reference,
+            'Payment confirmed',
+            'Your payment has been verified and your visa application is now submitted. You can track progress from the secure customer portal.'
+        );
     }
 }

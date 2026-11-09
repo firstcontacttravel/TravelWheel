@@ -22,10 +22,10 @@
 <div class="card">
     @if ($state === 'paid')
         <h1>This booking is paid</h1>
-        <p>Thank you. Your confirmation has been sent to your email. Reference: <strong>{{ $booking->payment_reference }}</strong>.</p>
+        <p>Thank you. Your confirmation has been sent to your email. Reference: <strong>{{ $reference }}</strong>.</p>
     @elseif ($state !== 'pending')
         <h1>This booking is no longer available</h1>
-        <p>Please contact {{ config('travelwheel.reservations_email') }} and quote <strong>{{ $booking->payment_reference }}</strong>.</p>
+        <p>Please contact {{ config('travelwheel.reservations_email') }} and quote <strong>{{ $reference }}</strong>.</p>
     @else
         <h1>Complete your booking</h1>
         <p>Dear {{ $customer }}, your {{ $product }} booking is confirmed once payment is received.</p>
@@ -34,7 +34,7 @@
             <div class="error" role="alert">{{ session('error') }}</div>
         @endif
 
-        <div class="row"><span>Reference</span><span>{{ $booking->payment_reference }}</span></div>
+        <div class="row"><span>Reference</span><span>{{ $reference }}</span></div>
         @foreach ($summary as $label => $value)
             <div class="row"><span>{{ $label }}</span><span>{{ $value }}</span></div>
         @endforeach
