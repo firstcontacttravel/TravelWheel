@@ -11,8 +11,10 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Holding a TravelFlex booking on our side, for an API that can't hold
- * seats (FlightSupplier::supportsHold() false — SkyLink today).
+ * Holding a booking on our side, for an API that can't hold seats
+ * (FlightSupplier::supportsHold() false — SkyLink today): a TravelFlex
+ * booking while Fast Credit reviews it, or an ordinary "hold and pay later"
+ * booking (hold_type PAY_LATER) for a day.
  *
  * The booking waits here while Fast Credit reviews it; nothing exists at the
  * supplier and no seat is reserved. When the approved customer comes to pay,
@@ -23,6 +25,11 @@ use Throwable;
  */
 class FlightPlatformHold
 {
+    /** FlightBooking::hold_type for a booking held at an ordinary checkout. */
+    public const PAY_LATER = 'pay_later';
+
+    public const PAY_LATER_EXPIRED = 'This booking was held until its payment deadline, which has passed. Nothing was charged. Please search again for a current fare.';
+
     public const UNAVAILABLE = 'This flight is no longer available at the approved fare, so no payment was taken. Please contact TravelWheel to choose another flight.';
 
     public const PRICE_INCREASED = 'The fare for this flight has gone up since your application was approved, so no payment was taken. Please choose the flight again or contact TravelWheel.';
@@ -47,6 +54,33 @@ class FlightPlatformHold
     public function holdUntil(): CarbonInterface
     {
         return now()->addHours(max(1, (int) config('flights.platform_hold.hold_hours', 72)));
+    }
+
+    /**
+     * "Hold and pay later" is offered at an ordinary checkout for this flight.
+     * Only for an API that can't hold seats: one that can (TravelNext) holds
+     * with the airline already.
+     */
+    public function offersPayLater(array $flight): bool
+    {
+        return (bool) config('flights.platform_hold.pay_later_enabled', true) && $this->applies($flight);
+    }
+
+    public function payLaterUntil(): CarbonInterface
+    {
+        return now()->addHours(max(1, (int) config('flights.platform_hold.pay_later_hours', 24)));
+    }
+
+    public function isPayLater(?FlightBooking $booking): bool
+    {
+        return $booking !== null && $booking->hold_type === self::PAY_LATER;
+    }
+
+    /** A pay-later hold whose time is up: no payment may start on it. */
+    public function payLaterExpired(?FlightBooking $booking): bool
+    {
+        return $this->isPayLater($booking)
+            && ($booking->booking_status === 'cancelled' || ($booking->tkt_time_limit !== null && $booking->tkt_time_limit->isPast()));
     }
 
     /**

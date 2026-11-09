@@ -156,6 +156,9 @@ class ItineraryPdfService
             // e-ticket's 51 KB for a logo nobody could see. The masthead is set
             // in type until a usable asset exists.
             'documentState' => $state,
+            // Held on our side (an API that can't hold seats): nothing is
+            // reserved with the airline, so "seats are held" would be untrue.
+            'platformHold' => $state === 'on_hold' && app(\App\Services\Flights\FlightPlatformHold::class)->applies($booking),
             'tripTitle' => $this->tripTitle($groups),
             'tripStart' => $first['depart_at'] ?? null,
             'tripEnd' => count($groups) > 1 ? ($last['arrive_at'] ?? null) : null,

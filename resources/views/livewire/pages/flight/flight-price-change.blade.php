@@ -1,4 +1,4 @@
-{{-- A company's fare rose before payment: nothing is charged until the booker decides. --}}
+{{-- The fare rose before payment: nothing is charged until the customer (or a company's booker) decides. --}}
 @component('layouts.app', ['title' => 'The fare has changed'])
     <div style="max-width:560px;margin:0 auto;padding:150px 16px 60px;">
         <div style="background:#fff;border:1px solid #e6e8ee;border-radius:12px;padding:24px;">

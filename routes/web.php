@@ -273,6 +273,9 @@ Route::post('/flights/payment/gateway/process', [FlightBookingController::class,
 Route::get('/flights/payment/options', [FlightBookingController::class, 'paymentOptions'])->name('flights.payment.options');
 Route::get('/flights/payment/options/resume/{bookingRef}', [FlightBookingController::class, 'resumePaymentOptions'])
     ->middleware('signed')->name('flights.payment.options.resume');
+// "Hold and pay later" on our side (SkyLink): the emailed link back to the pay page
+Route::get('/flights/hold/{bookingRef}', [FlightBookingController::class, 'resumePayLaterHold'])
+    ->middleware(['signed', 'throttle:30,1'])->name('flights.hold.resume');
 
 // Non-LCC: Bank transfer — user clicks "I have paid"
 Route::post('/flights/payment/bank-transfer', [FlightBookingController::class, 'bankTransferNotify'])->name('flights.payment.bank-transfer');

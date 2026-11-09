@@ -13,6 +13,8 @@
             .($ticketPNR ? ' '.$ticketPNR : '').' and the passport named on this booking.',
         $awaitingSupplierTicket ?? false => 'Your booking and payment are confirmed. The airline issues your ticket separately, and we will email it to you as soon as it is ready. '.$notATicket,
         $documentState === 'ticket_processing' => 'Your booking and payment are confirmed, and your ticket is being issued. We will email your e-ticket as soon as it is ready. '.$notATicket,
+        $documentState === 'on_hold' && ($platformHold ?? false) => 'This booking is saved but not yet paid for. The seats and price are not guaranteed until payment.'
+            .($holdUntil ? ' Pay before '.$holdUntil->timezone('Africa/Lagos')->format('H:i, D d M Y').' (Lagos time) to keep the booking.' : '').' '.$notATicket,
         $documentState === 'on_hold' => 'These seats are held but not yet paid for.'
             .($holdUntil ? ' Complete payment before '.$holdUntil->timezone('Africa/Lagos')->format('H:i, D d M Y').' (Lagos time) to keep them.' : '').' '.$notATicket,
         $documentState === 'payment_pending' => 'We are waiting for your payment to be confirmed. '.$notATicket,

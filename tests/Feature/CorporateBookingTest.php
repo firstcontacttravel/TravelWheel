@@ -414,17 +414,17 @@ class CorporateBookingTest extends TestCase
         $this->assertEquals($price, (float) $booking->fresh()->flight_snapshot['price']);
     }
 
-    public function test_the_public_keep_todays_behaviour_when_a_fare_rises(): void
+    /** Since 2026-11-09 the public are offered the new fare too, like a company. */
+    public function test_the_public_are_offered_the_new_fare_when_it_rises(): void
     {
         $this->select($this->searchSequentially());
         $this->passengerDetails();
         $this->verifiedPrice = self::SUPPLIER_FARE + 45000;
 
         $this->post(route('flights.payment.gateway.process'))
-            ->assertRedirect(route('air.flight-s'))
-            ->assertSessionHas('fareUnavailable');
+            ->assertRedirect(route('flights.price-change'));
 
-        $this->get(route('flights.price-change'))->assertRedirect(route('air.flight-s'));
+        $this->get(route('flights.price-change'))->assertOk()->assertSee('Accept the new fare');
     }
 
     // Emails

@@ -24,6 +24,7 @@ class ReconcileFlightOperations extends Command
         }
 
         $counts = [
+            'expired_pay_later_holds' => 0,
             'expired_holds' => 0,
             'stale_initializations' => 0,
             'stuck_ticketing' => 0,
@@ -34,11 +35,41 @@ class ReconcileFlightOperations extends Command
         try {
             $limit = max(1, (int) $this->option('limit'));
 
+            // A "hold and pay later" booking left unpaid simply closes: nothing
+            // was ever reserved with the supplier, so there is nothing to
+            // review. A card payment started near the deadline gets half an
+            // hour to come back from the gateway first.
+            FlightBooking::query()
+                ->where('hold_type', FlightPlatformHold::PAY_LATER)
+                ->where('booking_status', 'on_hold')
+                ->where('payment_status', 'pending')
+                ->where('tkt_time_limit', '<', now())
+                ->where(fn ($query) => $query
+                    ->whereNull('payment_reference')
+                    ->orWhere('payment_reference', '')
+                    ->orWhere('updated_at', '<', now()->subMinutes(30)))
+                ->limit($limit)
+                ->get()
+                ->each(function (FlightBooking $booking) use (&$counts): void {
+                    $booking->update([
+                        'booking_status' => 'cancelled',
+                        'last_reconciled_at' => now(),
+                        'reconciliation_note' => 'Hold and pay later: the payment deadline passed unpaid. Nothing was reserved with the supplier.',
+                    ]);
+                    $counts['expired_pay_later_holds']++;
+                });
+
             FlightBooking::query()
                 ->where('ticket_ordered', false)
                 ->whereNotNull('tkt_time_limit')
                 ->where('tkt_time_limit', '<', now())
                 ->whereIn('booking_status', ['on_hold', 'pending_payment', 'ticketing_in_progress'])
+                // Unpaid pay-later holds close above; one still here has a
+                // card payment in flight and waits for it.
+                ->where(fn ($query) => $query
+                    ->whereNull('hold_type')
+                    ->orWhere('hold_type', '!=', FlightPlatformHold::PAY_LATER)
+                    ->orWhere('payment_status', '!=', 'pending'))
                 ->limit($limit)
                 ->get()
                 ->each(function (FlightBooking $booking) use (&$counts): void {

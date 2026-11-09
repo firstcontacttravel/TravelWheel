@@ -78,6 +78,10 @@
                             <td>
                                 @if (\App\Http\Controllers\Business\BookingController::hasTicket($booking))
                                     <a href="{{ route('business.bookings.ticket', $booking->booking_ref) }}">Download</a>
+                                @elseif ($booking->hold_type === \App\Services\Flights\FlightPlatformHold::PAY_LATER && $booking->booking_status === 'on_hold' && $booking->payment_status === 'pending' && $booking->tkt_time_limit?->isFuture())
+                                    {{-- Saved with "hold and pay later": nothing is held with the airline yet. --}}
+                                    <a href="{{ URL::temporarySignedRoute('flights.hold.resume', $booking->tkt_time_limit, ['bookingRef' => $booking->booking_ref]) }}">Pay now</a>
+                                    <div class="biz-help">By {{ $booking->tkt_time_limit->timezone('Africa/Lagos')->format('H:i, j M') }}</div>
                                 @else
                                     <span class="biz-help">Not ready</span>
                                 @endif

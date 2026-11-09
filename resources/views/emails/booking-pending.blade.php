@@ -12,6 +12,10 @@
     $paymentMethod = $paymentMethod ?? ($method ?? 'bank_transfer');
     $isHoldNotice = $isHoldNotice ?? $paymentMethod === 'hold';
     $isBankTransferNotice = $isBankTransferNotice ?? $paymentMethod === 'bank_transfer';
+    // Saved on our side only: nothing is reserved with the airline, so the
+    // wording must not promise a seat or a price.
+    $isPayLater = $isPayLater ?? in_array($paymentMethod, ['pay_later', 'pay_later_reminder'], true);
+    $isReminder = $isReminder ?? $paymentMethod === 'pay_later_reminder';
 
     $tktFmt = null;
     $tktHours = null;
@@ -25,10 +29,17 @@
         }
     }
 
-    $heading = $isHoldNotice ? 'Your booking is on hold' : 'We are verifying your payment';
-    $intro = $isHoldNotice
-        ? 'your seat is reserved with the airline while payment is pending. Complete payment before the deadline to keep this fare.'
-        : 'we have your payment notification. Your booking stays reserved while our team confirms the transfer.';
+    $heading = match (true) {
+        $isReminder => 'Your saved booking expires soon',
+        $isPayLater => 'Your booking is saved',
+        $isHoldNotice => 'Your booking is on hold',
+        default => 'We are verifying your payment',
+    };
+    $intro = match (true) {
+        $isPayLater => 'we have saved your booking and traveller details. Your seat and price are not guaranteed until you pay: we confirm the fare with the airline when you pay, and if it has changed we show you the new price before anything is charged.',
+        $isHoldNotice => 'your seat is reserved with the airline while payment is pending. Complete payment before the deadline to keep this fare.',
+        default => 'we have your payment notification. Your booking stays reserved while our team confirms the transfer.',
+    };
 @endphp
 
 <x-mail.layout
@@ -51,11 +62,15 @@
     />
 
     @if ($tktFmt)
-        <x-mail.callout tone="warning" title="Your hold expires {{ $tktFmt }}">
+        <x-mail.callout tone="warning" title="{{ $isPayLater ? 'Pay by' : 'Your hold expires' }} {{ $tktFmt }}">
             @if ($tktHours !== null)
                 That is about {{ $tktHours }} hour{{ $tktHours === 1 ? '' : 's' }} from now.
             @endif
-            After that the airline releases the seat and this fare may no longer be available.
+            @if ($isPayLater)
+                After that this saved booking closes and you would need to search again. Nothing has been charged.
+            @else
+                After that the airline releases the seat and this fare may no longer be available.
+            @endif
         </x-mail.callout>
     @endif
 
@@ -70,7 +85,7 @@
         <x-mail.row label="Airline">{{ $booking->airline ?: '—' }}</x-mail.row>
         <x-mail.row label="Cabin">{{ $cabinLabel }}</x-mail.row>
         <x-mail.row label="Travellers">{{ count($passengers) ?: 1 }}</x-mail.row>
-        <x-mail.row label="Payment option">{{ $isBankTransferNotice ? 'Bank transfer' : 'Online or bank transfer' }}</x-mail.row>
+        <x-mail.row label="Payment option">{{ $isPayLater ? ($booking->company_id ? 'Card or company wallet' : 'Card') : ($isBankTransferNotice ? 'Bank transfer' : 'Online or bank transfer') }}</x-mail.row>
     </x-mail.rows>
 
     @unless ($isHoldNotice)
