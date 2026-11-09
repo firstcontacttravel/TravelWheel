@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\AirCargoBookingService;
+use App\Services\Flights\StaffFlightBooking;
 use App\Services\GroundBookingService;
 use App\Services\InsuranceBookingService;
 use App\Services\LoungeBookingService;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 /**
@@ -41,6 +43,8 @@ class StaffBooking extends Model
         InsurancePurchase::class => ['label' => 'Travel Insurance', 'seerbit_route' => 'air.insurance.callback', 'service' => InsuranceBookingService::class],
         // The customer pays a visa in the website's own application, so its link goes there
         VisaApplication::class => ['label' => 'Visa', 'seerbit_route' => 'visa.payments.callback', 'service' => VisaPaymentService::class],
+        // Paid like a visa, in the website's own checkout for a held fare
+        FlightBooking::class => ['label' => 'Flight', 'seerbit_route' => 'payments.seerbit.callback', 'service' => StaffFlightBooking::class],
     ];
 
     protected $fillable = [
@@ -97,19 +101,43 @@ class StaffBooking extends Model
     {
         $booking = $this->bookable;
 
-        return $booking instanceof VisaApplication ? $booking->reference : $booking?->payment_reference;
+        return match (true) {
+            $booking instanceof VisaApplication => $booking->reference,
+            $booking instanceof FlightBooking => $booking->booking_ref,
+            default => $booking?->payment_reference,
+        };
     }
 
     public function customerEmail(): ?string
     {
         $booking = $this->bookable;
 
-        return $booking instanceof VisaApplication ? $booking->contact_email : $booking?->email;
+        return $booking instanceof VisaApplication || $booking instanceof FlightBooking ? $booking->contact_email : $booking?->email;
     }
 
     public function isVisa(): bool
     {
         return $this->bookable instanceof VisaApplication;
+    }
+
+    public function isFlight(): bool
+    {
+        return $this->bookable instanceof FlightBooking;
+    }
+
+    /**
+     * Where the emailed link takes the customer, for a product paid in the
+     * website's own checkout; null for one paid on the link's own page.
+     */
+    public function checkoutUrl(): ?string
+    {
+        $booking = $this->bookable;
+
+        return match (true) {
+            $booking instanceof VisaApplication => route('visa.application', $booking),
+            $booking instanceof FlightBooking => URL::temporarySignedRoute('flights.payment.options.resume', $booking->tkt_time_limit ?? now()->addDays(7), ['bookingRef' => $booking->booking_ref]),
+            default => null,
+        };
     }
 
     public function seerbitCallbackRoute(): string
@@ -131,6 +159,14 @@ class StaffBooking extends Model
                 'Service' => SupportBookingService::YELLOW_CARD_SERVICES[$booking->service_type]['label'] ?? $booking->service_type,
                 'Delivery address' => $booking->delivery_address,
             ];
+        }
+
+        if ($booking instanceof FlightBooking) {
+            return array_filter([
+                'Flight' => trim($booking->route.' · '.$booking->airline, ' ·'),
+                'Pay before' => $booking->tkt_time_limit?->format('j M Y, H:i'),
+                'Passengers' => "{$booking->adult_count} adult(s), {$booking->child_count} child(ren), {$booking->infant_count} infant(s)",
+            ]);
         }
 
         if ($booking instanceof VisaApplication) {
@@ -185,6 +221,12 @@ class StaffBooking extends Model
     {
         $booking = $this->bookable;
 
+        if ($booking instanceof FlightBooking) {
+            $lead = $booking->passengers_snapshot[0] ?? [];
+
+            return trim(($lead['first_name'] ?? '').' '.($lead['last_name'] ?? '')) ?: $booking->contact_email;
+        }
+
         if ($booking instanceof VisaApplication) {
             $lead = $booking->travelers->first();
 
@@ -209,6 +251,7 @@ class StaffBooking extends Model
             $booking instanceof LoungeBooking, $booking instanceof ProtocolBooking => $booking->totalAmount(),
             $booking instanceof AirCargoModel => (float) $booking->total_price,
             $booking instanceof InsurancePurchase => (float) $booking->t_amount,
+            $booking instanceof FlightBooking => (float) $booking->total_price,
             default => $booking?->amount,
         };
     }
@@ -224,6 +267,11 @@ class StaffBooking extends Model
                 in_array($booking->status, ['draft', 'awaiting_payment'], true) => $booking->expires_at->isPast() ? 'expired' : 'pending',
                 default => 'cancelled',
             };
+        }
+
+        // A held fare can't be paid once the airline's hold has run out
+        if ($booking instanceof FlightBooking && $booking->payment_status === 'pending' && $booking->tkt_time_limit?->isPast()) {
+            return 'expired';
         }
 
         $status = strtolower((string) $this->bookable?->payment_status);
@@ -267,6 +315,12 @@ class StaffBooking extends Model
     {
         if ($this->bookable instanceof VisaApplication) {
             $this->cancelVisa($this->bookable);
+
+            return;
+        }
+
+        if ($this->bookable instanceof FlightBooking) {
+            app(StaffFlightBooking::class)->cancel($this->bookable);
 
             return;
         }

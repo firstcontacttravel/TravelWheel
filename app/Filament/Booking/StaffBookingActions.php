@@ -51,9 +51,11 @@ class StaffBookingActions
                 ->color('success')
                 ->visible(fn (StaffBooking $record): bool => $record->canRecordPayment())
                 ->authorize(fn (): bool => auth()->user()?->canHandleMoney() ?? false)
-                ->modalDescription(fn (StaffBooking $record): string => $record->isVisa()
-                    ? 'Only once the money has been received. The amount due is ₦'.number_format((float) $record->total(), 2).', rechecked against today\'s exchange rates when you record it. This submits the application to the visa team and emails the customer.'
-                    : 'Only once the money has been received. This confirms the booking and emails the customer.')
+                ->modalDescription(fn (StaffBooking $record): string => match (true) {
+                    $record->isVisa() => 'Only once the money has been received. The amount due is ₦'.number_format((float) $record->total(), 2).', rechecked against today\'s exchange rates when you record it. This submits the application to the visa team and emails the customer.',
+                    $record->isFlight() => 'Only once the money has been received. This marks the booking paid and emails the customer a receipt. The flight team then orders the ticket.',
+                    default => 'Only once the money has been received. This confirms the booking and emails the customer.',
+                })
                 ->form([
                     Select::make('method')->options(StaffBooking::RECORDED_METHODS)->required(),
                     TextInput::make('reference')

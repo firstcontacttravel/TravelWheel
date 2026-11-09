@@ -19,11 +19,13 @@ class StaffBookingPaymentController extends Controller
     {
         $staffBooking = StaffBooking::where('pay_token', $token)->firstOrFail();
 
-        // A visa is finished and paid in the website's application, which this link opens like its resume link
-        if ($staffBooking->isVisa() && $staffBooking->isAwaitingPayment()) {
-            session()->put("visa_application_access.{$staffBooking->bookingReference()}", true);
+        // A visa or a held fare is paid in the website's own checkout, which this link opens like its resume link
+        if ($staffBooking->checkoutUrl() && $staffBooking->isAwaitingPayment()) {
+            if ($staffBooking->isVisa()) {
+                session()->put("visa_application_access.{$staffBooking->bookingReference()}", true);
+            }
 
-            return redirect()->route('visa.application', $staffBooking->bookable);
+            return redirect()->away($staffBooking->checkoutUrl());
         }
 
         return view('staff-bookings.pay', [
@@ -42,7 +44,7 @@ class StaffBookingPaymentController extends Controller
         $staffBooking = StaffBooking::where('pay_token', $token)->firstOrFail();
         $booking = $staffBooking->bookable;
 
-        if ($staffBooking->isVisa() || ! $staffBooking->isAwaitingPayment()) {
+        if ($staffBooking->checkoutUrl() || ! $staffBooking->isAwaitingPayment()) {
             return redirect()->route('staff-bookings.pay', $token);
         }
 

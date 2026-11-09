@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Filament\Pages\NewBooking;
+use App\Http\Middleware\CorporateFlightSession;
 use App\Models\ActivityLog;
 use App\Models\CompanyWalletTopUp;
 use App\Models\FlightBooking;
@@ -18,6 +20,7 @@ use App\Services\Corporate\CorporateContext;
 use App\Services\Corporate\CorporateWalletPayments;
 use App\Services\Corporate\InsufficientWalletBalance;
 use App\Services\Flights\SkylinkFareRefresh;
+use App\Services\Flights\StaffFlightBooking;
 use App\Services\SeerbitPaymentService;
 use App\Services\SkylinkFlightService;
 use App\Services\TravelFlexApplicationPdfService;
@@ -70,8 +73,9 @@ class FlightBookingController extends Controller
         ]);
         $validated['session_id'] = $validated['session_id'] ?? '';
 
-        // TravelFlex isn't offered to companies, whatever the form says.
-        $checkoutIntent = app(CorporateContext::class)->user() ? 'booking' : ($validated['intent'] ?? 'booking');
+        // TravelFlex isn't offered to companies, or to staff booking for a customer, whatever the form says.
+        $staffFlight = app(StaffFlightBooking::class);
+        $checkoutIntent = app(CorporateContext::class)->user() || $staffFlight->active() ? 'booking' : ($validated['intent'] ?? 'booking');
 
         $supplier = $suppliers->get($validated['source'] ?? TravelnextFlightService::KEY);
         $searchParams = session('searchParamsStore', []);
@@ -107,6 +111,10 @@ class FlightBookingController extends Controller
         }
 
         $mappedFlight = FlightMarkup::apply($result['data']['flight'], app(CorporateContext::class)->company());
+
+        if ($staffFlight->active() && ! $staffFlight->holdable($mappedFlight)) {
+            return back()->withErrors(['error' => 'This fare is paid by card when it is booked, so it can\'t be held for a customer to pay later. Choose another fare.']);
+        }
 
         session([
             'bookingFlight' => $mappedFlight,
@@ -687,6 +695,12 @@ class FlightBookingController extends Controller
             'pay_later' => 'nullable|boolean',
         ]);
 
+        $staffFlight = app(StaffFlightBooking::class);
+        if ($staffFlight->active()) {
+            $validated['intent'] = 'booking';
+            session(['bookingIntent' => 'booking']);
+        }
+
         // Saved travellers' passports join the booking here, on the server.
         $companyUser = app(CorporateContext::class)->user();
         $travellers = app(CompanyTravellers::class);
@@ -729,6 +743,10 @@ class FlightBookingController extends Controller
         // Checked before a hold is placed or a pay-first checkout continues.
         if ($refused = $this->_refuseIfSupplierOff($mappedFlight, $dbBooking)) {
             return $refused;
+        }
+
+        if ($staffFlight->active() && ! $staffFlight->holdable($mappedFlight)) {
+            return redirect()->route('air.flight-s')->withErrors(['error' => 'This fare is paid by card when it is booked, so it can\'t be held for a customer to pay later. Choose another fare.']);
         }
 
         $fareType = strtolower($mappedFlight['fareType'] ?? 'public');
@@ -811,6 +829,14 @@ class FlightBookingController extends Controller
             'bookingStatus' => $bookResult['Status'] ?? '',
             'flightBookingDbId' => $dbBooking->id,
         ]);
+
+        // Booked by staff for a customer: they pay later, from the staff bookings
+        if ($staffFlight->active()) {
+            $staffFlight->finish($dbBooking);
+            session()->forget(CorporateFlightSession::FLIGHT_SESSION_KEYS);
+
+            return redirect()->to(NewBooking::getUrl());
+        }
 
         $this->_sendPendingEmail($dbBooking, 'hold');
 

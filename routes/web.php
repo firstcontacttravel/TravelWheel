@@ -18,6 +18,7 @@ use App\Http\Controllers\SupportController;
 use App\Http\Controllers\VisaApplicationController;
 use App\Http\Controllers\VisaPaymentController;
 use App\Http\Controllers\StaffBookingPaymentController;
+use App\Http\Controllers\StaffFlightBookingController;
 use App\Http\Controllers\VisaPortalController;
 use App\Http\Controllers\VisaSearchController;
 use App\Http\Middleware\EnsureVisaProductEnabled;
@@ -222,6 +223,8 @@ Route::post('/air/carhire/distance', [CarController::class, 'distance'])->name('
 // A customer paying for a booking staff made for them
 Route::get('/pay/{token}', [StaffBookingPaymentController::class, 'show'])->middleware('throttle:30,1')->name('staff-bookings.pay');
 Route::post('/pay/{token}', [StaffBookingPaymentController::class, 'start'])->middleware('throttle:10,1')->name('staff-bookings.pay.start');
+// Staff booking a flight for a customer on the website, leaving without booking
+Route::post('/flights/staff-booking/stop', [StaffFlightBookingController::class, 'stop'])->middleware('auth')->name('flights.staff-booking.stop');
 
 // Transfer routes
 Route::post('/air/transfer/submit', [CarController::class, 'submitTransfer'])->name('air.transfer.submit');
