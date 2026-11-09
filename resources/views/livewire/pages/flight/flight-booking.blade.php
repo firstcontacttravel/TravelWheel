@@ -689,6 +689,8 @@
     .bk-terms-bar .bk-mini-icon { flex-shrink: 0; color: var(--gray-400); margin-top: 2px; }
 
     .bk-pay-note { font-size: 11.5px; color: var(--gray-500); line-height: 1.5; margin-top: 6px; text-align: right; }
+    .bk-paylater { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--gray-200); display: flex; flex-direction: column; align-items: flex-end; }
+    .bk-paylater .bk-pay-note { max-width: 300px; }
 
     .bk-notice { display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border-radius: 10px; font-size: 12.5px; line-height: 1.55; }
     .bk-notice svg { flex-shrink: 0; margin-top: 1px; }
@@ -866,11 +868,17 @@
     $esSym = fn($code) => match($code) { 'NGN' => html_entity_decode('&#8358;', ENT_QUOTES, 'UTF-8'), 'USD' => '$', 'AED' => 'AED ', default => $code . ' ' };
     $esFmt = fn($svc) => ($esSym($svc['ServiceCost']['CurrencyCode'] ?? '') . number_format((float)($svc['ServiceCost']['Amount'] ?? 0), 2));
     $isTravelFlexCheckout = session('bookingIntent', 'booking') === 'travelflex';
+    // "Hold and pay later" for an API that can't hold seats (SkyLink): the
+    // booking is saved on our side only, so the note says plainly that the
+    // seat and price aren't guaranteed. TravelNext holds with the airline.
+    $offersPayLater = ! $isTravelFlexCheckout && app(\App\Services\Flights\FlightPlatformHold::class)->offersPayLater($mappedFlight ?? []);
+    $payLaterHours = max(1, (int) config('flights.platform_hold.pay_later_hours', 24));
 @endphp
 
     <div class="bk-wrap"
         x-data="{
             submitForm() { document.getElementById('bk-form').submit(); },
+            holdForm() { document.querySelector('#bk-form [name=pay_later]').value = '1'; this.submitForm(); },
             taxOpen: {},
             toggleTax(key) { this.taxOpen[key] = !this.taxOpen[key]; }
         }">
@@ -1820,6 +1828,7 @@
                         <input type="hidden" name="fare_source_code" value="{{ $flight['flight']['fareSourceCode'] ?? $flight['fareSourceCode'] ?? '' }}">
                         <input type="hidden" name="session_id"            value="{{ $sessionId }}">
                         <input type="hidden" name="intent"                value="{{ session('bookingIntent', 'booking') }}">
+                        <input type="hidden" name="pay_later"             value="0">
                         <input type="hidden" name="contact[email]"        value="{{ $contactEmail }}">
                         <input type="hidden" name="contact[phone]"        value="{{ $contactPhone }}">
                         <input type="hidden" name="contact[area_code]"    value="{{ $contactAreaCode }}">
@@ -1893,6 +1902,18 @@
                                     ? 'You will start your TravelFlex application on the next step.'
                                     : 'Nothing is charged until you complete payment on the next step.' }}
                             </div>
+                            @if($offersPayLater)
+                                <div class="bk-paylater">
+                                    <button type="button" class="bk-btn-ghost" @click="holdForm()">
+                                        <span class="bk-mini-icon bk-icon-clock" aria-hidden="true"></span>
+                                        Hold and pay later
+                                    </button>
+                                    <div class="bk-pay-note">
+                                        Saves your booking for {{ $payLaterHours }} hours and emails you a link to pay.
+                                        Your seat and price are not guaranteed until you pay.
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
 

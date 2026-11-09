@@ -109,14 +109,14 @@ class SkylinkFareRefreshTest extends TestCase
         $this->assertEquals($booking->total_price, $booking->fresh()->payment_amount);
     }
 
-    public function test_a_dearer_fare_is_refused_before_any_payment_starts(): void
+    /** The customer is shown the new fare to accept or decline (decided 2026-11-09). */
+    public function test_a_dearer_fare_stops_before_any_payment_and_offers_the_new_price(): void
     {
         $booking = $this->checkoutBooking();
         $this->fakeSkylink(verifiedPrice: self::PRICE_NGN + 45000);
 
         $this->post(route('flights.payment.gateway.process'))
-            ->assertRedirect(route('air.flight-s'))
-            ->assertSessionHas('fareUnavailable', fn (array $notice): bool => $notice['message'] === SkylinkFareRefresh::PRICE_INCREASED);
+            ->assertRedirect(route('flights.price-change'));
 
         Http::assertNotSent(fn (Request $request): bool => str_contains($request->url(), '/api/v2/payments'));
         $this->assertSame('btk_original', $booking->fresh()->fare_source_code);

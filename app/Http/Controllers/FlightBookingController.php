@@ -154,6 +154,127 @@ class FlightBookingController extends Controller
         return redirect()->route('flights.travelflex.fastcredit');
     }
 
+    /**
+     * "Hold and pay later" for an API that can't hold seats. The booking is
+     * saved here until FlightPlatformHold::payLaterUntil(); nothing is sent to
+     * the supplier, so neither the seat nor the price is guaranteed. Paying
+     * later runs the ordinary pay-first checkout on this same booking: the
+     * fare is priced again, a rise is offered to accept or decline, and the
+     * supplier booking is made only after payment.
+     */
+    private function _placePayLaterHold(array $mappedFlight, array $validated, ?FlightBooking $existing)
+    {
+        $hold = app(FlightPlatformHold::class);
+        $holdFields = [
+            'booking_status' => 'on_hold',
+            'payment_status' => 'pending',
+            'hold_type' => FlightPlatformHold::PAY_LATER,
+            'hold_reminder_sent_at' => null,
+            'extra_services_snapshot' => session('selectedExtras', []),
+        ];
+
+        // Back from the pay page to hold instead: the same flight keeps its
+        // booking rather than leaving a second, abandoned one behind.
+        $reusable = $existing
+            && $existing->payment_status === 'pending'
+            && $existing->payment_method !== 'wallet'
+            && blank($existing->unique_id)
+            && in_array($existing->booking_status, ['pending_payment', 'on_hold'], true)
+            && $existing->supplier === ($mappedFlight['source'] ?? null)
+            && $existing->fare_source_code === ($mappedFlight['fareSourceCode'] ?? null);
+
+        if ($reusable) {
+            $existing->update($holdFields + [
+                'tkt_time_limit' => $hold->payLaterUntil(),
+                'passengers_snapshot' => $validated['passengers'],
+                'contact_email' => $validated['contact']['email'] ?? $existing->contact_email,
+                'contact_phone' => $validated['contact']['phone'] ?? $existing->contact_phone,
+                'contact_area_code' => $validated['contact']['area_code'] ?? $existing->contact_area_code,
+                'contact_country_code' => $validated['contact']['country_code'] ?? $existing->contact_country_code,
+                'pending_email_sent' => false,
+            ]);
+            $dbBooking = $existing->fresh();
+        } else {
+            $dbBooking = $this->_persistBooking($mappedFlight, $validated, [], $holdFields + [
+                'unique_id' => '',
+                'payment_method' => 'gateway',
+                'tkt_time_limit' => $hold->payLaterUntil()->toIso8601String(),
+            ]);
+        }
+
+        session([
+            'flightBookingDbId' => $dbBooking->id,
+            'bookingRef' => $dbBooking->booking_ref,
+            'bookingTktTimeLimit' => optional($dbBooking->tkt_time_limit)->toIso8601String(),
+            'bookingStatus' => 'ON_HOLD',
+        ]);
+
+        $this->_sendPendingEmail($dbBooking, 'pay_later');
+
+        return redirect()->route('flights.payment.gateway')->with('status', sprintf(
+            'Booking %s is saved until %s (Lagos time). We have emailed you a link to pay. Your seat and price are not guaranteed until you pay.',
+            $dbBooking->booking_ref,
+            $dbBooking->tkt_time_limit->timezone('Africa/Lagos')->format('H:i, D d M'),
+        ));
+    }
+
+    /**
+     * The "Complete payment" link from a pay-later email: reopens the pay page
+     * for that booking. The signature is the customer's proof of the link.
+     */
+    public function resumePayLaterHold(Request $request, string $bookingRef)
+    {
+        if (! $request->hasValidSignature()) {
+            abort(403);
+        }
+
+        $booking = FlightBooking::where('booking_ref', $bookingRef)->firstOrFail();
+        $hold = app(FlightPlatformHold::class);
+
+        if (! $hold->isPayLater($booking)) {
+            abort(404);
+        }
+
+        if ($booking->payment_status === 'paid' || filled($booking->unique_id)) {
+            $this->_forgetStaleCheckoutSession();
+            $this->_primeBookingSession($booking);
+            session(['paymentMethod' => $booking->payment_method]);
+
+            return redirect()->route('flights.confirmation');
+        }
+
+        if ($hold->payLaterExpired($booking) || $booking->payment_status !== 'pending') {
+            return redirect()->route('air.flight-s')->withErrors(['error' => FlightPlatformHold::PAY_LATER_EXPIRED]);
+        }
+
+        if ($refused = $this->_refuseIfCompanyNotActive($booking)) {
+            return $refused;
+        }
+
+        $this->_forgetStaleCheckoutSession();
+        $this->_primeBookingSession($booking);
+        session(['bookingContact' => [
+            'email' => $booking->contact_email,
+            'phone' => $booking->contact_phone,
+            'area_code' => $booking->contact_area_code,
+            'country_code' => $booking->contact_country_code,
+        ]]);
+
+        return redirect()->route('flights.payment.gateway');
+    }
+
+    /** No payment starts on a pay-later hold whose deadline has passed. */
+    private function _refuseIfPayLaterExpired(?FlightBooking $booking): ?\Illuminate\Http\RedirectResponse
+    {
+        if (! app(FlightPlatformHold::class)->payLaterExpired($booking)) {
+            return null;
+        }
+
+        $this->_forgetStaleCheckoutSession();
+
+        return redirect()->route('air.flight-s')->withErrors(['error' => FlightPlatformHold::PAY_LATER_EXPIRED]);
+    }
+
     private const CARD_ONLY = 'This booking can only be paid by card. Please choose card payment to continue.';
 
     private function _isPlatformHeld(?FlightBooking $booking): bool
@@ -265,6 +386,10 @@ class FlightBookingController extends Controller
             }
 
             if ($flow === 'skylink_reserve_full') {
+                if ($refused = $this->_refuseIfPayLaterExpired($booking)) {
+                    return $refused;
+                }
+
                 $refreshed = app(SkylinkFareRefresh::class)->refresh($booking);
 
                 if (! $refreshed['ok']) {
@@ -398,30 +523,48 @@ class FlightBookingController extends Controller
     }
 
     // =========================================================================
-    //  Corporate fare rise: show the new price and let the booker decide
+    //  Fare rise before payment: show the new price and let the customer decide
     // =========================================================================
     private function _askToAcceptNewPrice(FlightBooking $booking, float $newFare): \Illuminate\Http\RedirectResponse
     {
-        session(['corporatePriceChange' => ['booking_id' => $booking->id, 'new_fare' => $newFare]]);
+        // flightBookingDbId too: a public booking made moments ago at Pay
+        // isn't in the session yet, and _priceChangeBooking() checks it.
+        session([
+            'corporatePriceChange' => ['booking_id' => $booking->id, 'new_fare' => $newFare],
+            'flightBookingDbId' => $booking->id,
+            'bookingRef' => $booking->booking_ref,
+        ]);
 
         return redirect()->route('flights.price-change');
     }
 
-    /** The booking waiting on a decision, if it belongs to whoever is asking. */
+    /**
+     * The booking waiting on a decision, if it belongs to whoever is asking:
+     * a company's to its people; a public booking to the session checking it
+     * out (the one that holds it as flightBookingDbId).
+     */
     private function _priceChangeBooking(): ?FlightBooking
     {
         $change = session('corporatePriceChange');
         $company = app(CorporateContext::class)->company();
 
-        if (! is_array($change) || $company === null) {
+        if (! is_array($change)) {
             return null;
         }
 
-        return FlightBooking::query()
+        $query = FlightBooking::query()
             ->whereKey($change['booking_id'] ?? 0)
-            ->where('company_id', $company->id)
-            ->where('payment_status', 'pending')
-            ->first();
+            ->where('payment_status', 'pending');
+
+        if ($company !== null) {
+            $query->where('company_id', $company->id);
+        } else {
+            $query->whereNull('company_id')->whereKey((int) session('flightBookingDbId'));
+        }
+
+        $booking = $query->first();
+
+        return app(FlightPlatformHold::class)->payLaterExpired($booking) ? null : $booking;
     }
 
     public function priceChange()
@@ -472,13 +615,15 @@ class FlightBookingController extends Controller
 
         $booking->refresh();
 
-        ActivityLog::recordForCompanyUser(
-            app(CorporateContext::class)->user(),
-            'company_fare_change_accepted',
-            'Accepted a new fare on '.$booking->booking_ref,
-            $booking,
-            ['accepted_fare' => $accepted, 'fare' => data_get($booking->flight_snapshot, 'price')],
-        );
+        if ($companyUser = app(CorporateContext::class)->user()) {
+            ActivityLog::recordForCompanyUser(
+                $companyUser,
+                'company_fare_change_accepted',
+                'Accepted a new fare on '.$booking->booking_ref,
+                $booking,
+                ['accepted_fare' => $accepted, 'fare' => data_get($booking->flight_snapshot, 'price')],
+            );
+        }
 
         session()->forget('corporatePriceChange');
         session(['bookingFlight' => $booking->flight_snapshot, 'flightBookingDbId' => $booking->id]);
@@ -539,6 +684,7 @@ class FlightBookingController extends Controller
             'extra_baggage' => 'nullable|array',
             'extra_meal' => 'nullable|array',
             'intent' => 'nullable|in:booking,travelflex',
+            'pay_later' => 'nullable|boolean',
         ]);
 
         // Saved travellers' passports join the booking here, on the server.
@@ -601,6 +747,14 @@ class FlightBookingController extends Controller
             } elseif (app(FlightPlatformHold::class)->applies($mappedFlight)) {
                 return $this->_placePlatformHold($mappedFlight, $validated);
             }
+        }
+
+        // ── Hold and pay later, on our side: an API that can't hold seats
+        // gets nothing until the customer pays. (TravelNext holds with the
+        // airline in the Public/Private flow below, so the choice is moot.)
+        if ($request->boolean('pay_later') && $checkoutIntent !== 'travelflex'
+            && app(FlightPlatformHold::class)->offersPayLater($mappedFlight)) {
+            return $this->_placePayLaterHold($mappedFlight, $validated, $dbBooking);
         }
 
         // ── SkyLink: always gateway-only, pay first — /reserve creates an
@@ -699,6 +853,12 @@ class FlightBookingController extends Controller
             return $refused;
         }
 
+        $sessionBooking = $this->_sessionBooking();
+
+        if ($refused = $this->_refuseIfPayLaterExpired($sessionBooking)) {
+            return $refused;
+        }
+
         $extraServices = session('extraServices', []);
         $selectedExtras = session('selectedExtras', []);
 
@@ -727,6 +887,9 @@ class FlightBookingController extends Controller
             'selectedExtras' => $selectedExtras,
             'extraServices' => $extraServices,
             'extrasTotal' => $extrasTotal,
+            'payLaterUntil' => app(FlightPlatformHold::class)->isPayLater($sessionBooking) && $sessionBooking->payment_status === 'pending'
+                ? $sessionBooking->tkt_time_limit
+                : null,
         ]);
     }
 
@@ -1453,11 +1616,15 @@ class FlightBookingController extends Controller
             // is still live when the customer comes back from SeerBit. Only a
             // fare that is gone or dearer stops here, before money moves.
             if ($flow === 'skylink_reserve_full') {
+                if ($refused = $this->_refuseIfPayLaterExpired($booking)) {
+                    return $refused;
+                }
+
                 $refreshed = app(SkylinkFareRefresh::class)->refresh($booking);
 
                 if (! $refreshed['ok']) {
-                    // A company decides for itself whether a higher fare is acceptable.
-                    if ($booking->company_id && $refreshed['reason'] === 'price_increased' && isset($refreshed['current_price'])) {
+                    // The customer decides whether a higher fare is acceptable.
+                    if ($refreshed['reason'] === 'price_increased' && isset($refreshed['current_price'])) {
                         return $this->_askToAcceptNewPrice($booking, (float) $refreshed['current_price']);
                     }
 

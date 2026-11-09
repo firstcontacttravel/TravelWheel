@@ -76,6 +76,10 @@ Schedule::command('flights:reconcile --limit=200')
     ->everyFiveMinutes()
     ->withoutOverlapping(10);
 
+Schedule::command('flights:remind-pay-later-holds')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping(10);
+
 Schedule::command('reports:sync')
     ->everyFiveMinutes()
     ->withoutOverlapping(15);

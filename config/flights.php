@@ -78,6 +78,14 @@ return [
     'platform_hold' => [
         'hold_hours' => (int) env('FLIGHTS_PLATFORM_HOLD_HOURS', 72),
         'price_tolerance' => 50,
+
+        // "Hold and pay later" at an ordinary checkout, for the same APIs.
+        // Shorter than TravelFlex's hold: the seat and price are not held with
+        // the airline, so the longer the wait the likelier the fare has gone.
+        'pay_later_enabled' => (bool) env('FLIGHTS_PAY_LATER_ENABLED', true),
+        'pay_later_hours' => (int) env('FLIGHTS_PAY_LATER_HOURS', 24),
+        // One reminder this long before the hold lapses.
+        'pay_later_reminder_hours' => 3,
     ],
 
     'cutoff' => [

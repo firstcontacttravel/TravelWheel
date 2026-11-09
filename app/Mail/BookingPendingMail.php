@@ -23,16 +23,32 @@ class BookingPendingMail extends Mailable
 
     public function envelope(): Envelope
     {
+        $ref = $this->booking->booking_ref ?? 'N/A';
+
         return new Envelope(
-            subject: 'Booking Pending - ' . ($this->booking->booking_ref ?? 'N/A'),
+            subject: match ($this->method) {
+                'pay_later' => 'Booking saved - pay to confirm - '.$ref,
+                'pay_later_reminder' => 'Your saved booking expires soon - '.$ref,
+                default => 'Booking Pending - '.$ref,
+            },
         );
+    }
+
+    /** Held on our side only ("hold and pay later"): no seat at the airline. */
+    private function isPayLater(): bool
+    {
+        return in_array($this->method, ['pay_later', 'pay_later_reminder'], true);
     }
 
     public function content(): Content
     {
         $resumePaymentUrl = null;
 
-        if ($this->booking->booking_ref && $this->booking->booking_status === 'on_hold') {
+        if ($this->isPayLater()) {
+            $resumePaymentUrl = $this->booking->booking_ref && $this->booking->tkt_time_limit?->isFuture()
+                ? URL::temporarySignedRoute('flights.hold.resume', $this->booking->tkt_time_limit, ['bookingRef' => $this->booking->booking_ref])
+                : null;
+        } elseif ($this->booking->booking_ref && $this->booking->booking_status === 'on_hold') {
             $resumePaymentUrl = URL::temporarySignedRoute(
                 'flights.payment.options.resume',
                 $this->booking->tkt_time_limit ?? now()->addDays(7),
@@ -46,7 +62,9 @@ class BookingPendingMail extends Mailable
                 'booking' => $this->booking,
                 'paymentMethod' => $this->method,
                 'resumePaymentUrl' => $resumePaymentUrl,
-                'isHoldNotice' => $this->method === 'hold',
+                'isHoldNotice' => $this->method === 'hold' || $this->isPayLater(),
+                'isPayLater' => $this->isPayLater(),
+                'isReminder' => $this->method === 'pay_later_reminder',
                 'isBankTransferNotice' => $this->method === 'bank_transfer',
             ],
         );
