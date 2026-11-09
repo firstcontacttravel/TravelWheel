@@ -4,12 +4,8 @@ namespace App\Filament\Pages;
 
 use App\Filament\Booking\StaffBookingActions;
 use App\Models\StaffBooking;
-use App\Services\Corporate\CorporateContext;
-use App\Services\Flights\StaffFlightBooking;
 use BackedEnum;
 use Filament\Actions\Action;
-use Filament\Forms\Components\Toggle;
-use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -52,24 +48,7 @@ class NewBooking extends Page implements HasTable
             Action::make('bookFlight')
                 ->label('Flight')
                 ->icon('heroicon-o-paper-airplane')
-                ->modalHeading('Book a flight for a customer')
-                ->modalDescription("Opens the website's flight search. Choose a fare and enter the passengers and the customer's contact details: the fare is then held with the airline, and the booking is listed here. Fares paid by card at booking (SkyLink and WebFare) can't be held, so they can't be chosen.")
-                ->modalSubmitActionLabel('Open flight search')
-                ->form([
-                    Toggle::make('send_link')
-                        ->label('Email the customer a payment link once the fare is held')
-                        ->default(true),
-                ])
-                ->action(function (array $data): void {
-                    if (app(CorporateContext::class)->hasActingSession()) {
-                        Notification::make()->title('Stop booking for the company first')->body("You're booking for a company on the website. Stop that from the bar at the bottom of its pages.")->danger()->send();
-
-                        return;
-                    }
-
-                    app(StaffFlightBooking::class)->start(auth()->user(), (bool) $data['send_link']);
-                    $this->redirect(url('/'));
-                }),
+                ->url(fn (): string => BookFlight::getUrl()),
             Action::make('bookCarHire')
                 ->label('Car Hire')
                 ->icon('heroicon-o-truck')

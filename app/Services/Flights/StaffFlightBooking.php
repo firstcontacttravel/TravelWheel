@@ -2,76 +2,92 @@
 
 namespace App\Services\Flights;
 
-use App\Filament\Booking\StaffBookingActions;
-use App\Http\Middleware\CorporateFlightSession;
 use App\Models\FlightBooking;
 use App\Models\PaymentVerificationRecord;
 use App\Models\StaffBooking;
-use App\Models\User;
 use App\Services\AdminPostTicketingService;
 use App\Services\DurableMailService;
+use App\Services\TravelnextFlightService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
- * A member of staff booking a flight for a customer on the website's own
- * search and checkout. The fare is held with the airline instead of paid; the
- * customer then pays from an emailed link, or Finance records the payment and
- * the flight team issues the ticket.
- *
- * Only fares the airline can hold qualify: SkyLink and WebFare fares are paid
- * by card at booking, with nothing to hold.
+ * A flight staff book for a customer from the admin: the fare is held with the
+ * airline instead of paid. The customer then pays from an emailed link, or
+ * Finance records the payment and the flight team issues the ticket.
  */
 class StaffFlightBooking
 {
-    public const SESSION_KEY = 'flights.staff_booking';
+    public function __construct(
+        private readonly FlightSupplierRegistry $suppliers,
+        private readonly FlightSupplierControl $control,
+        private readonly FlightBookingRecorder $recorder,
+    ) {}
 
-    public function start(User $staff, bool $sendLink): void
+    /**
+     * The switched-on flight APIs that can hold a fare before payment. SkyLink
+     * is paid by card when booked, so it has nothing to hold.
+     *
+     * @return array<string, \App\Contracts\FlightSupplier>
+     */
+    public function holdingSuppliers(): array
     {
-        // A fresh search: nothing from a checkout this browser had going carries over
-        session()->forget(CorporateFlightSession::FLIGHT_SESSION_KEYS);
-        session()->put(self::SESSION_KEY, ['user_id' => $staff->id, 'send_link' => $sendLink]);
+        return array_filter(
+            $this->suppliers->all(),
+            fn ($supplier, string $key): bool => $supplier->supportsHold() && $this->control->isEnabled($key),
+            ARRAY_FILTER_USE_BOTH,
+        );
     }
 
-    /** The member of staff booking, while they are still signed in and allowed to. */
-    public function staff(): ?User
-    {
-        $state = session(self::SESSION_KEY);
-        $user = auth()->user();
-
-        if (! is_array($state) || ! $user instanceof User || (int) $user->id !== (int) ($state['user_id'] ?? 0) || ! $user->canBookForCustomers()) {
-            return null;
-        }
-
-        return $user;
-    }
-
-    public function active(): bool
-    {
-        return $this->staff() !== null;
-    }
-
-    public function stop(): void
-    {
-        session()->forget(self::SESSION_KEY);
-    }
-
+    /** A WebFare is paid by card when booked even from an API that holds others. */
     public function holdable(array $flight): bool
     {
-        return ($flight['source'] ?? 'travelnext') !== 'skylink'
+        $supplier = (string) ($flight['source'] ?? '');
+
+        return array_key_exists($supplier, $this->holdingSuppliers())
             && strtolower((string) ($flight['fareType'] ?? 'public')) !== 'webfare';
     }
 
-    /** The fare is held: the booking joins the staff bookings, and the customer is emailed if staff asked. */
-    public function finish(FlightBooking $booking): void
+    /**
+     * Holds the re-confirmed fare with the airline and records the booking, as
+     * the website does when a customer chooses to pay later.
+     *
+     * @throws ValidationException when the airline refuses the hold
+     */
+    public function hold(array $flight, array $criteria, string $flightSessionId, array $contact, array $passengers): FlightBooking
     {
-        $sendLink = (bool) (session(self::SESSION_KEY)['send_link'] ?? false);
-        $booking->update(['booked_by_user_id' => auth()->id()]);
+        if (! $this->holdable($flight)) {
+            throw ValidationException::withMessages(['fare' => "This fare is paid by card when it is booked, so it can't be held. Choose another fare."]);
+        }
 
-        StaffBookingActions::finish($booking, ['send_link' => $sendLink]);
+        $result = app(TravelnextFlightService::class)->book($flight, ['contact' => $contact, 'passengers' => $passengers], $flightSessionId);
+        $bookResult = data_get($result, 'data.BookFlightResponse.BookFlightResult', []);
+        $uniqueId = (string) ($bookResult['UniqueID'] ?? '');
 
-        $this->stop();
+        if (($result['outcome'] ?? null) === 'unclear') {
+            Log::warning('Staff flight booking: hold outcome unclear', ['route' => $flight['segments'][0]['from'] ?? null, 'contact' => $contact['email'] ?? null]);
+
+            throw ValidationException::withMessages(['fare' => "The airline didn't answer in time, so the seat may or may not be held. Ask the flight team to check before trying again."]);
+        }
+
+        if (($result['error'] ?? true) || ! filter_var($bookResult['Success'] ?? false, FILTER_VALIDATE_BOOLEAN) || $uniqueId === '') {
+            $reason = data_get($bookResult, 'Errors.0.Message') ?? data_get($bookResult, 'Errors.Error.ErrorMessage') ?? ($result['message'] ?? null);
+
+            throw ValidationException::withMessages(['fare' => trim('The airline could not hold this fare. '.($reason ?: 'Search again for a current fare.'))]);
+        }
+
+        return $this->recorder->record($flight, $contact, $passengers, $result['data'], [
+            'session_id' => $flightSessionId,
+            'trip_type' => $flight['directionInd'] ?? strtoupper((string) ($criteria['trip'] ?? '')),
+            'booked_by' => auth()->user(),
+        ], [
+            'unique_id' => $uniqueId,
+            'booking_status' => 'on_hold',
+            'payment_status' => 'pending',
+            'tkt_time_limit' => ($bookResult['TktTimeLimit'] ?? null) ?: null,
+        ]);
     }
 
     /**

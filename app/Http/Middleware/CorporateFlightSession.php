@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use App\Services\Corporate\BusinessSession;
 use App\Services\Corporate\CorporateContext;
 use App\Services\Flights\FlightSearchStore;
-use App\Services\Flights\StaffFlightBooking;
 use Closure;
 use Filament\Facades\Filament;
 use Illuminate\Http\Request;
@@ -25,7 +24,7 @@ class CorporateFlightSession
 {
     public const COMPANY_KEY = 'flights.company_id';
 
-    public const FLIGHT_SESSION_KEYS = [
+    private const FLIGHT_SESSION_KEYS = [
         // Search
         'pendingFlightSearch',
         'pendingFlightSearchStartedAt',
@@ -123,7 +122,6 @@ class CorporateFlightSession
 
         view()->share('corporateCompany', $user?->company);
         view()->share('corporateStaffBooking', (bool) $user?->is_system);
-        view()->share('staffFlightBooking', $user === null && app(StaffFlightBooking::class)->active());
 
         return $next($request);
     }

@@ -124,20 +124,6 @@
             <a href="{{ route('business.dashboard') }}" class="tw-company-badge">Booking for {{ $corporateCompany->name }} · Back to portal</a>
         @endif
     @endif
-    @if ($staffFlightBooking ?? false)
-        <style>
-            .tw-staff-flight { position: fixed; left: 12px; bottom: 12px; z-index: 40; max-width: calc(100vw - 24px); margin: 0; padding: 8px 14px; border-radius: 20px; background: #92400e; color: #fff; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
-            @media (max-width: 768px) {
-                body { padding-bottom: 36px; }
-                .tw-staff-flight { left: 0; right: 0; bottom: 0; max-width: none; border-radius: 0; padding: 8px 12px; text-align: center; box-shadow: none; }
-            }
-        </style>
-        <form method="POST" action="{{ route('flights.staff-booking.stop') }}" class="tw-staff-flight">
-            @csrf
-            TravelWheel staff booking a flight for a customer: the fare is held, not paid ·
-            <button type="submit" style="all:unset;cursor:pointer;text-decoration:underline;">Stop</button>
-        </form>
-    @endif
     @livewireScripts
     
     <!-- Mobile Menu Toggle Script -->

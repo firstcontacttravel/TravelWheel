@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Filament\Pages\NewBooking;
-use App\Http\Middleware\CorporateFlightSession;
 use App\Models\ActivityLog;
 use App\Models\CompanyWalletTopUp;
 use App\Models\FlightBooking;
@@ -11,6 +9,8 @@ use App\Models\TravelFlexApplication;
 use App\Services\AdminTicketingService;
 use App\Services\DurableMailService;
 use App\Services\Flights\FlightBookingGuard;
+use App\Services\Flights\FlightBookingRecorder;
+use App\Services\Flights\FlightPassengerRules;
 use App\Services\Flights\FlightPlatformHold;
 use App\Services\Flights\FlightSearchStore;
 use App\Services\Flights\FlightSupplierRegistry;
@@ -20,7 +20,6 @@ use App\Services\Corporate\CorporateContext;
 use App\Services\Corporate\CorporateWalletPayments;
 use App\Services\Corporate\InsufficientWalletBalance;
 use App\Services\Flights\SkylinkFareRefresh;
-use App\Services\Flights\StaffFlightBooking;
 use App\Services\SeerbitPaymentService;
 use App\Services\SkylinkFlightService;
 use App\Services\TravelFlexApplicationPdfService;
@@ -73,9 +72,8 @@ class FlightBookingController extends Controller
         ]);
         $validated['session_id'] = $validated['session_id'] ?? '';
 
-        // TravelFlex isn't offered to companies, or to staff booking for a customer, whatever the form says.
-        $staffFlight = app(StaffFlightBooking::class);
-        $checkoutIntent = app(CorporateContext::class)->user() || $staffFlight->active() ? 'booking' : ($validated['intent'] ?? 'booking');
+        // TravelFlex isn't offered to companies, whatever the form says.
+        $checkoutIntent = app(CorporateContext::class)->user() ? 'booking' : ($validated['intent'] ?? 'booking');
 
         $supplier = $suppliers->get($validated['source'] ?? TravelnextFlightService::KEY);
         $searchParams = session('searchParamsStore', []);
@@ -111,10 +109,6 @@ class FlightBookingController extends Controller
         }
 
         $mappedFlight = FlightMarkup::apply($result['data']['flight'], app(CorporateContext::class)->company());
-
-        if ($staffFlight->active() && ! $staffFlight->holdable($mappedFlight)) {
-            return back()->withErrors(['error' => 'This fare is paid by card when it is booked, so it can\'t be held for a customer to pay later. Choose another fare.']);
-        }
 
         session([
             'bookingFlight' => $mappedFlight,
@@ -695,12 +689,6 @@ class FlightBookingController extends Controller
             'pay_later' => 'nullable|boolean',
         ]);
 
-        $staffFlight = app(StaffFlightBooking::class);
-        if ($staffFlight->active()) {
-            $validated['intent'] = 'booking';
-            session(['bookingIntent' => 'booking']);
-        }
-
         // Saved travellers' passports join the booking here, on the server.
         $companyUser = app(CorporateContext::class)->user();
         $travellers = app(CompanyTravellers::class);
@@ -743,10 +731,6 @@ class FlightBookingController extends Controller
         // Checked before a hold is placed or a pay-first checkout continues.
         if ($refused = $this->_refuseIfSupplierOff($mappedFlight, $dbBooking)) {
             return $refused;
-        }
-
-        if ($staffFlight->active() && ! $staffFlight->holdable($mappedFlight)) {
-            return redirect()->route('air.flight-s')->withErrors(['error' => 'This fare is paid by card when it is booked, so it can\'t be held for a customer to pay later. Choose another fare.']);
         }
 
         $fareType = strtolower($mappedFlight['fareType'] ?? 'public');
@@ -829,14 +813,6 @@ class FlightBookingController extends Controller
             'bookingStatus' => $bookResult['Status'] ?? '',
             'flightBookingDbId' => $dbBooking->id,
         ]);
-
-        // Booked by staff for a customer: they pay later, from the staff bookings
-        if ($staffFlight->active()) {
-            $staffFlight->finish($dbBooking);
-            session()->forget(CorporateFlightSession::FLIGHT_SESSION_KEYS);
-
-            return redirect()->to(NewBooking::getUrl());
-        }
 
         $this->_sendPendingEmail($dbBooking, 'hold');
 
@@ -2816,86 +2792,10 @@ class FlightBookingController extends Controller
 
     private function _validateBookingPassengers(array $validated): void
     {
-        $passengers = collect($validated['passengers'] ?? []);
-        $messages = [];
-
-        if ($passengers->count() > 9) {
-            $messages['passengers'] = 'The total number of passengers must not exceed 9 per booking.';
-        }
-
-        $travelDate = $this->_bookingTravelDate();
         $bookingFlight = session('bookingFlight', []);
         $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
-        $passportMandatory = filter_var(
-            $mappedFlight['isPassportMandatory'] ?? false,
-            FILTER_VALIDATE_BOOLEAN,
-        );
 
-        foreach ($passengers as $i => $pax) {
-            $title = (string) ($pax['title'] ?? '');
-            $type = (string) ($pax['type'] ?? '');
-
-            if ($passportMandatory) {
-                foreach ([
-                    'passport_no' => 'Passport number',
-                    'passport_issue_country' => 'Passport issuing country',
-                    'passport_issue_date' => 'Passport issue date',
-                    'passport_exp' => 'Passport expiry date',
-                ] as $field => $label) {
-                    if (blank($pax[$field] ?? null)) {
-                        $messages["passengers.{$i}.{$field}"] = "{$label} is required for this fare.";
-                    }
-                }
-            }
-
-            if (in_array($type, ['CHD', 'INF'], true) && ! in_array($title, ['Master', 'Miss'], true)) {
-                $messages["passengers.{$i}.title"] = 'Child and infant passenger titles must be Master or Miss.';
-            }
-
-            if (empty($pax['dob']) || empty($pax['type'])) {
-                continue;
-            }
-
-            try {
-                $age = Carbon::parse($pax['dob'])->diffInYears($travelDate);
-            } catch (\Throwable) {
-                continue;
-            }
-
-            $key = "passengers.{$i}.dob";
-            if ($pax['type'] === 'ADT' && $age < 18) {
-                $messages[$key] = 'Adult passengers must be at least 18 years old on the travel date.';
-            }
-            if ($pax['type'] === 'CHD' && ($age < 2 || $age > 12)) {
-                $messages[$key] = 'Child passengers must be between 2 and 12 years old on the travel date.';
-            }
-            if ($pax['type'] === 'INF' && $age >= 2) {
-                $messages[$key] = 'Infant passengers must be under 2 years old on the travel date.';
-            }
-
-            if (! empty($pax['passport_issue_date'])) {
-                try {
-                    if (Carbon::parse($pax['passport_issue_date'])->gt($travelDate)) {
-                        $messages["passengers.{$i}.passport_issue_date"] = 'Passport issue date must be before the travel date.';
-                    }
-                } catch (\Throwable) {
-                    // The request date rule provides the customer-facing error.
-                }
-            }
-            if (! empty($pax['passport_exp'])) {
-                try {
-                    if (Carbon::parse($pax['passport_exp'])->lte($travelDate)) {
-                        $messages["passengers.{$i}.passport_exp"] = 'Passport must remain valid through the travel date.';
-                    }
-                } catch (\Throwable) {
-                    // The request date rule provides the customer-facing error.
-                }
-            }
-        }
-
-        if (! empty($messages)) {
-            throw ValidationException::withMessages($messages);
-        }
+        app(FlightPassengerRules::class)->validate($validated['passengers'] ?? [], $mappedFlight, $this->_bookingTravelDate());
     }
 
     private function _validatePassengerCountsAgainstSearch(array $passengers): void
@@ -2925,15 +2825,8 @@ class FlightBookingController extends Controller
     private function _bookingTravelDate(): Carbon
     {
         $bookingFlight = session('bookingFlight', []);
-        $mappedFlight = $bookingFlight['flight'] ?? $bookingFlight;
-        $date = $mappedFlight['departDT'] ?? data_get($mappedFlight, 'segments.0.departDT');
-        $searchParams = session('bookingSearchParams', []);
 
-        if (! $date && ! empty($searchParams['depart'])) {
-            return Carbon::createFromFormat('d/m/Y', $searchParams['depart'])->startOfDay();
-        }
-
-        return $date ? Carbon::parse($date)->startOfDay() : now()->startOfDay();
+        return app(FlightPassengerRules::class)->travelDate($bookingFlight['flight'] ?? $bookingFlight, session('bookingSearchParams.depart'));
     }
 
     private function _callBookApi(array $validated, Request $request): array
@@ -2952,79 +2845,25 @@ class FlightBookingController extends Controller
         );
     }
 
-    /**
-     * Generate a unique, human-readable booking reference.
-     * Format: TW-XXXXXXXX  (TW prefix + 8 uppercase alphanumeric chars)
-     * This is OUR internal reference — completely separate from the airline's
-     * UniqueID / e-ticket number returned by the ticketing API.
-     */
-    private function _generateBookingRef(): string
-    {
-        do {
-            $ref = 'TW-'.strtoupper(substr(base_convert(bin2hex(random_bytes(5)), 16, 36), 0, 8));
-        } while (FlightBooking::where('booking_ref', $ref)->exists());
-
-        return $ref;
-    }
-
     private function _persistBooking(array $mappedFlight, array $validated, array $apiResponse, array $overrides = []): FlightBooking
     {
-        $contact = $validated['contact'] ?? session('bookingContact', []);
-        $passengers = $validated['passengers'] ?? session('bookingPassengers', []);
+        $corporate = app(CorporateContext::class);
 
-        $tktRaw = $overrides['tkt_time_limit'] ?? null;
-        unset($overrides['tkt_time_limit']);
-
-        // unique_id from the API (hold/ticket reference) — NOT our booking ref
-        // We always generate our own booking_ref for customer-facing reference.
-        $bookingRef = $this->_generateBookingRef();
-        $companyUser = app(CorporateContext::class)->user();
-
-        return FlightBooking::create(array_merge([
-            'company_id' => $companyUser?->company_id,
-            'company_user_id' => $companyUser?->id,
-            'booked_by_user_id' => app(CorporateContext::class)->actingStaff()?->id,
-            'cost_code' => $companyUser ? session('bookingCostCode') : null,
-            'booking_ref' => $bookingRef,
-            'fare_source_code' => $mappedFlight['fareSourceCode'] ?? '',
-            'session_id' => session('bookingSessionId', ''),
-            'fare_type' => $mappedFlight['fareType'] ?? 'Public',
-            'supplier' => $mappedFlight['source'] ?? 'travelnext',
-            'trip_type' => session('tripType', ''),
-            'route' => FlightDisplay::route($mappedFlight),
-            'airline' => $mappedFlight['airline'] ?? '',
-            'cabin' => \App\Support\FlightDisplay::cabin($mappedFlight),
-            'currency' => $mappedFlight['currency'] ?? 'NGN',
-            'supplier_price' => $mappedFlight['supplierPrice'] ?? ($mappedFlight['price'] ?? 0),
-            'markup_amount' => $mappedFlight['markupAmount'] ?? 0,
-            'markup_category' => $mappedFlight['markupCategory'] ?? null,
-            'markup_details' => [
-                'category' => $mappedFlight['markupCategory'] ?? null,
-                'cabin' => $mappedFlight['markupCabin'] ?? null,
-                'supplier_price' => $mappedFlight['supplierPrice'] ?? ($mappedFlight['price'] ?? 0),
-                'markup_amount' => $mappedFlight['markupAmount'] ?? 0,
-                'rate_per_passenger' => $mappedFlight['markupRatePerPassenger'] ?? 0,
-                'passenger_count' => $mappedFlight['markupPassengerCount'] ?? 1,
-                'customer_price' => $mappedFlight['price'] ?? 0,
-                'currency' => $mappedFlight['currency'] ?? 'NGN',
+        return app(FlightBookingRecorder::class)->record(
+            $mappedFlight,
+            $validated['contact'] ?? session('bookingContact', []),
+            $validated['passengers'] ?? session('bookingPassengers', []),
+            $apiResponse,
+            [
+                'session_id' => session('bookingSessionId', ''),
+                'trip_type' => session('tripType', ''),
+                'extras_total' => $this->_selectedExtrasTotal($overrides['extra_services_snapshot'] ?? session('selectedExtras', [])),
+                'company_user' => $corporate->user(),
+                'booked_by' => $corporate->actingStaff(),
+                'cost_code' => session('bookingCostCode'),
             ],
-            'total_price' => ((float) ($mappedFlight['price'] ?? 0)) + $this->_selectedExtrasTotal($overrides['extra_services_snapshot'] ?? session('selectedExtras', [])),
-            'contact_email' => $contact['email'] ?? '',
-            'contact_phone' => $contact['phone'] ?? '',
-            // Needed later for SkyLink's primary_guest.country_code — persisted
-            // rather than read from session at reserve() time, since that call
-            // runs from the SeerBit payment callback (a separate request, by
-            // then the original session may be long gone).
-            'contact_area_code' => $contact['area_code'] ?? '',
-            'contact_country_code' => $contact['country_code'] ?? '',
-            'adult_count' => collect($passengers)->where('type', 'ADT')->count(),
-            'child_count' => collect($passengers)->where('type', 'CHD')->count(),
-            'infant_count' => collect($passengers)->where('type', 'INF')->count(),
-            'tkt_time_limit' => $tktRaw ? \Carbon\Carbon::parse($tktRaw) : null,
-            'booking_api_response' => $apiResponse,
-            'passengers_snapshot' => $passengers,
-            'flight_snapshot' => $mappedFlight,
-        ], $overrides));
+            $overrides,
+        );
     }
 
     private function _sendConfirmedEmail(FlightBooking $booking, array $tripDetails = []): void
