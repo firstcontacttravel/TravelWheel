@@ -363,6 +363,10 @@
            to two lines each; stacked, the next step comes first. */
         .bk-actions { flex-direction: column-reverse; align-items: stretch; gap: 10px; }
         .bk-actions > * { width: 100%; justify-content: center; }
+        /* Paying first, holding second, Back last; each full width. */
+        .bk-actions-main { flex-direction: column-reverse; }
+        .bk-actions-main > * { width: 100%; }
+        .bk-actions-note { text-align: center; }
     }
     /* Two columns of ~104px still clipped dates on 320px phones. */
     @media (max-width: 359px) {
@@ -689,8 +693,22 @@
     .bk-terms-bar .bk-mini-icon { flex-shrink: 0; color: var(--gray-400); margin-top: 2px; }
 
     .bk-pay-note { font-size: 11.5px; color: var(--gray-500); line-height: 1.5; margin-top: 6px; text-align: right; }
-    .bk-paylater { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--gray-200); display: flex; flex-direction: column; align-items: flex-end; }
-    .bk-paylater .bk-pay-note { max-width: 300px; }
+    /* Review step: Back on the left, the choices together on the right, all
+       on one row; one short note underneath instead of a note per button. */
+    .bk-actions-main { display: flex; align-items: stretch; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+    .bk-btn-hold {
+        display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+        height: 52px; padding: 0 20px; border-radius: 10px;
+        border: 1.5px solid var(--blue-md); background: #fff; color: var(--blue);
+        font-family: var(--font); cursor: pointer; white-space: nowrap;
+        transition: background .15s ease, border-color .15s ease;
+    }
+    .bk-btn-hold:hover { background: var(--blue-lt); border-color: var(--blue); }
+    .bk-btn-hold:focus-visible, .bk-btn-pay:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+    .bk-btn-hold-lbl { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; line-height: 1.2; }
+    .bk-btn-hold-sub { font-size: 11.5px; font-weight: 500; color: var(--gray-500); line-height: 1.2; }
+    .bk-actions:has(.bk-actions-main) > .bk-btn-ghost { height: 52px; }
+    .bk-actions-note { margin-top: 10px; font-size: 12px; color: var(--gray-500); line-height: 1.5; text-align: right; }
 
     .bk-notice { display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border-radius: 10px; font-size: 12.5px; line-height: 1.55; }
     .bk-notice svg { flex-shrink: 0; margin-top: 1px; }
@@ -1884,7 +1902,20 @@
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                             Back
                         </button>
-                        <div style="text-align:right;">
+                        <div class="bk-actions-main">
+                            {{-- Second choice beside the main one, same height, so the
+                                 row reads as "pick one". Its terms sit in the button
+                                 itself rather than in a paragraph floating below. --}}
+                            @if($offersPayLater)
+                                <button type="button" class="bk-btn-hold" @click="holdForm()"
+                                    title="Saves your booking for {{ $payLaterHours }} hours and emails you a link to pay. Your seat and price are not guaranteed until you pay.">
+                                    <span class="bk-btn-hold-lbl">
+                                        <span class="bk-mini-icon bk-icon-clock" aria-hidden="true"></span>
+                                        Hold and pay later
+                                    </span>
+                                    <span class="bk-btn-hold-sub">Free for {{ $payLaterHours }} hours</span>
+                                </button>
+                            @endif
                             <button class="bk-btn-pay" @click="submitForm()">
                                 @if($isTravelFlexCheckout)
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
@@ -1894,28 +1925,20 @@
                                     Continue to payment &middot; {{ $fmt($this->getTotalPrice()) }}
                                 @endif
                             </button>
-                            {{-- This button does not take payment: it posts the booking and
-                                 moves to the payment step. It used to read "Confirm & Pay"
-                                 next to a six-figure sum, which says the charge happens now. --}}
-                            <div class="bk-pay-note">
-                                {{ $isTravelFlexCheckout
-                                    ? 'You will start your TravelFlex application on the next step.'
-                                    : 'Nothing is charged until you complete payment on the next step.' }}
-                            </div>
-                            @if($offersPayLater)
-                                <div class="bk-paylater">
-                                    <button type="button" class="bk-btn-ghost" @click="holdForm()">
-                                        <span class="bk-mini-icon bk-icon-clock" aria-hidden="true"></span>
-                                        Hold and pay later
-                                    </button>
-                                    <div class="bk-pay-note">
-                                        Saves your booking for {{ $payLaterHours }} hours and emails you a link to pay.
-                                        Your seat and price are not guaranteed until you pay.
-                                    </div>
-                                </div>
-                            @endif
                         </div>
                     </div>
+                    {{-- The pay button does not take payment: it posts the booking and
+                         moves to the payment step. It used to read "Confirm & Pay"
+                         next to a six-figure sum, which says the charge happens now. --}}
+                    <p class="bk-actions-note">
+                        @if($isTravelFlexCheckout)
+                            You will start your TravelFlex application on the next step.
+                        @elseif($offersPayLater)
+                            Nothing is charged yet. If you hold, we email you a link to pay; your seat and price are not guaranteed until you pay.
+                        @else
+                            Nothing is charged until you complete payment on the next step.
+                        @endif
+                    </p>
 
                 @endif {{-- /step 2 --}}
 
