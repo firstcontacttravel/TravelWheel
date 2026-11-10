@@ -18,6 +18,9 @@ class Department extends Model
 
     public const CUSTOMER_SUPPORT = 'customer-support';
 
+    /** Sees and oversees everything; never money, prices, staff or approving bookings. */
+    public const IT = 'it';
+
     /** The two teams Linear's free plan allows. */
     public const LINEAR_TEAMS = [
         'travelwheel' => 'Travelwheel',

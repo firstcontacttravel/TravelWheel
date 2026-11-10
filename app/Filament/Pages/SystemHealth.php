@@ -28,7 +28,7 @@ class SystemHealth extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isVisaAdministrator() ?? false;
+        return auth()->user()?->canManageSystem() ?? false;
     }
 
     public function mount(SystemHealthService $health): void

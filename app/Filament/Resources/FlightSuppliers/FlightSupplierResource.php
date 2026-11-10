@@ -399,7 +399,7 @@ class FlightSupplierResource extends Resource
      */
     public static function canViewAny(): bool
     {
-        return auth()->user()?->isVisaAdministrator() ?? false;
+        return auth()->user()?->canManageSystem() ?? false;
     }
 
     public static function canCreate(): bool

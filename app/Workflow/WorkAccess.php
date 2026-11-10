@@ -51,7 +51,8 @@ class WorkAccess
             return false;
         }
 
-        if ($user->isAdmin()) {
+        // IT hands bookings to the right person and keeps queues moving, across every team
+        if ($user->canOverseeSystem()) {
             return true;
         }
 
@@ -65,7 +66,8 @@ class WorkAccess
 
     public static function canWork(?User $user, ?WorkItem $item): bool
     {
-        if (! $user || $user->isDeactivated()) {
+        // IT oversees bookings but never approves, confirms or tickets one, even one handed to them
+        if (! $user || $user->isDeactivated() || ($user->isIt() && ! $user->isAdmin())) {
             return false;
         }
 
@@ -77,7 +79,8 @@ class WorkAccess
     /** Claiming: anyone takes an unowned booking; taking one from its owner is managing it. */
     public static function canClaim(?User $user, ?WorkItem $item): bool
     {
-        if (! $user || $user->isDeactivated() || $item?->owner_id === $user->getKey()) {
+        // Nothing to claim for: IT can't work a booking (see canWork)
+        if (! $user || $user->isDeactivated() || $item?->owner_id === $user->getKey() || ($user->isIt() && ! $user->isAdmin())) {
             return false;
         }
 

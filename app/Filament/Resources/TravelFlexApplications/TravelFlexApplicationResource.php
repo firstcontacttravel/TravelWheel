@@ -55,6 +55,19 @@ class TravelFlexApplicationResource extends Resource
         ];
     }
 
+    /** Credit applications, with customers' financial documents: IT stays out of them. */
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && ($user->isAdmin() || ! $user->isIt());
+    }
+
+    public static function canView(Model $record): bool
+    {
+        return static::canViewAny();
+    }
+
     public static function canCreate(): bool
     {
         return false;

@@ -80,9 +80,10 @@ class Company extends Model
 
     public function canBeBookedForBy(User $staff): bool
     {
+        // IT doesn't book for customers, a company's paid from its wallet included
         return $this->isActive()
             && ! $staff->isDeactivated()
-            && ($staff->isAdmin() || $staff->isDepartmentHead() || (int) $this->account_manager_id === (int) $staff->id);
+            && ($staff->isAdmin() || (! $staff->isIt() && ($staff->isDepartmentHead() || (int) $this->account_manager_id === (int) $staff->id)));
     }
 
     public function invitations(): HasMany

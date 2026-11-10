@@ -12,7 +12,7 @@ class ReportingAccess
         return (bool) ($user && (
             $user->isAdmin()
             || in_array($user->visa_role, ['administrator', 'finance', 'support'], true)
-            || $user->inDepartment(Department::FINANCE, Department::CUSTOMER_SUPPORT)
+            || $user->inDepartment(Department::FINANCE, Department::CUSTOMER_SUPPORT, Department::IT)
         ));
     }
 

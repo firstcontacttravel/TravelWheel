@@ -87,6 +87,22 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
         return $this->deactivated_at !== null;
     }
 
+    public function isIt(): bool
+    {
+        return $this->inDepartment(Department::IT);
+    }
+
+    /**
+     * The system's own screens and the work across every team: System
+     * Health, Flight APIs, Workflow Settings, Workload, the activity log, and
+     * reassigning or escalating any booking. Never money, prices, staff or
+     * approving a booking, which stay behind their own rules.
+     */
+    public function canOverseeSystem(): bool
+    {
+        return $this->isAdmin() || $this->isIt();
+    }
+
     public function inDepartment(string ...$slugs): bool
     {
         return $this->department_id !== null && in_array($this->department?->slug, $slugs, true);
@@ -133,6 +149,12 @@ class User extends Authenticatable implements FilamentUser, HasEmailAuthenticati
     public function isVisaAdministrator(): bool
     {
         return $this->isAdmin() || $this->visa_role === 'administrator';
+    }
+
+    /** System Health and switching flight APIs on and off. */
+    public function canManageSystem(): bool
+    {
+        return $this->isVisaAdministrator() || $this->isIt();
     }
 
     public function canOperateVisas(): bool

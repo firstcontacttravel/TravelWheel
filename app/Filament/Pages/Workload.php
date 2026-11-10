@@ -36,7 +36,7 @@ class Workload extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->isAdmin() ?? false;
+        return auth()->user()?->canOverseeSystem() ?? false;
     }
 
     public function mount(): void

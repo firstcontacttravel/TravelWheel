@@ -37,6 +37,19 @@ class CompanyResource extends Resource
         return auth()->user()?->isAdmin() ?? false;
     }
 
+    /** Company accounts carry wallets, credit and statements, which IT stays out of. */
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+
+        return $user !== null && ($user->isAdmin() || ! $user->isIt());
+    }
+
+    public static function canView(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return static::canViewAny();
+    }
+
     public static function getNavigationBadge(): ?string
     {
         $waiting = Company::where('status', 'requested')->count();
