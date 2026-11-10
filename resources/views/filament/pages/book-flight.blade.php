@@ -80,7 +80,6 @@
             @if ($searchError)
                 <div class="bk-route bad" role="alert">{{ $searchError }}</div>
             @endif
-            <div class="bk-note" style="margin-top:10px;">Only fares the airline can hold are shown. Fares paid by card at booking (SkyLink and WebFare) can't be held for a customer.</div>
         </section>
 
         @if ($searchId && ! $fare)
@@ -92,6 +91,11 @@
                 @forelse ($flights as $flight)
                     <div class="bk-price" wire:key="fare-{{ $flight['source'] }}-{{ md5($flight['fareSourceCode']) }}" style="margin-top:0; margin-bottom:12px;">
                         <h4>{{ $flight['airline'] ?: 'Airline' }} · {{ $flight['fareType'] ?? 'Public' }}</h4>
+                        <div><span>Booking</span><b style="font-weight:500;">{{ match ($flight['holdKind']) {
+                            'airline' => 'Seat held with the airline until its deadline',
+                            'pay_later' => 'Saved for '.$payLaterHours.' hours; customer pays by card',
+                            default => 'Pay at booking only',
+                        } }}</b></div>
                         <div><span>Outbound</span><b style="font-weight:500;">{{ $legLine($flight['segments'] ?? [], $flight['durationLabel'] ?? null, $flight['stops'] ?? 0) }}</b></div>
                         @if (! empty($flight['returnSegments']))
                             <div><span>Return</span><b style="font-weight:500;">{{ $legLine($flight['returnSegments'], $flight['returnDurationLabel'] ?? null, $flight['returnStops'] ?? 0) }}</b></div>
@@ -100,13 +104,19 @@
                             <span>{{ ($flight['isRefundable'] ?? false) ? 'Refundable' : 'Non-refundable' }}</span>
                             <b>{{ $flight['currency'] ?? 'NGN' }} {{ number_format((float) $flight['price'], 2) }}</b>
                         </div>
-                        <button type="button" class="bk-btn-line" style="margin-top:10px;" wire:click="choose(@js($flight['source']), @js($flight['fareSourceCode']))" wire:loading.attr="disabled" wire:target="choose">
-                            <span wire:loading.remove wire:target="choose">Choose this fare</span>
-                            <span wire:loading wire:target="choose">Confirming with the airline…</span>
-                        </button>
+                        @if ($flight['holdKind'])
+                            <button type="button" class="bk-btn-line" style="margin-top:10px;" wire:click="choose(@js($flight['source']), @js($flight['fareSourceCode']))" wire:loading.attr="disabled" wire:target="choose">
+                                <span wire:loading.remove wire:target="choose">Choose this fare</span>
+                                <span wire:loading wire:target="choose">Confirming with the airline…</span>
+                            </button>
+                        @else
+                            <div class="bk-note" style="margin-top:10px;">{{ $webfareReason }}</div>
+                        @endif
                     </div>
                 @empty
-                    <div class="bk-empty">No fares that can be held were found. Try other dates or airports.</div>
+                    @unless ($searchError)
+                        <div class="bk-empty">No fares were found. Try other dates or airports.</div>
+                    @endunless
                 @endforelse
             </section>
         @endif
@@ -123,6 +133,9 @@
                     <div class="total"><span>Total for all passengers</span><b>{{ $fare['currency'] ?? 'NGN' }} {{ number_format((float) $fare['price'], 2) }}</b></div>
                 </div>
                 <button type="button" class="bk-btn-line" style="margin-top:10px;" wire:click="changeFare" wire:loading.attr="disabled">Choose a different fare</button>
+                @if ($fareKind === 'pay_later')
+                    <div class="bk-note" style="margin-top:10px;">This fare is saved with us for {{ $payLaterHours }} hours, not held with the airline. The seat and price are confirmed only when the customer pays by card; if the fare has gone up by then, they're asked before anything is charged.</div>
+                @endif
                 @if ($fare['isPassportMandatory'] ?? false)
                     <div class="bk-note" style="margin-top:10px;">This airline needs every passenger's passport details.</div>
                 @endif
@@ -219,24 +232,28 @@
 
             <section class="bk-step">
                 <div class="bk-label">Payment</div>
-                <div class="bk-pays">
-                    <button type="button" class="bk-pay {{ $sendLink ? 'on' : '' }}" wire:click="$set('sendLink', true)">
-                        <b>Email a payment link</b>
-                        <small>The customer pays online before the hold runs out</small>
-                    </button>
-                    <button type="button" class="bk-pay {{ $sendLink ? '' : 'on' }}" wire:click="$set('sendLink', false)">
-                        <b>Don't send a link</b>
-                        <small>Paying by transfer, POS or cash: Finance records it</small>
-                    </button>
-                </div>
-                <div class="bk-note" style="margin-bottom:12px;">The fare is held with the airline, not paid. Once it is paid, the flight team orders the ticket.</div>
+                @if ($fareKind === 'pay_later')
+                    <div class="bk-note" style="margin-bottom:12px;">The customer is emailed a link and pays by card. The airline booking is made as the payment goes through, so this fare can't be paid by transfer, POS or cash.</div>
+                @else
+                    <div class="bk-pays">
+                        <button type="button" class="bk-pay {{ $sendLink ? 'on' : '' }}" wire:click="$set('sendLink', true)">
+                            <b>Email a payment link</b>
+                            <small>The customer pays online before the hold runs out</small>
+                        </button>
+                        <button type="button" class="bk-pay {{ $sendLink ? '' : 'on' }}" wire:click="$set('sendLink', false)">
+                            <b>Don't send a link</b>
+                            <small>Paying by transfer, POS or cash: Finance records it</small>
+                        </button>
+                    </div>
+                    <div class="bk-note" style="margin-bottom:12px;">The fare is held with the airline, not paid. Once it is paid, the flight team orders the ticket.</div>
+                @endif
                 @if ($fareError)
                     <div class="bk-route bad" role="alert" style="margin:0 0 12px;">{{ $fareError }}</div>
                 @endif
                 @error('passengers') <div class="bk-err" style="margin-bottom:12px;">{{ $message }}</div> @enderror
                 <button type="button" class="bk-submit" wire:click="create" wire:loading.attr="disabled" wire:target="create">
-                    <span wire:loading.remove wire:target="create">Hold the fare · {{ $fare['currency'] ?? 'NGN' }} {{ number_format((float) $fare['price'], 2) }}</span>
-                    <span wire:loading wire:target="create">Holding the fare with the airline…</span>
+                    <span wire:loading.remove wire:target="create">{{ $fareKind === 'pay_later' ? 'Save and email the customer' : 'Hold the fare' }} · {{ $fare['currency'] ?? 'NGN' }} {{ number_format((float) $fare['price'], 2) }}</span>
+                    <span wire:loading wire:target="create">{{ $fareKind === 'pay_later' ? 'Saving the booking…' : 'Holding the fare with the airline…' }}</span>
                 </button>
             </section>
         @endif

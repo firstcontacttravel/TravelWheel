@@ -34,6 +34,8 @@ class StaffFlightBookingTest extends TestCase
 
     private string $holdAnswer = 'held';
 
+    private bool $skylinkDown = false;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -72,11 +74,17 @@ class StaffFlightBookingTest extends TestCase
             ]]);
         });
 
-        // Paid by card when booked: never searched for a customer to pay later
+        // Can't hold with the airline: its fares are saved on our side to pay later
         $this->mock(SkylinkFlightService::class, function (MockInterface $mock): void {
             $mock->shouldReceive('key')->andReturn('skylink');
             $mock->shouldReceive('supportsHold')->andReturn(false);
-            $mock->shouldNotReceive('search');
+            $mock->shouldReceive('label')->andReturn('SkyLink');
+            $mock->shouldReceive('search')->andReturnUsing(fn () => $this->skylinkDown ? ['error' => true, 'message' => 'SkyLink flight search is temporarily unavailable.', 'data' => []] : ['error' => false, 'message' => null, 'data' => [
+                'flights' => [$this->flight('sky_1', ['source' => 'skylink', 'price' => 580.0])], 'meta' => [],
+            ]]);
+            $mock->shouldReceive('select')->andReturnUsing(fn (string $code) => ['error' => false, 'message' => null, 'data' => [
+                'flight' => $this->flight($code, ['source' => 'skylink', 'price' => 590.0]), 'extraServices' => [], 'fareRules' => [],
+            ]]);
         });
     }
 
@@ -139,14 +147,65 @@ class StaffFlightBookingTest extends TestCase
         $this->actingAs($this->staff('customer-support'))->get(BookFlight::getUrl())->assertForbidden();
     }
 
-    public function test_the_search_shows_only_fares_the_airline_can_hold(): void
+    public function test_the_search_shows_every_fare_and_how_it_can_be_held(): void
     {
         $this->actingAs($this->staff());
 
         $this->searched()
             ->assertHasNoErrors()
             ->assertSee('Choose this fare')
-            ->assertViewHas('flights', fn ($flights) => $flights->pluck('fareSourceCode')->all() === ['fare_public']);
+            ->assertSee(\App\Services\Flights\StaffFlightBooking::WEBFARE_REASON)
+            ->assertViewHas('flights', fn ($flights) => $flights->pluck('holdKind', 'fareSourceCode')->all() === ['fare_web' => null, 'sky_1' => 'pay_later', 'fare_public' => 'airline']);
+    }
+
+    public function test_a_flight_api_that_does_not_answer_is_said_plainly(): void
+    {
+        $this->actingAs($this->staff());
+        $this->skylinkDown = true;
+
+        $this->searched()
+            ->assertSet('searchError', fn ($error) => str_contains($error, 'SkyLink did not answer'))
+            ->assertViewHas('flights', fn ($flights) => $flights->pluck('fareSourceCode')->sort()->values()->all() === ['fare_public', 'fare_web']);
+    }
+
+    public function test_a_webfare_cannot_be_chosen(): void
+    {
+        $this->actingAs($this->staff());
+
+        $this->searched()->call('choose', 'travelnext', 'fare_web')
+            ->assertSet('fareKey', null)
+            ->assertSet('fareError', \App\Services\Flights\StaffFlightBooking::WEBFARE_REASON);
+    }
+
+    public function test_a_skylink_fare_is_saved_to_pay_later_and_the_customer_always_gets_the_card_link(): void
+    {
+        $this->actingAs($this->staff());
+
+        $this->filledIn($this->searched()->call('choose', 'skylink', 'sky_1'))
+            ->assertSee('not held with the airline')
+            ->set('sendLink', false)
+            ->call('create')
+            ->assertRedirect(NewBooking::getUrl());
+
+        $booking = FlightBooking::query()->sole();
+        $this->assertSame(['skylink', 'pay_later', '', 'on_hold', 'pending', 'gateway'], [$booking->supplier, $booking->hold_type, (string) $booking->unique_id, $booking->booking_status, $booking->payment_status, $booking->payment_method]);
+        $this->assertEqualsWithDelta(now()->addHours((int) config('flights.platform_hold.pay_later_hours', 24))->timestamp, $booking->tkt_time_limit->timestamp, 120);
+        Http::assertNotSent(fn ($request) => str_ends_with($request->url(), 'booking'));
+        Mail::assertSent(StaffBookingPaymentLinkMail::class, fn ($mail) => $mail->hasTo('customer@example.com'));
+
+        $staffBooking = StaffBooking::query()->sole();
+        $this->assertStringContainsString('/flights/hold/'.$booking->booking_ref, $staffBooking->checkoutUrl());
+        $this->assertFalse($staffBooking->canRecordPayment(), 'Card only: the airline booking is made as the card payment goes through.');
+
+        $this->actingAs($this->staff('finance'));
+        Livewire::test(NewBooking::class)->assertTableActionHidden('recordPayment', $staffBooking);
+
+        // The customer, in their own browser, lands on the card payment page
+        auth()->logout();
+        session()->flush();
+        $resume = $this->get($staffBooking->payUrl())->assertRedirect()->headers->get('Location');
+        $this->get($resume)->assertRedirect(route('flights.payment.gateway'));
+        $this->get(route('flights.payment.gateway'))->assertOk()->assertSee('Royal Air Maroc');
     }
 
     public function test_an_airport_must_be_chosen_from_the_list(): void

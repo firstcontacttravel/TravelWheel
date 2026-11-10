@@ -135,6 +135,7 @@ class StaffBooking extends Model
 
         return match (true) {
             $booking instanceof VisaApplication => route('visa.application', $booking),
+            $booking instanceof FlightBooking && app(StaffFlightBooking::class)->isPayLater($booking) => URL::temporarySignedRoute('flights.hold.resume', $booking->tkt_time_limit ?? now()->addDay(), ['bookingRef' => $booking->booking_ref]),
             $booking instanceof FlightBooking => URL::temporarySignedRoute('flights.payment.options.resume', $booking->tkt_time_limit ?? now()->addDays(7), ['bookingRef' => $booking->booking_ref]),
             default => null,
         };
@@ -165,6 +166,8 @@ class StaffBooking extends Model
             return array_filter([
                 'Flight' => trim($booking->route.' · '.$booking->airline, ' ·'),
                 'Pay before' => $booking->tkt_time_limit?->format('j M Y, H:i'),
+                // Saved on our side: nothing is reserved with the airline until it's paid
+                'Seat' => app(StaffFlightBooking::class)->isPayLater($booking) ? 'Confirmed, at the current fare, once paid by card' : null,
                 'Passengers' => "{$booking->adult_count} adult(s), {$booking->child_count} child(ren), {$booking->infant_count} infant(s)",
             ]);
         }
@@ -287,6 +290,11 @@ class StaffBooking extends Model
     /** A visa is paid for once its application is finished and has a quote: before that there is no amount to receive. */
     public function canRecordPayment(): bool
     {
+        // A flight saved to pay later is booked with the airline as the card payment goes through
+        if ($this->bookable instanceof FlightBooking && app(StaffFlightBooking::class)->isPayLater($this->bookable)) {
+            return false;
+        }
+
         return $this->isAwaitingPayment() && (! $this->isVisa() || $this->total() !== null);
     }
 

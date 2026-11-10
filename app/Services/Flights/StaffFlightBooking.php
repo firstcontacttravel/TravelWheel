@@ -14,52 +14,94 @@ use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
- * A flight staff book for a customer from the admin: the fare is held with the
- * airline instead of paid. The customer then pays from an emailed link, or
- * Finance records the payment and the flight team issues the ticket.
+ * A flight staff book for a customer from the admin, held instead of paid,
+ * the way the website holds one for a customer who pays later:
+ *
+ * - With the airline (TravelNext): the seat is reserved until the airline's
+ *   deadline. The customer pays from an emailed link, or Finance records the
+ *   payment and the flight team orders the ticket.
+ * - On our side ("hold and pay later", an API that can't hold, SkyLink): the
+ *   booking is saved for a day with nothing at the airline. The customer
+ *   pays by card from the link; the fare is then priced again and booked.
+ *
+ * A WebFare can be neither: the airline issues it only as it is paid.
  */
 class StaffFlightBooking
 {
+    public const AIRLINE_HOLD = 'airline';
+
+    public const PAY_LATER = 'pay_later';
+
+    public const WEBFARE_REASON = "A WebFare is issued only when it's paid by card, so it can't be held or saved for the customer. They can book it themselves on the website.";
+
     public function __construct(
         private readonly FlightSupplierRegistry $suppliers,
         private readonly FlightSupplierControl $control,
         private readonly FlightBookingRecorder $recorder,
+        private readonly FlightPlatformHold $platformHold,
     ) {}
 
     /**
-     * The switched-on flight APIs that can hold a fare before payment. SkyLink
-     * is paid by card when booked, so it has nothing to hold.
+     * Every switched-on flight API.
      *
      * @return array<string, \App\Contracts\FlightSupplier>
      */
-    public function holdingSuppliers(): array
+    public function searchableSuppliers(): array
     {
-        return array_filter(
-            $this->suppliers->all(),
-            fn ($supplier, string $key): bool => $supplier->supportsHold() && $this->control->isEnabled($key),
-            ARRAY_FILTER_USE_BOTH,
-        );
+        return array_filter($this->suppliers->all(), fn ($supplier, string $key): bool => $this->control->isEnabled($key), ARRAY_FILTER_USE_BOTH);
     }
 
-    /** A WebFare is paid by card when booked even from an API that holds others. */
-    public function holdable(array $flight): bool
+    /** How this fare can be held for the customer: AIRLINE_HOLD, PAY_LATER, or null when it can't. */
+    public function holdKind(array $flight): ?string
     {
         $supplier = (string) ($flight['source'] ?? '');
 
-        return array_key_exists($supplier, $this->holdingSuppliers())
-            && strtolower((string) ($flight['fareType'] ?? 'public')) !== 'webfare';
+        if (! array_key_exists($supplier, $this->searchableSuppliers()) || strtolower((string) ($flight['fareType'] ?? 'public')) === 'webfare') {
+            return null;
+        }
+
+        if ($this->suppliers->get($supplier)->supportsHold()) {
+            return self::AIRLINE_HOLD;
+        }
+
+        return $this->platformHold->offersPayLater($flight) ? self::PAY_LATER : null;
+    }
+
+    public function isPayLater(FlightBooking $booking): bool
+    {
+        return $this->platformHold->isPayLater($booking);
     }
 
     /**
-     * Holds the re-confirmed fare with the airline and records the booking, as
-     * the website does when a customer chooses to pay later.
+     * Holds the re-confirmed fare, with the airline or on our side, and
+     * records the booking as the website does for a customer paying later.
      *
-     * @throws ValidationException when the airline refuses the hold
+     * @throws ValidationException when the fare can't be held, or the airline refuses
      */
     public function hold(array $flight, array $criteria, string $flightSessionId, array $contact, array $passengers): FlightBooking
     {
-        if (! $this->holdable($flight)) {
-            throw ValidationException::withMessages(['fare' => "This fare is paid by card when it is booked, so it can't be held. Choose another fare."]);
+        $kind = $this->holdKind($flight);
+
+        if ($kind === null) {
+            throw ValidationException::withMessages(['fare' => self::WEBFARE_REASON]);
+        }
+
+        $context = [
+            'session_id' => $flightSessionId,
+            'trip_type' => $flight['directionInd'] ?? strtoupper((string) ($criteria['trip'] ?? '')),
+            'booked_by' => auth()->user(),
+        ];
+
+        // Nothing is sent to the airline: the booking is made when the customer pays
+        if ($kind === self::PAY_LATER) {
+            return $this->recorder->record($flight, $contact, $passengers, [], $context, [
+                'unique_id' => '',
+                'booking_status' => 'on_hold',
+                'payment_status' => 'pending',
+                'payment_method' => 'gateway',
+                'hold_type' => FlightPlatformHold::PAY_LATER,
+                'tkt_time_limit' => $this->platformHold->payLaterUntil()->toIso8601String(),
+            ]);
         }
 
         $result = app(TravelnextFlightService::class)->book($flight, ['contact' => $contact, 'passengers' => $passengers], $flightSessionId);
@@ -78,11 +120,7 @@ class StaffFlightBooking
             throw ValidationException::withMessages(['fare' => trim('The airline could not hold this fare. '.($reason ?: 'Search again for a current fare.'))]);
         }
 
-        return $this->recorder->record($flight, $contact, $passengers, $result['data'], [
-            'session_id' => $flightSessionId,
-            'trip_type' => $flight['directionInd'] ?? strtoupper((string) ($criteria['trip'] ?? '')),
-            'booked_by' => auth()->user(),
-        ], [
+        return $this->recorder->record($flight, $contact, $passengers, $result['data'], $context, [
             'unique_id' => $uniqueId,
             'booking_status' => 'on_hold',
             'payment_status' => 'pending',
@@ -97,6 +135,10 @@ class StaffFlightBooking
      */
     public function completePayment(FlightBooking $booking, ?string $method = null, ?string $reference = null): void
     {
+        if ($this->isPayLater($booking)) {
+            throw ValidationException::withMessages(['payment' => 'This flight is saved to pay later and can only be paid by card, from the link: the airline booking is made as the card payment goes through.']);
+        }
+
         $paid = DB::transaction(function () use ($booking, $method, $reference): ?FlightBooking {
             $booking = FlightBooking::query()->lockForUpdate()->findOrFail($booking->id);
             if ($booking->payment_status === 'paid') {

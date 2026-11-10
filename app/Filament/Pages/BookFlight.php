@@ -23,9 +23,10 @@ use Throwable;
 
 /**
  * Staff booking a flight for a customer without leaving the admin: a search of
- * the flight APIs that can hold a fare, the fare re-confirmed with the
- * airline, then the passengers. The fare is held, not paid; the customer pays
- * from an emailed link, or Finance records it and the flight team tickets.
+ * every switched-on flight API, the fare re-confirmed with the airline, then
+ * the passengers. The fare is held, not paid (see StaffFlightBooking for the
+ * two ways); the customer pays from an emailed link, or for a fare held with
+ * the airline Finance records it and the flight team tickets.
  */
 class BookFlight extends Page
 {
@@ -126,7 +127,7 @@ class BookFlight extends Page
         $this->updated($who);
     }
 
-    /** A live search of every switched-on API that can hold a fare. */
+    /** A live search of every switched-on flight API. */
     public function search(StaffFlightBooking $staffFlight, FlightSearchStore $store): void
     {
         $this->validate([
@@ -154,9 +155,9 @@ class BookFlight extends Page
         $this->searchError = null;
         $this->clearFare();
 
-        $suppliers = $staffFlight->holdingSuppliers();
+        $suppliers = $staffFlight->searchableSuppliers();
         if ($suppliers === []) {
-            $this->searchError = 'No flight API that can hold a fare is switched on. The flight team can switch one on under Flight APIs.';
+            $this->searchError = 'Every flight API is switched off. The flight team can switch one on under Flight APIs.';
 
             return;
         }
@@ -165,21 +166,30 @@ class BookFlight extends Page
         $searchId = $store->start($criteria);
         set_time_limit(120);
 
+        $failed = [];
         foreach ($suppliers as $key => $supplier) {
             try {
                 $result = $supplier->search($criteria, ['search_id' => $searchId, 'started_at' => microtime(true), 'final_attempt' => true]);
             } catch (Throwable $e) {
                 Log::warning('Staff flight search failed', ['supplier' => $key, 'error' => $e->getMessage()]);
-
-                continue;
+                $result = ['error' => true];
             }
 
             if (($result['error'] ?? true) || ($result['retry'] ?? false)) {
+                $failed[] = $supplier->label();
+
                 continue;
             }
 
             $flights = array_values(array_map(fn (array $flight): array => FlightMarkup::apply($flight, null), (array) ($result['data']['flights'] ?? [])));
             $store->put($searchId, $key, $flights, (array) ($result['data']['meta'] ?? []));
+        }
+
+        // Said plainly, so a flight API that didn't answer isn't mistaken for there being no flights
+        if ($failed !== []) {
+            $this->searchError = count($failed) === count($suppliers)
+                ? implode(' and ', $failed).' did not answer, so no fares could be found. Try again in a few minutes.'
+                : implode(' and ', $failed)." did not answer, so its fares aren't shown. Search again to try it.";
         }
 
         $this->searchId = $searchId;
@@ -192,8 +202,14 @@ class BookFlight extends Page
         $result = $this->searchId ? $store->result($this->searchId, $supplierKey) : null;
         $searched = collect($result['flights'] ?? [])->firstWhere('fareSourceCode', $fareSourceCode);
 
-        if (! $searched || ! $staffFlight->holdable($searched)) {
-            $this->fareError = "That fare can't be held. Search again or choose another.";
+        if (! $searched) {
+            $this->fareError = 'That fare is no longer in the results. Search again.';
+
+            return;
+        }
+
+        if (! $staffFlight->holdKind($searched)) {
+            $this->fareError = StaffFlightBooking::WEBFARE_REASON;
 
             return;
         }
@@ -212,8 +228,8 @@ class BookFlight extends Page
         }
 
         $flight = FlightMarkup::apply($selected['data']['flight'], null);
-        if (! $staffFlight->holdable($flight)) {
-            $this->fareError = "This fare is paid by card when it is booked, so it can't be held. Choose another.";
+        if (! $staffFlight->holdKind($flight)) {
+            $this->fareError = StaffFlightBooking::WEBFARE_REASON;
 
             return;
         }
@@ -284,28 +300,34 @@ class BookFlight extends Page
         }
 
         Cache::forget($this->fareKey);
-        StaffBookingActions::finish($booking, ['send_link' => $this->sendLink]);
+        // A fare saved to pay later is paid by card from the link, so the customer always gets it
+        StaffBookingActions::finish($booking, ['send_link' => $this->sendLink || $staffFlight->isPayLater($booking)]);
 
         $this->redirect(NewBooking::getUrl());
     }
 
     protected function getViewData(): array
     {
+        $staffFlight = app(StaffFlightBooking::class);
         $flights = collect();
         if ($this->searchId) {
             $store = app(FlightSearchStore::class);
-            $staffFlight = app(StaffFlightBooking::class);
-            foreach (array_keys($staffFlight->holdingSuppliers()) as $key) {
-                $flights = $flights->concat(collect($store->result($this->searchId, $key)['flights'] ?? [])->filter(fn (array $flight): bool => $staffFlight->holdable($flight)));
+            foreach (array_keys($staffFlight->searchableSuppliers()) as $key) {
+                $flights = $flights->concat(collect($store->result($this->searchId, $key)['flights'] ?? [])
+                    ->map(fn (array $flight): array => $flight + ['holdKind' => $staffFlight->holdKind($flight)]));
             }
         }
+        $fare = $this->fare()['flight'] ?? null;
 
         return [
             'cabins' => self::CABINS,
             'titles' => self::TITLES,
             'countries' => Country::query()->where('is_active', true)->whereNotNull('alpha2')->orderBy('name')->pluck('name', 'alpha2'),
             'flights' => $flights->sortBy('price')->take(40)->values(),
-            'fare' => $this->fare()['flight'] ?? null,
+            'fare' => $fare,
+            'fareKind' => $fare ? $staffFlight->holdKind($fare) : null,
+            'payLaterHours' => max(1, (int) config('flights.platform_hold.pay_later_hours', 24)),
+            'webfareReason' => StaffFlightBooking::WEBFARE_REASON,
         ];
     }
 
